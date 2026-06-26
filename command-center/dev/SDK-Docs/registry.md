@@ -10,7 +10,9 @@ Each row points at the SDK doc at `command-center/dev/SDK-Docs/<Name>/<name>.md`
 
 | SDK | SDK Doc | Official Docs | Version | Last verified |
 |-----|---------|---------------|---------|---------------|
-| _(empty — populated by research-process Step 3 as SDKs are integrated)_ | _ | _ | _ | _ |
+| supertokens-node | [`command-center/dev/SDK-Docs/SuperTokens/supertokens.md`](SuperTokens/supertokens.md) | https://supertokens.com/docs/emailpassword/introduction | 24.0.2 | 2026-06-26 |
+| `livekit-server-sdk` · `@livekit/components-react` · `livekit-client` | [`command-center/dev/SDK-Docs/LiveKit/livekit.md`](LiveKit/livekit.md) | https://docs.livekit.io/ | server-sdk: 2.15.5 · components-react: 2.9.21 · livekit-client: 2.20.0 | 2026-06-26 |
+| `resend` | [`command-center/dev/SDK-Docs/Resend/resend.md`](Resend/resend.md) | https://resend.com/docs/send-with-nodejs | 6.15.0 | 2026-06-26 |
 
 ---
 

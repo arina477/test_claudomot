@@ -78,7 +78,12 @@ All head-X agents are spawned as fresh sub-agents at the block-exit gate stage t
 |---|---|---|---|
 | `supertokens-integration` | SuperTokens self-hosted auth: signup/login/verify/reset, session JWT+refresh, SameSite=Lax httpOnly cookies, NestJS guards + middleware order, Socket.IO WS-upgrade auth, server-side LiveKit token bridge | supertokens auth work | [research](setup-tools/agent-creator/research/supertokens-integration-2026-06-26.md) · [pack](domain-packs/supertokens-integration.md) |
 | `livekit-integration` | LiveKit WebRTC voice/video: server-side room + token service (session+RBAC mint), self-host-vs-Cloud config, React mic/cam/screen-share grid + audio-only fallback | livekit voice/video work | [research](setup-tools/agent-creator/research/livekit-integration-2026-06-26.md) · [pack](domain-packs/livekit-integration.md) |
-| _(further per-stack executors populated at install per `project.yaml: stack.*`; e.g., `postgres-pro`, `react-specialist`, `node-specialist`)_ | _ | _ | _ |
+| `postgres-pro` | PostgreSQL + Drizzle schema, queries, indexing, migrations, performance | postgres / drizzle work | _(pre-built — VoltAgent)_ |
+| `react-specialist` | React 19 + Vite SPA components, hooks, state, performance | B-3 frontend (react component work) | _(pre-built — VoltAgent)_ |
+| `typescript-pro` | TS strict, project references, shared Zod types, type-level work | contracts / shared types / tsconfig | _(pre-built — VoltAgent)_ |
+| `node-specialist` | Node.js backend (NestJS) APIs, services, runtime | node / nestjs work | _(pre-built — VoltAgent)_ |
+| `devops-engineer` | Monorepo tooling (Turborepo/pnpm/Biome), CI, Railway deploy wiring | infra / CI / monorepo tooling | _(pre-built — VoltAgent)_ |
+| `frontend-developer` | Multi-framework frontend (fallback for react-specialist) | B-3 frontend fallback | _(pre-built)_ |
 
 ---
 

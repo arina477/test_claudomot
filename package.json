@@ -1,0 +1,31 @@
+{
+  "name": "studyhall",
+  "version": "0.0.1",
+  "private": true,
+  "packageManager": "pnpm@11.7.0",
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "biome ci .",
+    "lint:fix": "biome check --apply .",
+    "test": "turbo run test",
+    "test:ci": "turbo run test:ci",
+    "test:watch": "turbo run test -- --watch",
+    "db:generate": "echo 'no DB yet (deferred)' && exit 0",
+    "db:migrate": "echo 'no DB yet (deferred)' && exit 0",
+    "db:migrate:test": "echo 'no DB yet (deferred)' && exit 0",
+    "db:seed": "echo 'no DB yet (deferred)' && exit 0",
+    "db:studio": "echo 'no DB yet (deferred)' && exit 0",
+    "clean": "turbo run clean && rimraf node_modules"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.0",
+    "turbo": "^2.3.0",
+    "rimraf": "^6.0.0"
+  }
+}

@@ -37,7 +37,7 @@ This unified reference integrates architecture across all domains (modules, serv
 **CI/CD:** GitHub Actions (lint + typecheck + test + build parallel; deploy via Railway GitHub app)  
 **Lint/format:** Biome (single tool, no ESLint/Prettier)  
 **Testing:** Vitest (unit + integration) + Supertest (HTTP) + React Testing Library (components) + Playwright MCP (live E2E)  
-**Node:** v20.15.0 (pinned via `.nvmrc` + `engines` + GitHub Actions setup)  
+**Node:** v22 (current LTS) (pinned via `.nvmrc` + `engines` + GitHub Actions setup)  
 **TypeScript:** Strict mode, `composite: true` for project references, incremental compilation via `tsc --build`  
 
 **Deferred to H2:** Stripe (billing), Redis (realtime scaling, queues, rate-limit store), Sentry (error tracking — added at first deploy)
@@ -239,7 +239,7 @@ studyhall/
 ├── turbo.json
 ├── biome.json
 ├── tsconfig.base.json
-├── .nvmrc (20.15.0)
+├── .nvmrc (22)
 ├── package.json       # root scripts + engines
 ├── drizzle.config.ts  # in apps/api
 └── .env.example       # committed; secrets in platform env vars only
@@ -247,7 +247,7 @@ studyhall/
 
 **pnpm 9** (pinned via `packageManager` + `corepack`). Workspace protocol for internal deps: `"@studyhall/shared": "workspace:*"`.
 
-**Node v20.15.0** pinned via `.nvmrc` + root `engines` field. CI uses `actions/setup-node@v4` with `node-version-file: .nvmrc` + pnpm caching.
+**Node v22** pinned via `.nvmrc` + root `engines` field. CI uses `actions/setup-node@v4` with `node-version-file: .nvmrc` + pnpm caching.
 
 **TypeScript strict mode:** `strict: true`, `exactOptionalPropertyTypes: true`, `noUncheckedIndexedAccess: true` (offline sync state handling is complex). Per-workspace `tsconfig.json` extends `tsconfig.base.json`; `composite: true` for `tsc --build` project references (incremental compilation).
 
