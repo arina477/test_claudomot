@@ -59,6 +59,14 @@ _(empty)_
 **Rationale**: Matches the emotional anchors (calm · focused · friendly · credible · low-noise). Familiar enough to be instantly usable by Discord-native students, but visibly calmer and school-aware — the positioning wedge expressed visually. Dark-only per the explicit brief must-have.
 **Artifacts**: `design/direction.html`, `process/session/onboarding/v7-direction-brief.md`
 
+### [2026-Q2] Design system built + approved
+**Category**: Design
+**Status**: Active
+**Context**: v8 onboarding design system, gated on locked module-list (v6b) + approved direction (v7). Founder away; approved on their behalf.
+**Decision**: `design/DESIGN-SYSTEM.md` populated — full token set (layered zinc surfaces, emerald primary + amber secondary accents, Geist type, 4px spacing, radius/elevation/motion scales) + ~24 primitives covering every MVP module: standard (Button/Input/Card/Modal/Toast/Tooltip/Badge/Avatar/empty-error-loading/Form) and StudyHall-specific (ServerRail icon, ChannelSidebar item, MessageRow with pending/failed states, MessageComposer with offline outbox, MemberListItem presence, **ConnectionStateIndicator** — the offline-first wedge made visible, AssignmentCard, ChannelHeader, VoiceRoomTile, Invite preview). Each has states + accessibility notes.
+**Rationale**: Aligned to v7 direction (visual reference `design/direction.html`) + locked module list (v6b). Dark-only per brief. Restrained palette (one base hue + emerald + amber + danger) keeps the calm/academic, non-gaming feel.
+**Artifacts**: `design/DESIGN-SYSTEM.md`
+
 ## DevOps & Deploy
 
 _(empty)_
