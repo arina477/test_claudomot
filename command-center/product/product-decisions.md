@@ -77,7 +77,21 @@ _(empty)_
 
 ## DevOps & Deploy
 
-_(empty)_
+### [2026-Q2] Test accounts — auto-provision via signup
+**Category**: Testing
+**Status**: Active
+**Context**: v13 onboarding test-account seeding. Founder away (automatic); silent technical default per rule 17.
+**Decision**: Test accounts are created through the project's own signup flow at the first UI wave's B-5 — one local-dev + one prod-fixture per v3 persona (Student Member, Server Organizer). `project.yaml: test_users.local_dev[]` left as an empty array with a planning note.
+**Rationale**: No credentials needed at handoff; avoids vendor lock-in to provider tooling. T-5 / T-8 do not block — accounts exist before first needed.
+**Next action**: First UI wave's B-5 scripts the signup endpoint.
+
+### [2026-Q2] CI + deploy baseline
+**Category**: DevOps
+**Status**: Active
+**Context**: v13 CI seed + CI-PRINCIPLES population.
+**Decision**: GitHub Actions CI (`.github/workflows/ci.yml`): parallel lint / typecheck / test (Postgres 16 service) / build + gitleaks secret-scan, each with `timeout-minutes` + `permissions: contents: read`. Deploy: Railway bring-your-own (production on `main` + ephemeral PR previews; credential collected at first deploy, C-2 Action 0). Canary disabled for self-use-mvp (lenient thresholds recorded for launch). PR conventions: AI footer on, auto-merge off, squash merge.
+**Rationale**: Matches v6 DevOps/tools branches + the v6b resolution (gitleaks now, Sentry-PII lint deferred to H2). Canary gated by `canary_threshold_dau=1000` until real users arrive.
+**Alternatives considered**: enabling canary now (rejected — no real users at self-use-mvp).
 
 ## Process & Workflow
 
@@ -92,3 +106,12 @@ _(empty)_
 ## Data Model Decisions
 
 _(empty)_
+
+### [2026-Q2] M1 promoted + wave-1 seed bundle (onboarding bootstrap)
+**Category**: Process
+**Status**: Active
+**Context**: v13 handoff. v10 created milestones with zero child tasks (per-wave decomposition); the first wave needs a seed to claim. Mirrors the brownfield install.md Phase 9 bootstrap.
+**Decision**: Promoted M1 (Foundation: app shell, auth & profiles — highest-tier H1, T1) `todo → in_progress`, and authored its first bundle: seed "Bootstrap monorepo + dark app shell + CI" + siblings "Postgres + Drizzle + SuperTokens auth backend" and "Auth + profile frontend pages". `next_wave_seed_task` points at the seed.
+**Rationale**: Onboarding→wave boundary has no prior N-1 to promote/decompose; v13 is the sanctioned bootstrap exception (like v13 being sole writer of .last-wave-completed.yaml at first boot). Subsequent bundles come per-wave from N-1.
+
+[2026-06-26] M1: todo → in_progress (v13 onboarding bootstrap)

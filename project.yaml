@@ -72,8 +72,8 @@ test_users:
   # secrets / api keys (claudomat doctor fails the schema if any appear here).
   # Prod-fixture credentials live in command-center/testing/test-accounts.md
   # (gitignored) — that's where passwords belong.
-  local_dev:
-    - label: "_(fill in: e.g. admin)_"
-      email: "_(fill in: e.g. admin@example.com)_"
-    - label: "_(fill in: e.g. user)_"
-      email: "_(fill in: e.g. user@example.com)_"
+  # Auto-provisioned via the project's own signup flow at the first UI wave's
+  # B-5 (one local-dev + one prod-fixture per v3 persona: Student Member,
+  # Server Organizer). No credentials needed at handoff. Re-fire v13 step 2d to
+  # provide accounts directly instead.
+  local_dev: []

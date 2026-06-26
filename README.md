@@ -1,6 +1,6 @@
-# {{name}}
+# StudyHall
 
-> {{description}}
+> A dark-themed desktop study app for remote students — group servers, real-time chat, and drop-in voice/video study rooms with offline-first reliability — built to displace Discord for coursework.
 
 [![claudomat](https://img.shields.io/badge/orchestrated--by-claudomat-7c3aed)](https://github.com/) [![CI](https://img.shields.io/badge/CI-pending-lightgrey)]() [![License](https://img.shields.io/badge/license-private-lightgrey)]()
 

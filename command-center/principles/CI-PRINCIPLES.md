@@ -72,45 +72,57 @@ Three sections below are populated at `claudomat init` from the v6 DevOps branch
 ### Deploy targets
 
 ```yaml
-# Format: one entry per environment
+# Format: one entry per environment. Railway bring-your-own; project/services
+# provisioned + back-filled at first deploy (C-2 Action 0).
 deploy_targets:
-  - environment: <production | staging | preview>
-    platform: <railway | netlify | vercel | aws | other>
-    branch: <main | staging | pr-* preview>
-    healthcheck_url: <https://...>
-    deploy_status_command: <e.g. "railway status --service api">
-    rollback_command: <e.g. "railway rollback --service api --to=<sha>">
-    notes: <any quirks — cold-start time, DB-migration step ordering, secrets refresh>
+  - environment: production
+    platform: railway
+    branch: main
+    healthcheck_url: "https://<railway-domain>/health"   # back-filled at first deploy
+    deploy_status_command: "railway status --service api"
+    rollback_command: "railway rollback --service api --to=<sha>"
+    notes: "API + web + postgres (+ supertokens/livekit) as Railway services over private network. WebSocket needs sticky sessions; LiveKit needs UDP/WebRTC support — verify at first deploy. Run drizzle migrations before app boot."
+  - environment: preview
+    platform: railway
+    branch: "pr-* preview"
+    healthcheck_url: "https://<pr-preview-domain>/health"
+    deploy_status_command: "railway status"
+    rollback_command: "n/a (ephemeral PR environment)"
+    notes: "Railway PR preview environments. Do NOT share production Postgres before a real cohort onboards (devops.md risk)."
 ```
 
 ### Canary configuration
 
 ```yaml
 # Consumed by C-3 deploy & verify (canary phase) and `/canary` skill.
+# self-use-mvp: canary disabled until real users arrive (also gated by
+# project.yaml deploy_targets[].canary_threshold_dau=1000). Lenient thresholds
+# recorded for when it's enabled at launch (M7). Smoke routes still run.
 canary:
-  enabled: <true | false>
-  duration_minutes: <e.g. 15>
+  enabled: false
+  duration_minutes: 15
   rollback_threshold:
-    error_rate_pct: <e.g. 1.0>
-    p95_latency_delta_ms: <e.g. 200>
+    error_rate_pct: 2.0
+    p95_latency_delta_ms: 500
   smoke_routes:
-    - <https://prod-url/path>
-    - <https://prod-url/another>
-  alert_destination: <slack:#deploys | email:ops@... | none>
+    - "https://<railway-domain>/health"
+    - "https://<railway-domain>/"
+  alert_destination: none
 ```
 
 ### PR conventions
 
 ```yaml
-# Consumed by C-1 PR creation.
+# Consumed by C-1 PR creation. Defaults: AI footer on, auto-merge off, squash.
 pr_conventions:
   title_format: "<type>: <short description>"   # see C-1 stage file for type list
   title_max_chars: 70
-  body_template: claudomat-default              # or path to project-specific template
-  required_reviewers: []                        # GitHub usernames; empty = no required reviewers
-  required_labels: []                           # e.g. ["wave"]
-  ai_attribution_footer: <true | false>         # include "🤖 Generated with Claude Code" footer
-  auto_merge_after_ci: <true | false>           # only for trusted-author PRs; defaults false
+  body_template: claudomat-default
+  required_reviewers: []                        # solo founder; none required
+  required_labels: []
+  ai_attribution_footer: true
+  auto_merge_after_ci: false
+  merge_strategy: squash                        # mirrors project.yaml: merge_strategy
 ```
 
 ---

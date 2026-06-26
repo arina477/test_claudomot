@@ -9,3 +9,17 @@ command-center/testing/test-accounts.md
 .env
 .env.local
 .env.*.local
+
+# Dependencies / build (appended v13)
+node_modules/
+dist/
+.next/
+.turbo/
+*.tsbuildinfo
+
+# Environment
+.env.local
+.env.*.local
+
+# OS
+.DS_Store

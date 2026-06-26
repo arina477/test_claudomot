@@ -11,9 +11,9 @@ Restricts ceo-agent. Silent = ceo-agent has authority. Only entries below bind. 
 ---
 
 ## § 1 — Disallowed financial commitments
-_(leave blank for no restriction)_
+_(Conservative defaults — founder-stage `self-use-mvp`; no autonomous spend authorized. Loosen when ready.)_
 
-- `(no restriction)`
+- `ceo-agent must NOT authorize any spend, subscription, paid API tier, or charge of any amount. Spend cap is $0/wave. Route every money commitment to the founder via per-decision email (reply required).`
 
 _Example entries:_
 - `ceo-agent must NOT authorize any single transaction ≥ $500 USD.`
@@ -22,27 +22,28 @@ _Example entries:_
 
 ## § 2 — Disallowed external commitments
 
-- `(no restriction)`
+- `ceo-agent must NOT sign contracts, register domains, create third-party accounts, or make any binding external commitment without explicit founder approval.`
 
 _Example:_ `ceo-agent must NOT sign contracts with annual value > $6000 or duration > 24 months.`
 
 ## § 3 — Disallowed customer-facing actions
 
-- `(no restriction)`
+- `ceo-agent must NOT send emails to real users, post publicly, or publish customer-facing content under any StudyHall account without explicit founder approval.`
 
 _Example:_ `ceo-agent must NOT issue refunds > $500 in a single case.`
 _Example:_ `ceo-agent must NOT post to Twitter/X under the company account.`
 
 ## § 4 — Disallowed strategic actions
 
-- `(no restriction)`
+- `ceo-agent must NOT retire or deprecate any feature anchored to a live founder_bets row, cancel an H1 milestone, or invoke roadmap-planning without proposing it to the founder first.`
+- `ceo-agent must NOT perform destructive or irreversible actions (force-push, DROP TABLE, branch deletion, prod data deletion); reversible actions only.`
 
 _Example:_ `ceo-agent must NOT retire or deprecate any feature anchored to a live founder_bets row (DB) without explicit founder approval.`
 _Example:_ `ceo-agent must NOT invoke roadmap-planning-ritual without proposing the planning first.`
 
 ## § 5 — Disallowed novelty handling
 
-- `(no restriction)`
+- `ceo-agent must NOT act on legal demand letters (GDPR / FERPA / COPPA / DMCA / C&D / subpoena) or execute security-incident response without surfacing it to the founder via the ⚠ CHARTER PROPOSAL path first.`
 
 _Example:_ `ceo-agent must NOT act on legal demand letters (GDPR / DMCA / C&D / subpoena) without founder approval.`
 _Example:_ `ceo-agent must NOT execute security-incident response without surfacing the incident via the ⚠ CHARTER PROPOSAL path first.`
