@@ -17,4 +17,7 @@ async function bootstrap(): Promise<void> {
   Logger.log(`StudyHall API listening on http://localhost:${port}`, 'Bootstrap');
 }
 
-void bootstrap();
+bootstrap().catch((err) => {
+  Logger.error(err, 'Bootstrap');
+  process.exit(1);
+});

@@ -6,7 +6,7 @@
     "build": "nest build",
     "typecheck": "tsc --noEmit",
     "dev": "nest start --watch",
-    "start": "node dist/main",
+    "start": "node dist/src/main.js",
     "test": "vitest run",
     "test:ci": "vitest run --reporter=verbose",
     "clean": "rimraf dist *.tsbuildinfo"
