@@ -3,7 +3,7 @@
 **Block:** B (Build)
 **Wave topic:** Bootstrap monorepo + dark app shell + CI (M1 Foundation seed slice)
 **Block exit gate:** B-6
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 
@@ -15,7 +15,7 @@
 | B-3 | process/waves/wave-1/stages/B-3-frontend.md | done | dark app shell built; typecheck+build+test (10/10) green |
 | B-4 | process/waves/wave-1/stages/B-4-wiring.md | done | repo typecheck+lint+build green; a11y drift fixed via B-3 re-entry |
 | B-5 | process/waves/wave-1/stages/B-5-verify.md | done | lint+test(11)+build+smoke(/health 200) all green |
-| B-6 | process/waves/wave-1/stages/B-6-review.md | pending | head-builder + /review gate |
+| B-6 | process/waves/wave-1/stages/B-6-review.md | done | head-builder APPROVED; /review 2 findings fixed; gate PASS |
 
 ## Block-specific context
 
@@ -37,3 +37,15 @@
 ## Gate verdict log
 
 <appended by fresh head-builder spawn at B-6 Action 1; one entry per attempt>
+
+## Build-block exit handoff
+```yaml
+build_block_status:    complete
+branch:                wave-1-foundation-scaffold
+stages_run:            [B-0, B-1, B-2, B-3, B-4, B-5, B-6]
+stages_skipped:        [B-0-schema (no DB this wave)]
+review_verdict:        APPROVE
+deviations_logged:     [api-commonjs-override, inline-svg-icons, NODE_ENV-test, supertest-shim, db-placeholder-scripts]
+last_commit_sha:       b51c39c
+ready_for_ci:          true
+```
