@@ -123,3 +123,11 @@ _(empty)_
 **Decision**: Standardize on **Node 22** (current LTS). Amended `_library.md` + `tools.md` (.nvmrc=22, engines `>=22`); CI now uses `node-version-file: .nvmrc` (single source) instead of a hardcoded version. `.nvmrc` (created at B-0) is canonical.
 **Rationale**: 22 is current LTS; CI was already on 22; lower churn than reverting to 20.15.0. Technical default per rule 17 (no founder poll).
 **Alternatives considered**: revert everything to 20.15.0 (rejected — older LTS, more churn).
+
+### [2026-Q2] Voice/video: LiveKit Cloud (not self-host on Railway)
+**Category**: Architecture
+**Status**: Active
+**Context**: Build-ahead SDK research for wave-6 (voice) resolved the self-host-vs-cloud question flagged open at v6/v6b.
+**Decision**: Use **LiveKit Cloud** for the voice/video study rooms, not self-hosted LiveKit on Railway.
+**Rationale**: WebRTC media needs a UDP port range (50000–60000) + TURN; Railway only exposes TCP services, so a self-hosted LiveKit on Railway leaves symmetric-NAT users without media connectivity. LiveKit Cloud handles the SFU + TURN. The api still mints short-lived room-scoped tokens server-side (server stays out of the media path). Verified against official LiveKit self-hosting docs (`command-center/dev/SDK-Docs/LiveKit/livekit.md`).
+**Alternatives considered**: self-host on a UDP-capable VPS (viable later if cost/control demands; deferred — adds ops burden at self-use-mvp).
