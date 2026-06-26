@@ -46,6 +46,16 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    setupFiles: [],
+    setupFiles: ['./src/test-setup.ts'],
+    // The shell may have NODE_ENV=production (e.g. CI / Railway workers).
+    // Vitest only writes NODE_ENV=test when it is unset — it does NOT override
+    // an existing value.  React 19's production CJS build omits `act`, which
+    // @testing-library/react requires.  Force NODE_ENV=test inside the test
+    // runner so react and react-dom load their development builds (where `act`
+    // is exported).  This env key is vitest-specific and does not affect
+    // `vite build`.
+    env: {
+      NODE_ENV: 'test',
+    },
   },
 });

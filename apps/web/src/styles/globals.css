@@ -1,0 +1,118 @@
+@import "tailwindcss";
+
+/**
+ * StudyHall design-system tokens — sourced from design/DESIGN-SYSTEM.md.
+ * All surface, accent, typography, shadow, and radius values are canonical.
+ * Do not add hex values that are not in the design system.
+ */
+@theme {
+  /* ── Surface palette: near-black layered zinc ── */
+  --color-surface-950: #0a0a0b; /* deepest background, app frame */
+  --color-surface-900: #121214; /* sidebars (server rail, channel sidebar) */
+  --color-surface-800: #1c1c1f; /* main canvas (message view) */
+  --color-surface-700: #27272a; /* borders, hover fills */
+  --color-surface-600: #3f3f46; /* stronger borders, scrollbar thumb */
+  --color-surface-500: #52525b; /* scrollbar hover, disabled fills */
+
+  /* ── Accent + semantic ── */
+  --color-accent-emerald: #10b981; /* primary: active channel, online, success */
+  --color-accent-amber:   #f59e0b; /* secondary: due-soon, reconnecting, warnings */
+  --color-danger:         #ef4444; /* destructive, error, offline */
+
+  /* ── Typography: Geist (design system §2) ── */
+  --font-sans: 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+
+  /* ── Elevation: dark-optimised (design system §5) ── */
+  --shadow-sm:          0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-pop:         0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-glow-focus:  0 0 0 2px rgba(16, 185, 129, 0.4);
+  --shadow-glow-subtle: 0 0 15px rgba(255, 255, 255, 0.05);
+
+  /* ── Shape (design system §4) ── */
+  --radius-sm:   2px;
+  --radius-md:   6px;
+  --radius-lg:   8px;
+  --radius-xl:   12px;
+  --radius-full: 9999px;
+}
+
+/* ── Semantic tokens used as CSS vars (not mapped to Tailwind utilities) ── */
+:root {
+  --border-hairline: rgba(255, 255, 255, 0.06);
+  --border-hover:    rgba(255, 255, 255, 0.10);
+  --text-primary:    rgba(255, 255, 255, 0.92);
+  --text-secondary:  rgba(255, 255, 255, 0.60);
+  --text-muted:      rgba(255, 255, 255, 0.40);
+}
+
+/* ── Dark base ── */
+html {
+  height: 100%;
+  overflow: hidden;
+  background-color: #0a0a0b;
+}
+
+body {
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: rgba(255, 255, 255, 0.92);
+  background-color: #0a0a0b;
+}
+
+#root {
+  height: 100%;
+}
+
+/* ── Minimal 6px dark scrollbar (design system §9) ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
+
+/* ── Reconnecting spinner ── */
+@keyframes sh-spin {
+  to { transform: rotate(360deg); }
+}
+.sh-animate-spin {
+  animation: sh-spin 1s linear infinite;
+}
+
+/* ── Offline indicator pulse ── */
+@keyframes sh-pulse {
+  0%, 100% { opacity: 0.75; }
+  50%       { opacity: 1; }
+}
+.sh-animate-pulse {
+  animation: sh-pulse 2s ease-in-out infinite;
+}
+
+/* ── Server rail icon morphing (squircle → rounded on active) ── */
+.rail-icon {
+  transition: border-radius 300ms ease, background-color 300ms ease;
+  border-radius: 9999px;
+}
+.rail-icon:is([data-active='true']) {
+  border-radius: 12px;
+}
+
+/* ── Respect prefers-reduced-motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .sh-animate-spin,
+  .sh-animate-pulse {
+    animation: none;
+  }
+}
