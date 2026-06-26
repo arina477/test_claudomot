@@ -12,7 +12,7 @@
 | B-0 | process/waves/wave-1/stages/B-0-branch-and-schema.md | done | scaffold + deps committed (3530e75); schema skipped; install+lint+typecheck green |
 | B-1 | process/waves/wave-1/stages/B-1-contracts.md | done | HealthResponse Zod authored; shared typecheck+build green |
 | B-2 | process/waves/wave-1/stages/B-2-backend.md | pending | NestJS api + /health |
-| B-3 | process/waves/wave-1/stages/B-3-frontend.md | pending | Vite/React dark app shell |
+| B-3 | process/waves/wave-1/stages/B-3-frontend.md | done | dark app shell built; typecheck+build+test (10/10) green |
 | B-4 | process/waves/wave-1/stages/B-4-wiring.md | pending | scripts + e2e typecheck |
 | B-5 | process/waves/wave-1/stages/B-5-verify.md | pending | lint/typecheck/test/dev smoke |
 | B-6 | process/waves/wave-1/stages/B-6-review.md | pending | head-builder + /review gate |

@@ -15,7 +15,7 @@
 
 import { useState } from 'react';
 import { ChannelSidebar } from './ChannelSidebar';
-import { type ConnectionState } from './ConnectionStateIndicator';
+import type { ConnectionState } from './ConnectionStateIndicator';
 import { MainColumn } from './MainColumn';
 import { ServerRail } from './ServerRail';
 import { XIcon } from './icons';
@@ -37,10 +37,7 @@ export function AppShell({ connectionState = 'online' }: Props) {
   }
 
   return (
-    <div
-      className="flex h-full w-full overflow-hidden"
-      style={{ backgroundColor: '#0a0a0b' }}
-    >
+    <div className="flex h-full w-full overflow-hidden" style={{ backgroundColor: '#0a0a0b' }}>
       {/* ── Pane 1: Server Rail (always visible) ── */}
       <ServerRail />
 
@@ -59,10 +56,11 @@ export function AppShell({ connectionState = 'online' }: Props) {
 
       {/* Mobile overlay backdrop */}
       {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 lg:hidden"
+        <button
+          type="button"
+          aria-label="Close channel sidebar"
+          className="fixed inset-0 z-40 lg:hidden cursor-default"
           style={{ backgroundColor: 'rgba(0,0,0,0.50)' }}
-          aria-hidden="true"
           onClick={closeSidebar}
         />
       )}
@@ -71,7 +69,7 @@ export function AppShell({ connectionState = 'online' }: Props) {
       <div
         className="fixed top-0 bottom-0 z-50 flex transition-transform duration-300 ease-in-out lg:hidden"
         style={{
-          left: 72, /* start at ServerRail width */
+          left: 72 /* start at ServerRail width */,
           transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
         }}
         aria-label="Channel sidebar drawer"
@@ -79,6 +77,7 @@ export function AppShell({ connectionState = 'online' }: Props) {
         <ChannelSidebar />
         {/* Close button overlaid on drawer edge */}
         <button
+          type="button"
           aria-label="Close channel sidebar"
           className="absolute right-[-40px] top-3 flex h-9 w-9 items-center justify-center rounded-full shadow-pop focus-visible:outline-none focus-visible:ring-2"
           style={{
@@ -93,10 +92,7 @@ export function AppShell({ connectionState = 'online' }: Props) {
       </div>
 
       {/* ── Pane 3: Main Column (flex-1, always visible) ── */}
-      <MainColumn
-        connectionState={connectionState}
-        onToggleSidebar={toggleSidebar}
-      />
+      <MainColumn connectionState={connectionState} onToggleSidebar={toggleSidebar} />
     </div>
   );
 }

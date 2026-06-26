@@ -30,34 +30,28 @@ type ChannelItemProps = {
 
 function ChannelItem({ icon, name, active = false, unread = false }: ChannelItemProps) {
   return (
-    <a
-      href="#"
-      role="listitem"
+    <button
+      type="button"
       aria-current={active ? 'page' : undefined}
-      className="flex items-center gap-2 rounded px-2 py-1.5 cursor-pointer select-none transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2"
+      className="flex w-full items-center gap-2 rounded px-2 py-1.5 cursor-pointer select-none transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2"
       style={{
         backgroundColor: active ? '#27272a' : 'transparent',
-        color: active
-          ? '#10b981'
-          : unread
-          ? 'rgba(255,255,255,0.92)'
-          : 'rgba(255,255,255,0.60)',
+        color: active ? '#10b981' : unread ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.60)',
       }}
       onMouseEnter={(e) => {
         if (!active) {
-          (e.currentTarget as HTMLAnchorElement).style.backgroundColor = '#1c1c1f';
-          (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.92)';
+          (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#1c1c1f';
+          (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.92)';
         }
       }}
       onMouseLeave={(e) => {
         if (!active) {
-          (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'transparent';
-          (e.currentTarget as HTMLAnchorElement).style.color = unread
+          (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+          (e.currentTarget as HTMLButtonElement).style.color = unread
             ? 'rgba(255,255,255,0.92)'
             : 'rgba(255,255,255,0.60)';
         }
       }}
-      onClick={(e) => e.preventDefault()}
     >
       <span className="shrink-0" style={{ color: active ? '#10b981' : 'rgba(255,255,255,0.40)' }}>
         {icon}
@@ -72,7 +66,7 @@ function ChannelItem({ icon, name, active = false, unread = false }: ChannelItem
           style={{ backgroundColor: 'rgba(255,255,255,0.85)' }}
         />
       )}
-    </a>
+    </button>
   );
 }
 
@@ -85,20 +79,19 @@ function Category({ name, children }: CategoryProps) {
   return (
     <div>
       <button
+        type="button"
         className="flex w-full items-center gap-1 px-1 mb-1 cursor-pointer focus-visible:outline-none group transition-colors duration-150"
         style={{ color: 'rgba(255,255,255,0.40)' }}
         aria-expanded="true"
       >
         <CaretDownIcon size={10} className="group-hover:text-white/60 transition-colors" />
-        <span
-          className="text-[11px] font-semibold uppercase tracking-widest group-hover:text-white/60 transition-colors"
-        >
+        <span className="text-[11px] font-semibold uppercase tracking-widest group-hover:text-white/60 transition-colors">
           {name}
         </span>
       </button>
-      <div role="list" className="space-y-[2px]">
+      <ul className="space-y-[2px]" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
         {children}
-      </div>
+      </ul>
     </div>
   );
 }
@@ -177,11 +170,15 @@ export function ChannelSidebar() {
                   aria-hidden="true"
                   style={{ height: 12 }}
                 >
-                  {[4, 8, 6].map((h, i) => (
+                  {[
+                    { id: 'wb-a', h: 4 },
+                    { id: 'wb-b', h: 8 },
+                    { id: 'wb-c', h: 6 },
+                  ].map((bar) => (
                     <span
-                      key={i}
+                      key={bar.id}
                       className="inline-block w-[2px] rounded-sm"
-                      style={{ height: h, backgroundColor: '#10b981' }}
+                      style={{ height: bar.h, backgroundColor: '#10b981' }}
                     />
                   ))}
                 </div>
@@ -219,6 +216,7 @@ export function ChannelSidebar() {
         }}
       >
         <button
+          type="button"
           aria-label="Your profile and settings"
           className="flex w-full items-center gap-2 rounded-md p-1.5 cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 group"
           onMouseEnter={(e) => {

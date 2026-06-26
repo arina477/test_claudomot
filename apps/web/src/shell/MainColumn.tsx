@@ -14,22 +14,14 @@
  */
 
 import { type ConnectionState, ConnectionStateIndicator } from './ConnectionStateIndicator';
-import {
-  HashIcon,
-  MagnifyingGlassIcon,
-  MenuIcon,
-  PushPinIcon,
-} from './icons';
+import { HashIcon, MagnifyingGlassIcon, MenuIcon, PushPinIcon } from './icons';
 
 type Props = {
   connectionState?: ConnectionState;
   onToggleSidebar?: () => void;
 };
 
-export function MainColumn({
-  connectionState = 'online',
-  onToggleSidebar,
-}: Props) {
+export function MainColumn({ connectionState = 'online', onToggleSidebar }: Props) {
   return (
     <main
       data-testid="main-column"
@@ -51,6 +43,7 @@ export function MainColumn({
       >
         {/* Mobile sidebar toggle — only visible below lg */}
         <button
+          type="button"
           aria-label="Toggle channel sidebar"
           className="mr-3 flex h-9 w-9 shrink-0 items-center justify-center rounded-md transition-colors duration-150 lg:hidden focus-visible:outline-none focus-visible:ring-2"
           style={{ color: 'rgba(255,255,255,0.60)' }}
@@ -83,10 +76,7 @@ export function MainColumn({
         />
 
         {/* Topic */}
-        <p
-          className="truncate text-[13px] font-medium"
-          style={{ color: 'rgba(255,255,255,0.60)' }}
-        >
+        <p className="truncate text-[13px] font-medium" style={{ color: 'rgba(255,255,255,0.60)' }}>
           Discussion about lectures, concepts, and problem sets.
         </p>
 
@@ -96,12 +86,14 @@ export function MainColumn({
           style={{ color: 'rgba(255,255,255,0.40)' }}
         >
           <button
+            type="button"
             aria-label="Search in channel"
             className="transition-colors duration-150 hover:text-white/90 focus-visible:outline-none focus-visible:ring-2 rounded"
           >
             <MagnifyingGlassIcon size={18} />
           </button>
           <button
+            type="button"
             aria-label="View pinned messages"
             className="transition-colors duration-150 hover:text-white/90 focus-visible:outline-none focus-visible:ring-2 rounded"
           >
@@ -125,26 +117,17 @@ export function MainColumn({
             <HashIcon size={28} className="" />
           </div>
 
-          <h3
-            className="text-base font-semibold"
-            style={{ color: 'rgba(255,255,255,0.92)' }}
-          >
+          <h3 className="text-base font-semibold" style={{ color: 'rgba(255,255,255,0.92)' }}>
             Welcome to #questions
           </h3>
-          <p
-            className="text-[13px] leading-relaxed"
-            style={{ color: 'rgba(255,255,255,0.40)' }}
-          >
+          <p className="text-[13px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.40)' }}>
             This is the beginning of the #questions channel. Ask away — the whole cohort can help.
           </p>
         </div>
       </div>
 
       {/* Message composer placeholder — bottom */}
-      <div
-        className="shrink-0 px-5 pb-6 pt-2"
-        aria-label="Message composer"
-      >
+      <div className="shrink-0 px-5 pb-6 pt-2" aria-label="Message composer">
         <div
           className="flex items-center rounded-xl px-4 py-3"
           style={{
@@ -153,10 +136,7 @@ export function MainColumn({
             boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)',
           }}
         >
-          <span
-            className="text-[14px]"
-            style={{ color: 'rgba(255,255,255,0.30)' }}
-          >
+          <span className="text-[14px]" style={{ color: 'rgba(255,255,255,0.30)' }}>
             Message #questions
           </span>
         </div>

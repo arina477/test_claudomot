@@ -21,7 +21,7 @@ type ServerIconProps = {
 
 function ServerIconButton({ label, active = false, initials }: ServerIconProps) {
   return (
-    <div className="relative flex w-full justify-center group" role="listitem">
+    <li className="relative flex w-full justify-center group">
       {/* Active / hover left-edge indicator bar */}
       <span
         aria-hidden="true"
@@ -40,6 +40,7 @@ function ServerIconButton({ label, active = false, initials }: ServerIconProps) 
       />
 
       <button
+        type="button"
         aria-label={label}
         aria-current={active ? 'page' : undefined}
         data-active={active}
@@ -66,7 +67,7 @@ function ServerIconButton({ label, active = false, initials }: ServerIconProps) 
       >
         {label}
       </div>
-    </div>
+    </li>
   );
 }
 
@@ -82,13 +83,14 @@ export function ServerRail() {
       }}
     >
       {/* Home button */}
-      <div className="relative flex w-full justify-center group" role="listitem">
+      <div className="relative flex w-full justify-center group">
         <span
           aria-hidden="true"
           className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-full"
           style={{ backgroundColor: 'rgba(255,255,255,0.85)' }}
         />
         <button
+          type="button"
           aria-label="Home"
           className="w-11 h-11 flex items-center justify-center rounded-xl cursor-pointer focus-visible:outline-none focus-visible:ring-2"
           style={{
@@ -120,18 +122,23 @@ export function ServerRail() {
       />
 
       {/* Placeholder servers */}
-      <div role="list" aria-label="Your servers" className="flex flex-col items-center gap-2 w-full">
+      <ul
+        aria-label="Your servers"
+        className="flex flex-col items-center gap-2 w-full"
+        style={{ listStyle: 'none', padding: 0, margin: 0 }}
+      >
         <ServerIconButton label="CS-201 Data Structures" active initials="CS" />
         <ServerIconButton label="LIT-104 Literature" initials="LIT" />
         <ServerIconButton label="Study Group Alpha" initials="SG" />
-      </div>
+      </ul>
 
       {/* Spacer */}
       <div className="flex-1" aria-hidden="true" />
 
       {/* Create / Add server button */}
-      <div className="relative flex w-full justify-center group" role="listitem">
+      <div className="relative flex w-full justify-center group">
         <button
+          type="button"
           aria-label="Add a server"
           className="rail-icon w-11 h-11 flex items-center justify-center cursor-pointer focus-visible:outline-none focus-visible:ring-2"
           style={{

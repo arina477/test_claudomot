@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { type INestApplication } from '@nestjs/common';
+import type { INestApplication } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { HealthResponseSchema } from '@studyhall/shared';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';

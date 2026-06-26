@@ -15,9 +15,7 @@ import { ConnectionStateIndicator } from './ConnectionStateIndicator';
 describe('AppShell', () => {
   it('renders the server rail navigation', () => {
     render(<AppShell />);
-    expect(
-      screen.getByRole('navigation', { name: /server rail/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: /server rail/i })).toBeInTheDocument();
   });
 
   it('renders the channel sidebar (desktop — present in DOM)', () => {

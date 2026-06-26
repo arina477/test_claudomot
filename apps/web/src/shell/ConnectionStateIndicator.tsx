@@ -21,21 +21,15 @@ export function ConnectionStateIndicator({ state }: Props) {
   if (state === 'online') {
     // Online state: minimal/hidden. Render invisibly so DOM presence is consistent.
     return (
-      <div
-        role="status"
-        aria-live="polite"
-        aria-label="Connection status: online"
-        className="sr-only"
-      >
+      <output aria-live="polite" aria-label="Connection status: online" className="sr-only">
         Online
-      </div>
+      </output>
     );
   }
 
   if (state === 'reconnecting') {
     return (
-      <div
-        role="status"
+      <output
         aria-live="polite"
         className="sh-animate-pulse flex items-center gap-2 px-4 py-1.5 border-b text-xs font-medium tracking-wide"
         style={{
@@ -52,20 +46,16 @@ export function ConnectionStateIndicator({ state }: Props) {
           aria-hidden="true"
         />
 
-        <SpinnerIcon
-          size={12}
-          className="sh-animate-spin shrink-0"
-        />
+        <SpinnerIcon size={12} className="sh-animate-spin shrink-0" />
 
         <span>Reconnecting…</span>
-      </div>
+      </output>
     );
   }
 
   // offline
   return (
-    <div
-      role="status"
+    <output
       aria-live="polite"
       className="flex items-center gap-2 px-4 py-1.5 border-b text-xs font-medium tracking-wide"
       style={{
@@ -83,6 +73,6 @@ export function ConnectionStateIndicator({ state }: Props) {
       />
 
       <span>Offline — messages will send when you&apos;re back</span>
-    </div>
+    </output>
   );
 }
