@@ -29,6 +29,14 @@
 **Alternatives considered**: Next.js App Router (baseline default — rejected for this product shape: SSR overhead, weaker offline-first fit); Electron-first (deferred — start web, wrap later only if a desktop-only capability demands it).
 **Cascading updates**: v6 (offline sync engine as core module; LiveKit self-host-vs-cloud; promote Resend email; flag Redis), v6b (.env.example + project.yaml stack fields). See `command-center/dev/stack-decisions.md`.
 
+### [2026-Q2] Architecture cross-branch conflicts resolved (v6b)
+**Category**: Architecture
+**Status**: Active
+**Context**: v6b architect-reviewer scan found 20 cross-branch drifts (naming/ownership/contract) across the 8 parallel architecture branches. None were product trade-offs; all resolved by canonical-source rule (databases.md → table/column names + data ownership; services.md → NestJS module boundaries; security/sdks → policy). Founder away in automatic mode; engineering-default resolutions per rule 17.
+**Decision**: Canonical resolutions now authoritative in `_library.md` § Cross-domain (Resolved cross-branch decisions). Key ones: (1) ServersModule owns servers/members/channels/categories/invites/bans; (2) single `users` table holds profile + privacy fields (no separate profiles/privacy_settings tables); (3) single-role-per-member RBAC (`server_members.role_id`, no join tables); (4) two-tier invites (permanent `servers.invite_code` + ad-hoc `invites`); (5) offline outbox replays as idempotent `POST /api/messages` (idempotency_key, UNIQUE per channel) — no `/sync` namespace; catch-up via paginated history `?after=` cursor; (6) WS/LiveKit auth = SuperTokens session cookie on upgrade, short-lived JWT fallback for cross-origin/PWA; (7) auth emails via SuperTokens Core, invite/reminder via NotificationsModule (Resend, two keys); (8) 2 Socket.IO namespaces (`/messaging`, `/presence`); (9) file caps 2 MB avatar / 10 MB attachment; storage env vars `AWS_*`; (10) session cookie `SameSite=Lax`; (11) offline-sync is a `apps/web/src/features/sync` slice; CI adds web/e2e/offline jobs + gitleaks secret-scan; Sentry-PII lint guard deferred to H2.
+**Rationale**: `_library.md` is the authoritative integrated reference (wins on any branch conflict); branch files remain expanded detail.
+**Alternatives considered**: per-branch rewrites of all losing files (deferred — proportionality; `_library.md` authority + this log are the record).
+
 ## Authentication & Security
 
 _(empty)_

@@ -5,37 +5,41 @@
 # to change project facts. `claudomat doctor` validates schema (required keys,
 # enum constraints, no-password-in-test-users guard).
 
-name: "_(fill in: project name)_"
+name: "StudyHall"
 # description: single-line scalar (plain or quoted). Block-literal (`|` / `>`) is
 # rejected by `claudomat doctor` because v13 README finalization extracts this
 # value via a single-line read; multi-line block scalars produce garbage there.
-description: "_(fill in: one sentence — what you're building, who for, what competitors you'll displace)_"
+description: "A dark-themed desktop study app for remote students — group servers, real-time chat, and drop-in voice/video study rooms with offline-first reliability — built to displace Discord for coursework."
 
 stack:
-  repo_shape: "_(monorepo | single-package | other)_"
-  backend: "_(NestJS | FastAPI | Rails | Django | Express | ...)_"
-  database: "_(Postgres 15 | MySQL | MongoDB | SQLite | ...)_"
-  frontend: "_(Next.js | SvelteKit | Vue | none)_"
-  shared_contracts: "_(Zod | OpenAPI | tRPC | none)_"
-  deploy_platform: "_(railway | vercel | netlify | aws | gcp | azure | heroku | render | custom | none)_"
-  compliance_regime: "_(gdpr | hipaa | pci | soc2 | none)_"
-  industry_domain: "_(marketplace | fintech | ai tooling | dev tools | ...)_"
+  repo_shape: "monorepo"
+  backend: "NestJS"
+  database: "Postgres 16"
+  frontend: "Vite + React"
+  shared_contracts: "Zod"
+  deploy_platform: "railway"
+  compliance_regime: "none"
+  industry_domain: "edtech"
 
 quick_start:
   # Shell snippets read by T-4 (local DB setup) and surfaced in README.md.
-  install: "_(fill in: e.g. npm ci)_"
-  db_setup: "_(fill in: e.g. npx drizzle-kit migrate)_"
-  run_dev: "_(fill in: e.g. npm run dev)_"
+  install: "pnpm install"
+  db_setup: "pnpm db:migrate && pnpm db:seed"
+  run_dev: "pnpm dev"
 
 commands:
   # Project-defined commands (build / lint / test / typecheck / PR conventions).
   # Read by C-1 (PR conventions), C-2 (deploy commands), simplify skill.
-  - name: "_(fill in: e.g. build)_"
-    description: "_(...)_"
-  - name: "_(fill in: e.g. test)_"
-    description: "_(...)_"
+  - name: "pnpm build"
+    description: "Turborepo build across all workspaces"
+  - name: "pnpm lint"
+    description: "Biome lint + format check (single tool)"
+  - name: "pnpm typecheck"
+    description: "tsc project-references typecheck"
+  - name: "pnpm test"
+    description: "Vitest unit + integration; pnpm test:ci in CI"
 
-merge_strategy: "_(squash | merge | rebase)_"
+merge_strategy: "squash"
 
 # --- Deployment + access (claudomat default; the brain reads this in the C-block) ---
 # Per-project source of truth for the brain's deploy access — concrete tech names live
@@ -57,9 +61,9 @@ merge_strategy: "_(squash | merge | rebase)_"
 # AND the entries below to match your provider's account, CLI, and token.
 deploy_targets:
   # Read by C-2. One entry per platform the wave deploys to.
-  - platform: "_(railway | vercel | netlify | aws | gcp | azure | heroku | render | custom)_"
-    project: "_(platform-side project/account identifier — e.g. Railway project name, Vercel team slug, Netlify site name)_"
-    service_name_template: "_(fill in: e.g. eval-${EVAL_ID})_"
+  - platform: "railway"
+    project: "studyhall"   # generic placeholder; brain provisions + back-fills the real Railway project at first deploy (C-2 Action 0)
+    service_name_template: "studyhall-${SERVICE}"
     health_endpoint: "/health"
     canary_threshold_dau: 1000
 

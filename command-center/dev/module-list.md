@@ -1,3 +1,9 @@
+---
+status: locked
+locked_at: 2026-06-26T07:30:00Z
+locked_by: v6b
+---
+
 # Module List (v6 snapshot)
 
 ## MVP modules
@@ -58,4 +64,4 @@
 ---
 
 Last updated: 2026-06-26, source: v6 Modules branch
-status: draft
+status: locked  # v6b locked this snapshot (see front-matter)
