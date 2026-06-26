@@ -1,0 +1,11 @@
+process/session/.autonomous-session
+process/session/.capability-sheet.md
+process/session/.loop-paused.yaml
+process/session/.last-wave-completed.yaml
+process/session/.exit-warnings.log
+process/session/status-check.yaml
+process/session/updates/.last-daily-checkpoint
+command-center/testing/test-accounts.md
+.env
+.env.local
+.env.*.local

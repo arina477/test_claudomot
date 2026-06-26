@@ -1,0 +1,75 @@
+# project.yaml — structured project facts read by claudomat agents/recipes.
+#
+# Created by `claudomat init`, filled in via install.md Phase 2 / onboarding
+# loop. Never replaced by `claudomat sync` — edit this file (NOT `CLAUDE.md`)
+# to change project facts. `claudomat doctor` validates schema (required keys,
+# enum constraints, no-password-in-test-users guard).
+
+name: "_(fill in: project name)_"
+# description: single-line scalar (plain or quoted). Block-literal (`|` / `>`) is
+# rejected by `claudomat doctor` because v13 README finalization extracts this
+# value via a single-line read; multi-line block scalars produce garbage there.
+description: "_(fill in: one sentence — what you're building, who for, what competitors you'll displace)_"
+
+stack:
+  repo_shape: "_(monorepo | single-package | other)_"
+  backend: "_(NestJS | FastAPI | Rails | Django | Express | ...)_"
+  database: "_(Postgres 15 | MySQL | MongoDB | SQLite | ...)_"
+  frontend: "_(Next.js | SvelteKit | Vue | none)_"
+  shared_contracts: "_(Zod | OpenAPI | tRPC | none)_"
+  deploy_platform: "_(railway | vercel | netlify | aws | gcp | azure | heroku | render | custom | none)_"
+  compliance_regime: "_(gdpr | hipaa | pci | soc2 | none)_"
+  industry_domain: "_(marketplace | fintech | ai tooling | dev tools | ...)_"
+
+quick_start:
+  # Shell snippets read by T-4 (local DB setup) and surfaced in README.md.
+  install: "_(fill in: e.g. npm ci)_"
+  db_setup: "_(fill in: e.g. npx drizzle-kit migrate)_"
+  run_dev: "_(fill in: e.g. npm run dev)_"
+
+commands:
+  # Project-defined commands (build / lint / test / typecheck / PR conventions).
+  # Read by C-1 (PR conventions), C-2 (deploy commands), simplify skill.
+  - name: "_(fill in: e.g. build)_"
+    description: "_(...)_"
+  - name: "_(fill in: e.g. test)_"
+    description: "_(...)_"
+
+merge_strategy: "_(squash | merge | rebase)_"
+
+# --- Deployment + access (claudomat default; the brain reads this in the C-block) ---
+# Per-project source of truth for the brain's deploy access — concrete tech names live
+# HERE (in project.yaml), never in the brain's generic CLAUDE.md.
+# Bring-your-own deploy platform: the founder supplies the hosting account and its
+# credential; nothing is pre-provisioned for the brain. The default platform is Railway,
+# but the brain does NOT assume a ready-made project or token is waiting in the environment.
+#   - When the C-block first needs to deploy and finds no usable platform credential, the
+#     brain PAUSES and asks the founder to create their own account, mint an API token, and
+#     paste it (C-2 Action 0). It never declares "no access" or invents a manual workaround.
+#   - With the founder's own (full-power) token the brain provisions the project / service /
+#     database, generates a public domain, deploys, and reports the live URL back. Never
+#     commit any token value — it lives only in the environment / platform secrets.
+#   - Scoped to THIS project only — no access to other founders' accounts or projects.
+# `deploy_targets[]` below is what C-2 reads to verify the deploy landed; fill it in once the
+# brain has provisioned the target (project name, service template, health endpoint). For how
+# credentials are collected, see C-2 Action 0 (`claudomat-brain/blocks/ci-cd/stages/C-2-deploy-and-verify.md`).
+# If you move off the Railway default — e.g. to Netlify, Vercel, AWS, GCP — update this note
+# AND the entries below to match your provider's account, CLI, and token.
+deploy_targets:
+  # Read by C-2. One entry per platform the wave deploys to.
+  - platform: "_(railway | vercel | netlify | aws | gcp | azure | heroku | render | custom)_"
+    project: "_(platform-side project/account identifier — e.g. Railway project name, Vercel team slug, Netlify site name)_"
+    service_name_template: "_(fill in: e.g. eval-${EVAL_ID})_"
+    health_endpoint: "/health"
+    canary_threshold_dau: 1000
+
+test_users:
+  # Local-dev test accounts. Commit-able. NEVER include passwords / tokens /
+  # secrets / api keys (claudomat doctor fails the schema if any appear here).
+  # Prod-fixture credentials live in command-center/testing/test-accounts.md
+  # (gitignored) — that's where passwords belong.
+  local_dev:
+    - label: "_(fill in: e.g. admin)_"
+      email: "_(fill in: e.g. admin@example.com)_"
+    - label: "_(fill in: e.g. user)_"
+      email: "_(fill in: e.g. user@example.com)_"
