@@ -51,7 +51,13 @@ _(empty)_
 
 ## UI & Design
 
-_(empty)_
+### [2026-Q2] Design direction approved
+**Category**: Design
+**Status**: Active
+**Context**: v7 onboarding design direction, anchored on the server channel view (the 3-pane core users live on). Founder away in automatic mode; reviewed and adopted on the founder's behalf — revisable.
+**Decision**: Calm, focused, academic dark theme. Near-black zinc base (#0a0a0b → #1c1c1f layered surfaces), hairline borders (white @6% opacity), **emerald (#10b981)** as the primary academic accent with **amber (#f59e0b)** secondary; Geist sans (Linear-crisp typographic hierarchy). Discord-familiar 3-pane layout (server rail → channel sidebar → message view → member list) but quieter and warmer — not gaming-neon. Channels #general / #questions / #assignments + voice "Study Room"; assignments surfaced as first-class; connection/sync state indicator present (the offline-first wedge made visible); member presence (online / in voice).
+**Rationale**: Matches the emotional anchors (calm · focused · friendly · credible · low-noise). Familiar enough to be instantly usable by Discord-native students, but visibly calmer and school-aware — the positioning wedge expressed visually. Dark-only per the explicit brief must-have.
+**Artifacts**: `design/direction.html`, `process/session/onboarding/v7-direction-brief.md`
 
 ## DevOps & Deploy
 

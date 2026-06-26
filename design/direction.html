@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en" class="antialiased dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyHall — CS-201</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Geist', 'sans-serif'],
+          },
+          colors: {
+            study: {
+              950: '#0a0a0b', // Deepest background
+              900: '#121214', // Sidebar background
+              800: '#1c1c1f', // Main canvas background
+              700: '#27272a', // Borders and hovers
+              600: '#3f3f46',
+              border: 'rgba(255, 255, 255, 0.06)'
+            },
+            accent: {
+              emerald: '#10b981',
+              amber: '#f59e0b',
+              muted: 'rgba(255, 255, 255, 0.6)'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Scrollbar - Minimal & Dark */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #3f3f46;
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #52525b;
+    }
+
+    /* Refraction & Depth Utilities */
+    .glass-panel {
+      background: rgba(28, 28, 31, 0.6);
+      backdrop-filter: blur(12px);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    .recessed-input {
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.02);
+    }
+
+    /* Motion Engine */
+    @keyframes pulse-offline {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
+    }
+    .animate-offline-pulse {
+      animation: pulse-offline 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes sending-shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    .shimmer-mask {
+      position: relative;
+      overflow: hidden;
+    }
+    .shimmer-mask::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+      animation: sending-shimmer 2s infinite;
+    }
+
+    @keyframes voice-wave {
+      0% { height: 4px; }
+      50% { height: 12px; }
+      100% { height: 4px; }
+    }
+    .wave-line {
+      width: 2px;
+      background: #10b981;
+      border-radius: 2px;
+      animation: voice-wave 1s infinite ease-in-out;
+    }
+    .wave-line:nth-child(2) { animation-delay: 0.2s; }
+    .wave-line:nth-child(3) { animation-delay: 0.4s; }
+
+    /* Thread Reply Line */
+    .thread-line::before {
+      content: '';
+      position: absolute;
+      top: 20px;
+      left: -32px;
+      width: 24px;
+      height: calc(100% - 20px);
+      border-left: 2px solid #3f3f46;
+      border-top: 2px solid #3f3f46;
+      border-top-left-radius: 8px;
+    }
+
+    /* Active Server Pill */
+    .server-active-pill {
+      transform: scaleY(0.4);
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .server-group:hover .server-active-pill {
+      transform: scaleY(0.6);
+    }
+    .server-group.active .server-active-pill {
+      transform: scaleY(1);
+      opacity: 1;
+    }
+
+    /* Layout overrides for mobile safety */
+    @media (max-width: 1024px) {
+      .three-pane-grid {
+        grid-template-columns: 72px 240px 1fr !important;
+      }
+      .right-sidebar {
+        display: none !important;
+      }
+    }
+    @media (max-width: 768px) {
+      .three-pane-grid {
+        display: flex !important;
+        flex-direction: column !important;
+      }
+      .server-rail, .channel-sidebar {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-study-950 text-zinc-300 h-[100dvh] w-full overflow-hidden select-none">
+
+  <!-- Desktop Grid Layout -->
+  <div class="three-pane-grid grid h-full w-full" style="grid-template-columns: 72px 260px 1fr 280px;">
+
+    <!-- PANE 1: SERVER RAIL (Global Context) -->
+    <nav class="server-rail bg-study-950 border-r border-study-border flex flex-col items-center py-4 gap-3 z-30">
+      
+      <!-- Home App Icon -->
+      <button class="server-group relative group w-12 h-12 flex justify-center items-center">
+        <div class="absolute left-0 w-1 bg-white rounded-r-md min-h-[32px] opacity-0 transition-opacity"></div>
+        <div class="w-12 h-12 rounded-[24px] bg-study-800 flex items-center justify-center text-zinc-400 group-hover:rounded-[16px] group-hover:bg-zinc-700 transition-all duration-300">
+          <i class="ph ph-books text-xl"></i>
+        </div>
+      </button>
+
+      <div class="w-8 h-[2px] bg-study-700 rounded-full my-1"></div>
+
+      <!-- Server: CS-201 (Active) -->
+      <button class="server-group active relative group w-12 h-12 flex justify-center items-center">
+        <div class="server-active-pill absolute left-0 w-1 bg-white rounded-r-md h-full opacity-60"></div>
+        <!-- Using real image for server icon -->
+        <div class="w-12 h-12 rounded-[16px] overflow-hidden transition-all duration-300 border border-white/10 shadow-[0_0_15px_rgba(255,255,255,0.05)]">
+          <img src="https://images.unsplash.com/photo-1516116216624-53e697fedbea?auto=format&fit=crop&w=150&q=80" alt="CS Logic Server" class="w-full h-full object-cover">
+        </div>
+      </button>
+
+      <!-- Server: Lit-104 -->
+      <button class="server-group relative group w-12 h-12 flex justify-center items-center">
+        <div class="server-active-pill absolute left-0 w-1 bg-zinc-400 rounded-r-md h-full opacity-0"></div>
+        <div class="w-12 h-12 rounded-[24px] bg-study-800 flex items-center justify-center text-zinc-400 font-medium tracking-wider group-hover:rounded-[16px] group-hover:bg-study-700 group-hover:text-zinc-100 transition-all duration-300">
+          LIT
+        </div>
+      </button>
+
+      <!-- Server: Study Group -->
+      <button class="server-group relative group w-12 h-12 flex justify-center items-center">
+        <div class="server-active-pill absolute left-0 w-1 bg-zinc-400 rounded-r-md h-full opacity-0"></div>
+        <div class="w-12 h-12 rounded-[24px] bg-study-800 flex items-center justify-center text-zinc-400 font-medium group-hover:rounded-[16px] group-hover:bg-study-700 group-hover:text-zinc-100 transition-all duration-300">
+          <img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=150&q=80" alt="Study Group" class="w-full h-full object-cover">
+        </div>
+      </button>
+      
+      <div class="mt-auto w-12 h-12 rounded-full border border-study-700 flex items-center justify-center hover:bg-study-800 transition-colors cursor-pointer relative">
+        <i class="ph ph-plus text-zinc-400"></i>
+      </div>
+    </nav>
+
+
+    <!-- PANE 2: CHANNEL SIDEBAR (Local Context) -->
+    <aside class="channel-sidebar bg-study-900 border-r border-study-border flex flex-col z-20">
+      
+      <!-- Server Header -->
+      <header class="h-14 flex items-center justify-between px-4 border-b border-study-border hover:bg-zinc-800/50 cursor-pointer transition-colors shadow-[0_1px_2px_rgba(0,0,0,0.2)] z-10 glass-panel">
+        <h1 class="font-semibold text-zinc-100 truncate pr-2 tracking-tight">CS-201 Data Structures</h1>
+        <i class="ph ph-caret-down text-zinc-400 text-sm"></i>
+      </header>
+
+      <!-- Scrollable Channel List -->
+      <div class="flex-1 overflow-y-auto px-2 py-4 space-y-5">
+        
+        <!-- Category: Coursework -->
+        <div>
+          <div class="flex items-center group px-1 mb-1 cursor-pointer">
+            <i class="ph ph-caret-down text-[10px] text-zinc-500 mr-1 transition-transform group-hover:text-zinc-300"></i>
+            <h2 class="text-xs font-semibold text-zinc-500 uppercase tracking-widest group-hover:text-zinc-300 transition-colors">Coursework</h2>
+          </div>
+          <div class="space-y-[2px]">
+            <a href="#" class="flex items-center px-2 py-1.5 rounded text-zinc-400 hover:bg-study-800 hover:text-zinc-200 transition-all group">
+              <i class="ph ph-hash text-zinc-500 mr-2 text-lg group-hover:text-zinc-400"></i>
+              <span class="text-[14px]">general</span>
+            </a>
+            <a href="#" class="flex items-center px-2 py-1.5 rounded bg-study-700/50 text-zinc-100 transition-all group border border-white/5 shadow-sm">
+              <i class="ph ph-hash text-zinc-300 mr-2 text-lg"></i>
+              <span class="text-[14px] font-medium">questions</span>
+              <div class="ml-auto w-1.5 h-1.5 bg-zinc-300 rounded-full"></div> <!-- Unread indicator -->
+            </a>
+            <a href="#" class="flex items-center px-2 py-1.5 rounded text-zinc-400 hover:bg-study-800 hover:text-zinc-200 transition-all group">
+              <i class="ph ph-file-text text-zinc-500 mr-2 text-lg group-hover:text-zinc-400"></i>
+              <span class="text-[14px]">syllabus</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Category: Voice Study Rooms -->
+        <div>
+          <div class="flex items-center group px-1 mb-1 cursor-pointer">
+            <i class="ph ph-caret-down text-[10px] text-zinc-500 mr-1 transition-transform group-hover:text-zinc-300"></i>
+            <h2 class="text-xs font-semibold text-zinc-500 uppercase tracking-widest group-hover:text-zinc-300 transition-colors">Live Study</h2>
+          </div>
+          
+          <div class="space-y-[2px]">
+            <div class="flex flex-col rounded bg-study-950/40 p-1 border border-study-700/50">
+              <a href="#" class="flex items-center px-2 py-1.5 rounded text-zinc-300 hover:bg-study-800 transition-all group">
+                <i class="ph pl-speaker-high text-zinc-400 mr-2 text-lg"></i>
+                <span class="text-[14px]">Study Room (Quiet)</span>
+              </a>
+              <!-- Active Voice Participants -->
+              <div class="pl-8 pr-2 py-1 flex flex-col gap-1.5">
+                <div class="flex items-center gap-2 group">
+                  <div class="relative">
+                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=64&q=80" alt="Sarah" class="w-6 h-6 rounded-full border border-emerald-500/50">
+                    <div class="absolute -bottom-0.5 -right-0.5 bg-study-900 rounded-full p-[2px]">
+                      <div class="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                    </div>
+                  </div>
+                  <span class="text-xs text-zinc-400 group-hover:text-zinc-200">Sarah Jenkins</span>
+                  <!-- Voice Activity Wave -->
+                  <div class="ml-auto flex items-end gap-[2px] h-3">
+                    <div class="wave-line"></div>
+                    <div class="wave-line"></div>
+                    <div class="wave-line"></div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 group">
+                  <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=64&q=80" alt="David" class="w-6 h-6 rounded-full opacity-60">
+                  <span class="text-xs text-zinc-500 group-hover:text-zinc-300">David C.</span>
+                  <i class="ph ph-microphone-slash text-zinc-600 ml-auto text-xs"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Current User Controls (Bottom fixed) -->
+      <div class="h-[60px] bg-study-950/80 px-2 flex items-center border-t border-study-border mt-auto backdrop-blur-md">
+        <div class="flex items-center p-1.5 rounded-md hover:bg-study-800 transition-colors cursor-pointer w-full group">
+          <div class="relative">
+            <img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=64&q=80" alt="My Profile" class="w-8 h-8 rounded-full border border-zinc-700 group-hover:border-zinc-500 transition-colors">
+            <div class="absolute -bottom-0.5 -right-0.5 bg-study-950 rounded-full p-[2px]">
+              <div class="w-2.5 h-2.5 bg-emerald-500 rounded-full border border-study-950"></div>
+            </div>
+          </div>
+          <div class="flex flex-col ml-2 overflow-hidden">
+            <span class="text-[13px] font-medium text-zinc-200 truncate">Elias (You)</span>
+            <span class="text-[11px] text-zinc-500 truncate">elias@mit.edu</span>
+          </div>
+          <div class="ml-auto flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button class="w-7 h-7 rounded hover:bg-zinc-700 flex items-center justify-center text-zinc-400">
+              <i class="ph ph-microphone"></i>
+            </button>
+            <button class="w-7 h-7 rounded hover:bg-zinc-700 flex items-center justify-center text-zinc-400">
+              <i class="ph ph-gear"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+
+    <!-- PANE 3: MAIN CHAT CANVAS (The Core) -->
+    <main class="main-chat bg-study-800 flex flex-col min-w-0 z-10 relative">
+      
+      <!-- Top Banner: Offline / Reconnecting State -->
+      <div class="bg-amber-500/10 border-b border-amber-500/20 px-4 py-1.5 flex items-center gap-2 z-20 w-full glass-panel absolute top-0 left-0 animate-offline-pulse">
+        <i class="ph ph-wifi-slash text-amber-500 text-sm"></i>
+        <span class="text-xs font-medium text-amber-500/90 tracking-wide">Working Offline: Waiting for network reconnection to sync messages...</span>
+        <button class="ml-auto text-xs text-amber-500/80 hover:text-amber-400 underline decoration-amber-500/30 underline-offset-2">Try now</button>
+      </div>
+
+      <!-- Channel Header -->
+      <header class="h-14 mt-[34px] flex items-center px-5 border-b border-study-border shadow-[0_4px_24px_-8px_rgba(0,0,0,0.5)] z-10 bg-study-800/95 backdrop-blur-sm shrink-0">
+        <i class="ph ph-hash text-zinc-400 text-2xl mr-2"></i>
+        <h2 class="font-semibold text-zinc-100 text-[15px] tracking-tight">questions</h2>
+        <div class="mx-3 w-[1px] h-4 bg-study-600"></div>
+        <p class="text-[13px] text-zinc-400 font-medium truncate">Discussion about lectures, concepts, and Psets.</p>
+        
+        <div class="ml-auto flex items-center gap-4 text-zinc-400">
+          <i class="ph ph-magnifying-glass text-lg hover:text-zinc-200 cursor-pointer transition-colors"></i>
+          <i class="ph ph-push-pin text-lg hover:text-zinc-200 cursor-pointer transition-colors"></i>
+          <i class="ph ph-sidebar-simple text-lg text-zinc-200 cursor-pointer transition-colors"></i> <!-- Sidebar open indicator -->
+        </div>
+      </header>
+
+      <!-- Message History (Scrollable) -->
+      <div class="flex-1 overflow-y-auto px-1 py-6 flex flex-col gap-5 select-text">
+        
+        <!-- System Date Divider -->
+        <div class="flex items-center px-4 my-2 opacity-60">
+          <div class="flex-1 h-[1px] bg-study-700"></div>
+          <span class="text-[11px] font-semibold text-zinc-500 mx-3 tracking-widest uppercase">October 24, 2023</span>
+          <div class="flex-1 h-[1px] bg-study-700"></div>
+        </div>
+
+        <!-- Normal Message -->
+        <div class="group px-4 py-1 flex gap-4 hover:bg-study-700/30 transition-colors -mx-1 rounded-lg relative">
+          <!-- Absolute hover actions -->
+          <div class="absolute right-4 -top-3 hidden group-hover:flex items-center bg-study-700 border border-study-border rounded-md shadow-lg overflow-hidden z-10 text-zinc-400">
+            <button class="p-1.5 hover:bg-study-600 transition-colors"><i class="ph ph-smiley"></i></button>
+            <button class="p-1.5 hover:bg-study-600 transition-colors"><i class="ph ph-arrow-u-up-left"></i></button>
+            <button class="p-1.5 hover:bg-study-600 transition-colors"><i class="ph ph-dots-three"></i></button>
+          </div>
+
+          <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=64&q=80" alt="Mia" class="w-10 h-10 rounded-full object-cover shrink-0 mt-0.5 cursor-pointer hover:shadow-[0_0_0_2px_rgba(255,255,255,0.1)] transition-shadow">
+          <div class="flex flex-col w-full">
+            <div class="flex items-baseline gap-2">
+              <span class="font-medium text-zinc-100 text-[15px] hover:underline cursor-pointer">Mia Wong</span>
+              <span class="text-xs text-zinc-500 font-medium tracking-wide">Yesterday at 10:42 PM</span>
+            </div>
+            <div class="text-[14.5px] leading-relaxed text-zinc-300 mt-0.5">
+              Did Professor Smith mention if red-black trees are on the midterm? The syllabus is a bit vague on how deep we need to go into balancing algorithms.
+            </div>
+            
+            <!-- Reaction -->
+            <div class="mt-2 flex gap-1.5">
+              <div class="flex items-center gap-1.5 bg-study-700/50 border border-study-600/50 rounded p-1 px-2 cursor-pointer hover:bg-study-600/50 transition-colors">
+                <span class="text-[14px]">👀</span>
+                <span class="text-xs text-zinc-300 font-medium">4</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Threaded Reply Message -->
+        <div class="group px-4 py-1 flex gap-4 hover:bg-study-700/30 transition-colors -mx-1 rounded-lg relative">
+          <!-- Thread connection line (CSS pseudo-element logic simulated below) -->
+          <div class="absolute left-[35px] top-[-20px] w-6 h-8 border-l-2 border-b-2 border-study-600 rounded-bl-lg pointer-events-none opacity-50"></div>
+          
+          <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=64&q=80" alt="James" class="w-10 h-10 rounded-full object-cover shrink-0 mt-0.5 z-10 cursor-pointer">
+          <div class="flex flex-col w-full">
+            <div class="flex items-center gap-2 mb-0.5 text-[12px] text-zinc-500 cursor-pointer hover:text-zinc-300 transition-colors">
+              <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=24&q=80" class="w-4 h-4 rounded-full">
+              <span class="mr-1">Replying to <span class="font-medium">Mia Wong</span></span>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span class="font-medium text-emerald-400 text-[15px] hover:underline cursor-pointer">James O'Connor (TA)</span>
+              <span class="text-[10px] bg-study-700 text-zinc-300 px-1.5 py-0.5 rounded-sm uppercase tracking-wide font-semibold ml-1">TA</span>
+              <span class="text-xs text-zinc-500 font-medium tracking-wide">10:45 PM</span>
+            </div>
+            <div class="text-[14.5px] leading-relaxed text-zinc-300 mt-0.5">
+              Yes, he confirmed in office hours that we only need to know the properties and insertion concepts, not the full deletion code logic. Focus on standard BSTs for the coding section!
+            </div>
+          </div>
+        </div>
+
+        <!-- Normal Message -->
+        <div class="group px-4 py-1 flex gap-4 hover:bg-study-700/30 transition-colors -mx-1 rounded-lg relative mt-2">
+          <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=64&q=80" alt="David" class="w-10 h-10 rounded-full object-cover shrink-0 mt-0.5 cursor-pointer">
+          <div class="flex flex-col w-full">
+            <div class="flex items-baseline gap-2">
+              <span class="font-medium text-zinc-100 text-[15px] hover:underline cursor-pointer">David C.</span>
+              <span class="text-xs text-zinc-500 font-medium tracking-wide">Today at 9:12 AM</span>
+            </div>
+            <div class="text-[14.5px] leading-relaxed text-zinc-300 mt-0.5">
+              Has anyone started Pset 4? I'm completely stuck on problem 2 with the graph traversal. The test suite keeps giving me a memory limit exceeded error.
+            </div>
+          </div>
+        </div>
+
+        <!-- PENDING OUTBOX MESSAGE (The Brief Mandate) -->
+        <div class="group px-4 py-1 flex gap-4 -mx-1 rounded-lg relative mt-2 opacity-60 shimmer-mask">
+          <img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=64&q=80" alt="Me" class="w-10 h-10 rounded-full object-cover shrink-0 mt-0.5 filter grayscale border border-zinc-700">
+          <div class="flex flex-col w-full">
+            <div class="flex items-baseline gap-2">
+              <span class="font-medium text-zinc-100 text-[15px]">Elias (You)</span>
+              <span class="text-xs text-amber-500 font-bold tracking-wide flex items-center gap-1">
+                <i class="ph ph-clock text-[14px]"></i> Sending...
+              </span>
+            </div>
+            <div class="text-[14.5px] leading-relaxed text-zinc-400 mt-0.5 italic">
+              I had that issue too! You need to make sure you're keeping track of visited nodes using a Set instead of an Array. I can screenshare my approach in the Study Room if you want.
+            </div>
+          </div>
+        </div>
+        
+        <!-- Scroll Anchor -->
+        <div class="h-2"></div>
+      </div>
+
+      <!-- Message Composer -->
+      <div class="px-5 pb-6 pt-2 shrink-0 bg-transparent">
+        <div class="relative flex items-end bg-study-700/40 recessed-input border border-study-600/60 rounded-xl overflow-hidden focus-within:ring-1 focus-within:ring-zinc-500 focus-within:border-zinc-500 transition-shadow">
+          
+          <!-- Attachment Button -->
+          <button class="p-3.5 text-zinc-400 hover:text-zinc-200 hover:bg-study-600/50 transition-colors rounded-l-xl h-full flex items-center shrink-0">
+            <i class="ph ph-plus-circle text-xl"></i>
+          </button>
+
+          <!-- Input Field -->
+          <textarea 
+            rows="1" 
+            placeholder="Warning: Offline. Message will queue..." 
+            class="w-full bg-transparent text-[15px] text-zinc-100 placeholder-zinc-500 py-3.5 px-2 outline-none resize-none max-h-[50dvh] overflow-y-auto min-h-[48px]"
+            readonly
+          ></textarea>
+
+          <!-- Right Actions -->
+          <div class="p-2.5 flex items-center gap-1 shrink-0 h-full text-zinc-400">
+            <button class="p-1 px-1.5 hover:bg-study-600/80 rounded transition-colors" title="Code Snippet">
+              <i class="ph ph-code text-xl"></i>
+            </button>
+            <button class="p-1 px-1.5 hover:bg-study-600/80 rounded transition-colors" title="Emoji">
+              <i class="ph ph-smiley text-xl"></i>
+            </button>
+            <!-- Disable Send while offline, visual cue -->
+            <div class="w-[1px] h-6 bg-study-600 mx-1"></div>
+            <button class="p-1 px-1.5 text-amber-500/50 cursor-not-allowed rounded transition-colors" title="Send (Offline)">
+              <i class="ph ph-paper-plane-right text-xl"></i>
+            </button>
+          </div>
+        </div>
+        <div class="text-[11px] text-zinc-500 mt-2 px-2 flex justify-between tracking-wide">
+          <span><strong>Bold</strong> *text* &nbsp; • &nbsp; `code` &nbsp; • &nbsp; &gt; quote</span>
+          <span class="text-amber-500/80">Message will send when online</span>
+        </div>
+      </div>
+
+    </main>
+
+
+    <!-- PANE 4: RIGHT SIDEBAR (Academics & Roster) -->
+    <aside class="right-sidebar bg-study-900 border-l border-study-border flex flex-col z-20 overflow-hidden">
+      
+      <!-- Academic Surface: Assignments Panel (First-class citizen) -->
+      <div class="p-4 border-b border-study-border bg-study-950/20 shadow-[inset_0_-10px_20px_rgba(0,0,0,0.2)]">
+        <div class="flex items-center justify-between mb-3 text-zinc-200">
+          <h2 class="text-[13px] font-bold tracking-widest uppercase text-zinc-400 flex items-center gap-2">
+            <i class="ph ph-clipboard-text text-lg"></i>
+            Assignments
+          </h2>
+          <button class="text-xs text-zinc-500 hover:text-zinc-300">View All</button>
+        </div>
+        
+        <div class="space-y-2">
+          <!-- Pending Assignment -->
+          <div class="group bg-study-800 border border-study-600 rounded-lg p-2.5 hover:border-zinc-500 transition-colors cursor-pointer relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-1 h-full bg-amber-500"></div>
+            <div class="flex justify-between items-start pl-2">
+              <div class="flex flex-col">
+                <span class="text-[14px] font-semibold text-zinc-100">Pset 4: Graph Alg.</span>
+                <span class="text-[12px] text-zinc-400 mt-0.5">CS-201 Core</span>
+              </div>
+              <div class="flex flex-col items-end">
+                <span class="text-[11px] font-bold text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded uppercase tracking-wider">Due Tmrw</span>
+                <span class="text-[11px] text-zinc-500 mt-1">11:59 PM</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Upcoming Assignment -->
+          <div class="group bg-study-950/50 border border-study-700/50 rounded-lg p-2.5 hover:border-study-500 transition-colors cursor-pointer">
+            <div class="flex justify-between items-start">
+              <div class="flex flex-col">
+                <span class="text-[14px] font-medium text-zinc-300">Reading: Ch 8-10</span>
+                <span class="text-[12px] text-zinc-500 mt-0.5">Syllabus</span>
+              </div>
+              <div class="flex flex-col items-end">
+                <span class="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Oct 28</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Member List -->
+      <div class="flex-1 overflow-y-auto p-4 space-y-6">
+        
+        <!-- Role Group: Instructors/TAs -->
+        <div>
+          <h3 class="text-[11px] font-bold text-zinc-500 uppercase tracking-widest mb-3">Teaching Staff — 2</h3>
+          <div class="space-y-1">
+            <div class="flex items-center gap-3 p-1.5 rounded-md hover:bg-study-800 transition-colors cursor-pointer group">
+              <div class="relative">
+                <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=64&q=80" alt="Prof" class="w-8 h-8 rounded-full border border-zinc-600">
+                <div class="absolute -bottom-0.5 -right-0.5 bg-study-900 rounded-full p-[2px]">
+                  <div class="w-2.5 h-2.5 bg-emerald-500 rounded-full border border-study-900"></div>
+                </div>
+              </div>
+              <div class="flex flex-col">
+                <span class="text-[14px] font-semibold text-emerald-400 group-hover:text-emerald-300">Prof. Averbukh</span>
+                <span class="text-[11px] text-zinc-500">Instructor</span>
+              </div>
+            </div>
+            
+            <div class="flex items-center gap-3 p-1.5 rounded-md hover:bg-study-800 transition-colors cursor-pointer group">
+              <div class="relative">
+                <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=64&q=80" alt="James" class="w-8 h-8 rounded-full border border-zinc-600">
+                <div class="absolute -bottom-0.5 -right-0.5 bg-study-900 rounded-full p-[2px]">
+                  <div class="w-2.5 h-2.5 bg-zinc-500 rounded-full border border-study-900"></div> <!-- Offline status -->
+                </div>
+              </div>
+              <div class="flex flex-col">
+                <span class="text-[14px] font-semibold text-emerald-500/60 group-hover:text-emerald-400/80">James O'Connor</span>
+                <span class="text-[11px] text-zinc-500">Head TA (Offline)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Role Group: Online Students -->
+        <div>
+          <h3 class="text-[11px] font-bold text-zinc-500 uppercase tracking-widest mb-3">Online — 4</h3>
+          <div class="space-y-1">
+            
+            <!-- Student in Voice (Status representation) -->
+            <div class="flex items-center gap-3 p-1.5 rounded-md hover:bg-study-800 transition-colors cursor-pointer group">
+              <div class="relative">
+                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=64&q=80" alt="Sarah" class="w-8 h-8 rounded-full border-2 border-emerald-500/80 p-[1px]">
+              </div>
+              <div class="flex flex-col">
+                <span class="text-[14px] font-medium text-zinc-300 group-hover:text-zinc-100">Sarah Jenkins</span>
+                <span class="text-[11px] text-zinc-400 flex items-center gap-1">
+                  <i class="ph ph-speaker-high text-emerald-500"></i> In Study Room
+                </span>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3 p-1.5 rounded-md hover:bg-study-800 transition-colors cursor-pointer group">
+              <div class="relative">
+                <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=64&q=80" alt="Mia" class="w-8 h-8 rounded-full opacity-90">
+                <div class="absolute -bottom-0.5 -right-0.5 bg-study-900 rounded-full p-[2px]">
+                  <div class="w-2.5 h-2.5 bg-emerald-500 rounded-full border border-study-900"></div>
+                </div>
+              </div>
+              <span class="text-[14px] font-medium text-zinc-400 group-hover:text-zinc-200">Mia Wong</span>
+            </div>
+
+            <div class="flex items-center gap-3 p-1.5 rounded-md hover:bg-study-800 transition-colors cursor-pointer group">
+              <div class="relative">
+                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=64&q=80" alt="David" class="w-8 h-8 rounded-full opacity-90">
+                <div class="absolute -bottom-0.5 -right-0.5 bg-study-900 rounded-full p-[2px]">
+                  <div class="w-2.5 h-2.5 bg-emerald-500 rounded-full border border-study-900"></div>
+                </div>
+              </div>
+              <div class="flex flex-col">
+                <span class="text-[14px] font-medium text-zinc-400 group-hover:text-zinc-200">David C.</span>
+                <span class="text-[11px] text-zinc-500">Working on Pset 4</span>
+              </div>
+            </div>
+
+            <!-- Current User (Offline state represented) -->
+            <div class="flex items-center gap-3 p-1.5 rounded-md bg-study-800/50 border border-study-700/50 cursor-pointer group">
+              <div class="relative">
+                <img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=64&q=80" alt="Me" class="w-8 h-8 rounded-full filter grayscale opacity-80">
+                <div class="absolute -bottom-0.5 -right-0.5 bg-study-800 rounded-full p-[2px]">
+                  <div class="w-2.5 h-2.5 bg-amber-500 rounded-full border border-study-800"></div>
+                </div>
+              </div>
+              <div class="flex flex-col">
+                <span class="text-[14px] font-medium text-zinc-200">Elias (You)</span>
+                <span class="text-[11px] text-amber-500/80 font-medium tracking-wide">Reconnecting...</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Role Group: Offline -->
+        <div>
+          <h3 class="text-[11px] font-bold text-zinc-600 uppercase tracking-widest mb-2 mt-4">Offline — 14</h3>
+          <div class="space-y-1 opacity-50">
+            <div class="flex items-center gap-3 p-1.5 rounded-md hover:bg-study-800 transition-colors cursor-pointer">
+              <div class="w-8 h-8 rounded-full bg-study-700 flex items-center justify-center text-xs font-bold text-zinc-400">AM</div>
+              <span class="text-[14px] font-medium text-zinc-400">Alex M.</span>
+            </div>
+            <div class="flex items-center gap-3 p-1.5 rounded-md hover:bg-study-800 transition-colors cursor-pointer">
+              <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=64&q=80" alt="User" class="w-8 h-8 rounded-full filter grayscale">
+              <span class="text-[14px] font-medium text-zinc-400">Chloe</span>
+            </div>
+            <div class="text-[11px] text-zinc-500 pl-2 pt-1 hover:text-zinc-400 cursor-pointer">Show 12 more...</div>
+          </div>
+        </div>
+
+      </div>
+    </aside>
+
+  </div>
+
+  <script>
+    // Minimal Vanilla JS to simulate interaction states if needed (Framer Motion alternative)
+    // Most specific logic handled by CSS transitions.
+    document.addEventListener('DOMContentLoaded', () => {
+      const textarea = document.querySelector('textarea');
+      // Auto-resize textarea logic
+      textarea.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+      });
+    });
+  </script>
+</body>
+</html>
