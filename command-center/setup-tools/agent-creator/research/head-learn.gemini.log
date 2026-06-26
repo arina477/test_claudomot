@@ -1,0 +1,13 @@
+interaction_id=v1_Chdqa0UtYXFqdk5zMlNfdU1QbnJtcDhBZxIXamtFLWFxanZOczJTX3VNUG5ybXA4QWc agent=deep-research-preview-04-2026
+[fast] v1_Chdqa0UtYXFqdk5zMlNfdU1QbnJtcDhBZxIXamtFLWFxanZOczJTX3VNUG5ybXA4QWc status=in_progress
+Traceback (most recent call last):
+  File "/home/claudomat/.claude/skills/gemini-deep-research/scripts/search_grounded.py", line 75, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/claudomat/.claude/skills/gemini-deep-research/scripts/search_grounded.py", line 65, in main
+    inter = poll_until_done(iid, args.interval, args.timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/claudomat/.claude/skills/gemini-deep-research/scripts/search_grounded.py", line 39, in poll_until_done
+    raise TimeoutError(f"Timed out after {timeout}s waiting for {iid}")
+TimeoutError: Timed out after 360s waiting for v1_Chdqa0UtYXFqdk5zMlNfdU1QbnJtcDhBZxIXamtFLWFxanZOczJTX3VNUG5ybXA4QWc
+EXIT:1

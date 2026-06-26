@@ -26,12 +26,12 @@ Schema:
 
 | tag | expertise | routing | collateral |
 |---|---|---|---|
-| `strategist` | Bet alignment, direction, strategic position | BOARD seat #1 | [research](setup-tools/agent-creator/research/strategist-<DATE>.md) · [pack](domain-packs/strategist.md) |
-| `industry-expert` | Prior art + pattern library across tech / product / organizational patterns the project's industry has converged on | BOARD seat #2 | [research](setup-tools/agent-creator/research/industry-expert-<DATE>.md) · [pack](domain-packs/industry-expert.md) |
-| `realist` | Evidence, data, assumed-unverified claims — "show the proof" | BOARD seat #3 | [research](setup-tools/agent-creator/research/realist-<DATE>.md) · [pack](domain-packs/realist.md) |
-| `user-advocate` | User-experienced impact (UX + retention + trust + brand signal) | BOARD seat #4 | [research](setup-tools/agent-creator/research/user-advocate-<DATE>.md) · [pack](domain-packs/user-advocate.md) |
-| `risk-officer` | Tech-risk only — failure modes, escape routes, performance/scale, vendor + architectural lock-in, schema/migration risk | BOARD seat #5 | [research](setup-tools/agent-creator/research/risk-officer-<DATE>.md) · [pack](domain-packs/risk-officer.md) |
-| `counter-thinker` | Steel-manned alternatives, inversion, "what's the smartest opposing case?" | BOARD seat #6 | [research](setup-tools/agent-creator/research/counter-thinker-<DATE>.md) · [pack](domain-packs/counter-thinker.md) |
+| `strategist` | Bet alignment, direction, strategic position | BOARD seat #1 | [research](setup-tools/agent-creator/research/strategist-2026-06-26.md) · [pack](domain-packs/strategist.md) |
+| `industry-expert` | Prior art + pattern library across edtech / student-comms / real-time-collab / offline-first the industry has converged on | BOARD seat #2 | [research](setup-tools/agent-creator/research/industry-expert-2026-06-26.md) · [pack](domain-packs/industry-expert.md) |
+| `realist` | Evidence, data, assumed-unverified claims — "show the proof" | BOARD seat #3 | [research](setup-tools/agent-creator/research/realist-2026-06-26.md) · [pack](domain-packs/realist.md) |
+| `user-advocate` | User-experienced impact (UX + retention + trust + brand signal); tuned to remote students on unreliable internet | BOARD seat #4 | [research](setup-tools/agent-creator/research/user-advocate-2026-06-26.md) · [pack](domain-packs/user-advocate.md) |
+| `risk-officer` | Tech-risk only — failure modes, escape routes, performance/scale, vendor + architectural lock-in, schema/migration risk; tuned to self-use-mvp + offline-sync/LiveKit/Socket.IO | BOARD seat #5 | [research](setup-tools/agent-creator/research/risk-officer-2026-06-26.md) · [pack](domain-packs/risk-officer.md) |
+| `counter-thinker` | Steel-manned alternatives, inversion, "what's the smartest opposing case?"; inversion/pre-mortem/reference-class pattern library baked in | BOARD seat #6 | [research](setup-tools/agent-creator/research/counter-thinker-2026-06-26.md) · [pack](domain-packs/counter-thinker.md) |
 | `founder-proxy` | Founder voice via product-decisions.md + founder_bets; HARD-STOP on no precedent | BOARD seat #7 | _(claudomat-bundled — `claudomat-brain/setup-tools/prebuilt-claudomat-agents/founder-proxy.md`)_ |
 
 ### Head-X gates (8 — one per block; gate-only)
@@ -40,14 +40,14 @@ All head-X agents are spawned as fresh sub-agents at the block-exit gate stage t
 
 | tag | expertise | routing | collateral |
 |---|---|---|---|
-| `head-product` | P-block gate: bet alignment, scope discipline, decomposition, spec quality | P-4 gate verdict | [research](setup-tools/agent-creator/research/head-product-<DATE>.md) · [pack](domain-packs/head-product.md) |
-| `head-designer` | D-block gate: brief quality, variant coherence, design-system token discipline | D-3 gate verdict | [research](setup-tools/agent-creator/research/head-designer-<DATE>.md) · [pack](domain-packs/head-designer.md) |
-| `head-builder` | B-block gate: branch & schema → contracts → backend → frontend → wiring → review sequence | B-6 gate verdict | [research](setup-tools/agent-creator/research/head-builder-<DATE>.md) · [pack](domain-packs/head-builder.md) |
-| `head-tester` | T-block gate: per-layer test discipline (T-1 through T-9) | T-9 gate verdict | [research](setup-tools/agent-creator/research/head-tester-<DATE>.md) · [pack](domain-packs/head-tester.md) |
-| `head-verifier` | V-block gate: parallel Karen + jenny reviews + triage + fast-fix loop | V-3 gate verdict + fast-fix loop | [research](setup-tools/agent-creator/research/head-verifier-<DATE>.md) · [pack](domain-packs/head-verifier.md) |
-| `head-ci-cd` | C-block: PR-author + CI-watch + deploy & verify (incl. canary) | C-block (sub-agent owns lifetime) | [research](setup-tools/agent-creator/research/head-ci-cd-<DATE>.md) · [pack](domain-packs/head-ci-cd.md) |
-| `head-learn` | L-block: observation-quality + ≤1-rule-promotion-per-wave | L-block (sub-agent owns lifetime) | [research](setup-tools/agent-creator/research/head-learn-<DATE>.md) · [pack](domain-packs/head-learn.md) |
-| `head-next` | N-block: seed-pick + sibling-bundling + archive-readiness | N-block (sub-agent owns lifetime) | [research](setup-tools/agent-creator/research/head-next-<DATE>.md) · [pack](domain-packs/head-next.md) |
+| `head-product` | P-block gate: bet alignment, scope discipline, decomposition, spec quality | P | [research](setup-tools/agent-creator/research/head-product-2026-06-26.md) · [pack](domain-packs/head-product.md) |
+| `head-designer` | D-block gate: brief quality, variant coherence, design-system token discipline | D | [research](setup-tools/agent-creator/research/head-designer-2026-06-26.md) · [pack](domain-packs/head-designer.md) |
+| `head-builder` | B-block gate: branch & schema → contracts → backend → frontend → wiring → review sequence | B | [research](setup-tools/agent-creator/research/head-builder-2026-06-26.md) · [pack](domain-packs/head-builder.md) |
+| `head-tester` | T-block gate: per-layer test discipline (T-1 through T-9) | T | [research](setup-tools/agent-creator/research/head-tester-2026-06-26.md) · [pack](domain-packs/head-tester.md) |
+| `head-verifier` | V-block gate: parallel Karen + jenny reviews + triage + fast-fix loop | V | [research](setup-tools/agent-creator/research/head-verifier-2026-06-26.md) · [pack](domain-packs/head-verifier.md) |
+| `head-ci-cd` | C-block: PR-author + CI-watch + deploy & verify (incl. canary) | C | [research](setup-tools/agent-creator/research/head-ci-cd-2026-06-26.md) · [pack](domain-packs/head-ci-cd.md) |
+| `head-learn` | L-block gate (Engineering Manager / Retrospective Lead): observation-quality + blameless retro + ≤1-rule-promotion-per-wave | L | [research](setup-tools/agent-creator/research/head-learn-2026-06-26.md) · [pack](domain-packs/head-learn.md) |
+| `head-next` | N-block gate (Program / Delivery Manager): trigger-pick + smallest-viable-bundle + clean single-move archive handoff | N | [research](setup-tools/agent-creator/research/head-next-2026-06-26.md) · [pack](domain-packs/head-next.md) |
 
 ### Universal verifiers (always — installed pre-built or via agent-creator)
 
@@ -76,7 +76,9 @@ All head-X agents are spawned as fresh sub-agents at the block-exit gate stage t
 
 | tag | expertise | routing | collateral |
 |---|---|---|---|
-| _(populated at install per `project.yaml: stack.*`; e.g., `postgres-pro`, `react-specialist`, `nextjs-developer`, `python-pro`, `<sdk>-integration`)_ | _ | _ | _ |
+| `supertokens-integration` | SuperTokens self-hosted auth: signup/login/verify/reset, session JWT+refresh, SameSite=Lax httpOnly cookies, NestJS guards + middleware order, Socket.IO WS-upgrade auth, server-side LiveKit token bridge | supertokens auth work | [research](setup-tools/agent-creator/research/supertokens-integration-2026-06-26.md) · [pack](domain-packs/supertokens-integration.md) |
+| `livekit-integration` | LiveKit WebRTC voice/video: server-side room + token service (session+RBAC mint), self-host-vs-Cloud config, React mic/cam/screen-share grid + audio-only fallback | livekit voice/video work | [research](setup-tools/agent-creator/research/livekit-integration-2026-06-26.md) · [pack](domain-packs/livekit-integration.md) |
+| _(further per-stack executors populated at install per `project.yaml: stack.*`; e.g., `postgres-pro`, `react-specialist`, `node-specialist`)_ | _ | _ | _ |
 
 ---
 
