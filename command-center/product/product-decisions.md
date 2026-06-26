@@ -115,3 +115,11 @@ _(empty)_
 **Rationale**: Onboarding→wave boundary has no prior N-1 to promote/decompose; v13 is the sanctioned bootstrap exception (like v13 being sole writer of .last-wave-completed.yaml at first boot). Subsequent bundles come per-wave from N-1.
 
 [2026-06-26] M1: todo → in_progress (v13 onboarding bootstrap)
+
+### [2026-Q2] Node version standardized on 22
+**Category**: Architecture
+**Status**: Active
+**Context**: Wave-1 P-4 gate (karen) found a load-bearing conflict — architecture docs pinned Node 20.15.0 while the CI workflow + P-3 plan used Node 22.
+**Decision**: Standardize on **Node 22** (current LTS). Amended `_library.md` + `tools.md` (.nvmrc=22, engines `>=22`); CI now uses `node-version-file: .nvmrc` (single source) instead of a hardcoded version. `.nvmrc` (created at B-0) is canonical.
+**Rationale**: 22 is current LTS; CI was already on 22; lower churn than reverting to 20.15.0. Technical default per rule 17 (no founder poll).
+**Alternatives considered**: revert everything to 20.15.0 (rejected — older LTS, more churn).

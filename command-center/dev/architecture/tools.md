@@ -62,12 +62,12 @@ Workspace protocol for internal dependencies: `"@studyhall/shared": "workspace:*
 
 `.nvmrc`:
 ```
-20.15.0
+22
 ```
 
 Root `package.json` `engines` field:
 ```json
-"engines": { "node": ">=20.15.0", "pnpm": ">=9.0.0" }
+"engines": { "node": ">=22", "pnpm": ">=9.0.0" }
 ```
 
 CI uses `actions/setup-node` with `node-version-file: .nvmrc` and `cache: pnpm`.
