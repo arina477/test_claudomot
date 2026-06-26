@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Email | StudyHall</title>
+
+    <!-- Preconnect & Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Tailwind Config -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Geist', 'system-ui', 'sans-serif'],
+                        mono: ['Geist Mono', 'ui-monospace', 'monospace'],
+                    },
+                    colors: {
+                        surface: {
+                            950: '#0a0a0b',
+                            900: '#121214',
+                            800: '#1c1c1f',
+                            700: '#27272a',
+                            600: '#3f3f46',
+                            500: '#52525b',
+                        },
+                        accent: {
+                            emerald: '#10b981',
+                            amber: '#f59e0b',
+                        },
+                        danger: '#ef4444',
+                        text: {
+                            primary: 'rgba(255,255,255,0.92)',
+                            secondary: 'rgba(255,255,255,0.60)',
+                            muted: 'rgba(255,255,255,0.40)',
+                        },
+                        border: {
+                            hairline: 'rgba(255,255,255,0.06)',
+                            hover: 'rgba(255,255,255,0.10)',
+                        }
+                    },
+                    boxShadow: {
+                        sm: '0 1px 2px rgba(0,0,0,0.4)',
+                        pop: '0 8px 24px rgba(0,0,0,0.5)',
+                        'glow-focus': '0 0 0 2px rgba(16,185,129,0.4)',
+                        'glow-subtle': '0 0 15px rgba(255,255,255,0.05)',
+                        'glow-danger': '0 0 0 2px rgba(239,68,68,0.4)',
+                        'emboss': 'inset 0 1px 1px rgba(255,255,255,0.05)',
+                    },
+                    borderRadius: {
+                        'sm': '2px',
+                        'md': '6px',
+                        'lg': '10px',
+                        'xl': '12px',
+                    },
+                    keyframes: {
+                        'blink': {
+                            '0%, 100%': { opacity: 1 },
+                            '50%': { opacity: 0 },
+                        },
+                        'shake': {
+                            '0%, 100%': { transform: 'translateX(0)' },
+                            '10%, 30%, 50%, 70%, 90%': { transform: 'translateX(-4px)' },
+                            '20%, 40%, 60%, 80%': { transform: 'translateX(4px)' },
+                        },
+                        'shimmer-beam': {
+                            '0%': { transform: 'translateX(-100%)' },
+                            '100%': { transform: 'translateX(200%)' },
+                        },
+                        'mesh-pan': {
+                            '0%': { backgroundPosition: '0% 0%' },
+                            '100%': { backgroundPosition: '100px 100px' },
+                        },
+                        'fade-in-up': {
+                            '0%': { opacity: 0, transform: 'translateY(10px)' },
+                            '100%': { opacity: 1, transform: 'translateY(0)' },
+                        }
+                    },
+                    animation: {
+                        'blink': 'blink 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'shake': 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both',
+                        'shimmer-beam': 'shimmer-beam 2s infinite',
+                        'mesh-pan': 'mesh-pan 20s linear infinite',
+                        'fade-in-up': 'fade-in-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* CSS Variables for internal component logic */
+        :root {
+            --stagger-step: 60ms;
+        }
+
+        /* Abstract Mesh Pattern */
+        .bg-mesh {
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+
+        /* Hide scrollbar for clean aesthetic */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.1);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3f3f46;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #52525b;
+        }
+
+        /* Caret custom styling for inputs */
+        .code-input {
+            caret-color: transparent; /* Custom caret implemented via JS/CSS */
+        }
+        
+        .code-input:focus {
+            box-shadow: 0 0 0 2px rgba(16,185,129,0.4), inset 0 1px 1px rgba(255,255,255,0.05);
+        }
+
+        .code-input.error {
+            border-color: #ef4444;
+            box-shadow: 0 0 0 2px rgba(239,68,68,0.2), inset 0 1px 1px rgba(255,255,255,0.05);
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        .code-input.success {
+            border-color: #10b981;
+            background-color: rgba(16,185,129,0.05);
+            transition: all 0.3s ease;
+        }
+
+        /* Synthetic Caret */
+        .synthetic-caret {
+            position: absolute;
+            width: 2px;
+            height: 24px;
+            background-color: #10b981;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            display: none;
+            animation: blink 1s step-end infinite;
+        }
+        .code-wrapper.is-focused .synthetic-caret {
+            display: block;
+        }
+        .code-wrapper.has-value .synthetic-caret {
+            display: none; /* Hide if it has a value */
+        }
+
+        /* Staggered load animation */
+        .stagger-item {
+            opacity: 0;
+            animation: fade-in-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        
+        /* Shimmer loading mask */
+        .shimmer-mask {
+            position: relative;
+            overflow: hidden;
+        }
+        .shimmer-mask::after {
+            content: '';
+            position: absolute;
+            top: 0; right: 0; bottom: 0; left: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+            transform: translateX(-100%);
+            animation: shimmer-beam 1.5s infinite;
+        }
+
+        /* Physical button press effect */
+        button:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body class="bg-surface-950 text-text-primary font-sans antialiased min-h-[100dvh] flex flex-col lg:flex-row overflow-x-hidden selection:bg-accent-emerald/30">
+
+    <!-- Macro Architecture: Left Shell (The Abstract/Structural Context) -->
+    <aside class="hidden lg:flex w-[35%] border-r border-border-hairline bg-surface-900 relative flex-col justify-between overflow-hidden p-12">
+        <!-- Abstract Mesh Background -->
+        <div class="absolute inset-0 bg-mesh animate-mesh-pan opacity-[0.15]"></div>
+        
+        <!-- Gradient Overlay for depth -->
+        <div class="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-surface-950 to-transparent pointer-events-none"></div>
+        <div class="absolute top-0 right-0 w-full h-full bg-gradient-to-l from-surface-950/40 to-transparent pointer-events-none"></div>
+
+        <!-- Branding Header -->
+        <div class="relative z-10 flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-surface-800 border border-border-hairline flex items-center justify-center shadow-sm relative overflow-hidden">
+                <div class="absolute inset-0 bg-accent-emerald opacity-20"></div>
+                <!-- Abstract 'S' mark logic -->
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" class="text-accent-emerald" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor" fill-opacity="0.2"/>
+                    <path d="M2 17L12 22L22 17" />
+                    <path d="M2 12L12 17L22 12" />
+                </svg>
+            </div>
+            <span class="font-semibold text-lg tracking-tight">StudyHall</span>
+        </div>
+
+        <!-- Connection graphic showing pending state -->
+        <div class="relative z-10 flex flex-col gap-6">
+            <div class="flex items-center gap-4 text-text-secondary w-full max-w-xs">
+                <div class="flex-1 h-px bg-border-hairline relative">
+                    <div class="absolute top-1/2 left-0 w-4 h-[1px] bg-accent-emerald transform -translate-y-1/2 rounded-full ring-2 ring-accent-emerald/20 animate-pulse"></div>
+                </div>
+                <div class="w-10 h-10 rounded-full border border-border-hairline bg-surface-800 flex items-center justify-center relative shadow-pop">
+                    <!-- Rotating dashed ring indicating pending -->
+                    <svg class="absolute inset-0 w-full h-full text-border-hover animate-[spin_4s_linear_infinite]" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="4 8" />
+                    </svg>
+                    <i class="ph ph-shield-check text-text-muted text-lg"></i>
+                </div>
+                 <div class="flex-1 h-px bg-border-hairline"></div>
+            </div>
+            
+            <div>
+                <h2 class="text-2xl font-semibold mb-2">Secure your session</h2>
+                <p class="text-sm text-text-secondary leading-relaxed">
+                    Account verification establishes your academic identity. This ensures a focused, low-noise environment for all current students.
+                </p>
+            </div>
+        </div>
+
+        <!-- Footer Meta -->
+        <div class="relative z-10 flex items-center justify-between text-xs text-text-muted font-mono">
+            <span>SYS_AUTH_NODE_V7</span>
+            <span class="flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-accent-amber animate-pulse"></span>
+                AWAITING_VERIFICATION
+            </span>
+        </div>
+    </aside>
+
+    <!-- Macro Architecture: Right Shell (The Interaction Workspace) -->
+    <main class="flex-1 flex flex-col relative w-full items-center justify-center p-6 sm:p-12">
+        
+        <!-- Mobile Header (Visible only on small screens) -->
+        <div class="absolute top-6 left-6 lg:hidden flex items-center gap-3">
+            <div class="w-6 h-6 rounded-md bg-surface-800 border border-border-hairline flex items-center justify-center">
+                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="text-accent-emerald" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" />
+                </svg>
+            </div>
+            <span class="font-semibold text-sm">StudyHall</span>
+        </div>
+
+        <!-- Connection Wedge (Top Right) -->
+        <div class="absolute top-6 right-6 flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-900 border border-border-hairline text-xs font-medium" id="connection-wedge" role="status" aria-live="polite">
+            <span class="w-2 h-2 rounded-full bg-accent-emerald shadow-[0_0_8px_rgba(16,185,129,0.5)] transition-colors duration-200" id="connection-dot"></span>
+            <span class="text-text-secondary" id="connection-text">Online</span>
+        </div>
+
+        <!-- Meso Architecture: The Form Container -->
+        <div class="w-full max-w-[420px] flex flex-col">
+            
+            <!-- Context & Header -->
+            <div class="flex flex-col gap-3 mb-8 stagger-item" style="animation-delay: calc(var(--stagger-step) * 1)">
+                <h1 class="text-3xl font-semibold tracking-tight text-white">Check your inbox</h1>
+                <p class="text-sm text-text-secondary leading-relaxed">
+                    We sent a verification code to authenticate your account. Please confirm ownership below.
+                </p>
+                
+                <!-- Masked Email Pill -->
+                <div class="mt-2 inline-flex relative w-max cursor-default group">
+                    <div class="absolute inset-0 bg-surface-800 rounded-md border border-border-hover blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div class="flex items-center gap-2 px-3 py-1.5 rounded-md bg-surface-900 border border-border-hairline text-sm relative z-10 shadow-sm">
+                        <i class="ph ph-envelope-simple text-text-muted"></i>
+                        <span class="font-mono text-text-primary tracking-tight">a***@student.university.edu</span>
+                        <a href="/login" class="ml-2 text-text-muted hover:text-white transition-colors" aria-label="Wrong email? Go back to login" title="Change email">
+                            <i class="ph ph-pencil-simple"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Verification Method Toggle (Segmented Control) -->
+            <div class="bg-surface-900 p-1 rounded-lg border border-border-hairline flex relative mb-8 stagger-item" style="animation-delay: calc(var(--stagger-step) * 2)">
+                <div class="absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] bg-surface-700/80 rounded-md shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.2)] transition-transform duration-300 ease-[cubic-bezier(0.175,0.885,0.32,1.275)]" id="toggle-pill"></div>
+                <button class="relative z-10 flex-1 text-sm font-medium py-2 rounded-md transition-colors text-white" onclick="switchMethod('code')" id="tab-code">
+                    Enter code
+                </button>
+                <button class="relative z-10 flex-1 text-sm font-medium py-2 rounded-md transition-colors text-text-muted hover:text-text-primary" onclick="switchMethod('link')" id="tab-link">
+                    Use email link
+                </button>
+            </div>
+
+            <!-- Form Area (Dynamic based on toggle) -->
+            <div class="relative min-h-[160px]">
+                
+                <!-- STATE: Code Input -->
+                <form id="verify-form" class="absolute inset-0 flex flex-col gap-6 transition-all duration-300 opacity-100 translate-x-0" onsubmit="event.preventDefault(); submitVerification();">
+                    
+                    <div class="flex flex-col gap-2 stagger-item" style="animation-delay: calc(var(--stagger-step) * 3)">
+                        <label class="text-xs font-semibold text-text-secondary uppercase tracking-wider pl-1">6-Digit Code</label>
+                        
+                        <!-- Input Grid -->
+                        <div class="flex justify-between gap-2 sm:gap-3" id="code-container">
+                            <!-- JS will inject 6 inputs here to keep code DRY and manage focus precisely, but for strict HTML requirements we write them out manually here -->
+                            
+                            <div class="relative code-wrapper w-[48px] h-[56px] sm:w-[60px] sm:h-[72px]">
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit 1" class="code-input w-full h-full bg-surface-900 border border-border-hairline rounded-lg text-center text-2xl font-mono text-white shadow-emboss transition-all focus:outline-none placeholder-surface-500" placeholder="·" />
+                                <div class="synthetic-caret"></div>
+                            </div>
+                            <div class="relative code-wrapper w-[48px] h-[56px] sm:w-[60px] sm:h-[72px]">
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit 2" class="code-input w-full h-full bg-surface-900 border border-border-hairline rounded-lg text-center text-2xl font-mono text-white shadow-emboss transition-all focus:outline-none placeholder-surface-500" placeholder="·" />
+                                <div class="synthetic-caret"></div>
+                            </div>
+                            <div class="relative code-wrapper w-[48px] h-[56px] sm:w-[60px] sm:h-[72px]">
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit 3" class="code-input w-full h-full bg-surface-900 border border-border-hairline rounded-lg text-center text-2xl font-mono text-white shadow-emboss transition-all focus:outline-none placeholder-surface-500" placeholder="·" />
+                                <div class="synthetic-caret"></div>
+                            </div>
+                            <div class="relative code-wrapper w-[48px] h-[56px] sm:w-[60px] sm:h-[72px]">
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit 4" class="code-input w-full h-full bg-surface-900 border border-border-hairline rounded-lg text-center text-2xl font-mono text-white shadow-emboss transition-all focus:outline-none placeholder-surface-500" placeholder="·" />
+                                <div class="synthetic-caret"></div>
+                            </div>
+                            <div class="relative code-wrapper w-[48px] h-[56px] sm:w-[60px] sm:h-[72px]">
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit 5" class="code-input w-full h-full bg-surface-900 border border-border-hairline rounded-lg text-center text-2xl font-mono text-white shadow-emboss transition-all focus:outline-none placeholder-surface-500" placeholder="·" />
+                                <div class="synthetic-caret"></div>
+                            </div>
+                            <div class="relative code-wrapper w-[48px] h-[56px] sm:w-[60px] sm:h-[72px]">
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit 6" class="code-input w-full h-full bg-surface-900 border border-border-hairline rounded-lg text-center text-2xl font-mono text-white shadow-emboss transition-all focus:outline-none placeholder-surface-500" placeholder="·" />
+                                <div class="synthetic-caret"></div>
+                            </div>
+                        </div>
+
+                        <!-- Inline Error/Status Container -->
+                        <div id="status-message" class="text-sm font-medium mt-1 h-5 flex items-center" aria-live="polite">
+                            <!-- Content injected via JS -->
+                        </div>
+                    </div>
+
+                    <button type="submit" id="btn-verify" disabled class="stagger-item w-full h-11 bg-accent-emerald text-white rounded-md font-semibold mt-2 shadow-[0_1px_2px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.2)] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-accent-emerald/40 transition-all flex items-center justify-center gap-2 group" style="animation-delay: calc(var(--stagger-step) * 4)">
+                        <span id="btn-text">Verify Email</span>
+                        <i class="ph-bold ph-arrow-right opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 absolute right-4 hidden group-enabled:block"></i>
+                        <!-- Spinner (Hidden by default) -->
+                        <svg id="btn-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </button>
+                </form>
+
+                <!-- STATE: Link Info (Hidden initially) -->
+                <div id="link-info" class="absolute inset-0 flex flex-col justify-center items-center gap-4 text-center transition-all duration-300 opacity-0 translate-x-8 pointer-events-none">
+                    <div class="w-12 h-12 rounded-xl bg-surface-900 border border-border-hairline flex items-center justify-center mb-2">
+                        <i class="ph ph-paper-plane-tilt text-2xl text-accent-emerald"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-semibold text-white mb-1">Check for the magic link</h3>
+                        <p class="text-sm text-text-secondary leading-relaxed max-w-[280px]">
+                            We also sent a direct link in the email. Click it on any device to verify instantly. No code needed.
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Footer / Resend Actions -->
+            <div class="mt-8 flex flex-col items-center gap-4 text-sm stagger-item" style="animation-delay: calc(var(--stagger-step) * 5)">
+                
+                <div class="flex items-center gap-1.5 text-text-secondary p-3 rounded-lg border border-transparent hover:bg-surface-900 hover:border-border-hairline transition-all group">
+                    <span>Didn't receive a code?</span>
+                    <button id="btn-resend" onclick="executeResend()" class="text-white font-medium hover:text-accent-emerald focus:outline-none focus:text-accent-emerald disabled:text-text-muted disabled:cursor-not-allowed transition-colors">
+                        Resend code <span id="resend-countdown" class="tabular-nums font-mono hidden text-text-muted text-xs ml-1">(60s)</span>
+                    </button>
+                    <i id="resend-spinner" class="ph ph-spinner-gap animate-spin hidden text-text-muted"></i>
+                </div>
+
+                <a href="/login" class="text-text-muted hover:text-white transition-colors flex items-center gap-1.5 border-b border-transparent hover:border-white pb-0.5">
+                    <i class="ph ph-arrow-left"></i>
+                    Already verified? Go to login
+                </a>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Interactive Logic (Simulating Framework State & Behavior) -->
+    <script>
+        // --- State Management ---
+        const state = {
+            code: ['', '', '', '', '', ''],
+            method: 'code', // 'code' or 'link'
+            resendCountdown: 0,
+            isSubmitting: false,
+            resendAttempts: 0
+        };
+
+        // --- DOM Elements ---
+        const inputs = Array.from(document.querySelectorAll('.code-input'));
+        const wrappers = document.querySelectorAll('.code-wrapper');
+        const btnVerify = document.getElementById('btn-verify');
+        const btnText = document.getElementById('btn-text');
+        const btnSpinner = document.getElementById('btn-spinner');
+        const statusMsg = document.getElementById('status-message');
+        const form = document.getElementById('verify-form');
+        
+        const togglePill = document.getElementById('toggle-pill');
+        const tabCode = document.getElementById('tab-code');
+        const tabLink = document.getElementById('tab-link');
+        const linkInfo = document.getElementById('link-info');
+        
+        const btnResend = document.getElementById('btn-resend');
+        const resendCountdownEl = document.getElementById('resend-countdown');
+        const resendSpinner = document.getElementById('resend-spinner');
+
+        // --- Initialization ---
+        function init() {
+            // Focus first input on mount if method is code
+            if(state.method === 'code' && window.innerWidth > 768) {
+                setTimeout(() => inputs[0].focus(), 600); // Wait for load animation
+            }
+            updateButtonState();
+        }
+
+        // --- Tab Switching Logic (Macro/Meso structure interaction) ---
+        function switchMethod(method) {
+            if (state.method === method) return;
+            state.method = method;
+
+            if (method === 'link') {
+                // UI changes for Link mode
+                togglePill.style.transform = 'translateX(100%)';
+                togglePill.style.width = 'calc(50% - 2px)';
+                
+                tabCode.classList.replace('text-white', 'text-text-muted');
+                tabLink.classList.replace('text-text-muted', 'text-white');
+
+                form.style.opacity = '0';
+                form.style.transform = 'translateX(-8px)';
+                form.style.pointerEvents = 'none';
+
+                linkInfo.style.opacity = '1';
+                linkInfo.style.transform = 'translateX(0)';
+                linkInfo.style.pointerEvents = 'auto';
+
+            } else {
+                // UI changes for Code mode
+                togglePill.style.transform = 'translateX(0)';
+                togglePill.style.width = 'calc(50% - 4px)';
+
+                tabLink.classList.replace('text-white', 'text-text-muted');
+                tabCode.classList.replace('text-text-muted', 'text-white');
+
+                linkInfo.style.opacity = '0';
+                linkInfo.style.transform = 'translateX(8px)';
+                linkInfo.style.pointerEvents = 'none';
+
+                form.style.opacity = '1';
+                form.style.transform = 'translateX(0)';
+                form.style.pointerEvents = 'auto';
+                
+                setTimeout(() => { if(!state.isSubmitting) inputs[0].focus() }, 300);
+            }
+        }
+
+        // --- Input Handling Logic (Micro-architecture) ---
+        inputs.forEach((input, index) => {
+            
+            // Focus events for synthetic caret and styling
+            input.addEventListener('focus', () => {
+                wrappers[index].classList.add('is-focused');
+                input.select(); // Select value if exists
+            });
+            
+            input.addEventListener('blur', () => {
+                wrappers[index].classList.remove('is-focused');
+            });
+
+            // Key press handling
+            input.addEventListener('keydown', (e) => {
+                // Allow control keys (Tab, Ctrl+C, etc)
+                if (e.metaKey || e.ctrlKey || e.key === 'Tab') return;
+
+                if (e.key === 'Backspace') {
+                    e.preventDefault();
+                    clearErrors();
+                    if (input.value !== '') {
+                        // Clear current input
+                        input.value = '';
+                        state.code[index] = '';
+                        wrappers[index].classList.remove('has-value');
+                    } else if (index > 0) {
+                        // Move to previous and clear it
+                        inputs[index - 1].focus();
+                        inputs[index - 1].value = '';
+                        state.code[index - 1] = '';
+                        wrappers[index - 1].classList.remove('has-value');
+                    }
+                    updateButtonState();
+                    return;
+                }
+
+                if (e.key === 'ArrowLeft' && index > 0) {
+                    inputs[index - 1].focus();
+                    return;
+                }
+                if (e.key === 'ArrowRight' && index < inputs.length - 1) {
+                    inputs[index + 1].focus();
+                    return;
+                }
+
+                // Block non-numeric
+                if (!/^[0-9]$/.test(e.key)) {
+                    e.preventDefault();
+                }
+            });
+
+            input.addEventListener('input', (e) => {
+                const val = e.target.value;
+                clearErrors();
+                
+                // Keep only numeric
+                if (!/^\d*$/.test(val)) {
+                    e.target.value = val.replace(/\D/g, '');
+                    return;
+                }
+
+                if (val) {
+                    state.code[index] = val;
+                    wrappers[index].classList.add('has-value');
+                    // Auto-advance
+                    if (index < inputs.length - 1) {
+                        inputs[index + 1].focus();
+                    } else {
+                        input.blur(); // Blur on last filled
+                    }
+                } else {
+                    state.code[index] = '';
+                    wrappers[index].classList.remove('has-value');
+                }
+                updateButtonState();
+            });
+
+            // Paste Handling (Crucial UX feature)
+            input.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const pasteData = (e.clipboardData || window.clipboardData).getData('text');
+                const cleanData = pasteData.replace(/\D/g, '').slice(0, 6); // Extract up to 6 digits
+                
+                if (cleanData.length > 0) {
+                    clearErrors();
+                    // Distribute across inputs
+                    for (let i = 0; i < 6; i++) {
+                        if (i < cleanData.length) {
+                            inputs[i].value = cleanData[i];
+                            state.code[i] = cleanData[i];
+                            wrappers[i].classList.add('has-value');
+                        } else {
+                            inputs[i].value = '';
+                            state.code[i] = '';
+                            wrappers[i].classList.remove('has-value');
+                        }
+                    }
+                    // Focus logic after paste
+                    if (cleanData.length < 6) {
+                        inputs[cleanData.length].focus();
+                    } else {
+                        inputs[5].blur();
+                    }
+                    updateButtonState();
+                }
+            });
+        });
+
+        function updateButtonState() {
+            const isComplete = state.code.every(digit => digit !== '');
+            btnVerify.disabled = !isComplete || state.isSubmitting;
+        }
+
+        // --- Form Submission & Validation Simulation (Meso-architecture logic) ---
+        function submitVerification() {
+            const fullCode = state.code.join('');
+            if (fullCode.length !== 6) return; // Prevent early submit
+
+            state.isSubmitting = true;
+            updateButtonState();
+            clearErrors();
+            
+            // UI: Loading State
+            btnText.textContent = 'Verifying...';
+            btnSpinner.classList.remove('hidden');
+            inputs.forEach(i => {
+                i.disabled = true;
+                i.parentElement.classList.add('opacity-50');
+            });
+
+            // Simulate Network Request (1.2s delay)
+            setTimeout(() => {
+                
+                // TEST CASES Based on PRD requirements:
+                
+                // Error Case 1: Wrong Code (Simulate with '000000')
+                if (fullCode === '000000') {
+                    handleError("Code is incorrect. Try again.", false);
+                } 
+                // Error Case 2: Expired Code (Simulate with '111111')
+                else if (fullCode === '111111') {
+                    handleError("Code expired. Request a new one.", true);
+                }
+                // Error Case 3: Rate Limiting (Too many attempts) -> Simulated randomly rarely or let's say '999999'
+                else if (fullCode === '999999') {
+                    handleError("Too many attempts. Resend a new code.", true);
+                    btnResend.classList.add('animate-pulse', 'text-accent-emerald'); // Highlight resend
+                }
+                // Success Case
+                else {
+                    handleSuccess();
+                }
+
+            }, 1200);
+        }
+
+        function handleError(msgText, clearInputs) {
+            state.isSubmitting = false;
+            
+            // Reset Button
+            btnText.textContent = 'Verify Email';
+            btnSpinner.classList.add('hidden');
+            
+            // Show Error Message
+            statusMsg.innerHTML = `<i class="ph-fill ph-warning-circle text-danger mr-1"></i> <span class="text-danger">${msgText}</span>`;
+            
+            // Visual feedback on inputs
+            inputs.forEach((input, i) => {
+                input.disabled = false;
+                wrappers[i].classList.remove('opacity-50');
+                
+                // Force reflow for animation restart
+                input.classList.remove('error');
+                void input.offsetWidth; 
+                input.classList.add('error');
+
+                if (clearInputs) {
+                    input.value = '';
+                    state.code[i] = '';
+                    wrappers[i].classList.remove('has-value');
+                }
+            });
+
+            updateButtonState();
+            if(clearInputs) inputs[0].focus();
+            else inputs[5].focus(); // Remain for quick edit
+        }
+
+        function handleSuccess() {
+            // Success Visuals
+            btnText.textContent = 'Email Verified';
+            btnSpinner.classList.add('hidden');
+            btnVerify.classList.replace('bg-accent-emerald', 'bg-surface-700');
+            btnVerify.classList.add('text-accent-emerald');
+            
+            statusMsg.innerHTML = `<i class="ph-bold ph-check text-accent-emerald mr-1 animate-[fade-in-up_0.3s_ease]"></i> <span class="text-accent-emerald animate-[fade-in-up_0.3s_ease_0.1s_both]">Verified! Redirecting to setup...</span>`;
+
+            inputs.forEach((input) => {
+                input.classList.add('success');
+            });
+
+            // Simulate Redirect
+            setTimeout(() => {
+                form.classList.add('opacity-0', '-translate-y-4');
+                setTimeout(() => {
+                   // window.location.href = '/home'; // Actual behavior
+                   console.log('Redirecting to /home step 3/5');
+                }, 300);
+            }, 2000);
+        }
+
+        function clearErrors() {
+            statusMsg.innerHTML = '';
+            inputs.forEach(i => i.classList.remove('error'));
+        }
+
+        // --- Resend Logic & Countdown Timer ---
+        function executeResend() {
+            if (state.resendCountdown > 0) return;
+
+            state.resendAttempts++;
+            if (state.resendAttempts > 3) {
+                // Rate limit locally simulated
+                statusMsg.innerHTML = `<i class="ph-fill ph-warning-circle text-accent-amber mr-1"></i> <span class="text-accent-amber">You've sent too many codes. Try again in 1 hour.</span>`;
+                return;
+            }
+
+            // Simulate UI sending state
+            btnResend.disabled = true;
+            btnResend.innerHTML = 'Sending...';
+            resendSpinner.classList.remove('hidden');
+
+            setTimeout(() => {
+                // Success sending
+                resendSpinner.classList.add('hidden');
+                
+                // Show temporary toast / inner inline msg
+                const originalMsg = statusMsg.innerHTML;
+                statusMsg.innerHTML = `<i class="ph-bold ph-paper-plane-right text-text-secondary mr-1"></i> <span class="text-text-secondary">Sent! Check your email.</span>`;
+                setTimeout(() => { if(statusMsg.innerText.includes('Sent!')) statusMsg.innerHTML = originalMsg }, 3000);
+
+                // Start countdown
+                state.resendCountdown = 60;
+                resendCountdownEl.classList.remove('hidden');
+                
+                const timer = setInterval(() => {
+                    state.resendCountdown--;
+                    btnResend.innerHTML = `Resend code <span class="tabular-nums font-mono text-text-muted text-xs ml-1">(${state.resendCountdown}s)</span>`;
+                    
+                    if (state.resendCountdown <= 0) {
+                        clearInterval(timer);
+                        btnResend.disabled = false;
+                        btnResend.innerHTML = 'Resend code';
+                        resendCountdownEl.classList.add('hidden');
+                    }
+                }, 1000);
+
+            }, 800);
+        }
+
+        // --- Network State Simulation (Edge Case Handling) ---
+        window.addEventListener('offline', () => {
+            const wedge = document.getElementById('connection-wedge');
+            const dot = document.getElementById('connection-dot');
+            const text = document.getElementById('connection-text');
+            
+            dot.classList.replace('bg-accent-emerald', 'bg-danger');
+            dot.style.boxShadow = '0 0 8px rgba(239,68,68,0.5)';
+            text.textContent = 'Offline';
+            text.classList.replace('text-text-secondary', 'text-danger');
+            
+            btnVerify.disabled = true;
+            btnVerify.title = "Internet required to verify";
+        });
+
+        window.addEventListener('online', () => {
+            const wedge = document.getElementById('connection-wedge');
+            const dot = document.getElementById('connection-dot');
+            const text = document.getElementById('connection-text');
+            
+            dot.classList.replace('bg-danger', 'bg-accent-amber');
+            dot.style.boxShadow = '0 0 8px rgba(245,158,11,0.5)';
+            text.textContent = 'Reconnecting...';
+            text.classList.replace('text-danger', 'text-accent-amber');
+
+            setTimeout(() => {
+                dot.classList.replace('bg-accent-amber', 'bg-accent-emerald');
+                dot.style.boxShadow = '0 0 8px rgba(16,185,129,0.5)';
+                text.textContent = 'Online';
+                text.classList.replace('text-accent-amber', 'text-text-secondary');
+                updateButtonState();
+                btnVerify.title = "";
+            }, 1000);
+        });
+
+        // Start
+        document.addEventListener('DOMContentLoaded', init);
+
+    </script>
+</body>
+</html>

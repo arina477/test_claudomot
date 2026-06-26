@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<!--
+  aesthetic_dna: Zinc-layered dark mode, academic focus, subtle glassmorphism, functional software UI.
+  ui_paradigm: Multi-pane persistent workspace (Left Rail, Channel Nav, Central Stage, Context Right-Panel).
+  palette: base=Zinc (950...500), primary=Emerald, alert=Amber, danger=Red.
+-->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Voice Study Room | StudyHall</title>
+
+    <!-- Google Fonts: Geist & Geist Mono (Approximation via Inter if Geist strictly fails, but requesting Geist specifically) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Tailwind CSS (via CDN with Config) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Geist', '-apple-system', 'sans-serif'],
+                        mono: ['Geist Mono', 'monospace'],
+                    },
+                    colors: {
+                        surface: {
+                            950: '#0a0a0b',
+                            900: '#121214',
+                            800: '#1c1c1f',
+                            700: '#27272a',
+                            600: '#3f3f46',
+                            500: '#52525b',
+                        },
+                        text: {
+                            primary: 'rgba(255,255,255,0.92)',
+                            secondary: 'rgba(255,255,255,0.60)',
+                            muted: 'rgba(255,255,255,0.40)',
+                        },
+                        accent: {
+                            emerald: '#10b981',
+                            amber: '#f59e0b',
+                        },
+                        danger: '#ef4444',
+                    },
+                    boxShadow: {
+                        'sm': '0 1px 2px rgba(0,0,0,0.4)',
+                        'pop': '0 8px 24px rgba(0,0,0,0.5)',
+                        'glow-focus': '0 0 0 2px rgba(16,185,129,0.4)',
+                        'glow-subtle': '0 0 15px rgba(255,255,255,0.05)',
+                    },
+                    transitionTimingFunction: {
+                        'spring': 'cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Advance Custom CSS -->
+    <style>
+        :root {
+            --border-hairline: rgba(255,255,255,0.06);
+            --border-hover: rgba(255,255,255,0.10);
+            --glass-bg: rgba(39, 39, 42, 0.7);
+        }
+
+        body {
+            background-color: var(--surface-950);
+            color: var(--text-primary);
+            overflow: hidden; /* App-like rigid frame */
+        }
+
+        /* Standardize borders globally */
+        .b-hairline { border-color: var(--border-hairline); }
+        .b-hover { border-color: var(--border-hover); }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3f3f46;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #52525b;
+        }
+
+        /* Glass / Materiality */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 8px 32px rgba(0,0,0,0.4);
+        }
+
+        /* Dynamic Animations */
+        @keyframes speak-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(16,185,129,0.4); }
+            70% { box-shadow: 0 0 0 8px rgba(16,185,129,0); }
+            100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+        }
+        .is-speaking {
+            animation: speak-pulse 2s infinite;
+            border: 2px solid #10b981;
+        }
+
+        @keyframes wave-bounce {
+            0%, 100% { transform: scaleY(0.4); }
+            50% { transform: scaleY(1); }
+        }
+        .audio-bar {
+            display: inline-block;
+            width: 3px;
+            background: #10b981;
+            border-radius: 99px;
+            animation: wave-bounce 1s infinite ease-in-out;
+            transform-origin: bottom;
+        }
+        .audio-bar:nth-child(1) { animation-delay: 0.1s; height: 12px; }
+        .audio-bar:nth-child(2) { animation-delay: 0.3s; height: 16px; }
+        .audio-bar:nth-child(3) { animation-delay: 0.2s; height: 10px; }
+
+        @keyframes pulse-amber {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .poor-connection-icon {
+            animation: pulse-amber 2s infinite;
+            color: #f59e0b;
+        }
+
+        /* Staggered load */
+        .cascade-reveal {
+            opacity: 0;
+            transform: translateY(10px);
+            animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: calc(var(--index) * 50ms);
+        }
+        @keyframes fadeUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Responsive overrides via CSS to keep HTML clean */
+        @media (max-width: 1024px) {
+            #left-rail, #channel-sidebar { display: none; }
+            #stage-controls { width: calc(100% - 32px); max-width: 600px; }
+        }
+    </style>
+</head>
+<body class="antialiased h-[100dvh] w-full flex text-sm text-text-primary">
+
+    <!-- PANEL 1: Left Server Rail -->
+    <nav id="left-rail" class="w-[72px] bg-surface-900 border-r b-hairline flex flex-col items-center py-4 gap-3 z-40 shrink-0">
+        <!-- Home -->
+        <button class="w-12 h-12 rounded-lg bg-surface-700 hover:bg-surface-600 transition-colors flex items-center justify-center text-text-primary group relative outline-none focus-visible:ring-2 focus-visible:ring-accent-emerald cascade-reveal" style="--index: 1;">
+            <i class="ph ph-house text-2xl group-hover:scale-110 transition-transform"></i>
+        </button>
+        <div class="w-8 h-[2px] bg-surface-700 rounded-full my-1 cascade-reveal" style="--index: 2;"></div>
+        
+        <!-- Server 1 (Active) -->
+        <div class="relative group cascade-reveal" style="--index: 3;">
+            <!-- Active Indicator -->
+            <div class="absolute -left-1 top-1/2 -translate-y-1/2 w-1.5 h-8 bg-accent-emerald rounded-r-md transition-all"></div>
+            <button class="w-12 h-12 rounded-[14px] bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-lg font-bold shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-accent-emerald overflow-hidden">
+                CS
+            </button>
+        </div>
+
+        <!-- Server 2 -->
+        <div class="relative group cascade-reveal" style="--index: 4;">
+            <div class="absolute -left-1 top-1/2 -translate-y-1/2 w-1.5 h-0 bg-text-primary rounded-r-md transition-all group-hover:h-5"></div>
+            <button class="w-12 h-12 rounded-[24px] group-hover:rounded-[14px] bg-surface-800 border b-hairline flex items-center justify-center text-text-secondary group-hover:text-text-primary transition-all duration-300 outline-none">
+                <i class="ph ph-atom text-xl"></i>
+            </button>
+            <!-- Unread Badge -->
+            <div class="absolute -top-1 -right-1 w-4 h-4 bg-text-primary rounded-full border-[3px] border-surface-900"></div>
+        </div>
+
+        <!-- Add Server -->
+        <div class="mt-auto cascade-reveal" style="--index: 5;">
+            <button class="w-12 h-12 rounded-full border border-dashed b-hairline hover:border-accent-emerald hover:text-accent-emerald text-text-secondary flex items-center justify-center transition-all outline-none">
+                <i class="ph ph-plus text-xl"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- PANEL 2: Channel Sidebar -->
+    <aside id="channel-sidebar" class="w-60 bg-surface-900 border-r b-hairline flex flex-col z-30 shrink-0">
+        <!-- Server Header -->
+        <header class="h-14 px-4 flex items-center justify-between border-b b-hairline hover:bg-surface-800 transition-colors cursor-pointer shrink-0">
+            <h1 class="font-semibold text-base truncate">CS-301 Algorithms</h1>
+            <i class="ph ph-caret-down text-text-secondary"></i>
+        </header>
+
+        <!-- Offline Queue Indicator (The Wedge) -->
+        <div class="mx-3 mt-3 p-2 rounded-md bg-surface-800 border b-hairline flex items-center gap-2 cascade-reveal" style="--index: 1;">
+            <div class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-emerald opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-accent-emerald"></span>
+            </div>
+            <span class="text-xs text-text-secondary font-medium">System Online</span>
+        </div>
+
+        <!-- Channel List -->
+        <div class="flex-1 overflow-y-auto px-2 py-4 space-y-4">
+            <!-- Category: Async Study -->
+            <div>
+                <button class="flex items-center text-[11px] font-semibold text-text-muted uppercase tracking-wider hover:text-text-secondary px-2 w-full text-left mb-1 cascade-reveal" style="--index: 2;">
+                    <i class="ph ph-caret-down mr-1"></i> Async discussions
+                </button>
+                <div class="space-y-0.5">
+                    <a href="#" class="flex items-center gap-2 px-2 py-1.5 rounded-md text-text-secondary hover:bg-surface-800 hover:text-text-primary transition-colors cascade-reveal" style="--index: 3;">
+                        <i class="ph ph-hash text-lg text-text-muted"></i> class-logistics
+                    </a>
+                    <a href="#" class="flex items-center gap-2 px-2 py-1.5 rounded-md text-text-primary font-medium bg-surface-800 cascade-reveal" style="--index: 4;">
+                        <i class="ph ph-hash text-lg text-text-secondary"></i> problem-set-3
+                        <div class="ml-auto w-1.5 h-1.5 rounded-full bg-text-primary"></div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Category: Sync Layers -->
+            <div>
+                <button class="flex items-center text-[11px] font-semibold text-text-muted uppercase tracking-wider hover:text-text-secondary px-2 w-full text-left mb-1 cascade-reveal" style="--index: 5;">
+                    <i class="ph ph-caret-down mr-1"></i> Live Study Rooms
+                </button>
+                <div class="space-y-0.5">
+                    <!-- Active Voice Channel -->
+                    <div class="bg-surface-800 rounded-md overflow-hidden cascade-reveal" style="--index: 6;">
+                        <a href="#" class="flex items-center gap-2 px-2 py-1.5 text-accent-emerald font-medium">
+                            <i class="ph-fill ph-speaker-high text-lg"></i> Group Project
+                            <i class="ph ph-users ml-auto text-text-secondary text-xs"> 4</i>
+                        </a>
+                        <!-- Occupants sub-list -->
+                        <div class="pl-7 pb-2 pr-2 space-y-1">
+                            <div class="flex items-center gap-2 text-xs text-text-secondary">
+                                <div class="w-5 h-5 rounded-full bg-surface-600 shrink-0 overflow-hidden relative is-speaking border-[1px]">
+                                    <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=64&q=80" alt="Alice" class="w-full h-full object-cover">
+                                </div>
+                                Alice (You)
+                            </div>
+                            <div class="flex items-center gap-2 text-xs text-text-secondary opacity-70">
+                                <div class="w-5 h-5 rounded-full shrink-0 overflow-hidden">
+                                    <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=64&q=80" alt="Bob" class="w-full h-full object-cover">
+                                </div>
+                                Bob
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Category: Assignments -->
+            <div class="mt-4 pt-4 border-t b-hairline cascade-reveal" style="--index: 7;">
+                 <a href="#" class="flex items-center gap-2 px-2 py-1.5 rounded-md text-text-secondary hover:bg-surface-800 transition-colors">
+                    <i class="ph ph-clipboard-text text-lg text-text-muted"></i> Homework tracking
+                </a>
+            </div>
+        </div>
+
+        <!-- User Profile Area -->
+        <div class="h-[60px] bg-surface-950 p-2 flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-2 hover:bg-surface-800 p-1.5 rounded-md cursor-pointer transition-colors flex-1 min-w-0">
+                <div class="relative shrink-0">
+                    <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=128&q=80" alt="You" class="w-8 h-8 rounded-full border border-surface-700 object-cover">
+                    <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-accent-emerald border-2 border-surface-950 rounded-full ring-1 ring-surface-950"></div>
+                </div>
+                <div class="truncate">
+                    <div class="text-[13px] font-medium leading-none text-text-primary">Alice_V</div>
+                    <div class="text-[11px] text-text-muted mt-1 truncate">Connected</div>
+                </div>
+            </div>
+            <div class="flex items-center gap-1 shrink-0 text-text-muted">
+                <button class="w-7 h-7 rounded hover:bg-surface-800 hover:text-text-primary flex items-center justify-center transition-colors"><i class="ph ph-microphone"></i></button>
+                <button class="w-7 h-7 rounded hover:bg-surface-800 hover:text-text-primary flex items-center justify-center transition-colors"><i class="ph ph-headphones"></i></button>
+                <button class="w-7 h-7 rounded hover:bg-surface-800 hover:text-text-primary flex items-center justify-center transition-colors"><i class="ph ph-gear"></i></button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- PANEL 3: Central Canvas (The Video / Voice Stage) -->
+    <main class="flex-1 flex flex-col bg-surface-800 relative z-10 w-full min-w-0">
+        
+        <!-- Context Header -->
+        <header class="h-14 border-b b-hairline flex items-center justify-between px-4 shrink-0 bg-surface-800/80 backdrop-blur-md sticky top-0 z-20">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-md bg-surface-700 flex items-center justify-center text-text-secondary">
+                    <i class="ph-fill ph-speaker-high text-lg text-text-primary"></i>
+                </div>
+                <div>
+                    <h2 class="font-semibold text-base leading-tight">Group Project Sync</h2>
+                    <div class="flex items-center gap-2 text-xs text-text-secondary">
+                        <span>4 participants</span>
+                        <span class="w-1 h-1 rounded-full bg-surface-600"></span>
+                        <span class="text-accent-emerald flex items-center gap-1">
+                            <i class="ph-fill ph-lock-key"></i> Encrypted
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <!-- Layout views -->
+                <div class="bg-surface-900 rounded-md border b-hairline p-0.5 flex">
+                    <button class="px-2.5 py-1 text-text-primary bg-surface-700 rounded shadow-sm text-xs font-medium border border-surface-600 outline-none"><i class="ph ph-users text-sm align-middle mr-1"></i>Speaker</button>
+                    <button class="px-2.5 py-1 text-text-muted hover:text-text-primary rounded text-xs font-medium transition-colors outline-none"><i class="ph-fill ph-squares-four text-sm align-middle mr-1"></i>Grid</button>
+                </div>
+                <div class="w-[1px] h-4 bg-surface-700 mx-1"></div>
+                <!-- Toggle right panel -->
+                <button id="toggle-panel-btn" class="w-8 h-8 rounded-md hover:bg-surface-700 text-text-primary flex items-center justify-center transition-colors outline-none bg-surface-700">
+                    <i class="ph ph-sidebar-simple text-lg"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Stage Area -->
+        <div class="flex-1 p-4 md:p-6 overflow-hidden relative flex flex-col justify-center items-center bg-surface-950">
+            
+            <!-- Floating connection toast -->
+            <div class="absolute top-4 left-1/2 -translate-x-1/2 z-30 bg-surface-700/80 backdrop-blur border border-accent-amber/30 text-accent-amber px-4 py-2 rounded-full text-xs font-medium flex items-center gap-2 shadow-pop transition-transform duration-300 transform scale-100 cascade-reveal">
+                <i class="ph-fill ph-warning-circle text-base"></i>
+                Bob is experiencing poor connection. Audio-only fallback engaged.
+            </div>
+
+            <!-- Speaker View Geometry -->
+            <div class="w-full h-full max-w-[1280px] flex flex-col gap-4 relative">
+                
+                <!-- Main Speaker Video (Alice) -->
+                <div class="flex-1 bg-surface-900 rounded-xl md:rounded-[24px] border b-hairline overflow-hidden relative is-speaking shadow-[0_8px_32px_rgba(0,0,0,0.4)] group">
+                    <!-- Video Feed -->
+                    <img src="https://images.unsplash.com/photo-1544256718-3b61023f4de6?auto=format&fit=crop&w=1920&q=80" alt="Camera feed of Alice at desk" class="w-full h-full object-cover">
+                    
+                    <!-- Overlay vignette -->
+                    <div class="absolute inset-0 bg-gradient-to-t from-surface-950/80 via-transparent to-surface-950/20 pointer-events-none"></div>
+                    
+                    <!-- Top-right Actions -->
+                    <div class="absolute top-4 right-4 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button class="w-8 h-8 rounded-lg bg-surface-800/80 backdrop-blur border b-hairline flex items-center justify-center text-text-secondary hover:text-text-primary outline-none" title="Pin to screen">
+                            <i class="ph ph-push-pin"></i>
+                        </button>
+                    </div>
+
+                    <!-- Bottom-left Metadata -->
+                    <div class="absolute bottom-4 left-4 flex items-center gap-3">
+                        <div class="px-3 py-1.5 rounded-lg bg-surface-950/80 backdrop-blur border b-hairline flex items-center gap-2">
+                            <span class="font-medium text-text-primary">Alice (You)</span>
+                            <!-- Live audio indicator -->
+                            <div class="flex items-end gap-[2px] h-3 h-full pb-0.5 ml-1">
+                                <div class="audio-bar"></div>
+                                <div class="audio-bar"></div>
+                                <div class="audio-bar"></div>
+                            </div>
+                        </div>
+                        <div class="px-2 py-1.5 rounded-lg bg-surface-950/80 backdrop-blur border b-hairline text-accent-emerald flex items-center" title="Connection: Excellent">
+                            <i class="ph-fill ph-cell-signal-full text-base"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Thumbnail Row (Participants) -->
+                <div class="h-28 md:h-36 w-full flex gap-4 shrink-0 overflow-x-auto pb-2 custom-scrollbar">
+                    
+                    <!-- Thumbnail 1 (Bob - Audio Only / Poor Connection) -->
+                    <div class="aspect-video h-full bg-surface-900 rounded-xl border border-accent-amber/50 relative overflow-hidden flex flex-col justify-center items-center shadow-sm shrink-0">
+                        <!-- Avatar fallback -->
+                        <div class="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden border-2 border-surface-700 relative">
+                            <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=256&q=80" alt="Bob avatar" class="w-full h-full object-cover">
+                        </div>
+                        <div class="text-[10px] text-accent-amber mt-2 uppercase tracking-wide font-semibold flex items-center gap-1 bg-surface-950/80 px-2 py-0.5 rounded-full absolute top-2 right-2 backdrop-blur">
+                            <i class="ph-fill ph-wifi-low poor-connection-icon"></i> Audio Only
+                        </div>
+                        <div class="absolute bottom-2 left-2 px-2 py-1 bg-surface-950/90 rounded text-xs flex items-center gap-1.5 border b-hairline">
+                            <span class="w-2 h-2 rounded-full bg-accent-emerald"></span> Bob
+                        </div>
+                    </div>
+
+                    <!-- Thumbnail 2 (Carol - Camera Off, Muted) -->
+                    <div class="aspect-video h-full bg-surface-900 rounded-xl border b-hairline relative overflow-hidden flex flex-col justify-center items-center shadow-sm shrink-0">
+                        <div class="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden border-2 border-surface-700">
+                            <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=256&q=80" alt="Carol avatar" class="w-full h-full object-cover opacity-50 grayscale transition-all">
+                        </div>
+                        <div class="absolute bottom-2 left-2 px-2 py-1 bg-surface-950/90 rounded text-xs flex items-center gap-1.5 border b-hairline">
+                            <i class="ph-fill ph-microphone-slash text-danger"></i> Carol
+                        </div>
+                    </div>
+
+                    <!-- Thumbnail 3 (Dave - Camera On, Muted) -->
+                    <div class="aspect-video h-full bg-surface-900 rounded-xl border b-hairline relative overflow-hidden shadow-sm shrink-0">
+                        <img src="https://images.unsplash.com/photo-1503756234508-e32369269deb?auto=format&fit=crop&w=800&q=80" alt="Dave studying" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-gradient-to-t from-surface-950/60 to-transparent pointer-events-none"></div>
+                        
+                        <div class="absolute bottom-2 left-2 px-2 py-1 bg-surface-950/90 rounded text-xs flex items-center gap-1.5 border b-hairline">
+                            <i class="ph-fill ph-microphone-slash text-danger"></i> Dave
+                        </div>
+                    </div>
+                     <!-- Empty state hint slot -->
+                    <button class="aspect-video h-full bg-surface-900/50 hover:bg-surface-800 rounded-xl border border-dashed border-surface-600 relative overflow-hidden flex flex-col justify-center items-center shrink-0 transition-colors text-text-secondary hover:text-text-primary group">
+                         <i class="ph ph-user-plus text-2xl mb-1 group-hover:scale-110 transition-transform duration-spring"></i>
+                         <span class="text-xs font-medium">Invite to Room</span>
+                    </button>
+
+                </div>
+            </div>
+
+            <!-- Global Controls Bar (Floating bottom center) -->
+            <div id="stage-controls" class="absolute bottom-6 md:bottom-8 left-1/2 -translate-x-1/2 min-w-max glass-panel rounded-[20px] p-2 flex items-center gap-2 z-40 cascade-reveal" style="--index: 8;">
+                
+                <!-- Mic Toggle -->
+                <div class="relative group">
+                    <button class="w-12 h-12 rounded-2xl bg-surface-700/50 hover:bg-surface-600 flex items-center justify-center text-text-primary transition-all shadow-sm outline-none active:scale-95 group-hover:-translate-y-0.5 border b-hairline group-focus:ring-2 focus:ring-accent-emerald relative">
+                        <i class="ph-fill ph-microphone text-xl z-10"></i>
+                    </button>
+                    <!-- Tooltip -->
+                    <div class="absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-surface-900 border b-hairline rounded text-[11px] font-medium text-text-secondary opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-pop">Mute (M)</div>
+                </div>
+
+                <!-- Cam Toggle -->
+                <div class="relative group">
+                    <button class="w-12 h-12 rounded-2xl bg-surface-700/50 hover:bg-surface-600 flex items-center justify-center text-text-primary transition-all shadow-sm outline-none active:scale-95 group-hover:-translate-y-0.5 border b-hairline">
+                        <i class="ph-fill ph-video-camera text-xl"></i>
+                    </button>
+                </div>
+
+                <!-- Screen Share -->
+                <div class="relative group">
+                    <button class="w-12 h-12 rounded-2xl bg-surface-700/50 hover:bg-surface-600 flex items-center justify-center text-text-primary transition-all shadow-sm outline-none active:scale-95 group-hover:-translate-y-0.5 border b-hairline">
+                        <i class="ph-bold ph-screencast text-xl"></i>
+                    </button>
+                </div>
+
+                <div class="w-[1px] h-8 bg-surface-600 mx-1"></div>
+
+                <!-- Settings / Quality -->
+                <div class="relative group">
+                    <button class="w-12 h-12 rounded-xl hover:bg-surface-700 flex items-center justify-center text-text-secondary hover:text-text-primary transition-all outline-none active:scale-95 border border-transparent hover:b-hairline">
+                        <i class="ph ph-faders text-xl"></i>
+                    </button>
+                </div>
+
+                <!-- Chat Toggle -->
+                <div class="relative group">
+                    <button class="w-12 h-12 rounded-xl hover:bg-surface-700 flex items-center justify-center text-text-secondary hover:text-text-primary transition-all outline-none active:scale-95 border border-transparent hover:b-hairline relative">
+                        <i class="ph ph-chat-circle-dots text-xl"></i>
+                        <span class="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-accent-emerald rounded-full border-2 border-surface-800"></span>
+                    </button>
+                </div>
+
+                <div class="w-[1px] h-8 bg-surface-600 mx-1"></div>
+
+                <!-- Leave Call -->
+                <button class="h-12 px-5 rounded-2xl bg-danger hover:bg-red-600 text-white font-bold flex items-center gap-2 transition-all shadow-[0_4px_12px_rgba(239,68,68,0.3)] outline-none active:scale-95 transform hover:-translate-y-0.5">
+                    <i class="ph-bold ph-phone-disconnect text-lg"></i> Leave
+                </button>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- PANEL 4: Member & Context Panel (Right Drawer) -->
+    <aside id="member-panel" class="w-72 bg-surface-900 border-l b-hairline flex flex-col z-30 shrink-0 transform transition-transform duration-spring">
+        <header class="h-14 px-4 flex items-center justify-between border-b b-hairline shrink-0">
+            <h3 class="font-semibold text-sm">Room Details</h3>
+            <button class="p-1 rounded hover:bg-surface-800 text-text-secondary transition-colors outline-none" id="close-panel-btn">
+                <i class="ph ph-x"></i>
+            </button>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
+            
+            <!-- Connection Diagnostics Block (App Wedge Feature) -->
+            <section class="cascade-reveal" style="--index: 1;">
+                <div class="flex items-center justify-between mb-2">
+                    <h4 class="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Network Health</h4>
+                    <button class="text-xs text-accent-emerald hover:underline">Diagnostics</button>
+                </div>
+                <!-- Your state -->
+                <div class="bg-surface-800 rounded-lg p-3 border border-accent-emerald/20 flex gap-3 mb-2">
+                    <div class="mt-0.5">
+                        <i class="ph-fill ph-wifi-high text-accent-emerald"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs font-medium text-text-primary">Your Connection: Good</div>
+                        <div class="text-[11px] text-text-secondary mt-1">Latency: 28ms &bull; 5.2 Mbps</div>
+                    </div>
+                </div>
+                <!-- Warning state for someone else -->
+                <div class="bg-surface-800 rounded-lg p-3 border border-accent-amber/40 flex flex-col gap-2 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-16 h-16 bg-accent-amber/5 rounded-bl-full pointer-events-none"></div>
+                    <div class="flex gap-3">
+                        <div class="mt-0.5">
+                            <i class="ph-fill ph-warning-circle text-accent-amber poor-connection-icon"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs font-medium text-text-primary">Bob's Network is unstable</div>
+                            <div class="text-[11px] text-text-secondary mt-1">High packet loss (12%).</div>
+                        </div>
+                    </div>
+                    <button class="w-full mt-1 bg-surface-700 hover:bg-surface-600 text-text-primary text-xs font-medium py-1.5 rounded transition-colors border b-hairline">
+                        Suggest Audio-Only Mode
+                    </button>
+                </div>
+            </section>
+
+            <!-- Participant List -->
+            <section class="cascade-reveal" style="--index: 2;">
+                <h4 class="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-3">In Room (4)</h4>
+                
+                <div class="space-y-1">
+                    <!-- Member 1: Alice (Speaking) -->
+                    <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-800 transition-colors group cursor-pointer">
+                        <div class="relative">
+                            <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=64&q=80" alt="Alice" class="w-8 h-8 rounded-full border border-surface-700 outline outline-2 outline-accent-emerald outline-offset-1">
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-medium truncate flex items-center gap-1.5">
+                                Alice_V 
+                                <span class="bg-surface-700 text-[10px] px-1.5 py-0.5 rounded text-text-secondary border b-hairline">Host</span>
+                            </div>
+                            <div class="text-[11px] text-accent-emerald font-medium">Speaking...</div>
+                        </div>
+                        <div class="flex items-center gap-1.5 text-text-secondary opacity-0 group-hover:opacity-100 transition-opacity">
+                            <i class="ph-fill ph-video-camera text-sm"></i>
+                            <i class="ph-fill ph-microphone text-sm text-text-primary"></i>
+                        </div>
+                    </div>
+
+                    <!-- Member 2: Bob (Audio Only) -->
+                    <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-800 transition-colors group cursor-pointer">
+                        <div class="relative">
+                            <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=64&q=80" alt="Bob" class="w-8 h-8 rounded-full opacity-60">
+                            <div class="absolute -bottom-1 -right-1 bg-surface-950 rounded-full p-[2px]">
+                                <div class="w-2.5 h-2.5 bg-accent-amber rounded-full"></div>
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-medium text-text-secondary truncate">Bobby_Tables</div>
+                            <div class="text-[11px] text-accent-amber font-medium">Audio-only fallback</div>
+                        </div>
+                        <div class="flex items-center gap-1.5 text-text-secondary">
+                            <i class="ph ph-video-camera-slash text-sm"></i>
+                            <i class="ph ph-microphone text-sm"></i>
+                        </div>
+                    </div>
+
+                    <!-- Member 3: Carol (Muted) -->
+                    <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-800 transition-colors group cursor-pointer">
+                        <div class="relative">
+                            <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=64&q=80" alt="Carol" class="w-8 h-8 rounded-full border b-hairline">
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-medium text-text-secondary truncate">Carol_S</div>
+                            <div class="text-[11px] text-text-muted font-medium">Listening</div>
+                        </div>
+                        <div class="flex items-center gap-1.5 text-text-secondary">
+                            <i class="ph ph-video-camera-slash text-sm"></i>
+                            <i class="ph-fill ph-microphone-slash text-danger text-sm"></i>
+                        </div>
+                    </div>
+
+                     <!-- Member 4: Dave -->
+                     <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-800 transition-colors group cursor-pointer">
+                        <div class="relative">
+                            <!-- Show snapshot of video feed if hovering, else avatar. For mock, just use small image -->
+                             <img src="https://images.unsplash.com/photo-1503756234508-e32369269deb?auto=format&fit=crop&w=128&q=80" alt="Dave" class="w-8 h-8 rounded-md object-cover border b-hairline">
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-medium text-text-secondary truncate">Dave_W</div>
+                            <div class="text-[11px] text-text-muted font-medium">Camera on</div>
+                        </div>
+                        <div class="flex items-center gap-1.5 text-text-secondary">
+                            <i class="ph-fill ph-video-camera text-sm"></i>
+                            <i class="ph-fill ph-microphone-slash text-danger text-sm"></i>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+             <!-- Room Metadata -->
+             <section class="mt-6 pt-4 border-t b-hairline cascade-reveal" style="--index: 3;">
+                <div class="text-[11px] text-text-muted space-y-2">
+                    <p class="flex justify-between"><span>Session Started:</span> <span class="text-text-secondary">43 mins ago</span></p>
+                    <p class="flex justify-between"><span>Region:</span> <span class="text-text-secondary">US-East (LiveKit)</span></p>
+                </div>
+                
+                <button class="w-full mt-4 h-9 bg-transparent border border-surface-600 hover:border-text-secondary hover:text-text-primary text-text-secondary text-xs font-semibold rounded-md flex items-center justify-center gap-2 transition-colors outline-none focus:ring-2 ring-accent-emerald">
+                    <i class="ph ph-link"></i> Copy Room Link
+                </button>
+            </section>
+
+        </div>
+    </aside>
+
+    <!-- Vanilla JS to drive mockup interactions safely -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const memberPanel = document.getElementById('member-panel');
+            const togglePanelBtn = document.getElementById('toggle-panel-btn');
+            const closePanelBtn = document.getElementById('close-panel-btn');
+            
+            // Toggle Logic for right panel
+            let isPanelOpen = true; // start open on desktop
+            
+            // Auto hide panel on small screens initially
+            if(window.innerWidth < 1280) {
+                isPanelOpen = false;
+                memberPanel.style.display = 'none';
+                togglePanelBtn.classList.remove('bg-surface-700');
+            }
+
+            function togglePanel() {
+                isPanelOpen = !isPanelOpen;
+                if(isPanelOpen) {
+                    memberPanel.style.display = 'flex';
+                    togglePanelBtn.classList.add('bg-surface-700');
+                    togglePanelBtn.classList.add('text-text-primary');
+                    togglePanelBtn.classList.remove('text-text-secondary');
+                } else {
+                    memberPanel.style.display = 'none';
+                    togglePanelBtn.classList.remove('bg-surface-700');
+                    togglePanelBtn.classList.remove('text-text-primary');
+                    togglePanelBtn.classList.add('text-text-secondary');
+                }
+            }
+
+            togglePanelBtn.addEventListener('click', togglePanel);
+            closePanelBtn.addEventListener('click', () => { if(isPanelOpen) togglePanel(); });
+
+            // Responsive listener
+            window.addEventListener('resize', () => {
+                if(window.innerWidth >= 1280 && !isPanelOpen && memberPanel.style.display === '') {
+                     // Force state based on CSS logic if not manually touched, but keep it simple here.
+                }
+            });
+
+            // Simulated Mic Toggle interaction on Main Button
+            const micBtn = document.querySelector('#stage-controls button:first-child');
+            const micIcon = micBtn.querySelector('i');
+            let isMicOn = true;
+
+            micBtn.addEventListener('click', () => {
+                isMicOn = !isMicOn;
+                if(isMicOn) {
+                    micIcon.className = 'ph-fill ph-microphone text-xl z-10 text-text-primary';
+                    micBtn.classList.remove('bg-danger/20', 'text-danger', 'border-danger/50');
+                    micBtn.classList.add('bg-surface-700/50', 'text-text-primary');
+                } else {
+                    micIcon.className = 'ph-fill ph-microphone-slash text-xl z-10';
+                    micBtn.classList.add('bg-danger/20', 'text-danger', 'border-danger/50');
+                    micBtn.classList.remove('bg-surface-700/50', 'text-text-primary');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

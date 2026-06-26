@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Settings — Profile — StudyHall</title>
+    
+    <!-- Fonts: Outfit (modern geometric sans mimicking Geist proportions) and DM Mono for code/usernames -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'system-ui', 'sans-serif'],
+                        mono: ['DM Mono', 'monospace'],
+                    },
+                    colors: {
+                        surface: {
+                            950: '#0a0a0b',
+                            900: '#121214',
+                            800: '#1c1c1f',
+                            700: '#27272a',
+                            600: '#3f3f46',
+                            500: '#52525b',
+                        },
+                        ui: {
+                            hairline: 'rgba(255,255,255,0.06)',
+                            hover: 'rgba(255,255,255,0.10)',
+                            primary: 'rgba(255,255,255,0.92)',
+                            secondary: 'rgba(255,255,255,0.60)',
+                            muted: 'rgba(255,255,255,0.40)',
+                        },
+                        status: {
+                            danger: '#ef4444',
+                            amber: '#f59e0b',
+                            emerald: '#10b981',
+                        }
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-out forwards',
+                        'slide-up': 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'dash': 'dash 1.5s ease-in-out infinite',
+                        'spin-slow': 'spin 2s linear infinite',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { opacity: '0', transform: 'translateY(10px) scale(0.98)' },
+                            '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
+                        },
+                        dash: {
+                            '0%': { strokeDasharray: '1, 150', strokeDashoffset: '0' },
+                            '50%': { strokeDasharray: '90, 150', strokeDashoffset: '-35' },
+                            '100%': { strokeDasharray: '90, 150', strokeDashoffset: '-124' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            /* Dynamic User Variables */
+            --user-accent: #10b981; /* Emerald default */
+            --user-accent-glow: rgba(16, 185, 129, 0.4);
+            
+            /* Custom Scrollbar */
+            --scrollbar-bg: #0a0a0b;
+            --scrollbar-thumb: #3f3f46;
+        }
+
+        body {
+            background-color: theme('colors.surface.950');
+            color: theme('colors.ui.primary');
+        }
+
+        /* Architectural Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+            background-color: var(--scrollbar-bg);
+        }
+        ::-webkit-scrollbar-thumb {
+            background-color: var(--scrollbar-thumb);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background-color: theme('colors.surface.500');
+        }
+
+        /* Input architectural styling */
+        .academic-input {
+            background-color: theme('colors.surface.900');
+            border: 1px solid theme('colors.ui.hairline');
+            transition: all 0.2s ease;
+        }
+        .academic-input:hover:not(:disabled) {
+            border-color: theme('colors.ui.hover');
+        }
+        .academic-input:focus {
+            outline: none;
+            border-color: var(--user-accent);
+            box-shadow: 0 0 0 2px var(--user-accent-glow);
+        }
+        .academic-input.error {
+            border-color: theme('colors.status.danger');
+            box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+        }
+
+        /* Glass refraction edge on cards */
+        .glass-panel {
+            background-color: theme('colors.surface.800');
+            border: 1px solid theme('colors.ui.hairline');
+            box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.2), 
+                        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        }
+
+        /* Button architecture */
+        .btn-primary {
+            background-color: var(--user-accent);
+            color: #fff;
+            transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.2s ease;
+        }
+        .btn-primary:hover:not(:disabled) {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+        .btn-primary:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background-color: theme('colors.surface.900');
+            border: 1px solid theme('colors.ui.hairline');
+            transition: all 0.2s ease;
+        }
+        .btn-secondary:hover:not(:disabled) {
+            background-color: theme('colors.surface.700');
+            border-color: theme('colors.ui.hover');
+        }
+
+        /* Toggle Switch */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: var(--user-accent);
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: var(--user-accent);
+        }
+        .toggle-checkbox:focus + .toggle-label {
+            box-shadow: 0 0 0 2px var(--user-accent-glow);
+        }
+
+        /* Micro-animations */
+        .stagger-1 { animation-delay: 50ms; }
+        .stagger-2 { animation-delay: 100ms; }
+        .stagger-3 { animation-delay: 150ms; }
+        .stagger-4 { animation-delay: 200ms; }
+
+        /* Color Swatch specific */
+        .color-swatch.active {
+            border-color: white;
+            transform: scale(1.1);
+        }
+        .color-swatch:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 2px theme('colors.ui.hairline'), 0 0 0 4px #fff;
+        }
+
+        /* Overlay blur */
+        .backdrop-blur-xl {
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+        }
+
+        /* SVG Loader */
+        .spinner {
+            animation: rotate 2s linear infinite;
+        }
+        .spinner .path {
+            stroke: currentColor;
+            stroke-linecap: round;
+            animation: dash 1.5s ease-in-out infinite;
+        }
+        @keyframes rotate { 100% { transform: rotate(360deg); } }
+
+        /* Hide preview on mobile, show via modal if needed */
+        @media (max-width: 1024px) {
+            #preview-panel { display: none; }
+        }
+    </style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style id="studyhall-geist-fix">
+  :root { --sh-font: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+          --sh-mono: 'Geist Mono', ui-monospace, monospace; }
+  html, body, button, input, textarea, select, h1,h2,h3,h4,h5,h6, p, span, div, a, label {
+    font-family: var(--sh-font) !important; }
+  code, pre, .font-mono { font-family: var(--sh-mono) !important; }
+</style>
+</head>
+<body class="min-h-[100dvh] flex antialiased text-[14px]">
+
+    <!-- App Environment Shell -->
+    
+    <!-- 1. Left Sidebar (Settings Navigation) -->
+    <aside class="w-64 bg-surface-900 border-r border-ui-hairline hidden md:flex flex-col flex-shrink-0 z-20 sticky top-0 h-[100dvh]">
+        <!-- Brand/Back Header -->
+        <div class="h-14 flex items-center px-4 border-b border-ui-hairline">
+            <button class="text-ui-secondary hover:text-ui-primary flex items-center gap-2 transition-colors text-sm font-medium">
+                <i class="ph ph-arrow-left text-lg"></i>
+                Back to App
+            </button>
+        </div>
+
+        <!-- Nav Links -->
+        <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+            <div class="px-3 pb-2 text-[11px] font-bold tracking-wider text-ui-muted uppercase">User Settings</div>
+            
+            <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-md bg-surface-700 text-ui-primary font-medium transition-colors">
+                <i class="ph overflow-hidden ph-user text-lg text-ui-secondary"></i>
+                Profile
+            </a>
+            
+            <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-md text-ui-secondary hover:bg-surface-700/50 hover:text-ui-primary transition-colors">
+                <i class="ph ph-shield-check text-lg"></i>
+                Privacy & Safety
+            </a>
+            
+            <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-md text-ui-secondary hover:bg-surface-700/50 hover:text-ui-primary transition-colors">
+                <i class="ph ph-bell text-lg"></i>
+                Notifications
+            </a>
+            
+            <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-md text-ui-secondary hover:bg-surface-700/50 hover:text-ui-primary transition-colors">
+                <i class="ph ph-palette text-lg"></i>
+                Appearance
+            </a>
+            
+            <div class="my-4 border-t border-ui-hairline mx-2"></div>
+            
+            <div class="px-3 pb-2 text-[11px] font-bold tracking-wider text-ui-muted uppercase">App Settings</div>
+            
+            <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-md text-ui-secondary hover:bg-surface-700/50 hover:text-ui-primary transition-colors">
+                <i class="ph ph-microphone-stage text-lg"></i>
+                Voice & Video
+            </a>
+            
+            <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-md text-ui-secondary hover:bg-surface-700/50 hover:text-ui-primary transition-colors">
+                <i class="ph ph-keyboard text-lg"></i>
+                Keybinds
+            </a>
+        </nav>
+    </aside>
+
+    <!-- 2. Main Content Canvas -->
+    <main class="flex-1 flex flex-col h-[100dvh] overflow-y-auto relative bg-surface-950">
+        
+        <!-- Mobile Header (Hidden on Desktop) -->
+        <header class="md:hidden h-14 bg-surface-900 border-b border-ui-hairline flex items-center px-4 justify-between sticky top-0 z-30">
+            <div class="flex items-center gap-3">
+                <button class="text-ui-secondary hover:text-ui-primary p-1">
+                    <i class="ph ph-list text-xl"></i>
+                </button>
+                <span class="font-semibold text-ui-primary">Profile</span>
+            </div>
+            <button onclick="document.getElementById('mobile-preview-modal').classList.remove('hidden')" class="btn-secondary px-3 py-1.5 rounded-md text-xs font-medium">
+                Preview
+            </button>
+        </header>
+
+        <!-- Main Form Area Constraints -->
+        <div class="max-w-[1200px] w-full mx-auto px-6 py-8 md:py-12 flex-1 flex flex-col lg:flex-row gap-12 lg:gap-16">
+            
+            <!-- LEFT COLUMN: Form Engine -->
+            <div class="flex-1 max-w-2xl w-full mx-auto lg:mx-0 flex flex-col gap-10">
+                
+                <!-- Page Title -->
+                <div class="space-y-1 animate-slide-up opacity-0">
+                    <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-white">Profile Settings</h1>
+                    <p class="text-ui-secondary text-sm">Personalize your identity across all StudyHall servers.</p>
+                </div>
+
+                <!-- Form Ecosystem -->
+                <form id="profile-form" class="space-y-10" onsubmit="event.preventDefault(); saveProfile();">
+                    
+                    <!-- Section: Avatar -->
+                    <section class="opacity-0 animate-slide-up stagger-1">
+                        <h2 class="text-[11px] font-bold tracking-wider text-ui-muted uppercase mb-4">Avatar</h2>
+                        
+                        <div class="flex items-center gap-6">
+                            <!-- Avatar Display/Trigger -->
+                            <div class="relative group cursor-pointer" onclick="document.getElementById('avatar-upload').click()">
+                                <div class="w-24 h-24 rounded-full border border-ui-hairline overflow-hidden bg-surface-800 relative z-10 transition-transform duration-300 group-hover:scale-105 group-active:scale-95 shadow-sm">
+                                    <img id="avatar-preview-img" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=256&q=80" alt="Current Avatar" class="w-full h-full object-cover">
+                                    
+                                    <!-- Hover Overlay -->
+                                    <div class="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                        <i class="ph ph-camera text-2xl text-white mb-1"></i>
+                                        <span class="text-[10px] uppercase font-bold tracking-wider text-white">Change</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Offline Badge (hidden by default) -->
+                                <div id="offline-avatar-badge" class="hidden absolute -top-1 -right-1 w-6 h-6 bg-status-danger rounded-full border-2 border-surface-950 flex items-center justify-center z-20 tooltip-trigger">
+                                    <i class="ph-bold ph-wifi-x text-white text-[10px]"></i>
+                                </div>
+                            </div>
+                            
+                            <!-- Explainer -->
+                            <div class="flex-1 space-y-1">
+                                <p class="text-sm text-ui-primary font-medium">Upload a custom avatar</p>
+                                <p class="text-xs text-ui-secondary leading-relaxed">Accepted dimensions: 1:1 square.<br>JPEG, PNG, WEBP. Max 10MB.</p>
+                                <button type="button" onclick="document.getElementById('avatar-upload').click()" class="text-[var(--user-accent)] text-sm font-medium hover:underline mt-1 block">
+                                    Choose file...
+                                </button>
+                                <input type="file" id="avatar-upload" accept="image/png, image/jpeg, image/webp" class="hidden" onchange="handleAvatarSelect(event)">
+                            </div>
+                        </div>
+                    </section>
+
+                    <div class="h-px w-full bg-ui-hairline opacity-0 animate-slide-up stagger-1"></div>
+
+                    <!-- Section: Identity -->
+                    <section class="opacity-0 animate-slide-up stagger-2 space-y-6">
+                        <h2 class="text-[11px] font-bold tracking-wider text-ui-muted uppercase mb-4">Identity</h2>
+                        
+                        <!-- Username Data-Group -->
+                        <div class="space-y-2 relative">
+                            <label for="username" class="text-sm font-semibold text-ui-primary flex items-center gap-1">
+                                Username <span class="text-status-danger">*</span>
+                            </label>
+                            
+                            <div class="relative flex items-center">
+                                <div class="absolute left-3 text-ui-muted font-mono select-none">@</div>
+                                <input type="text" id="username" name="username" value="alex_study" 
+                                    class="academic-input w-full rounded-md pl-8 pr-10 py-2.5 font-mono text-sm placeholder-ui-muted"
+                                    placeholder="your_handle"
+                                    maxlength="32"
+                                    autocomplete="off"
+                                >
+                                
+                                <!-- Validation Indicators -->
+                                <div class="absolute right-3 flex items-center justify-center w-5 h-5">
+                                    <!-- Spinner -->
+                                    <svg class="spinner w-4 h-4 text-ui-secondary hidden" id="user-spinner" viewBox="0 0 50 50">
+                                        <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
+                                    </svg>
+                                    <!-- Check -->
+                                    <i class="ph-bold ph-check text-status-emerald hidden text-base" id="user-check"></i>
+                                    <!-- Cross -->
+                                    <i class="ph-bold ph-x text-status-danger hidden text-base" id="user-cross"></i>
+                                </div>
+                            </div>
+                            
+                            <div class="flex justify-between items-start mt-1.5">
+                                <p class="text-xs text-ui-secondary" id="username-hint">Unique across StudyHall. Used for mentions.</p>
+                                <p class="text-[10px] font-mono text-ui-muted" id="username-count">10/32</p>
+                            </div>
+                        </div>
+
+                        <!-- Display Name Data-Group -->
+                        <div class="space-y-2">
+                            <label for="display_name" class="text-sm font-semibold text-ui-primary flex items-center justify-between">
+                                <span>Display Name <span class="text-ui-muted font-normal text-xs ml-1">(Optional)</span></span>
+                            </label>
+                            
+                            <input type="text" id="display_name" name="display_name" value="Alex Smith" 
+                                class="academic-input w-full rounded-md px-3 py-2.5 text-sm placeholder-ui-muted"
+                                placeholder="e.g. Alex Smith"
+                                maxlength="64"
+                            >
+                            
+                            <div class="flex justify-between items-start mt-1.5">
+                                <p class="text-xs text-ui-secondary">How you appear in servers and voice channels.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <div class="h-px w-full bg-ui-hairline opacity-0 animate-slide-up stagger-2"></div>
+
+                    <!-- Section: Appearance -->
+                    <section class="opacity-0 animate-slide-up stagger-3 space-y-8">
+                        <div class="flex justify-between items-end mb-4">
+                            <h2 class="text-[11px] font-bold tracking-wider text-ui-muted uppercase">Appearance</h2>
+                        </div>
+
+                        <!-- Accent Color -->
+                        <div class="space-y-4">
+                            <label class="text-sm font-semibold text-ui-primary block">Accent Color</label>
+                            
+                            <div class="flex flex-wrap gap-3" role="radiogroup" aria-label="Choose accent color" id="color-picker">
+                                <!-- Emerald (Default) -->
+                                <button type="button" class="color-swatch w-7 h-7 rounded-full border-[3px] border-transparent active transition-transform shrink-0" 
+                                    style="background-color: #10b981;" data-color="#10b981" aria-label="Emerald" aria-checked="true" role="radio"></button>
+                                
+                                <!-- Cyan -->
+                                <button type="button" class="color-swatch w-7 h-7 rounded-full border-[3px] border-transparent transition-transform shrink-0" 
+                                    style="background-color: #06b6d4;" data-color="#06b6d4" aria-label="Cyan" aria-checked="false" role="radio"></button>
+                                
+                                <!-- Blue -->
+                                <button type="button" class="color-swatch w-7 h-7 rounded-full border-[3px] border-transparent transition-transform shrink-0" 
+                                    style="background-color: #3b82f6;" data-color="#3b82f6" aria-label="Blue" aria-checked="false" role="radio"></button>
+                                
+                                <!-- Violet -->
+                                <button type="button" class="color-swatch w-7 h-7 rounded-full border-[3px] border-transparent transition-transform shrink-0" 
+                                    style="background-color: #8b5cf6;" data-color="#8b5cf6" aria-label="Violet" aria-checked="false" role="radio"></button>
+
+                                <!-- Pink -->
+                                <button type="button" class="color-swatch w-7 h-7 rounded-full border-[3px] border-transparent transition-transform shrink-0" 
+                                    style="background-color: #ec4899;" data-color="#ec4899" aria-label="Pink" aria-checked="false" role="radio"></button>
+                                
+                                <!-- Amber -->
+                                <button type="button" class="color-swatch w-7 h-7 rounded-full border-[3px] border-transparent transition-transform shrink-0" 
+                                    style="background-color: #f59e0b;" data-color="#f59e0b" aria-label="Amber" aria-checked="false" role="radio"></button>
+                                
+                                <!-- Rose (Danger/Messy - usually avoid but standard option) -->
+                                <button type="button" class="color-swatch w-7 h-7 rounded-full border-[3px] border-transparent transition-transform shrink-0" 
+                                    style="background-color: #f43f5e;" data-color="#f43f5e" aria-label="Rose" aria-checked="false" role="radio"></button>
+                                
+                                <!-- Slate -->
+                                <button type="button" class="color-swatch w-7 h-7 rounded-full border-[3px] border-transparent transition-transform shrink-0" 
+                                    style="background-color: #94a3b8;" data-color="#94a3b8" aria-label="Slate" aria-checked="false" role="radio"></button>
+                            </div>
+                            <p class="text-xs text-ui-secondary">Used for buttons, links, and your profile card identity.</p>
+                        </div>
+
+                        <!-- Theme (Read Only per Spec) -->
+                        <div class="space-y-3">
+                            <label class="text-sm font-semibold text-ui-primary block">App Theme</label>
+                            <div class="flex items-center justify-between p-3 rounded-md bg-surface-900 border border-ui-hairline opacity-70 cursor-not-allowed">
+                                <div class="flex items-center gap-3">
+                                    <i class="ph-fill ph-moon text-[var(--user-accent)] text-lg transition-colors" id="theme-icon"></i>
+                                    <span class="text-sm font-medium text-ui-primary">Dark Mode Focus</span>
+                                </div>
+                                <div class="w-10 h-5 bg-[var(--user-accent)] rounded-full relative transition-colors" id="theme-track">
+                                    <div class="absolute right-1 top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-white rounded-full"></div>
+                                </div>
+                            </div>
+                            <p class="text-[11px] text-ui-muted">StudyHall MVP is optimized for dark mode to reduce academic eye-strain. Light theme arrives in v2.</p>
+                        </div>
+                    </section>
+
+                    <!-- Bottom Action Bar (Sticky on mobile, static on desktop) -->
+                    <div class="mt-12 pt-6 border-t border-ui-hairline flex flex-col-reverse sm:flex-row items-center justify-between gap-4 opacity-0 animate-slide-up stagger-4 pb-12 md:pb-0">
+                        <button type="button" class="text-status-danger hover:text-red-400 text-sm font-medium transition-colors w-full sm:w-auto text-left" onclick="showSignoutModal()">
+                            Sign out
+                        </button>
+                        
+                        <div class="flex items-center gap-3 w-full sm:w-auto">
+                            <button type="button" id="btn-cancel" class="btn-secondary px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 flex-1 sm:flex-none" disabled onclick="resetForm()">
+                                Cancel
+                            </button>
+                            <button type="submit" id="btn-save" class="btn-primary px-6 py-2 rounded-md flex items-center justify-center gap-2 text-sm font-medium disabled:opacity-50 min-w-[140px] flex-1 sm:flex-none" disabled>
+                                <span>Save Changes</span>
+                                <svg class="spinner w-4 h-4 text-white hidden" id="save-spinner" viewBox="0 0 50 50">
+                                    <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+            </div>
+
+            <!-- RIGHT COLUMN: Meso-Architecture (The Preview Paradigm) -->
+            <aside id="preview-panel" class="w-[320px] flex-shrink-0 opacity-0 animate-fade-in stagger-3">
+                <div class="sticky top-12 space-y-4">
+                    <h2 class="text-sm font-semibold text-ui-primary flex items-center justify-between">
+                        Live Preview
+                        <span class="text-[10px] font-normal text-ui-muted uppercase tracking-wider bg-surface-800 px-2 py-0.5 rounded-sm border border-ui-hairline">Server Card</span>
+                    </h2>
+                    
+                    <!-- The Profile Card Component (Bento style structure) -->
+                    <div class="glass-panel rounded-xl overflow-hidden shadow-pop relative group">
+                        <!-- Header Banner (takes dynamic color) -->
+                        <div class="h-20 w-full relative transition-colors duration-500 ease-in-out" style="background-color: var(--user-accent);" id="preview-banner">
+                            <!-- Subtle noise overlay on banner -->
+                            <div class="absolute inset-0 opacity-10 mix-blend-overlay" style="background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E');"></div>
+                        </div>
+
+                        <!-- Card Body -->
+                        <div class="px-5 pb-5 pt-3 relative bg-surface-900">
+                            
+                            <!-- Avatar placement breaking the plane -->
+                            <div class="absolute -top-10 left-4 w-[76px] h-[76px] rounded-full ring-4 ring-surface-900 bg-surface-800 overflow-hidden">
+                                <img id="preview-avatar-img" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=256&q=80" alt="Avatar" class="w-full h-full object-cover">
+                                
+                                <!-- Mock Presence Dot (Status) -->
+                                <div class="absolute bottom-0 right-0 w-4 h-4 bg-status-emerald rounded-full ring-2 ring-surface-900 shadow-sm" id="preview-presence"></div>
+                            </div>
+                            
+                            <!-- Badges (Top Right) -->
+                            <div class="flex justify-end gap-1 h-8">
+                                <!-- Dummy badge -->
+                                <div class="w-6 h-6 rounded bg-surface-700/50 flex items-center justify-center border border-ui-hairline text-[var(--user-accent)]" title="Verified Student">
+                                    <i class="ph-fill ph-student text-sm"></i>
+                                </div>
+                            </div>
+
+                            <!-- Name Block -->
+                            <div class="mt-2 space-y-1">
+                                <h3 class="text-xl font-semibold text-ui-primary leading-none" id="preview-display">Alex Smith</h3>
+                                <p class="text-sm font-mono text-ui-secondary leading-none">@<span id="preview-username">alex_study</span></p>
+                            </div>
+
+                            <div class="mt-4 border-t border-ui-hairline pt-4 space-y-3">
+                                
+                                <!-- Dummy Bio -->
+                                <div>
+                                    <h4 class="text-[10px] font-bold tracking-wider text-ui-muted uppercase mb-1">About Me</h4>
+                                    <p class="text-xs text-ui-secondary line-clamp-2 leading-relaxed">CS Major trying to survive Data Structures. HMU for late night study sessions.</p>
+                                </div>
+
+                                <!-- Dummy Roles -->
+                                <div>
+                                    <h4 class="text-[10px] font-bold tracking-wider text-ui-muted uppercase mb-1">Roles</h4>
+                                    <div class="flex flex-wrap gap-1.5">
+                                        <span class="px-2 py-0.5 rounded-full bg-surface-800 border border-ui-hairline text-xs text-ui-primary flex items-center gap-1">
+                                            <div class="w-2 h-2 rounded-full" style="background-color: var(--user-accent)"></div> Moderator
+                                        </span>
+                                        <span class="px-2 py-0.5 rounded-full bg-surface-800 border border-ui-hairline text-xs text-ui-secondary">CS101</span>
+                                    </div>
+                                </div>
+
+                                <!-- Interaction Dummy -->
+                                <div class="pt-2">
+                                <input type="text" class="w-full bg-surface-950 border border-ui-hairline rounded text-xs px-2 py-1.5 placeholder-ui-muted" placeholder="Message @alex_study" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <p class="text-xs text-ui-muted text-center italic">This is how you appear in server member lists.</p>
+                </div>
+            </aside>
+
+        </div>
+    </main>
+
+    <!-- UI MICRO-ARCHITECTURE: Modals & Toasts -->
+
+    <!-- Mobile Preview Modal Container -->
+    <div id="mobile-preview-modal" class="fixed inset-0 z-50 hidden">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-surface-950/80 backdrop-blur-sm transition-opacity" onclick="this.parentElement.classList.add('hidden')"></div>
+        <!-- Modal Content (Centered Card) -->
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[320px] px-4">
+            <!-- Injecting a clone of the preview card logic here requires JS syncing, so for this static single file we just instruct usage, but let's visually build the shell -->
+            <div class="glass-panel rounded-xl overflow-hidden shadow-pop relative p-4 flex flex-col gap-4 text-center">
+                <p class="text-sm font-medium text-ui-secondary">Preview mode is optimal on desktop devices.</p>
+                <button class="btn-secondary py-1.5 rounded" onclick="document.getElementById('mobile-preview-modal').classList.add('hidden')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sign Out Confirm Modal -->
+    <div id="signout-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-surface-950/80 backdrop-blur-sm" onclick="hideSignoutModal()"></div>
+        <div class="glass-panel w-full max-w-sm rounded-xl p-6 relative z-10 scale-95 opacity-0 transition-all duration-200" id="signout-dialog">
+            <h3 class="text-lg font-semibold text-ui-primary mb-2">Sign out?</h3>
+            <p class="text-sm text-ui-secondary mb-6">You'll need to sign back in with your credentials to access your StudyHall servers.</p>
+            <div class="flex gap-3 justify-end">
+                <button class="btn-secondary px-4 py-2 rounded-md text-sm font-medium" onclick="hideSignoutModal()">Cancel</button>
+                <button class="bg-status-danger hover:brightness-110 text-white px-4 py-2 rounded-md text-sm font-medium transition-all" onclick="performSignout()">Sign Out</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none">
+        <!-- Toasts injected here via JS -->
+    </div>
+
+    <!-- JAVASCRIPT ENGINE (Simulating React/State Logic) -->
+    <script>
+        // --- State Management ---
+        const initialState = {
+            username: 'alex_study',
+            display_name: 'Alex Smith',
+            accent: '#10b981', // emerald
+            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=256&q=80'
+        };
+        let currentState = { ...initialState };
+        let isUsernameValid = true;
+
+        // Elements
+        const form = document.getElementById('profile-form');
+        const usernameInput = document.getElementById('username');
+        const displayNameInput = document.getElementById('display_name');
+        const colorSwatches = document.querySelectorAll('.color-swatch');
+        
+        const btnSave = document.getElementById('btn-save');
+        const btnCancel = document.getElementById('btn-cancel');
+        const saveText = btnSave.querySelector('span');
+        const saveSpinner = document.getElementById('save-spinner');
+
+        // Preview Elements
+        const previewDisplay = document.getElementById('preview-display');
+        const previewUsername = document.getElementById('preview-username');
+        const previewBanner = document.getElementById('preview-banner');
+        
+        // --- Core Logic ---
+
+        function checkDirty() {
+            const isDirty = 
+                currentState.username !== initialState.username ||
+                currentState.display_name !== initialState.display_name ||
+                currentState.accent !== initialState.accent ||
+                currentState.avatar !== initialState.avatar;
+
+            const canSave = isDirty && isUsernameValid && currentState.username.length > 0;
+            
+            btnSave.disabled = !canSave;
+            btnCancel.disabled = !isDirty;
+        }
+
+        // --- Username Validation (Debounced Simulation) ---
+        let usernameTimeout;
+        usernameInput.addEventListener('input', (e) => {
+            const val = e.target.value.replace(/[^a-zA-Z0-9_]/g, ''); // Enforce alphanumeric+underscore
+            e.target.value = val;
+            currentState.username = val;
+            document.getElementById('username-count').innerText = `${val.length}/32`;
+            previewUsername.innerText = val || 'username';
+
+            // UI Reset
+            btnSave.disabled = true; // disable while checking
+            document.getElementById('user-check').classList.add('hidden');
+            document.getElementById('user-cross').classList.add('hidden');
+            
+            if (val.length === 0) {
+                isUsernameValid = false;
+                showUsernameError("Username is required.");
+                checkDirty();
+                return;
+            } else {
+                removeUsernameError();
+            }
+
+            // Show Spinner
+            const spinner = document.getElementById('user-spinner');
+            spinner.classList.remove('hidden');
+
+            clearTimeout(usernameTimeout);
+            usernameTimeout = setTimeout(() => {
+                spinner.classList.add('hidden');
+                
+                // Simulate API Check (Fail if 'taken')
+                if (val.toLowerCase() === 'taken' || val.toLowerCase() === 'admin') {
+                    isUsernameValid = false;
+                    document.getElementById('user-cross').classList.remove('hidden');
+                    showUsernameError("Username is already taken.");
+                } else {
+                    isUsernameValid = true;
+                    document.getElementById('user-check').classList.remove('hidden');
+                }
+                checkDirty();
+            }, 600); // 600ms debounce
+        });
+
+        function showUsernameError(msg) {
+            usernameInput.classList.add('error');
+            const hint = document.getElementById('username-hint');
+            hint.innerText = msg;
+            hint.classList.add('text-status-danger');
+            hint.classList.remove('text-ui-secondary');
+        }
+
+        function removeUsernameError() {
+            usernameInput.classList.remove('error');
+            const hint = document.getElementById('username-hint');
+            hint.innerText = "Unique across StudyHall. Used for mentions.";
+            hint.classList.remove('text-status-danger');
+            hint.classList.add('text-ui-secondary');
+        }
+
+        // --- Display Name Sync ---
+        displayNameInput.addEventListener('input', (e) => {
+            currentState.display_name = e.target.value;
+            previewDisplay.innerText = e.target.value || 'Anonymous';
+            checkDirty();
+        });
+
+        // --- Accent Color Logic ---
+        colorSwatches.forEach(swatch => {
+            swatch.addEventListener('click', (e) => {
+                const color = e.target.getAttribute('data-color');
+                
+                // Update UI state
+                colorSwatches.forEach(s => {
+                    s.classList.remove('active');
+                    s.setAttribute('aria-checked', 'false');
+                });
+                e.target.classList.add('active');
+                e.target.setAttribute('aria-checked', 'true');
+
+                // Update CSS Variable (Updates Focus rings, buttons, themes globally in this view)
+                document.documentElement.style.setProperty('--user-accent', color);
+                
+                // Adjust Glow opacity safely based on hex (pseudo-logic for aesthetic)
+                // Real app would use HSL or calc, here we just fake it
+                let rgb = hexToRgb(color);
+                document.documentElement.style.setProperty('--user-accent-glow', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)`);
+
+                // Update State & Preview
+                currentState.accent = color;
+                // Banner transits colors via CSS transition
+                
+                checkDirty();
+            });
+        });
+
+        function hexToRgb(hex) {
+            var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : {r:0,g:0,b:0};
+        }
+
+        // --- Avatar Selection (Mock) ---
+        function handleAvatarSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                // Size validation mock
+                if (file.size > 10 * 1024 * 1024) {
+                    showToast('Avatar must be smaller than 10MB.', 'error');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const dataUrl = e.target.result;
+                    document.getElementById('avatar-preview-img').src = dataUrl;
+                    document.getElementById('preview-avatar-img').src = dataUrl;
+                    currentState.avatar = dataUrl;
+                    checkDirty();
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // --- Save Flow ---
+        function saveProfile() {
+            if (btnSave.disabled) return;
+
+            // UI Loading state
+            btnSave.disabled = true;
+            btnCancel.disabled = true;
+            saveText.innerText = 'Saving...';
+            saveSpinner.classList.remove('hidden');
+
+            // Simulate API Latency
+            setTimeout(() => {
+                // Success
+                initialState.username = currentState.username;
+                initialState.display_name = currentState.display_name;
+                initialState.accent = currentState.accent;
+                initialState.avatar = currentState.avatar;
+                
+                saveText.innerText = 'Save Changes';
+                saveSpinner.classList.add('hidden');
+                
+                showToast('Profile settings saved successfully!', 'success');
+                checkDirty(); // will disable cancel button since state matches
+            }, 1200);
+        }
+
+        function resetForm() {
+            // Restore visual layout
+            usernameInput.value = initialState.username;
+            displayNameInput.value = initialState.display_name;
+            document.getElementById('avatar-preview-img').src = initialState.avatar;
+            document.getElementById('preview-avatar-img').src = initialState.avatar;
+            
+            previewDisplay.innerText = initialState.display_name;
+            previewUsername.innerText = initialState.username;
+            document.getElementById('username-count').innerText = `${initialState.username.length}/32`;
+
+            // Restore Color
+            const targetColorSwatch = Array.from(colorSwatches).find(s => s.getAttribute('data-color') === initialState.accent);
+            if(targetColorSwatch) targetColorSwatch.click();
+
+            // Reset state object
+            currentState = { ...initialState };
+            
+            removeUsernameError();
+            document.getElementById('user-check').classList.add('hidden');
+            checkDirty();
+        }
+
+        // --- Modals & Toasts ---
+        function showSignoutModal() {
+            const modal = document.getElementById('signout-modal');
+            const dialog = document.getElementById('signout-dialog');
+            modal.classList.remove('hidden');
+            // small delay to allow display block to apply before animation
+            setTimeout(() => {
+                dialog.classList.remove('scale-95', 'opacity-0');
+                dialog.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        function hideSignoutModal() {
+            const modal = document.getElementById('signout-modal');
+            const dialog = document.getElementById('signout-dialog');
+            dialog.classList.remove('scale-100', 'opacity-100');
+            dialog.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 200);
+        }
+
+        function performSignout() {
+            hideSignoutModal();
+            showToast("Signing out locally...", "default");
+            // Simulate redirect
+            setTimeout(() => {
+                document.body.innerHTML = '<div class="h-screen w-full flex items-center justify-center text-ui-secondary">Redirecting to login...</div>';
+            }, 1000);
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            
+            const toast = document.createElement('div');
+            toast.className = `glass-panel px-4 py-3 rounded-md shadow-pop flex items-center gap-3 transform translate-y-10 opacity-0 transition-all duration-300 relative overflow-hidden`;
+            
+            // Accent bar based on type
+            let accentColor = 'bg-status-emerald';
+            let icon = '<i class="ph-fill ph-check-circle text-status-emerald text-lg"></i>';
+            if (type === 'error') {
+                accentColor = 'bg-status-danger';
+                icon = '<i class="ph-fill ph-warning-circle text-status-danger text-lg"></i>';
+            } else if (type === 'warning') {
+                accentColor = 'bg-status-amber';
+                icon = '<i class="ph-fill ph-warning text-status-amber text-lg"></i>';
+            }
+
+            toast.innerHTML = `
+                <div class="absolute left-0 top-0 bottom-0 w-1 ${accentColor}"></div>
+                ${icon}
+                <span class="text-sm font-medium text-ui-primary pt-0.5">${message}</span>
+            `;
+
+            container.appendChild(toast);
+
+            // Animate in
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            });
+
+            // Remove after 4s
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'scale-95');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // --- Offline Simulation Binding (for architectural completion) ---
+        // Just listening to window events to toggle a visual "offline" state on the avatar
+        window.addEventListener('offline', () => {
+             document.getElementById('offline-avatar-badge').classList.remove('hidden');
+             document.getElementById('avatar-upload').disabled = true;
+             btnSave.disabled = true;
+             saveText.innerText = "Offline";
+        });
+        window.addEventListener('online', () => {
+             document.getElementById('offline-avatar-badge').classList.add('hidden');
+             document.getElementById('avatar-upload').disabled = false;
+             saveText.innerText = "Save Changes";
+             checkDirty();
+        });
+
+    </script>
+</body>
+</html>

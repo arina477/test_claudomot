@@ -604,3 +604,6 @@ StudyHall's positioning centers on **student agency**. This page operationalizes
 
 This page is a trust statement. It's the proof that StudyHall means what it says about being student-first.
 
+
+---
+**Approved design (v9):** `design/settings-privacy.html`

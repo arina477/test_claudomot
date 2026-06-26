@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en" class="antialiased dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Settings — StudyHall</title>
+    <!-- 
+    aesthetic_dna: academic · calm · focused · near-black layered zinc
+    ui_paradigm: command-center dense configuration matrix with structural sidebars
+    palette_choice: surface-950 base, emerald accent, amber alerts
+    -->
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Inter Typography (Configured to simulate Geist metric crispness) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Tailwind Config & Custom CSS -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['ui-monospace', 'monospace'],
+                    },
+                    colors: {
+                        surface: {
+                            950: '#0a0a0b',
+                            900: '#121214',
+                            800: '#1c1c1f',
+                            700: '#27272a',
+                            600: '#3f3f46',
+                            500: '#52525b',
+                        },
+                        accent: {
+                            emerald: '#10b981',
+                            amber: '#f59e0b',
+                        },
+                        danger: '#ef4444',
+                    },
+                    boxShadow: {
+                        'sm': '0 1px 2px rgba(0,0,0,0.4)',
+                        'pop': '0 8px 24px rgba(0,0,0,0.5)',
+                        'glow-focus': '0 0 0 2px rgba(16,185,129,0.4)',
+                    },
+                    animation: {
+                        'shimmer': 'shimmer 2s infinite linear',
+                        'fade-in-up': 'fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        shimmer: {
+                            '0%': { transform: 'translateX(-100%)' },
+                            '100%': { transform: 'translateX(100%)' }
+                        },
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(8px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --border-hairline: rgba(255,255,255,0.06);
+            --border-hover: rgba(255,255,255,0.10);
+            --text-primary: rgba(255,255,255,0.92);
+            --text-secondary: rgba(255,255,255,0.60);
+            --text-muted: rgba(255,255,255,0.40);
+        }
+
+        body {
+            background-color: theme('colors.surface.950');
+            color: var(--text-primary);
+            letter-spacing: -0.01em;
+        }
+
+        /* Custom Scrollbar for dense matrix */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: theme('colors.surface.600');
+            border-radius: 9999px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: theme('colors.surface.500');
+        }
+
+        /* Hardware Accelerated Smooth Scrolling */
+        .scroll-container {
+            -webkit-overflow-scrolling: touch;
+            will-change: scroll-position;
+        }
+
+        /* Staggered Animation Cascade */
+        .stagger-1 { animation-delay: 50ms; }
+        .stagger-2 { animation-delay: 100ms; }
+        .stagger-3 { animation-delay: 150ms; }
+
+        /* Liquid Refraction Panel */
+        .panel-refraction {
+            background: theme('colors.surface.800');
+            box-shadow: 
+                0 4px 24px -1px rgba(0,0,0,0.5),
+                inset 0 1px 0 0 rgba(255,255,255,0.05);
+            border: 1px solid var(--border-hairline);
+        }
+
+        /* Custom Toggle Switch */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: theme('colors.accent.emerald');
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: theme('colors.accent.emerald');
+        }
+        .toggle-checkbox:checked + .toggle-label:after {
+            transform: translateX(100%);
+            border-color: white;
+        }
+        
+        /* Checkbox styling */
+        .matrix-toggle {
+            appearance: none;
+            width: 32px;
+            height: 18px;
+            background-color: theme('colors.surface.600');
+            border-radius: 9999px;
+            position: relative;
+            cursor: pointer;
+            outline: none;
+            transition: background-color 0.2s, box-shadow 0.2s;
+        }
+        .matrix-toggle::before {
+            content: '';
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background-color: white;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .matrix-toggle:checked {
+            background-color: theme('colors.accent.emerald');
+        }
+        .matrix-toggle:checked::before {
+            transform: translateX(14px);
+        }
+        .matrix-toggle:focus-visible {
+            box-shadow: 0 0 0 2px theme('colors.surface.950'), 0 0 0 4px theme('colors.accent.emerald');
+        }
+        .matrix-toggle:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            background-color: theme('colors.surface.700');
+        }
+
+        /* Matrix Table Adjustments */
+        .matrix-cell {
+            border-bottom: 1px solid var(--border-hairline);
+            border-right: 1px solid var(--border-hairline);
+        }
+        .matrix-row:hover .matrix-cell {
+            background-color: rgba(255,255,255,0.02);
+            transition: background-color 0.1s;
+        }
+
+        /* Interactive active scale */
+        .btn-press:active {
+            transform: scale(0.98);
+        }
+    </style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style id="studyhall-geist-fix">
+  :root { --sh-font: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+          --sh-mono: 'Geist Mono', ui-monospace, monospace; }
+  html, body, button, input, textarea, select, h1,h2,h3,h4,h5,h6, p, span, div, a, label {
+    font-family: var(--sh-font) !important; }
+  code, pre, .font-mono { font-family: var(--sh-mono) !important; }
+</style>
+</head>
+<body class="min-h-[100dvh] flex flex-col md:flex-row overflow-hidden relative">
+
+    <!-- SKELETON LOADER (Initially visible, fades out via JS to show real data density) -->
+    <div id="app-loader" class="absolute inset-0 z-50 bg-surface-950 flex flex-col md:flex-row transition-opacity duration-500">
+        <div class="w-60 shrink-0 border-r border-[#ffffff0f] bg-surface-900 p-4 space-y-6">
+            <div class="h-10 w-10 bg-surface-700 rounded-lg relative overflow-hidden"><div class="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/5 to-transparent"></div></div>
+            <div class="space-y-3 pt-4">
+                <div class="h-6 w-3/4 bg-surface-700 rounded relative overflow-hidden"><div class="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/5 to-transparent"></div></div>
+                <div class="h-6 w-full bg-surface-700 rounded relative overflow-hidden"><div class="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/5 to-transparent"></div></div>
+                <div class="h-6 w-2/3 bg-surface-700 rounded relative overflow-hidden"><div class="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/5 to-transparent"></div></div>
+            </div>
+        </div>
+        <div class="flex-1 p-8 flex items-center justify-center">
+            <div class="flex flex-col items-center gap-4 text-surface-500">
+                <i class="ph ph-circle-notch animate-spin text-3xl"></i>
+                <span class="text-sm font-medium tracking-wide">Loading server architecture...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- LEFT SIDEBAR: Nav & Context -->
+    <aside class="w-full md:w-60 shrink-0 bg-surface-900 border-b md:border-b-0 md:border-r border-[#ffffff0f] flex flex-col h-auto md:h-full z-20">
+        
+        <!-- Context Header -->
+        <div class="p-4 flex items-center gap-3 border-b border-[#ffffff0f] h-16 shrink-0 relative hover:bg-white/[0.02] transition-colors cursor-pointer group">
+            <div class="h-10 w-10 rounded-lg overflow-hidden shrink-0 border border-white/10 shadow-sm relative shadow-black">
+                <img src="https://images.unsplash.com/photo-1555949963-aa79dcee981c?auto=format&fit=crop&w=150&q=80" alt="Server Icon - Abstract 3D Shapes" class="object-cover w-full h-full opacity-90 group-hover:opacity-100 transition-opacity" />
+            </div>
+            <div class="flex flex-col overflow-hidden">
+                <h2 class="text-sm font-semibold truncate text-[var(--text-primary)] leading-tight">CS 410: Data Structures</h2>
+                <span class="text-xs text-[var(--text-secondary)] font-medium mt-0.5">Server Settings</span>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-1">
+            <a href="#" class="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-[var(--text-secondary)] hover:text-white hover:bg-surface-800 transition-all">
+                <i class="ph ph-info text-lg"></i>
+                Overview
+            </a>
+            <!-- Active Tab -->
+            <a href="#" class="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-accent-emerald bg-accent-emerald/10 relative transition-all shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-3/5 bg-accent-emerald rounded-r-full"></div>
+                <i class="ph-fill ph-shield-check text-lg"></i>
+                Roles
+            </a>
+            <a href="#" class="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-[var(--text-secondary)] hover:text-white hover:bg-surface-800 transition-all">
+                <i class="ph ph-users text-lg"></i>
+                Members
+            </a>
+            <a href="#" class="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-[var(--text-secondary)] hover:text-white hover:bg-surface-800 transition-all">
+                <i class="ph ph-hash text-lg"></i>
+                Channels
+            </a>
+            <a href="#" class="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-[var(--text-secondary)] hover:text-white hover:bg-surface-800 transition-all group">
+                <i class="ph ph-link text-lg group-hover:-rotate-45 transition-transform"></i>
+                Invites
+            </a>
+            
+            <div class="pt-6 pb-2 px-3">
+                <hr class="border-[var(--border-hairline)] mb-4">
+                <p class="text-[11px] uppercase tracking-widest text-[var(--text-muted)] font-semibold mb-2">Metrics</p>
+                <div class="flex items-center justify-between text-xs text-[var(--text-secondary)] mb-1">
+                    <span>Members</span>
+                    <span class="font-medium text-[var(--text-primary)]">128</span>
+                </div>
+                <div class="flex items-center justify-between text-xs text-[var(--text-secondary)]">
+                    <span>Avg. Online</span>
+                    <span class="font-medium text-accent-emerald flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-accent-emerald animate-pulse"></span> 42
+                    </span>
+                </div>
+            </div>
+        </nav>
+        
+        <!-- Connection State (The Wedge) -->
+        <div class="p-4 border-t border-[#ffffff0f] bg-surface-950 mt-auto shrink-0 flex items-center gap-3">
+             <div class="relative w-8 h-8 rounded-full bg-surface-700 border border-white/5 flex items-center justify-center overflow-hidden shrink-0">
+                 <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80" alt="Jane Doe Avatar" class="w-full h-full object-cover">
+             </div>
+             <div class="flex flex-col text-xs">
+                <span class="font-medium text-[var(--text-primary)]">Jane Doe</span>
+                <span class="text-accent-emerald flex items-center gap-1 mt-0.5">
+                    <i class="ph-fill ph-wifi-high"></i> Online connected
+                </span>
+             </div>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 flex flex-col h-[100dvh] relative overflow-hidden bg-surface-950">
+        
+        <!-- Header Controls -->
+        <header class="h-16 shrink-0 border-b border-[var(--border-hairline)] flex items-center justify-between px-6 z-20 bg-surface-950/80 backdrop-blur-md">
+            <h1 class="text-xl font-semibold tracking-tight">Roles & Permissions</h1>
+            <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-800 text-[var(--text-secondary)] hover:text-white transition-colors btn-press pointer-events-auto" aria-label="Close Settings">
+                <i class="ph ph-x text-lg"></i>
+            </button>
+        </header>
+
+        <!-- Scrollable Tab Content View -->
+        <div class="flex-1 overflow-y-auto custom-scrollbar scroll-container relative" id="main-scroll">
+            
+            <div class="max-w-[1400px] mx-auto p-4 md:p-8 flex flex-col gap-6 scroll-smooth">
+                
+                <!-- Mandatory Safeguard Warning (Always Visible per specs) -->
+                <div class="bg-accent-amber/5 border border-accent-amber/20 rounded-lg p-4 flex gap-3.5 items-start opacity-0 animate-fade-in-up shadow-[0_4px_12px_rgba(0,0,0,0.2)]" role="alert">
+                    <i class="ph-fill ph-warning-circle text-accent-amber text-xl shrink-0 mt-0.5"></i>
+                    <div class="flex-1">
+                        <h3 class="text-sm font-semibold text-accent-amber mb-1">Owner-Lockout Safeguard Active</h3>
+                        <p class="text-[13px] text-accent-amber/80 leading-relaxed">
+                            You cannot remove permissions that lock you out of this server. If a role misconfiguration occurs during editing, the system will block the save to preserve your administrative access.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Roles 3-Section Layout Base -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 opacity-0 animate-fade-in-up stagger-1 min-h-[600px] mb-8">
+                    
+                    <!-- SECTION 2A: Role List -->
+                    <section class="lg:col-span-3 flex flex-col bg-surface-900 border border-[var(--border-hairline)] rounded-xl overflow-hidden panel-refraction h-fit lg:sticky lg:top-8">
+                        <div class="p-4 border-b border-[var(--border-hairline)] flex items-center justify-between bg-surface-950/30">
+                            <h2 class="text-sm font-semibold">Roles <span class="text-[var(--text-muted)] font-normal ml-1">4/10</span></h2>
+                            <button class="text-xs font-semibold text-[var(--text-secondary)] hover:text-white transition-colors flex items-center gap-1 btn-press">
+                                <i class="ph ph-plus"></i> Add role
+                            </button>
+                        </div>
+                        <ul class="p-2 space-y-0.5" role="listbox">
+                            <!-- Immutable Owner Role -->
+                            <li>
+                                <button class="w-full flex items-center justify-between p-2 rounded-md hover:bg-surface-800 transition-colors group cursor-not-allowed">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-2.5 h-2.5 rounded-full bg-accent-amber shadow-[0_0_8px_rgba(245,158,11,0.5)]"></div>
+                                        <span class="text-[13px] text-[var(--text-secondary)] font-medium group-hover:text-[var(--text-primary)] transition-colors">@owner</span>
+                                    </div>
+                                    <!-- Lock icon to indicate immutability in MVP list -->
+                                    <i class="ph-fill ph-lock-key text-[var(--text-muted)] text-[11px]" title="Immutable system role"></i>
+                                </button>
+                            </li>
+                            <!-- Admin Role (Active Editing State) -->
+                            <li>
+                                <button class="w-full flex items-center justify-between p-2 rounded-md bg-surface-700/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] border border-[var(--border-hairline)]" aria-selected="true">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-2.5 h-2.5 rounded-full bg-[#3b82f6]"></div>
+                                        <span class="text-[13px] text-white font-medium">@TA (Admin)</span>
+                                    </div>
+                                    <i class="ph ph-caret-right text-[var(--text-muted)] text-xs"></i>
+                                </button>
+                            </li>
+                            <!-- Custom Role -->
+                            <li>
+                                <button class="w-full flex items-center gap-2.5 p-2 rounded-md hover:bg-surface-800 transition-colors text-left btn-press">
+                                    <div class="w-2.5 h-2.5 rounded-full bg-[#8b5cf6]"></div>
+                                    <span class="text-[13px] text-[var(--text-secondary)] font-medium flex-1 truncate">@Study-Lead</span>
+                                </button>
+                            </li>
+                            <!-- Base Member Role -->
+                            <li>
+                                <button class="w-full flex items-center gap-2.5 p-2 rounded-md hover:bg-surface-800 transition-colors text-left btn-press">
+                                    <div class="w-2.5 h-2.5 rounded-full bg-surface-500 border border-white/20"></div>
+                                    <span class="text-[13px] text-[var(--text-secondary)] font-medium flex-1 truncate">@member</span>
+                                </button>
+                            </li>
+                        </ul>
+                    </section>
+
+                    <!-- SECTION 2B: Role Editor (Matrix) -->
+                    <section class="lg:col-span-9 flex flex-col bg-surface-800 border border-[var(--border-hairline)] rounded-xl panel-refraction flex-1 min-h-[500px]">
+                        
+                        <!-- Role Header Editor -->
+                        <div class="p-6 border-b border-[var(--border-hairline)] flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-950/20 rounded-t-xl">
+                            <div class="flex items-center gap-4">
+                                <!-- Color Picker Mock -->
+                                <button class="w-10 h-10 rounded-lg border border-[var(--border-hairline)] bg-surface-950 flex items-center justify-center hover:bg-surface-900 transition-colors btn-press outline-none focus:ring-2 focus:ring-accent-emerald/50" aria-label="Change role color">
+                                    <div class="w-4 h-4 rounded-full bg-[#3b82f6] shadow-sm"></div>
+                                </button>
+                                <div class="flex flex-col">
+                                    <input type="text" value="TA (Admin)" class="bg-transparent border-none text-lg font-semibold text-white focus:outline-none focus:ring-0 p-0 m-0 w-full max-w-[200px]" placeholder="Role Name">
+                                    <span class="text-xs text-[var(--text-muted)] mt-0.5">Pre-defined base · Mutable permissions</span>
+                                </div>
+                            </div>
+                            <!-- Delete button (Disabled for predefined admin in H1 ideally, but shown for UI completeness) -->
+                            <button class="shrink-0 h-9 px-3 bg-danger/10 text-danger hover:bg-danger/20 border border-danger/20 rounded-md text-[13px] font-medium transition-colors flex items-center gap-1.5 btn-press opacity-50 cursor-not-allowed" title="System roles cannot be deleted in H1">
+                                <i class="ph ph-trash"></i> Delete Role
+                            </button>
+                        </div>
+
+                        <!-- Dense Data Matrix: Permissions -->
+                        <div class="flex-1 overflow-x-auto custom-scrollbar relative bg-surface-900/50">
+                            <!-- Define Grid structure natively mimicking a table for absolute control -->
+                            <div class="min-w-[800px] w-full text-sm">
+                                
+                                <!-- Matrix Header Row -->
+                                <div class="grid grid-cols-[300px_repeat(4,minmax(120px,1fr))] sticky top-0 bg-surface-950/95 backdrop-blur z-10 border-b border-surface-600 shadow-[0_4px_10px_-4px_rgba(0,0,0,0.3)] font-medium text-[12px] text-[var(--text-secondary)]">
+                                    <div class="p-3 pl-6 flex items-center matrix-cell">
+                                        Permission
+                                    </div>
+                                    <div class="p-3 flex items-center justify-center matrix-cell hover:bg-surface-800 transition-colors cursor-pointer text-accent-amber">
+                                        <i class="ph-bold ph-globe mr-1.5 mt-0.5"></i> Server-wide
+                                    </div>
+                                    <div class="p-3 flex items-center justify-center matrix-cell hover:bg-surface-800 transition-colors cursor-pointer">
+                                        <i class="ph ph-hash mr-1.5 mt-0.5"></i> general
+                                    </div>
+                                    <div class="p-3 flex items-center justify-center matrix-cell hover:bg-surface-800 transition-colors cursor-pointer">
+                                        <i class="ph ph-hash mr-1.5 mt-0.5"></i> assignments
+                                    </div>
+                                    <div class="p-3 flex items-center justify-center matrix-cell hover:bg-surface-800 transition-colors cursor-pointer border-r-0">
+                                        <i class="ph-fill ph-speaker-high mr-1.5 mt-0.5"></i> Study Room
+                                    </div>
+                                </div>
+
+                                <!-- MATRIX CATEGORY: General -->
+                                <div class="bg-surface-800 border-b border-[var(--border-hairline)] px-6 py-1.5 text-[11px] font-semibold tracking-wider text-[var(--text-muted)] uppercase sticky top-[45px] z-10">
+                                    General Channel Permissions
+                                </div>
+
+                                <!-- Row 1: Read -->
+                                <div class="grid grid-cols-[300px_repeat(4,minmax(120px,1fr))] matrix-row group relative cursor-crosshair">
+                                    <div class="p-3 pl-6 flex flex-col justify-center matrix-cell bg-surface-900 group-hover:bg-surface-800 transition-colors sticky left-0 z-[5]">
+                                        <span class="text-[13px] text-white font-medium mb-0.5">View & Read</span>
+                                        <span class="text-[11px] text-[var(--text-muted)]">Can see channel in list</span>
+                                    </div>
+                                    <!-- Global cell -->
+                                    <div class="p-3 flex items-center justify-center matrix-cell"><input type="checkbox" class="matrix-toggle" checked title="Global"></div>
+                                    <!-- Channel cells -->
+                                    <div class="p-3 flex items-center justify-center matrix-cell"><input type="checkbox" class="matrix-toggle" checked title="#general"></div>
+                                    <div class="p-3 flex items-center justify-center matrix-cell"><input type="checkbox" class="matrix-toggle" checked title="#assignments"></div>
+                                    <div class="p-3 flex items-center justify-center matrix-cell border-r-0"><input type="checkbox" class="matrix-toggle" checked title="Study Room"></div>
+                                </div>
+
+                                <!-- Row 2: Post -->
+                                <div class="grid grid-cols-[300px_repeat(4,minmax(120px,1fr))] matrix-row group">
+                                    <div class="p-3 pl-6 flex flex-col justify-center matrix-cell bg-surface-900 group-hover:bg-surface-800 transition-colors sticky left-0 z-[5]">
+                                        <span class="text-[13px] text-white font-medium mb-0.5">Send Messages & Speak</span>
+                                        <span class="text-[11px] text-[var(--text-muted)]">Post text or transmit audio</span>
+                                    </div>
+                                    <div class="p-3 flex items-center justify-center matrix-cell"><input type="checkbox" class="matrix-toggle" checked></div>
+                                    <div class="p-3 flex items-center justify-center matrix-cell"><input type="checkbox" class="matrix-toggle" checked></div>
+                                    <div class="p-3 flex items-center justify-center matrix-cell"><input type="checkbox" class="matrix-toggle" title="#assignments (Denied)"></div>
+                                    <div class="p-3 flex items-center justify-center matrix-cell border-r-0"><input type="checkbox" class="matrix-toggle" checked></div>
+                                </div>
+
+                                <!-- MATRIX CATEGORY: Moderation -->
+                                <div class="bg-surface-800 border-b border-[var(--border-hairline)] px-6 py-1.5 text-[11px] font-semibold tracking-wider text-[var(--text-muted)] uppercase sticky top-[45px] z-10">
+                                    Moderation Permissions
+                                </div>
+
+                                <!-- Row 3: Manage Messages -->
+                                <div class="grid grid-cols-[300px_repeat(4,minmax(120px,1fr))] matrix-row group">
+                                    <div class="p-3 pl-6 flex flex-col justify-center matrix-cell bg-surface-900 group-hover:bg-surface-800 transition-colors sticky left-0 z-[5]">
+                                        <span class="text-[13px] text-white font-medium mb-0.5">Manage Messages</span>
+                                        <span class="text-[11px] text-[var(--text-muted)]">Delete or pin others' posts</span>
+                                    </div>
+                                    <div class="p-3 flex items-center justify-center matrix-cell"><input type="checkbox" class="matrix-toggle" checked></div>
+                                    <div class="p-3 flex items-center justify-center matrix-cell"><input type="checkbox" class="matrix-toggle" checked></div>
+                                    <div class="p-3 flex items-center justify-center matrix-cell"><input type="checkbox" class="matrix-toggle" checked></div>
+                                    <!-- N/A for Voice -->
+                                    <div class="p-3 flex items-center justify-center matrix-cell border-r-0 relative">
+                                        <input type="checkbox" class="matrix-toggle" disabled title="Not applicable for voice channels">
+                                        <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPgo8cmVjdCB3aWR0aD0iOCIgaGVpZ2h0PSI4IiBmaWxsPSIjMWMxYzFmIj48L3JlY3Q+CjxwYXRoIGQ9Ik0wIDhMOCAwaC0xbC04IDh6IiBzdHJva2U9IiMzZjNmNDYiIHN0cm9rZS13aWR0aD0iMSIvPgo8L3N2Zz4=')] opacity-30 select-none pointer-events-none"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Row 4: Manage Roles (DANGEROUS PERMISSION) -->
+                                <div class="grid grid-cols-[300px_repeat(4,minmax(120px,1fr))] matrix-row group bg-surface-950/20" id="row-manage-roles">
+                                    <div class="p-3 pl-6 flex flex-col justify-center matrix-cell bg-surface-900 group-hover:bg-surface-800 transition-colors sticky left-0 z-[5] border-l-2 border-l-accent-amber">
+                                        <span class="text-[13px] text-white font-medium mb-0.5 flex items-center gap-1.5">
+                                            Manage Roles <i class="ph-fill ph-warning text-accent-amber" title="Affects owner lockout safeguard"></i>
+                                        </span>
+                                        <span class="text-[11px] text-[var(--text-muted)]">Assign/edit roles server-wide</span>
+                                    </div>
+                                    <!-- Global only permission -->
+                                    <div class="p-3 flex items-center justify-center matrix-cell bg-surface-900/40" id="cell-manage-roles-global">
+                                        <input type="checkbox" class="matrix-toggle ring-offset-surface-900" checked id="trigger-safeguard">
+                                    </div>
+                                    <div class="p-3 flex items-center justify-center matrix-cell relative bg-surface-950 pointer-events-none"><span class="text-surface-700 text-xs">—</span></div>
+                                    <div class="p-3 flex items-center justify-center matrix-cell relative bg-surface-950 pointer-events-none"><span class="text-surface-700 text-xs">—</span></div>
+                                    <div class="p-3 flex items-center justify-center matrix-cell border-r-0 relative bg-surface-950 pointer-events-none"><span class="text-surface-700 text-xs">—</span></div>
+                                </div>
+                                <div class="h-24 bg-surface-900"></div> <!-- spacing for sticky bottom -->
+                            </div>
+                        </div>
+
+                        <!-- Save/Cancel Footer (Sticky Bottom inside right panel) -->
+                        <div class="p-4 border-t border-[var(--border-hairline)] bg-surface-800/95 backdrop-blur-md flex items-center justify-between mt-auto shrink-0 z-20 sticky bottom-0 rounded-b-xl shadow-[0_-10px_20px_rgba(0,0,0,0.1)]">
+                            <div class="flex items-center gap-2" id="save-status-container">
+                                <!-- Status area (empty by default, JS injects error here) -->
+                            </div>
+                            <div class="flex gap-3">
+                                <button class="h-9 px-4 rounded-md text-[13px] font-medium text-[var(--text-secondary)] hover:text-white hover:bg-surface-700 transition-colors btn-press">
+                                    Discard changes
+                                </button>
+                                <button id="save-role-btn" class="h-9 px-5 rounded-md text-[13px] font-semibold bg-accent-emerald text-white shadow-[0_1px_2px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.2)] hover:bg-accent-emerald/90 transition-colors btn-press focus:outline-none focus:ring-2 focus:ring-accent-emerald/50">
+                                    Save Changes
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- SECTION 2C: Quick Assign (Full Width Bottom) -->
+                <section class="opacity-0 animate-fade-in-up stagger-2 bg-surface-900 border border-[var(--border-hairline)] rounded-xl panel-refraction mb-12">
+                     <div class="p-5 border-b border-[var(--border-hairline)] flex items-center justify-between">
+                         <div>
+                             <h2 class="text-sm font-semibold text-white">Quick role assignment</h2>
+                             <p class="text-xs text-[var(--text-muted)] mt-1">Assign the currently selected role (@TA Admin) to members.</p>
+                         </div>
+                         <div class="relative w-64">
+                             <input type="text" placeholder="Search members..." class="w-full h-9 pl-9 pr-3 bg-surface-950 border border-[var(--border-hairline)] rounded-md text-[13px] text-white focus:border-accent-emerald focus:ring-1 focus:ring-accent-emerald outline-none transition-all placeholder-[var(--text-muted)]">
+                             <i class="ph ph-magnifying-glass absolute left-3 top-2.5 text-[var(--text-muted)] text-[15px]"></i>
+                         </div>
+                     </div>
+                     <div class="p-0 overflow-x-auto">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <thead class="bg-surface-950/20 text-[11px] uppercase tracking-wide text-[var(--text-muted)] font-semibold border-b border-[var(--border-hairline)]">
+                                <tr>
+                                    <th class="px-5 py-2.5 w-10">
+                                        <input type="checkbox" class="matrix-toggle w-[18px] h-[18px] flex-shrink-0 before:w-3 before:h-3 before:top-[2px] before:left-[2px] rounded-md focus-visible:!ring-offset-0 ml-1">
+                                    </th>
+                                    <th class="px-5 py-2.5">Member</th>
+                                    <th class="px-5 py-2.5">Current Role</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-[var(--border-hairline)]">
+                                <!-- Member 1 -->
+                                <tr class="hover:bg-surface-800 transition-colors group cursor-pointer">
+                                    <td class="px-5 py-3">
+                                        <input type="checkbox" class="matrix-toggle w-[18px] h-[18px] rounded-md before:w-3 before:h-3 before:top-[2px] before:left-[2px] ml-1">
+                                    </td>
+                                    <td class="px-5 py-3">
+                                        <div class="flex items-center gap-3">
+                                            <img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=64&q=80" alt="Avatar" class="w-8 h-8 rounded-full border border-white/5 object-cover">
+                                            <div class="flex flex-col">
+                                                <span class="font-medium text-white group-hover:text-accent-emerald transition-colors">Alex Rivera</span>
+                                                <span class="text-[11px] text-[var(--text-muted)]">Joined Jun 20</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-5 py-3">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-medium bg-surface-500/10 border border-white/10 text-[var(--text-secondary)]">
+                                            @member
+                                        </span>
+                                    </td>
+                                </tr>
+                                <!-- Member 2 (Demonstratng already has role) -->
+                                <tr class="hover:bg-surface-800 transition-colors group">
+                                    <td class="px-5 py-3">
+                                        <input type="checkbox" disabled class="matrix-toggle w-[18px] h-[18px] rounded-md before:w-3 before:h-3 before:top-[2px] before:left-[2px] ml-1 opacity-20">
+                                    </td>
+                                    <td class="px-5 py-3">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded-full bg-[#3b82f6]/20 border border-[#3b82f6]/50 flex items-center justify-center text-[#3b82f6] text-xs font-bold">
+                                                SK
+                                            </div>
+                                            <div class="flex flex-col">
+                                                <span class="font-medium text-white group-hover:text-accent-emerald transition-colors text-opacity-70">Sam K.</span>
+                                                <span class="text-[11px] text-[var(--text-muted)]">Joined Jun 21</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-5 py-3">
+                                        <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium bg-[#3b82f6]/10 border border-[#3b82f6]/20 text-[#3b82f6]">
+                                            <div class="w-1.5 h-1.5 rounded-full bg-[#3b82f6]"></div> @TA (Admin)
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                     </div>
+                     <div class="p-4 border-t border-[var(--border-hairline)] bg-surface-950/50 flex justify-end">
+                         <button class="h-9 px-4 rounded-md text-[13px] font-medium bg-surface-700 text-[var(--text-secondary)] hover:text-white hover:bg-surface-600 transition-colors btn-press flex items-center gap-2">
+                            <span>Apply @TA (Admin) to 0 selected</span>
+                         </button>
+                     </div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <!-- Vanilla JS to drive Micro-Interactions and simulate the Safeguard -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. Dismiss Skeletons
+            setTimeout(() => {
+                const loader = document.getElementById('app-loader');
+                loader.style.opacity = '0';
+                setTimeout(() => loader.remove(), 500);
+            }, 800);
+
+            // 2. Safeguard Simulation Logic
+            const safeguardToggle = document.getElementById('trigger-safeguard');
+            const saveBtn = document.getElementById('save-role-btn');
+            const statusContainer = document.getElementById('save-status-container');
+            const roleRow = document.getElementById('row-manage-roles');
+
+            let attemptFailed = false;
+
+            // When toggle is clicked to OFF -> Queue the warning state
+            safeguardToggle.addEventListener('change', (e) => {
+                if (!e.target.checked) {
+                    statusContainer.innerHTML = `
+                        <div class="flex items-center gap-2 text-accent-amber animate-fade-in-up">
+                            <i class="ph-fill ph-warning-circle text-lg"></i>
+                            <span class="text-xs font-semibold">Unsaved change flags safeguard potential.</span>
+                        </div>
+                    `;
+                    roleRow.classList.add('bg-accent-amber/5');
+                } else {
+                    statusContainer.innerHTML = '';
+                    roleRow.classList.remove('bg-accent-amber/5');
+                    saveBtn.classList.remove('bg-danger', 'hover:bg-danger/90', 'focus:ring-danger/50');
+                    saveBtn.classList.add('bg-accent-emerald', 'hover:bg-accent-emerald/90', 'focus:ring-accent-emerald/50');
+                    saveBtn.textContent = 'Save Changes';
+                    attemptFailed = false;
+                }
+            });
+
+            // Simulate the Save -> Server-side rejection pattern mandated in prompt
+            saveBtn.addEventListener('click', () => {
+                if (!safeguardToggle.checked) {
+                    // HARD GATE: Owner Lockout Safeguard Failure
+                    attemptFailed = true;
+                    
+                    // Shake animation logic via CSS temp inject
+                    saveBtn.style.transform = 'translateX(-4px)';
+                    setTimeout(() => saveBtn.style.transform = 'translateX(4px)', 50);
+                    setTimeout(() => saveBtn.style.transform = 'translateX(-4px)', 100);
+                    setTimeout(() => saveBtn.style.transform = 'translateX(0)', 150);
+
+                    // Red structural error
+                    saveBtn.classList.remove('bg-accent-emerald', 'hover:bg-accent-emerald/90', 'focus:ring-accent-emerald/50');
+                    saveBtn.classList.add('bg-danger', 'hover:bg-danger/90', 'focus:ring-danger/50');
+                    saveBtn.innerHTML = 'Action Blocked <i class="ph-bold ph-hand-palm ml-1"></i>';
+
+                    // Toast error creation
+                    statusContainer.innerHTML = `
+                        <div class="flex items-center gap-2 text-danger bg-danger/10 border border-danger/20 px-3 py-1.5 rounded shadow-sm">
+                            <i class="ph-fill ph-warning-octagon text-lg"></i>
+                            <span class="text-[12px] font-semibold leading-tight">Permission denied: Modifying this role would lock you out.</span>
+                        </div>
+                    `;
+                    
+                    // Flash the row
+                    roleRow.classList.add('border-danger', 'border');
+                    setTimeout(() => roleRow.classList.remove('border-danger', 'border'), 2000);
+                } else {
+                    // Success state simulation
+                    saveBtn.innerHTML = '<i class="ph ph-spinner-gap animate-spin"></i>';
+                    setTimeout(() => {
+                        saveBtn.innerHTML = '<i class="ph-bold ph-check mr-1"></i> Saved';
+                        saveBtn.classList.add('bg-surface-700', 'text-white');
+                        saveBtn.classList.remove('bg-accent-emerald');
+                        setTimeout(() => {
+                            saveBtn.innerHTML = 'Save Changes';
+                            saveBtn.classList.remove('bg-surface-700');
+                            saveBtn.classList.add('bg-accent-emerald');
+                        }, 2000);
+                    }, 600);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

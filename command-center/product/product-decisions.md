@@ -67,6 +67,14 @@ _(empty)_
 **Rationale**: Aligned to v7 direction (visual reference `design/direction.html`) + locked module list (v6b). Dark-only per brief. Restrained palette (one base hue + emerald + amber + danger) keeps the calm/academic, non-gaming feel.
 **Artifacts**: `design/DESIGN-SYSTEM.md`
 
+### [2026-Q2] Per-page designs complete
+**Category**: Design
+**Status**: Active
+**Context**: v9 onboarding per-page mockups. Founder away; generated + reviewed on their behalf. server-channel-view canonicalized from the approved v7 direction; the other 13 generated via aidesigner against each page's PD + the design system.
+**Decision**: 14 non-stub pages designed + approved (`design/<page>.html`): landing, signup, login, forgot-password, email-verify, app-home, server-channel-view, voice-study-room, create-server, invite-join, server-settings, assignments-panel, settings-profile, settings-privacy. (Privacy/Terms remain stubs per v4 compliance quota.) A fresh ui-designer cross-page audit found palette/layout consistent but flagged aidesigner font substitution (Outfit/Inter/Satoshi) on 5 pages; resolved deterministically by injecting a Geist load + `!important` font override (regeneration was unreliable since aidesigner ignored the Geist instruction). Minor token-namespace/shade drift accepted — values are correct and `design/DESIGN-SYSTEM.md` is the canonical source B-block implements against (mockups are reference, not pixel-copy).
+**Rationale**: Consistent calm-dark academic system across all surfaces; the offline-first connection indicator and assignments surface appear as first-class across in-app pages.
+**Artifacts**: `design/<page>.html` × 14 + `process/session/onboarding/v9-<page>-brief.md` + per-page-pd annotations.
+
 ## DevOps & Deploy
 
 _(empty)_

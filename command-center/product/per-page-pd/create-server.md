@@ -248,3 +248,6 @@ Modal-based flow (layered on top of the main app, dismissible). Dark theme appli
 - **Template definitions** (channels, categories, descriptions) are static config in `command-center/product/tools-modules-map.md` § Server & membership module. H2 can add user-created templates (H2 expansion).
 - **Server limits (MVP):** 20 channels, 5 categories, 100 members (may increase H2 based on infra). Display quota info in step 3 if near limit.
 - **Permissions:** Creator is owner with all permissions (RBAC feature 10); assigned after server create completes.
+
+---
+**Approved design (v9):** `design/create-server.html`

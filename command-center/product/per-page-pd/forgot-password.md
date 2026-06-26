@@ -156,3 +156,6 @@ A two-step password recovery flow for students who've forgotten their credential
 - Mark reset tokens as single-use; attempting reuse should fail gracefully
 - Invalidate all user sessions after password reset (security best practice; prevents attacker from keeping backdoor access if they knew the old password)
 - Consider sending a "password changed" notification email after successful reset (helps users detect unauthorized resets)
+
+---
+**Approved design (v9):** `design/forgot-password.html`

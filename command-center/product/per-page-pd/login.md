@@ -107,3 +107,6 @@ The sign-in page for returning students. After email verification, users enter t
 - No password strength feedback (not signup; users are re-entering their password, not creating new)
 - No social auth (privacy wedge; all auth is first-party)
 - Error messages must not leak whether an email is registered (prevents account enumeration attacks)
+
+---
+**Approved design (v9):** `design/login.html`

@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyHall - Welcome</title>
+    
+    <!-- Fonts: Outfit for premium geometric/sans-serif structure (Ban on Inter/Serifs) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Icons: Phosphor -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                        mono: ['"Geist Mono"', 'monospace'],
+                    },
+                    colors: {
+                        surface: {
+                            950: '#0a0a0b', // Deepest background
+                            900: '#121214', // Sidebars
+                            800: '#1c1c1f', // Main canvas/Cards
+                            700: '#27272a', // Borders, hover
+                            600: '#3f3f46', // Stronger borders
+                            500: '#52525b', // Disabled/muted
+                        },
+                        accent: {
+                            emerald: '#10b981', // Prime focus
+                            amber: '#f59e0b',   // Warnings/Offline
+                        },
+                        danger: '#ef4444'
+                    },
+                    boxShadow: {
+                        'sm': '0 1px 2px rgba(0,0,0,0.4)',
+                        'pop': '0 8px 24px rgba(0,0,0,0.5)',
+                        'glow-focus': '0 0 0 2px rgba(16,185,129,0.4)',
+                        'glow-subtle': '0 0 15px rgba(255,255,255,0.05)',
+                        'panel': 'inset 0 1px 0 rgba(255,255,255,0.06), 0 20px 40px -15px rgba(0,0,0,0.5)'
+                    },
+                    transitionTimingFunction: {
+                        'spring': 'cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3f3f46;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #52525b;
+        }
+
+        /* Fixed Pointer-Events-None Noise */
+        .bg-noise {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            pointer-events: none;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opactiy='0.03'/%3E%3C/svg%3E");
+            opacity: 0.025;
+            mix-blend-mode: overlay;
+        }
+
+        /* Liquid Refraction & Materiality Panels */
+        .glass-panel {
+            background: rgba(28, 28, 31, 0.4);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 30px -10px rgba(0,0,0,0.5);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.3s ease;
+        }
+        
+        .glass-panel:hover {
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        /* Structural Gradient Void */
+        .void-glow {
+            position: absolute;
+            top: -20%;
+            right: -10%;
+            width: 80vw;
+            height: 80vw;
+            background: radial-gradient(circle, rgba(16,185,129,0.03) 0%, rgba(10,10,11,0) 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Staggered Orchestration */
+        .stagger-item {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: calc(var(--index) * 120ms);
+        }
+
+        @keyframes fade-up {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Ambient Breathing Micro-Interaction */
+        .animate-breathe {
+            animation: breathe 8s ease-in-out infinite alternate;
+        }
+        @keyframes breathe {
+            0% { transform: translateY(0) scale(1); opacity: 0.4; }
+            100% { transform: translateY(-10px) scale(1.02); opacity: 0.6; }
+        }
+
+        /* Button Press Physics */
+        .btn-press:active {
+            transform: scale(0.98);
+        }
+
+        /* Server Rail Morphing */
+        .rail-icon {
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-radius: 9999px; /* Default circle-ish */
+        }
+        .rail-icon.active {
+            border-radius: 12px; /* Morphs to squircle */
+            background-color: #10b981;
+            color: #0a0a0b;
+        }
+        .rail-indicator {
+            height: 8px;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        .rail-icon.active ~ .rail-indicator, .group:hover .rail-indicator {
+            height: 32px;
+            opacity: 1;
+        }
+
+        /* Shimmer Loading State */
+        .shimmer-active {
+            position: relative;
+            overflow: hidden;
+            color: transparent !important;
+        }
+        .shimmer-active::after {
+            content: '';
+            position: absolute;
+            top: 0; right: 0; bottom: 0; left: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: translateX(-100%);
+            animation: shimmer 1.5s infinite;
+        }
+        @keyframes shimmer {
+            100% { transform: translateX(100%); }
+        }
+
+        /* Wireframe drawing animation */
+        @keyframes draw-line {
+            from { width: 0; }
+            to { width: var(--w); }
+        }
+        .wire-line {
+            width: 0;
+            animation: draw-line 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: calc(var(--index) * 150ms + 500ms);
+        }
+    </style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style id="studyhall-geist-fix">
+  :root { --sh-font: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+          --sh-mono: 'Geist Mono', ui-monospace, monospace; }
+  html, body, button, input, textarea, select, h1,h2,h3,h4,h5,h6, p, span, div, a, label {
+    font-family: var(--sh-font) !important; }
+  code, pre, .font-mono { font-family: var(--sh-mono) !important; }
+</style>
+</head>
+<body class="bg-surface-950 text-white/90 antialiased selection:bg-accent-emerald/30 overflow-hidden flex h-[100dvh]">
+
+    <!-- Global Noise overlay -->
+    <div class="bg-noise"></div>
+
+    <!-- MACRO-ARCHITECTURE: App Shell (Left Rail) -->
+    <aside class="w-[72px] bg-surface-900 border-r border-white/[0.06] flex-shrink-0 flex flex-col items-center py-4 z-20 relative">
+        <!-- Direct Home Active State -->
+        <div class="relative group w-full flex justify-center mb-4">
+            <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 bg-white rounded-r-full rail-indicator h-8 opacity-100"></div>
+            <button class="w-12 h-12 bg-surface-800 text-white rounded-xl shadow-sm flex items-center justify-center transition-all btn-press" aria-label="Home / Dashboard">
+                <i class="ph ph-planet text-2xl"></i>
+            </button>
+        </div>
+
+        <div class="w-8 h-[2px] bg-surface-700 rounded-full my-2"></div>
+
+        <!-- Create Server Sticky Action -->
+        <div class="relative group w-full flex justify-center mt-2">
+            <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 bg-accent-emerald rounded-r-full rail-indicator"></div>
+            <button class="w-12 h-12 rail-icon bg-surface-800 text-accent-emerald hover:bg-accent-emerald hover:text-surface-950 flex items-center justify-center btn-press group-hover:rounded-xl group-hover:shadow-[0_0_15px_rgba(16,185,129,0.2)]" aria-label="Create a Server">
+                <i class="ph ph-plus text-xl font-bold"></i>
+            </button>
+            <!-- Tooltip -->
+            <div class="absolute left-16 top-1/2 -translate-y-1/2 bg-surface-950 border border-surface-700 text-xs px-3 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-pop whitespace-nowrap z-50">
+                Add a Server
+            </div>
+        </div>
+
+        <!-- Footer actions in rail -->
+        <div class="mt-auto flex flex-col gap-4 w-full items-center mb-2">
+            <button class="w-12 h-12 text-white/40 hover:text-white transition-colors flex items-center justify-center" aria-label="App Download">
+                 <i class="ph ph-download-simple text-xl"></i>
+            </button>
+        </div>
+    </aside>
+
+    <!-- MACRO-ARCHITECTURE: Main Content Area -->
+    <main class="flex-1 flex flex-col relative z-10 w-full min-h-[100dvh]">
+        
+        <!-- Subtle background environmental lighting -->
+        <div class="void-glow mix-blend-screen"></div>
+
+        <!-- Header -->
+        <header class="h-16 border-b border-surface-700 flex items-center justify-between px-6 flex-shrink-0 z-20 relative bg-surface-950/50 backdrop-blur-md">
+            <div class="flex items-center gap-3">
+                <i class="ph-fill ph-book-open-text text-accent-emerald text-2xl"></i>
+                <span class="font-semibold tracking-tight text-lg">StudyHall</span>
+            </div>
+
+            <!-- Profile Pill Dropdown -->
+            <button class="flex items-center gap-3 hover:bg-surface-800 p-1.5 pr-3 rounded-full border border-transparent hover:border-surface-700 transition-all focus:outline-none focus:ring-2 focus:ring-accent-emerald/40 group btn-press" aria-haspopup="true">
+                <div class="relative">
+                    <img src="https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=100&q=80" alt="Elias Thorne Profile" class="w-8 h-8 rounded-full object-cover shadow-sm bg-surface-700">
+                    <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-accent-emerald rounded-full border-[2px] border-surface-950"></div>
+                </div>
+                <span class="text-sm font-medium text-white/90 group-hover:text-white transition-colors">Elias Thorne</span>
+                <i class="ph ph-caret-down text-white/40 group-hover:text-white/80"></i>
+            </button>
+        </header>
+
+        <!-- Dynamic Main Scrollable Area -->
+        <div class="flex-1 overflow-y-auto px-6 py-12 md:py-20 flex item-start justify-center">
+            
+            <!-- Context Container: Asymmetric Split Grid to break 50/50 center bias -->
+            <div class="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-start">
+                
+                <!-- LEFT STORY COLUMN (Span 5) -->
+                <div class="lg:col-span-5 flex flex-col justify-start lg:sticky lg:top-20 z-10 relative">
+                    
+                    <div class="stagger-item" style="--index: 1;">
+                        <span class="text-xs uppercase tracking-widest text-accent-emerald mb-4 block font-semibold">Workspace Initiation</span>
+                        <h1 class="text-4xl md:text-5xl lg:text-6xl tracking-tighter leading-[1.05] font-semibold text-white">
+                            Welcome to StudyHall,<br>
+                            <span class="text-white/40">Elias.</span>
+                        </h1>
+                    </div>
+                    
+                    <p class="stagger-item text-white/60 text-lg mt-6 leading-relaxed max-w-md font-light" style="--index: 2;">
+                        Study smarter together over text, voice, and robust offline-first messaging. Your academic ecosystem begins here.
+                    </p>
+
+                    <!-- Meso-Architecture Teaser: Wireframe of what a sidebar looks like -->
+                    <div class="stagger-item mt-12 md:mt-20 lg:mt-32 relative hidden md:block" style="--index: 4;">
+                        <h3 class="text-xs font-semibold text-white/30 uppercase tracking-wider mb-6 flex items-center gap-2">
+                            <i class="ph ph-projector-screen text-base"></i> Architecture Preview
+                        </h3>
+                        
+                        <!-- Abstract Channel List Graphic -->
+                        <div class="animate-breathe pl-4 border-l border-surface-700/50 relative">
+                            <!-- Fade out mask at bottom -->
+                            <div class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-surface-950 pointer-events-none z-10"></div>
+                            
+                            <div class="flex items-center gap-3 mb-4 opacity-40">
+                                <i class="ph ph-hash text-surface-500"></i>
+                                <div class="h-1.5 bg-surface-600 rounded-full wire-line" style="--w: 60%; --index: 1;"></div>
+                            </div>
+                            <div class="flex items-center gap-3 mb-4 opacity-40">
+                                <i class="ph ph-hash text-surface-500"></i>
+                                <div class="h-1.5 bg-surface-600 rounded-full wire-line" style="--w: 80%; --index: 2;"></div>
+                                <div class="h-1.5 bg-accent-amber/50 rounded-full wire-line ml-auto" style="--w: 15%; --index: 3;"></div>
+                            </div>
+                            <div class="flex items-center gap-3 mb-4 opacity-60 bg-surface-800/40 -ml-4 pl-4 py-2 rounded-r-md border-l-2 border-accent-emerald">
+                                <i class="ph ph-speaker-high text-accent-emerald"></i>
+                                <div class="h-1.5 bg-white/80 rounded-full wire-line" style="--w: 50%; --index: 4;"></div>
+                            </div>
+                            <div class="flex items-center gap-3 mb-4 opacity-30 pl-6">
+                                <div class="w-4 h-4 rounded-full border border-surface-600"></div>
+                                <div class="h-1 bg-surface-700 rounded-full wire-line" style="--w: 40%; --index: 5;"></div>
+                            </div>
+                            <div class="flex items-center gap-3 mb-4 opacity-20">
+                                <i class="ph ph-clipboard-text text-surface-500"></i>
+                                <div class="h-1.5 bg-surface-600 rounded-full wire-line" style="--w: 70%; --index: 6;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- RIGHT ACTION COLUMN (Span 6, offset by 1) -->
+                <div class="lg:col-span-6 lg:col-start-7 flex flex-col gap-6 pt-4 lg:pt-0 pb-20">
+                    
+                    <!-- ACTION PARADIGM 1: Join (Bento Layout) -->
+                    <div class="glass-panel rounded-3xl p-8 stagger-item relative group" style="--index: 2;">
+                        <!-- Subtle background icon for depth -->
+                        <i class="ph ph-link absolute right-8 top-8 text-6xl text-white/[0.02] -rotate-12 group-hover:rotate-0 transition-transform duration-700 group-hover:text-white/[0.04]"></i>
+                        
+                        <div class="flex items-center gap-4 mb-2">
+                            <div class="w-10 h-10 rounded-xl bg-surface-800 border border-surface-700 flex items-center justify-center text-white/80 shadow-sm">
+                                <i class="ph ph-sign-in text-xl"></i>
+                            </div>
+                            <h2 class="text-2xl font-medium tracking-tight text-white">Join a Study Server</h2>
+                        </div>
+                        
+                        <p class="text-white/50 text-sm mb-6 pl-14">
+                            Have an invite link? Paste it here to sync with your cohort.
+                        </p>
+
+                        <!-- Interactive Form Logic Container -->
+                        <form id="joinForm" class="pl-14 max-w-sm" onsubmit="handleJoinSubmit(event)">
+                            <label for="inviteCode" class="sr-only">Invite code or link</label>
+                            
+                            <div class="flex flex-col gap-2">
+                                <div class="relative flex items-center">
+                                    <input 
+                                        type="text" 
+                                        id="inviteCode" 
+                                        placeholder="e.g. sh.app/biology-101" 
+                                        class="w-full bg-surface-900 border border-surface-600 text-white text-sm rounded-lg pl-4 pr-24 py-3 focus:outline-none focus:border-accent-emerald focus:ring-1 focus:ring-accent-emerald transition-all shadow-sm placeholder-white/30 peer"
+                                        autocomplete="off"
+                                    >
+                                    
+                                    <button 
+                                        type="submit" 
+                                        id="joinBtn"
+                                        class="absolute right-1.5 px-4 py-1.5 bg-surface-700 hover:bg-surface-600 text-white text-sm font-medium rounded-md transition-colors btn-press focus:outline-none focus:ring-2 focus:ring-accent-emerald focus:ring-offset-2 focus:ring-offset-surface-900"
+                                    >
+                                        <span class="btn-text">Join</span>
+                                        <i class="ph ph-spinner-gap animate-spin hidden text-lg"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- Micro-architecture: Inline Error Reporting -->
+                                <div id="joinError" class="hidden flex items-start gap-2 text-danger text-sm mt-1 animate-[fade-up_0.2s_ease-out]">
+                                    <i class="ph-fill ph-warning-circle mt-0.5"></i>
+                                    <span>This invite isn't valid or has expired. Ask the organizer for a new one.</span>
+                                </div>
+                                <div id="joinSubtext" class="text-xs text-white/30 mt-1 transition-opacity">
+                                    You'll be added with a default member role.
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- OR Divider -->
+                    <div class="flex items-center gap-4 px-8 stagger-item" style="--index: 3;">
+                        <div class="h-[1px] flex-1 bg-surface-800"></div>
+                        <span class="text-xs font-mono text-surface-500 uppercase">Or</span>
+                        <div class="h-[1px] flex-1 bg-surface-800"></div>
+                    </div>
+
+                    <!-- ACTION PARADIGM 2: Create (Bento Layout - Primary visual weight) -->
+                    <div class="glass-panel rounded-3xl p-8 stagger-item relative overflow-hidden group shadow-[inset_0_0_0_1px_rgba(16,185,129,0.1),_0_20px_40px_-15px_rgba(0,0,0,0.5)] border-accent-emerald/20" style="--index: 4;">
+                        
+                        <!-- Glow effect locked to this specific bento -->
+                        <div class="absolute -bottom-20 -right-20 w-64 h-64 bg-accent-emerald/10 blur-[80px] rounded-full pointer-events-none transition-opacity opacity-50 group-hover:opacity-100"></div>
+
+                        <div class="flex flex-col h-full relative z-10">
+                            <div class="flex items-start justify-between mb-4">
+                                <div class="w-12 h-12 rounded-2xl bg-surface-900 border border-surface-700 flex items-center justify-center text-accent-emerald shadow-sm relative overflow-hidden group-hover:border-accent-emerald/50 transition-colors">
+                                    <!-- Inner spark icon -->
+                                    <i class="ph-fill ph-sparkle text-2xl relative z-10"></i>
+                                    <!-- Liquid gradient inner BG -->
+                                    <div class="absolute inset-0 bg-gradient-to-tr from-accent-emerald/10 to-transparent"></div>
+                                </div>
+                                <span class="px-2.5 py-1 bg-accent-emerald/10 text-accent-emerald border border-accent-emerald/20 rounded-md text-xs font-medium">
+                                    Owner Role
+                                </span>
+                            </div>
+                            
+                            <h2 class="text-3xl font-medium tracking-tight text-white mb-2">Create a Space</h2>
+                            <p class="text-white/50 text-base leading-relaxed mb-8 max-w-sm">
+                                Start your own study hub. Organize distinct channels by syllabus, control member access, and ensure materials sync cleanly across devices.
+                            </p>
+
+                            <div class="mt-auto flex items-center justify-between">
+                                <button class="px-6 py-3 bg-accent-emerald hover:bg-accent-emerald/90 text-surface-950 font-semibold rounded-lg transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] btn-press flex items-center gap-2 relative overflow-hidden group/btn focus:outline-none focus:ring-2 focus:ring-accent-emerald focus:ring-offset-4 focus:ring-offset-surface-900">
+                                    <span>Initialize Server</span>
+                                    <i class="ph ph-arrow-right group-hover/btn:translate-x-1 transition-transform"></i>
+                                    <!-- Button highlight sweep -->
+                                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:animate-[shimmer_1s_ease-in-out]"></div>
+                                </button>
+
+                                <div class="flex -space-x-2">
+                                    <div class="w-8 h-8 rounded-full bg-surface-700 border-2 border-surface-900 flex items-center justify-center text-[10px] text-white/50 relative z-30">#</div>
+                                    <div class="w-8 h-8 rounded-full bg-surface-700 border-2 border-surface-900 flex items-center justify-center text-[10px] text-white/50 relative z-20"><i class="ph ph-speaker-high"></i></div>
+                                    <div class="w-8 h-8 rounded-full bg-surface-700 border-2 border-surface-900 flex items-center justify-center text-[10px] text-white/50 relative z-10"><i class="ph ph-clipboard"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer links contained within the layout flow -->
+                    <div class="mt-8 flex gap-6 text-xs text-white/40 font-medium px-2 stagger-item" style="--index: 5;">
+                        <a href="#" class="hover:text-white transition-colors">Help & FAQ</a>
+                        <a href="#" class="hover:text-white transition-colors">Privacy Policy</a>
+                        <a href="#" class="hover:text-white transition-colors flex items-center gap-1.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-accent-emerald"></span> System: All Operational
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Vanilla JS to drive Micro-architecture Interaction States -->
+    <script>
+        function handleJoinSubmit(e) {
+            e.preventDefault();
+            
+            const form = e.target;
+            const input = document.getElementById('inviteCode');
+            const btn = document.getElementById('joinBtn');
+            const btnText = btn.querySelector('.btn-text');
+            const btnSpinner = btn.querySelector('.ph-spinner-gap');
+            const errorMsg = document.getElementById('joinError');
+            const subtext = document.getElementById('joinSubtext');
+
+            const val = input.value.trim();
+
+            if (!val) {
+                input.focus();
+                return;
+            }
+
+            // State: Loading
+            input.disabled = true;
+            btn.disabled = true;
+            btnText.classList.add('hidden');
+            btnSpinner.classList.remove('hidden');
+            input.classList.remove('border-danger', 'focus:border-danger', 'focus:ring-danger');
+            errorMsg.classList.add('hidden');
+            subtext.classList.remove('hidden');
+
+            // Simulate API Network Request Delay
+            setTimeout(() => {
+                // State: Error Simulation (Assuming user typed arbitrary string for empty state mockup)
+                input.disabled = false;
+                btn.disabled = false;
+                
+                btnText.classList.remove('hidden');
+                btnSpinner.classList.add('hidden');
+                
+                input.classList.add('border-danger', 'focus:border-danger', 'focus:ring-danger');
+                errorMsg.classList.remove('hidden');
+                subtext.classList.add('hidden');
+
+                // Shake animation for visceral feedback
+                btn.animate([
+                    { transform: 'translateX(0)' },
+                    { transform: 'translateX(-4px)' },
+                    { transform: 'translateX(4px)' },
+                    { transform: 'translateX(-4px)' },
+                    { transform: 'translateX(4px)' },
+                    { transform: 'translateX(0)' }
+                ], { duration: 300, easing: 'ease-in-out' });
+
+                input.focus();
+                
+            }, 1200);
+        }
+
+        // Add subtle mouse tracking for the right column bentos to feel like physical glass
+        document.querySelectorAll('.glass-panel').forEach(panel => {
+            panel.addEventListener('mousemove', (e) => {
+                const rect = panel.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                // Extremely subtle rotation mapping based on cursor position
+                const xPct = (x / rect.width - 0.5) * 2; // -1 to 1
+                const yPct = (y / rect.height - 0.5) * 2; // -1 to 1
+                
+                panel.style.transform = `perspective(1000px) rotateX(${-yPct * 2}deg) rotateY(${xPct * 2}deg) scale3d(1.01, 1.01, 1.01)`;
+            });
+
+            panel.addEventListener('mouseleave', () => {
+                panel.style.transform = `perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)`;
+            });
+        });
+    </script>
+</body>
+</html>

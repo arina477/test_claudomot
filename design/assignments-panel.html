@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en" class="antialiased dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assignments — StudyHall</title>
+    
+    <!-- Scripts & Fonts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* Palette Primitives */
+            --surface-950: #0a0a0b;
+            --surface-900: #121214;
+            --surface-800: #1c1c1f;
+            --surface-700: #27272a;
+            --surface-600: #3f3f46;
+            --surface-500: #52525b;
+            --border-hairline: rgba(255,255,255,0.06);
+            --border-hover: rgba(255,255,255,0.12);
+            --text-primary: rgba(255,255,255,0.92);
+            --text-secondary: rgba(255,255,255,0.60);
+            --text-muted: rgba(255,255,255,0.40);
+            --accent-emerald: #10b981;
+            --accent-emerald-dim: rgba(16,185,129,0.1);
+            --accent-amber: #f59e0b;
+            --danger: #ef4444;
+            
+            /* Shapes & Motion */
+            --radius-md: 6px;
+            --radius-lg: 10px;
+            --radius-xl: 12px;
+            --easing-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            --easing-smooth: cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+
+        body {
+            font-family: 'Satoshi', sans-serif;
+            background-color: var(--surface-950);
+            color: var(--text-primary);
+            overflow: hidden; /* App shell manages its own overflow */
+        }
+
+        /* Scrollbar customization (minimal dark) */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--surface-600); border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--surface-500); }
+
+        /* Typography Utilities */
+        .text-primary { color: var(--text-primary); }
+        .text-secondary { color: var(--text-secondary); }
+        .text-muted { color: var(--text-muted); }
+        
+        /* Surface & Border Utilities */
+        .bg-surface-900 { background-color: var(--surface-900); }
+        .bg-surface-800 { background-color: var(--surface-800); }
+        .bg-surface-700 { background-color: var(--surface-700); }
+        .border-hairline { border-color: var(--border-hairline); }
+        
+        .glass-edge {
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 1px 2px rgba(0,0,0,0.4);
+        }
+        
+        .glass-panel {
+            background-color: var(--surface-800);
+            border: 1px solid var(--border-hairline);
+            box-shadow: shadow-sm;
+        }
+
+        /* Micro-Interactions */
+        .hover-lift {
+            transition: transform 0.3s var(--easing-spring), border-color 0.2s ease, background-color 0.2s ease;
+        }
+        .hover-lift:hover {
+            transform: translateY(-2px);
+            border-color: var(--border-hover);
+        }
+        .hover-lift:active {
+            transform: translateY(0) scale(0.99);
+        }
+
+        /* Server Icon Squircle Morph */
+        .server-icon {
+            transition: all 0.3s var(--easing-spring);
+        }
+        .server-icon:hover, .server-icon.active {
+            border-radius: 12px;
+            background-color: var(--accent-emerald);
+        }
+        .server-icon.active {
+            background-color: var(--surface-700);
+        }
+        
+        /* Custom Checkbox Toggle */
+        .status-toggle {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border: 1.5px solid var(--surface-500);
+            border-radius: var(--radius-md);
+            background: transparent;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s var(--easing-smooth);
+        }
+        .status-toggle:hover {
+            border-color: var(--text-secondary);
+            background: var(--surface-700);
+        }
+        .status-toggle:checked {
+            background: var(--accent-emerald);
+            border-color: var(--accent-emerald);
+            box-shadow: 0 0 0 2px rgba(16,185,129,0.2) inset, 0 0 10px rgba(16,185,129,0.4);
+        }
+        .status-toggle:checked::after {
+            content: '';
+            position: absolute;
+            left: 6px;
+            top: 2px;
+            width: 5px;
+            height: 10px;
+            border: solid var(--surface-950);
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+            animation: check-pop 0.3s var(--easing-spring);
+        }
+        
+        @keyframes check-pop {
+            0% { transform: rotate(45deg) scale(0); opacity: 0; }
+            100% { transform: rotate(45deg) scale(1); opacity: 1; }
+        }
+
+        /* Animation Orchestration */
+        @keyframes waterfall {
+            0% { opacity: 0; transform: translateY(16px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        .stagger-item {
+            opacity: 0;
+            animation: waterfall 0.6s var(--easing-spring) forwards;
+            animation-delay: calc(var(--idx) * 80ms);
+        }
+        
+        @keyframes pulse-shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        .skeleton {
+            background: linear-gradient(90deg, var(--surface-700) 25%, var(--surface-600) 50%, var(--surface-700) 75%);
+            background-size: 200% 100%;
+            animation: pulse-shimmer 2s infinite linear;
+        }
+
+        /* Status card modifiers */
+        .card-done {
+            background-color: var(--accent-emerald-dim);
+            border-color: rgba(16,185,129,0.2);
+        }
+        .card-done .card-title {
+            color: var(--text-secondary);
+            text-decoration: line-through;
+            text-decoration-color: var(--text-muted);
+        }
+
+        /* Modal specific */
+        .backdrop-blur { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+        
+        @keyframes modalSlideUp {
+            from { transform: scale(0.95) translateY(20px); opacity: 0; }
+            to { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        .modal-animate {
+            animation: modalSlideUp 0.4s var(--easing-spring) forwards;
+        }
+
+    </style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style id="studyhall-geist-fix">
+  :root { --sh-font: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+          --sh-mono: 'Geist Mono', ui-monospace, monospace; }
+  html, body, button, input, textarea, select, h1,h2,h3,h4,h5,h6, p, span, div, a, label {
+    font-family: var(--sh-font) !important; }
+  code, pre, .font-mono { font-family: var(--sh-mono) !important; }
+</style>
+</head>
+<body class="flex w-full h-[100dvh] select-none text-[14px]">
+
+    <!-- ========================================== -->
+    <!-- MACRO-ARCHITECTURE: APP SHELL & SIDEBARS   -->
+    <!-- ========================================== -->
+
+    <!-- Pane 1: Server Rail -->
+    <nav class="w-[72px] h-full bg-surface-900 border-r border-hairline flex flex-col items-center py-4 gap-3 z-30 shrink-0">
+        <!-- Active App Icon -->
+        <div class="relative group">
+            <div class="absolute -left-[14px] top-[10px] w-1 h-[24px] bg-[var(--accent-emerald)] rounded-r-full"></div>
+            <button class="server-icon active w-12 h-12 rounded-[24px] flex items-center justify-center text-primary glass-edge bg-surface-700" aria-label="CS-202: Algorithms Study Group">
+                <span class="font-bold text-lg tracking-tight">CS</span>
+            </button>
+        </div>
+        
+        <div class="w-8 h-[1px] bg-[var(--surface-600)] rounded-full my-1"></div>
+        
+        <!-- Other Servers -->
+        <button class="server-icon w-12 h-12 rounded-[24px] bg-surface-800 flex items-center justify-center text-secondary hover:text-primary border border-hairline" aria-label="Bio 101 Cohort">
+            <i class="ph ph-flask text-2xl"></i>
+        </button>
+        <button class="server-icon w-12 h-12 rounded-[24px] bg-surface-800 flex items-center justify-center text-secondary hover:text-primary border border-hairline overflow-hidden" aria-label="Design Patterns">
+            <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=100&q=80" alt="Server Artwork" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity">
+        </button>
+
+        <button class="server-icon w-12 h-12 rounded-[24px] bg-surface-800 flex items-center justify-center text-[var(--accent-emerald)] mt-auto border border-hairline hover:bg-[var(--accent-emerald-dim)] transition-colors" aria-label="Add a Server">
+            <i class="ph ph-plus text-xl"></i>
+        </button>
+    </nav>
+
+    <!-- Pane 2: Channel Sidebar (Hidden on mobile) -->
+    <aside class="hidden lg:flex w-[240px] h-full bg-surface-900 border-r border-hairline flex-col z-20 shrink-0">
+        <!-- Server Header -->
+        <header class="h-[52px] border-b border-hairline flex items-center px-4 justify-between cursor-pointer hover:bg-surface-800 transition-colors">
+            <h1 class="font-semibold text-base text-primary truncate">CS-202: Algorithms</h1>
+            <i class="ph ph-caret-down text-secondary"></i>
+        </header>
+
+        <!-- Offline Sync Indicator (The Wedge) -->
+        <div id="connection-wedge" class="flex items-center gap-2 px-4 py-2 bg-[var(--accent-amber)]/10 border-b border-[var(--accent-amber)]/20 cursor-help transition-all duration-300">
+            <div class="relative flex items-center justify-center w-2 h-2">
+                <span id="conn-dot-ping" class="absolute inline-flex h-full w-full rounded-full bg-[var(--accent-amber)] opacity-75 animate-ping"></span>
+                <span id="conn-dot-core" class="relative inline-flex rounded-full h-2 w-2 bg-[var(--accent-amber)]"></span>
+            </div>
+            <span id="conn-text" class="text-xs font-medium text-[var(--accent-amber)]">Reconnecting...</span>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-2 py-4 space-y-6">
+            <!-- Pinned/Tools Category -->
+            <div>
+                <h2 class="px-2 text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">Workspace</h2>
+                <ul class="space-y-0.5">
+                    <li>
+                        <button class="w-full relative flex items-center gap-2 px-2 py-1.5 bg-surface-700 text-primary rounded-md group">
+                            <i class="ph ph-clipboard-text text-lg text-[var(--accent-emerald)]"></i>
+                            <span class="font-medium">Assignments</span>
+                            <span class="absolute right-2 text-[10px] bg-[var(--surface-500)]/50 px-1.5 py-0.5 rounded text-secondary">2 Due</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button class="w-full flex items-center gap-2 px-2 py-1.5 text-secondary hover:text-primary hover:bg-surface-800 rounded-md transition-colors">
+                            <i class="ph ph-folder text-lg"></i>
+                            <span class="font-medium">Resources</span>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Channels Category -->
+            <div>
+                <h2 class="px-2 text-[11px] font-semibold text-muted uppercase tracking-wider mb-1 flex items-center group cursor-pointer">
+                    <i class="ph ph-caret-down mr-1 transition-transform"></i> Discussions
+                </h2>
+                <ul class="space-y-0.5">
+                    <li>
+                        <button class="w-full flex items-center gap-2 px-2 py-1.5 text-secondary hover:text-primary hover:bg-surface-800 rounded-md transition-colors">
+                            <i class="ph ph-hash text-lg"></i>
+                            <span class="font-medium">general</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button class="w-full flex items-center justify-between px-2 py-1.5 text-primary hover:bg-surface-800 rounded-md transition-colors group">
+                            <div class="flex items-center gap-2">
+                                <i class="ph ph-hash text-lg text-secondary group-hover:text-primary"></i>
+                                <span class="font-medium">project-1-help</span>
+                            </div>
+                            <div class="w-2 h-2 rounded-full bg-white"></div>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Voice Category -->
+            <div>
+                <h2 class="px-2 text-[11px] font-semibold text-muted uppercase tracking-wider mb-1 flex items-center">
+                    <i class="ph ph-caret-down mr-1"></i> Study Rooms
+                </h2>
+                <ul class="space-y-0.5">
+                    <li>
+                        <button class="w-full flex items-center gap-2 px-2 py-1.5 text-secondary hover:text-primary hover:bg-surface-800 rounded-md transition-colors">
+                            <i class="ph ph-speaker-high text-lg"></i>
+                            <span class="font-medium">Library (Focus)</span>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- User Profile Area -->
+        <div class="h-[52px] border-t border-hairline bg-surface-900/50 flex items-center px-3 gap-2 shrink-0">
+            <div class="relative">
+                <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=60&q=80" alt="Your Avatar" class="w-8 h-8 rounded-full border border-surface-700">
+                <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-[var(--accent-emerald)] rounded-full border border-surface-900"></div>
+            </div>
+            <div class="flex flex-col flex-1 min-w-0">
+                <span class="text-sm font-semibold text-primary truncate leading-tight">Alex Dev</span>
+                <span class="text-[11px] text-muted truncate leading-tight">Online</span>
+            </div>
+            <button class="p-1.5 text-secondary hover:text-primary hover:bg-surface-700 rounded-md transition-colors rounded">
+                <i class="ph ph-gear text-lg"></i>
+            </button>
+        </div>
+    </aside>
+
+    <!-- ========================================== -->
+    <!-- MESO-ARCHITECTURE: MAIN CONTENT CANVAS     -->
+    <!-- ========================================== -->
+    <main class="flex-1 flex flex-col min-w-0 bg-surface-800 relative z-10">
+        
+        <!-- Canvas Header -->
+        <header class="h-[52px] border-b border-hairline flex items-center justify-between px-6 shrink-0 bg-surface-800/80 backdrop-blur z-20">
+            <div class="flex items-center gap-3">
+                <i class="ph ph-list text-xl text-secondary lg:hidden cursor-pointer"></i>
+                <div class="flex items-center gap-2 text-primary font-semibold text-base">
+                    <i class="ph ph-clipboard-text text-xl"></i>
+                    <h2>Assignments</h2>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <button class="h-8 px-3 flex items-center gap-2 text-sm text-secondary bg-surface-900 border border-hairline rounded-md hover:bg-surface-700 hover:text-primary transition-colors glass-edge">
+                    <i class="ph ph-faders text-lg"></i>
+                    <span>Filter: All</span>
+                </button>
+                <button class="h-8 px-4 flex items-center gap-2 text-sm text-white bg-[var(--accent-emerald)] rounded-md font-semibold hover:bg-[#0ea5e9] hover:-translate-y-[1px] transition-all glass-edge shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]" onclick="openModal('new')">
+                    <i class="ph ph-plus-bold text-sm"></i>
+                    <span>New Assignment</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Scrolling List Area -->
+        <div class="flex-1 overflow-y-auto px-4 py-8 pb-32">
+            <div class="max-w-4xl mx-auto flex flex-col gap-8">
+                
+                <!-- Section Header -->
+                <div class="flex items-end justify-between border-b border-surface-600 pb-2 stagger-item" style="--idx:0;">
+                    <h3 class="text-sm font-semibold text-secondary uppercase tracking-wider">Upcoming & Recent</h3>
+                    <span class="text-xs text-muted">Sorted by Due Date</span>
+                </div>
+
+                <!-- View Type A: List Output -->
+                <div class="flex flex-col gap-3">
+                    
+                    <!-- Card 1: Overdue & To-Do -->
+                    <article class="glass-panel rounded-[var(--radius-lg)] p-5 flex flex-col md:flex-row gap-5 hover-lift relative overflow-hidden group cursor-pointer stagger-item border-l-2 border-l-[var(--danger)]" style="--idx:1;" onclick="openModal('view')">
+                        <div class="absolute inset-0 bg-gradient-to-r from-[var(--danger)]/5 to-transparent pointer-events-none"></div>
+                        
+                        <!-- Metadata / Top-Left -->
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-3 mb-1">
+                                <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-[var(--danger)]/10 text-[var(--danger)] border border-[var(--danger)]/20 uppercase tracking-wide">
+                                    Overdue: Yesterday
+                                </span>
+                                <span class="text-xs text-muted flex items-center gap-1"><i class="ph ph-user text-[14px]"></i> Prof. Ada Woods</span>
+                            </div>
+                            <h4 class="card-title text-[18px] font-bold text-primary mb-1 truncate leading-tight">Homework 4: Graph Traversals</h4>
+                            <p class="text-sm text-secondary line-clamp-2 pr-4">Implement BFS and DFS algorithms using adjacency matrices. Provide Big-O time and space complexity annotations in comments.</p>
+                        </div>
+
+                        <!-- Mid/Right Controls -->
+                        <div class="flex flex-row md:flex-col items-center md:items-end justify-between shrink-0 gap-4 mt-4 md:mt-0 border-t border-hairline md:border-t-0 pt-4 md:pt-0">
+                            <!-- Toggle (Propagates click stop) -->
+                            <div class="flex items-center gap-3 bg-surface-900 px-3 py-2 rounded-md border border-hairline shadow-sm" onclick="event.stopPropagation()">
+                                <label for="hw4" class="text-sm font-medium text-secondary cursor-pointer">Mark as Done</label>
+                                <input type="checkbox" id="hw4" class="status-toggle">
+                            </div>
+                            <!-- Engagment Icons -->
+                            <div class="flex items-center gap-3 text-secondary">
+                                <div class="flex items-center text-xs bg-surface-900 px-2 py-1 rounded border border-hairline">
+                                    <i class="ph ph-paperclip mr-1"></i> 2 Files
+                                </div>
+                                <button class="p-1 hover:text-primary hover:bg-surface-600 rounded transition-colors"><i class="ph ph-dots-three-vertical text-lg"></i></button>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- Card 2: Due Soon & To-Do -->
+                    <article class="glass-panel rounded-[var(--radius-lg)] p-5 flex flex-col md:flex-row gap-5 hover-lift relative overflow-hidden group cursor-pointer stagger-item border-l-2 border-l-[var(--accent-amber)]" style="--idx:2;" onclick="openModal('view')">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-3 mb-1">
+                                <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-[var(--accent-amber)]/10 text-[var(--accent-amber)] border border-[var(--accent-amber)]/20 uppercase tracking-wide flex items-center gap-1">
+                                    <i class="ph ph-clock text-[12px]"></i> Due Tomorrow, 11:59 PM
+                                </span>
+                                <span class="text-xs text-muted">Posted Jun 24</span>
+                            </div>
+                            <h4 class="card-title text-[18px] font-bold text-primary mb-1 truncate leading-tight">Reading Response: System Design</h4>
+                            <p class="text-sm text-secondary line-clamp-2 pr-4">Read chapter 4 of Designing Data-Intensive Applications. Write a 500-word response focusing on partition strategies and potential skew issues.</p>
+                        </div>
+                        <div class="flex flex-row md:flex-col items-center md:items-end justify-between shrink-0 gap-4 mt-4 md:mt-0 border-t border-hairline md:border-t-0 pt-4 md:pt-0">
+                            <div class="flex items-center gap-3 bg-surface-900 px-3 py-2 rounded-md border border-hairline shadow-sm" onclick="event.stopPropagation()">
+                                <label for="rr1" class="text-sm font-medium text-secondary cursor-pointer">Mark as Done</label>
+                                <input type="checkbox" id="rr1" class="status-toggle">
+                            </div>
+                            <div class="flex items-center gap-3 text-secondary">
+                                <div class="flex -space-x-2">
+                                    <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=50&h=50&fit=crop" class="w-6 h-6 rounded-full border-2 border-surface-800">
+                                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=50&h=50&fit=crop" class="w-6 h-6 rounded-full border-2 border-surface-800">
+                                    <div class="w-6 h-6 rounded-full bg-surface-600 border-2 border-surface-800 flex items-center justify-center text-[10px] text-white">+5</div>
+                                </div>
+                                <button class="p-1 hover:text-primary hover:bg-surface-600 rounded transition-colors"><i class="ph ph-dots-three-vertical text-lg"></i></button>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- Card 3: Standard Upcoming -->
+                    <article class="glass-panel rounded-[var(--radius-lg)] p-5 flex flex-col md:flex-row gap-5 hover-lift group cursor-pointer stagger-item" style="--idx:3;" onclick="openModal('view')">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-3 mb-1">
+                                <span class="text-xs text-muted font-medium">Due: <span class="text-primary">Fri, Jun 28</span></span>
+                                <span class="w-1 h-1 rounded-full bg-surface-600"></span>
+                                <span class="text-xs text-muted flex items-center gap-1"><i class="ph ph-user text-[14px]"></i> TA James</span>
+                            </div>
+                            <h4 class="card-title text-[18px] font-semibold text-primary mb-1 truncate leading-tight">Project 1 Milestone 2</h4>
+                            <p class="text-sm text-secondary line-clamp-2 pr-4">Submit the API schema definition and initial database entity relational diagram. Ensure adherence to 3NF where applicable.</p>
+                        </div>
+                        <div class="flex flex-row md:flex-col items-center md:items-end justify-between shrink-0 gap-4 mt-4 md:mt-0 border-t border-hairline md:border-t-0 pt-4 md:pt-0">
+                            <div class="flex items-center gap-3 bg-surface-900 px-3 py-2 rounded-md border border-hairline shadow-sm" onclick="event.stopPropagation()">
+                                <label for="m2" class="text-sm font-medium text-secondary cursor-pointer">Mark as Done</label>
+                                <input type="checkbox" id="m2" class="status-toggle">
+                            </div>
+                            <div class="flex items-center gap-3 text-secondary">
+                                <div class="flex items-center text-xs bg-surface-900 px-2 py-1 rounded border border-hairline">
+                                    <i class="ph ph-paperclip mr-1 text-primary"></i> 1 File
+                                </div>
+                                <button class="p-1 hover:text-primary hover:bg-surface-600 rounded transition-colors"><i class="ph ph-dots-three-vertical text-lg"></i></button>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- Card 4: Completed Item -->
+                    <article class="glass-panel rounded-[var(--radius-lg)] p-5 flex flex-col md:flex-row gap-5 hover-lift group cursor-pointer stagger-item card-done" style="--idx:4;" onclick="openModal('view')">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-3 mb-1 opacity-70">
+                                <span class="text-xs text-muted font-medium">Due: Formatted Date</span>
+                            </div>
+                            <h4 class="card-title text-[18px] font-semibold text-primary mb-1 truncate leading-tight">Setup Local Development Env</h4>
+                            <p class="text-sm text-secondary line-clamp-1 pr-4 opacity-70">Install Node.js 18+, Docker, and initialize the template repo.</p>
+                        </div>
+                        <div class="flex flex-row md:flex-col items-center md:items-end justify-between shrink-0 gap-4 mt-4 md:mt-0 pt-4 md:pt-0">
+                            <div class="flex items-center gap-3 px-3 py-2 rounded-md border border-[var(--accent-emerald)]/30 bg-[var(--accent-emerald)]/10" onclick="event.stopPropagation()">
+                                <label for="c1" class="text-sm font-medium text-[var(--accent-emerald)] cursor-pointer"><i class="ph-fill ph-check-circle mr-1"></i> Completed</label>
+                                <input type="checkbox" id="c1" class="status-toggle" checked>
+                            </div>
+                        </div>
+                    </article>
+
+                </div>
+                
+                <!-- Bottom spacing/End state indicator -->
+                <div class="py-8 text-center text-secondary text-sm stagger-item" style="--idx:5;">
+                    <i class="ph ph-check-all text-xl mb-2 text-muted"></i>
+                    <p>You're all caught up for earlier dates.</p>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- ========================================== -->
+    <!-- MICRO-ARCHITECTURE: MODALS & OVERLAYS      -->
+    <!-- ========================================== -->
+
+    <!-- Backdrop -->
+    <div id="modal-backdrop" class="fixed inset-0 bg-black/60 backdrop-blur z-40 hidden flex items-center justify-center p-4">
+        
+        <!-- Assignment Detail Modal -->
+        <dialog id="assignment-modal" open class="bg-surface-900 border border-hairline rounded-[var(--radius-lg)] shadow-2xl w-full max-w-2xl text-primary overflow-hidden relative modal-animate flex flex-col max-h-[90dvh]">
+            
+            <!-- Header -->
+            <header class="flex items-start justify-between p-6 border-b border-hairline shrink-0 bg-surface-900">
+                <div class="pr-8">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold bg-[var(--accent-amber)]/10 text-[var(--accent-amber)] border border-[var(--accent-amber)]/20 mb-3">
+                        <i class="ph-fill ph-clock"></i> Due Tomorrow at 11:59 PM
+                    </span>
+                    <h2 class="text-[24px] font-bold tracking-tight leading-tight mb-2">Reading Response: System Design</h2>
+                    <div class="flex items-center gap-3 text-sm text-secondary">
+                        <span class="flex items-center gap-1.5"><img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=32&h=32&fit=crop" class="w-5 h-5 rounded-full"> Posted by Prof. Ada Woods</span>
+                        <span>•</span>
+                        <span>Jun 24, 2026</span>
+                        <span>•</span>
+                        <a href="#" class="text-[var(--accent-emerald)] hover:underline flex items-center gap-1"><i class="ph ph-hash"></i>general</a>
+                    </div>
+                </div>
+                <button onclick="closeModal()" class="absolute top-6 right-6 p-1.5 text-secondary hover:text-primary hover:bg-surface-700 rounded-md transition-colors border border-transparent hover:border-hairline">
+                    <i class="ph ph-x text-lg font-bold"></i>
+                </button>
+            </header>
+
+            <!-- Scrollable Body Markdown Area -->
+            <div class="p-6 overflow-y-auto space-y-6 flex-1 text-[15px] leading-relaxed text-[var(--text-primary)]/90 custom-scroll">
+                
+                <div class="space-y-4">
+                    <p>Read chapter 4 of <em>Designing Data-Intensive Applications</em>. Write a 500-word response focusing on partition strategies and potential skew issues.</p>
+                    <h3 class="text-lg font-semibold text-primary mt-6 mb-2">Requirements:</h3>
+                    <ul class="list-disc pl-5 space-y-1 text-secondary">
+                        <li>Compare Range vs. Hash partitioning.</li>
+                        <li>Give a real-world example of where a 'hot spot' might occur.</li>
+                        <li>Submit as a PDF format.</li>
+                    </ul>
+                    <div class="bg-surface-800 border-l-4 border-[var(--accent-emerald)] p-4 text-sm mt-4 text-secondary rounded-r-md">
+                        <strong>Late Policy:</strong> Submissions accepted up to 48 hours late with a 10% penalty per day.
+                    </div>
+                </div>
+
+                <hr class="border-hairline">
+
+                <!-- Attachments -->
+                <div>
+                    <h3 class="text-sm font-semibold text-primary mb-3">Attachments (2)</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        
+                        <a href="#" class="flex items-center gap-3 p-3 rounded-md bg-surface-800 border border-hairline hover:bg-surface-700 hover:border-hover transition-colors group">
+                            <div class="w-10 h-10 rounded bg-[var(--danger)]/10 text-[var(--danger)] flex items-center justify-center shrink-0">
+                                <i class="ph-fill ph-file-pdf text-xl"></i>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <p class="text-sm font-medium text-primary truncate group-hover:text-[var(--accent-emerald)] transition-colors">DDIA_Ch4_Excerpt.pdf</p>
+                                <p class="text-[11px] text-muted">2.4 MB • PDF Document</p>
+                            </div>
+                            <i class="ph ph-download-simple text-secondary opacity-0 group-hover:opacity-100 transition-opacity pr-2"></i>
+                        </a>
+
+                        <a href="#" class="flex items-center gap-3 p-3 rounded-md bg-surface-800 border border-hairline hover:bg-surface-700 hover:border-hover transition-colors group">
+                            <div class="w-10 h-10 rounded bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0">
+                                <i class="ph-fill ph-file-doc text-xl"></i>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <p class="text-sm font-medium text-primary truncate group-hover:text-[var(--accent-emerald)] transition-colors">Response_Template.docx</p>
+                                <p class="text-[11px] text-muted">18 KB • Word Document</p>
+                            </div>
+                            <i class="ph ph-download-simple text-secondary opacity-0 group-hover:opacity-100 transition-opacity pr-2"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Action & Status -->
+            <footer class="p-4 sm:p-6 border-t border-hairline bg-surface-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
+                <!-- Social/Engagement -->
+                <div class="flex items-center gap-3">
+                    <div class="flex -space-x-2">
+                        <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=50&h=50&fit=crop" class="w-7 h-7 rounded-full border-2 border-surface-800">
+                        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=50&h=50&fit=crop" class="w-7 h-7 rounded-full border-2 border-surface-800">
+                        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50&h=50&fit=crop" class="w-7 h-7 rounded-full border-2 border-surface-800">
+                    </div>
+                    <span class="text-xs text-secondary"><strong>8 of 24</strong> people marked this done</span>
+                </div>
+
+                <!-- Personal Primary Action -->
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2 text-xs font-medium text-amber-500 italic mr-2" id="modal-sync-status">
+                        <i class="ph ph-arrows-clockwise animate-spin"></i> Offline (will sync)
+                    </div>
+                    <button class="h-10 px-6 rounded-md bg-[var(--surface-900)] border border-[var(--surface-500)] text-primary font-semibold flex items-center gap-2 hover:bg-surface-700 transition-colors shadow-sm" onclick="toggleModalStatus()">
+                        <i id="modal-check-icon" class="ph ph-circle text-xl text-secondary"></i>
+                        <span id="modal-btn-text">Mark as Done</span>
+                    </button>
+                </div>
+            </footer>
+        </dialog>
+    </div>
+
+    <!-- Vanilla Interactivity Script -->
+    <script>
+        // Modal Logic
+        const backdrop = document.getElementById('modal-backdrop');
+        const modal = document.getElementById('assignment-modal');
+
+        function openModal(type) {
+            backdrop.classList.remove('hidden');
+            // Allow CSS animation frame to tick
+            requestAnimationFrame(() => {
+                modal.classList.add('modal-animate');
+                backdrop.style.opacity = "1";
+            });
+        }
+
+        function closeModal() {
+            backdrop.classList.add('hidden');
+            modal.classList.remove('modal-animate');
+        }
+
+        backdrop.addEventListener('click', (e) => {
+            if(e.target === backdrop) closeModal();
+        });
+
+        // Toggle Status inside Modal Demo
+        let isDone = false;
+        function toggleModalStatus() {
+            const btnText = document.getElementById('modal-btn-text');
+            const icon = document.getElementById('modal-check-icon');
+            const syncStatus = document.getElementById('modal-sync-status');
+            
+            isDone = !isDone;
+            if(isDone) {
+                btnText.innerText = "Completed";
+                icon.className = "ph-fill ph-check-circle text-xl text-[var(--accent-emerald)]";
+                icon.parentElement.style.borderColor = "var(--accent-emerald)";
+                icon.parentElement.style.backgroundColor = "var(--accent-emerald-dim)";
+                // Simulate offline optimistic UI
+                syncStatus.innerHTML = '<i class="ph ph-check text-[var(--accent-emerald)]"></i> <span class="text-[var(--accent-emerald)] not-italic">Saved locally</span>';
+                setTimeout(() => {
+                   if(connState === 'offline') syncStatus.innerHTML = '<i class="ph ph-clock text-[var(--accent-amber)]"></i> <span class="text-[var(--accent-amber)] not-italic">Queued</span>'; 
+                }, 1500)
+            } else {
+                btnText.innerText = "Mark as Done";
+                icon.className = "ph ph-circle text-xl text-secondary";
+                icon.parentElement.style.borderColor = "var(--surface-500)";
+                icon.parentElement.style.backgroundColor = "var(--surface-900)";
+                syncStatus.innerHTML = '';
+            }
+        }
+
+        // Card Checkbox Logic (Card color change)
+        document.querySelectorAll('.status-toggle').forEach(checkbox => {
+            checkbox.addEventListener('change', function(e) {
+                const card = this.closest('article');
+                if(this.checked) {
+                    card.classList.add('card-done');
+                } else {
+                    card.classList.remove('card-done');
+                }
+                // Stop click from opening modal if clicking checkbox wrapper area
+                e.stopPropagation();
+            });
+        });
+
+        // Connection State Wedge Simulation (Demonstrating Feature 12 Offline Wedge)
+        const wedge = document.getElementById('connection-wedge');
+        const connText = document.getElementById('conn-text');
+        const dotPing = document.getElementById('conn-dot-ping');
+        const dotCore = document.getElementById('conn-dot-core');
+        let connState = 'syncing'; // 'online', 'syncing', 'offline'
+
+        // Cycle states for demonstration
+        setInterval(() => {
+            if(connState === 'syncing') {
+                connState = 'online';
+                wedge.className = "flex items-center gap-2 px-4 py-1.5 transition-all duration-500 h-0 overflow-hidden opacity-0"; // Collapse when online
+            } 
+            else if (connState === 'online') {
+                connState = 'offline';
+                wedge.className = "flex items-center gap-2 px-4 py-2 transition-all duration-300 bg-[var(--danger)]/10 border-b border-[var(--danger)]/20 cursor-help";
+                connText.innerText = "Offline. Changes will sync later.";
+                connText.className = "text-xs font-medium text-[var(--danger)]";
+                dotCore.className = "relative inline-flex rounded-full h-2 w-2 bg-[var(--danger)]";
+                dotPing.classList.add('hidden');
+            }
+            else {
+                connState = 'syncing';
+                wedge.className = "flex items-center gap-2 px-4 py-2 transition-all duration-300 bg-[var(--accent-amber)]/10 border-b border-[var(--accent-amber)]/20 cursor-help";
+                connText.innerText = "Reconnecting...";
+                connText.className = "text-xs font-medium text-[var(--accent-amber)]";
+                dotCore.className = "relative inline-flex rounded-full h-2 w-2 bg-[var(--accent-amber)]";
+                dotPing.classList.remove('hidden');
+            }
+        }, 8000);
+
+    </script>
+</body>
+</html>

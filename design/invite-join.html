@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en" class="antialiased selection:bg-emerald-500/30 selection:text-emerald-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyHall — Invite Preview</title>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Geist', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+                        mono: ['Geist Mono', 'ui-monospace', 'monospace'],
+                    },
+                    colors: {
+                        surface: {
+                            950: '#0a0a0b',
+                            900: '#121214',
+                            800: '#1c1c1f',
+                            700: '#27272a',
+                            600: '#3f3f46',
+                            500: '#52525b',
+                        },
+                        accent: {
+                            emerald: '#10b981',
+                            emeraldHover: '#0da170',
+                            amber: '#f59e0b',
+                        },
+                        danger: '#ef4444',
+                        text: {
+                            primary: 'rgba(255,255,255,0.92)',
+                            secondary: 'rgba(255,255,255,0.60)',
+                            muted: 'rgba(255,255,255,0.40)',
+                        }
+                    },
+                    boxShadow: {
+                        'pop': '0 8px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)',
+                        'sm-tactile': '0 1px 2px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)',
+                    },
+                    animation: {
+                        'slide-up': 'slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'fade-in': 'fadeIn 0.4s ease-out forwards',
+                        'spin-slow': 'spin 2s linear infinite',
+                    },
+                    keyframes: {
+                        slideUp: {
+                            '0%': { opacity: 0, transform: 'translateY(20px) scale(0.98)' },
+                            '100%': { opacity: 1, transform: 'translateY(0) scale(1)' },
+                        },
+                        fadeIn: {
+                            '0%': { opacity: 0 },
+                            '100%': { opacity: 1 },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom Keyframes & Physics (Beyond standard Tailwind) */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+        
+        body {
+            background-color: var(--surface-950, #0a0a0b);
+            color: var(--text-primary, rgba(255,255,255,0.92));
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Glassmorphism / Spatial adjustments */
+        .glass-edge {
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        
+        .glass-edge-top {
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+        }
+
+        /* Standardized Spring Easing */
+        .spring-transition {
+            transition: all 400ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        .fast-spring {
+            transition: all 250ms cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        /* Staggered Item Animation Engine */
+        .stagger-item {
+            opacity: 0;
+            transform: translateY(10px);
+            animation: staggerFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: calc(var(--idx, 0) * 60ms + 100ms);
+        }
+
+        @keyframes staggerFade {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Custom Scrollbar for inner lists */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3f3f46;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #52525b;
+        }
+
+        /* Utility Hide for State Management */
+        .state-layer {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .state-layer.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        /* Glow effects */
+        .glow-emerald {
+            box-shadow: 0 0 15px rgba(16,185,129,0.1);
+        }
+        .glow-danger {
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.1);
+        }
+    </style>
+</head>
+<body class="min-h-[100dvh] w-full flex items-center justify-center p-4 relative overflow-hidden font-sans">
+
+    <!-- Macro-Architecture: Atmospheric Environment -->
+    <div class="fixed inset-0 pointer-events-none z-0">
+        <!-- Ambient top glow to establish hierarchy without noise -->
+        <div class="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-accent-emerald/5 blur-[120px] rounded-full"></div>
+        <div class="absolute bottom-0 left-0 w-full h-[30vh] bg-gradient-to-t from-surface-950 to-transparent"></div>
+    </div>
+
+    <!-- Active Invite Code Header Context (Simulated Navigation) -->
+    <div class="fixed top-0 left-0 w-full p-6 flex justify-between items-center z-20 animate-fade-in pointer-events-none">
+        <div class="flex items-center gap-2">
+            <i class="ph ph-books text-accent-emerald text-xl"></i>
+            <span class="font-medium tracking-tight text-white/90">StudyHall</span>
+        </div>
+        <div id="connection-state" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-900 glass-edge transition-colors duration-300 pointer-events-auto">
+            <span class="w-1.5 h-1.5 rounded-full bg-accent-emerald shadow-[0_0_8px_rgba(16,185,129,0.8)]" id="conn-dot"></span>
+            <span class="text-xs text-text-secondary font-medium" id="conn-text">Online</span>
+        </div>
+    </div>
+
+    <!-- Meso-Architecture: Main Container -->
+    <main class="relative z-10 w-full max-w-[440px] animate-slide-up" id="main-panel">
+        
+        <!-- CARD SHELL -->
+        <div class="bg-surface-900 rounded-[20px] shadow-pop glass-edge relative flex flex-col pt-12 pb-6 px-6 sm:px-8 mt-12">
+            
+            <!-- STATE: LOADING -->
+            <div id="state-loading" class="state-layer active flex-col items-center justify-center py-12">
+                <div class="relative w-12 h-12 flex items-center justify-center mb-6">
+                    <div class="absolute inset-0 rounded-full border-2 border-surface-700"></div>
+                    <div class="absolute inset-0 rounded-full border-2 border-accent-emerald border-t-transparent animate-spin"></div>
+                    <i class="ph ph-hash text-text-muted"></i>
+                </div>
+                <h2 class="text-lg font-semibold tracking-tight text-text-primary mb-1">Loading server preview...</h2>
+                <p class="text-sm text-text-secondary text-center">Fetching data securely.</p>
+            </div>
+
+            <!-- STATE: PREVIEW (Both Authed & Unauthed base context) -->
+            <div id="state-preview" class="state-layer flex-col w-full relative">
+                
+                <!-- Server Icon (Pulled up overlapping the border for structural tension) -->
+                <div class="absolute -top-[84px] left-1/2 -translate-x-1/2 flex flex-col items-center animate-slide-up" style="animation-delay: 50ms;">
+                    <div class="w-[84px] h-[84px] rounded-2xl bg-surface-800 p-1 glass-edge shadow-pop">
+                        <img 
+                            src="https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&w=200&q=80" 
+                            alt="Organic Chemistry Server Icon" 
+                            class="w-full h-full object-cover rounded-xl"
+                        />
+                    </div>
+                </div>
+
+                <!-- Header Info -->
+                <div class="text-center mt-2 mb-6 stagger-item" style="--idx: 0">
+                    <h1 class="text-2xl font-semibold tracking-tight text-text-primary leading-tight">Organic Chemistry Study Group</h1>
+                    <p class="text-sm text-text-secondary mt-1 max-w-[280px] mx-auto">Fall 2025 cohort — O-chem section 3, led by Prof. Aris.</p>
+                    
+                    <!-- Metadata Pills -->
+                    <div class="flex items-center justify-center gap-3 mt-4">
+                        <div class="flex items-center gap-1.5">
+                            <i class="ph ph-users text-text-secondary text-sm"></i>
+                            <span class="text-xs text-text-secondary font-medium">42 members</span>
+                        </div>
+                        <div class="w-1 h-1 rounded-full bg-surface-700"></div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-accent-emerald relative">
+                                <span class="absolute inset-0 rounded-full bg-accent-emerald animate-ping opacity-50"></span>
+                            </span>
+                            <span class="text-xs text-text-secondary font-medium">8 online</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Content: Visible Channels Box (Bento logic) -->
+                <div class="w-full bg-surface-800 rounded-xl glass-edge p-3 mb-6 stagger-item" style="--idx: 1">
+                    <div class="flex justify-between items-center mb-2 px-1">
+                        <span class="text-xs font-semibold text-text-muted uppercase tracking-wider">Visible channels</span>
+                        <span class="text-[10px] text-text-muted bg-surface-900 px-1.5 py-0.5 rounded font-mono border border-white/[0.04]">New Member</span>
+                    </div>
+                    
+                    <ul class="flex flex-col gap-0.5 relative">
+                        <!-- Channel Item 1 -->
+                        <li class="flex items-center gap-2 p-2 rounded-md hover:bg-surface-700/50 fast-spring cursor-default group">
+                            <i class="ph ph-hash text-text-secondary group-hover:text-text-primary fast-spring"></i>
+                            <span class="text-sm text-text-secondary group-hover:text-text-primary font-medium fast-spring">general</span>
+                        </li>
+                        <!-- Channel Item 2 -->
+                        <li class="flex items-center gap-2 p-2 rounded-md hover:bg-surface-700/50 fast-spring cursor-default group">
+                            <i class="ph ph-hash text-text-secondary group-hover:text-text-primary fast-spring"></i>
+                            <span class="text-sm text-text-secondary group-hover:text-text-primary font-medium fast-spring">assignments-q-and-a</span>
+                        </li>
+                        <!-- Divider Line inside list -->
+                        <li class="w-full h-px bg-white/[0.04] my-1"></li>
+                        <!-- Channel Item 3 (Voice) -->
+                        <li class="flex justify-between items-center p-2 rounded-md hover:bg-surface-700/50 fast-spring cursor-default group">
+                            <div class="flex items-center gap-2">
+                                <i class="ph ph-speaker-high text-text-secondary group-hover:text-text-primary fast-spring"></i>
+                                <span class="text-sm text-text-secondary group-hover:text-text-primary font-medium fast-spring">Study Room A</span>
+                            </div>
+                            <!-- Simulated Presence context -->
+                            <div class="flex -space-x-1 border-white/[0.06] overflow-hidden">
+                                <img src="https://i.pravatar.cc/100?img=1" class="w-4 h-4 rounded-full border border-surface-800" alt="Avatar"/>
+                                <img src="https://i.pravatar.cc/100?img=2" class="w-4 h-4 rounded-full border border-surface-800" alt="Avatar"/>
+                                <img src="https://i.pravatar.cc/100?img=3" class="w-4 h-4 rounded-full border border-surface-800" alt="Avatar"/>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- DYNAMIC CTA SECTIONS -->
+                
+                <!-- CTA: Authenticated -->
+                <div id="cta-authed" class="w-full flex flex-col gap-2 stagger-item" style="--idx: 2">
+                    <button class="w-full h-10 rounded-md bg-accent-emerald hover:bg-accent-emeraldHover text-white font-semibold text-sm flex items-center justify-center gap-2 glass-edge-top active:scale-[0.98] fast-spring shadow-sm-tactile group relative overflow-hidden" onclick="simulateJoin()">
+                        <span class="relative z-10 flex items-center gap-2">Join Server <i class="ph ph-arrow-right group-hover:translate-x-0.5 fast-spring"></i></span>
+                        <!-- Shimmer effect -->
+                        <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]"></div>
+                    </button>
+                    <button class="w-full h-10 rounded-md bg-transparent hover:bg-surface-800 text-text-secondary hover:text-text-primary text-sm font-medium active:scale-[0.98] fast-spring" onclick="resetState()">
+                        Cancel
+                    </button>
+                </div>
+
+                <!-- CTA: Unauthenticated -->
+                <div id="cta-unauthed" class="w-full flex gap-3 stagger-item hidden" style="--idx: 2">
+                    <button class="flex-1 h-10 rounded-md bg-accent-emerald hover:bg-accent-emeraldHover text-white font-semibold text-sm flex items-center justify-center glass-edge-top active:scale-[0.98] fast-spring shadow-sm-tactile">
+                        Sign up to join
+                    </button>
+                    <button class="flex-1 h-10 rounded-md bg-surface-800 hover:bg-surface-700 text-text-primary border border-white/[0.06] font-medium text-sm flex items-center justify-center active:scale-[0.98] fast-spring transition-colors">
+                        Log in
+                    </button>
+                </div>
+                <!-- Unauthed helper text -->
+                <p id="cta-unauthed-helper" class="text-[11px] text-text-muted text-center mt-3 stagger-item hidden" style="--idx: 3">
+                    Sign up takes 30 seconds. No credit card needed.
+                </p>
+
+            </div>
+
+            <!-- STATE: ERROR (e.g., Expired/Banned) -->
+            <div id="state-error" class="state-layer flex-col items-center justify-center py-4 text-center">
+                <div class="w-16 h-16 rounded-full bg-danger/10 border border-danger/20 flex items-center justify-center mb-5 glow-danger">
+                    <i class="ph ph-clock-user text-2xl text-danger"></i>
+                </div>
+                <h2 class="text-xl font-semibold tracking-tight text-text-primary mb-2">Invite link expired</h2>
+                <p class="text-sm text-text-secondary leading-relaxed mb-8 max-w-[280px]">
+                    This invite link is no longer valid or has reached its max uses. Ask the organizer for a new one.
+                </p>
+                <div class="w-full flex flex-col gap-2">
+                    <button class="w-full h-10 rounded-md bg-surface-800 hover:bg-surface-700 text-text-primary border border-white/[0.06] font-medium text-sm flex items-center justify-center active:scale-[0.98] fast-spring" onclick="resetState()">
+                        Return to App
+                    </button>
+                    <div class="relative w-full mt-4">
+                        <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                            <div class="w-full border-t border-surface-800"></div>
+                        </div>
+                        <div class="relative flex justify-center">
+                            <span class="bg-surface-900 px-2 text-[11px] uppercase tracking-wider font-semibold text-text-muted">Or enter manually</span>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex gap-2 relative">
+                        <input type="text" placeholder="Invite code..." class="flex-1 h-9 bg-surface-800 border border-surface-600 rounded-md px-3 text-sm text-white placeholder-text-muted focus:outline-none focus:border-accent-emerald focus:ring-1 focus:ring-accent-emerald fast-spring shadow-inner" />
+                        <button class="h-9 px-3 rounded-md bg-surface-700 hover:bg-surface-600 border border-white/[0.06] text-white flex items-center justify-center fast-spring">
+                            <i class="ph ph-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Micro-Architecture: Toast Notification System (Hidden by default) -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none">
+        <!-- Toasts will be appended here by JS -->
+    </div>
+
+    <!-- DEVELOPMENT / DEMO CONTROLS (Hidden in prod, requested for comprehensive mockups) -->
+    <div class="fixed bottom-4 left-4 z-50 bg-surface-900 border border-surface-700 p-2 rounded-lg shadow-pop flex flex-col gap-1 text-[10px] font-mono text-text-muted">
+        <span class="px-2 mb-1 border-b border-surface-800 pb-1">State Engine</span>
+        <button onclick="switchState('loading')" class="text-left px-2 py-1 hover:text-white hover:bg-surface-800 rounded">1. Trigger Loading</button>
+        <button onclick="switchAuth(true)" class="text-left px-2 py-1 hover:text-white hover:bg-surface-800 rounded">2. Show: Authed</button>
+        <button onclick="switchAuth(false)" class="text-left px-2 py-1 hover:text-white hover:bg-surface-800 rounded">3. Show: Unauthed</button>
+        <button onclick="switchState('error')" class="text-left px-2 py-1 hover:text-danger hover:bg-danger/10 rounded">4. Show: Error (Expired)</button>
+        <button onclick="toggleOffline()" class="text-left px-2 py-1 hover:text-accent-amber hover:bg-accent-amber/10 rounded mt-1 border-t border-surface-800 pt-1">Toggle Offline Wedge</button>
+    </div>
+
+    <script>
+        // DOM Elements
+        const states = {
+            loading: document.getElementById('state-loading'),
+            preview: document.getElementById('state-preview'),
+            error: document.getElementById('state-error')
+        };
+        
+        const ctas = {
+            authed: document.getElementById('cta-authed'),
+            unauthed: document.getElementById('cta-unauthed'),
+            unauthedHelper: document.getElementById('cta-unauthed-helper')
+        };
+
+        const connState = document.getElementById('connection-state');
+        const connDot = document.getElementById('conn-dot');
+        const connText = document.getElementById('conn-text');
+
+        let isOffline = false;
+
+        // Initialization Pipeline
+        document.addEventListener('DOMContentLoaded', () => {
+            // Simulate network fetch on load
+            switchState('loading');
+            setTimeout(() => {
+                switchState('preview');
+            }, 1200);
+        });
+
+        // State Machine Switcher
+        function switchState(targetState) {
+            Object.values(states).forEach(el => el.classList.remove('active'));
+            states[targetState].classList.add('active');
+
+            // Reset animations if entering preview
+            if(targetState === 'preview') {
+                const staggerItems = document.querySelectorAll('.stagger-item');
+                staggerItems.forEach(item => {
+                    item.style.animation = 'none';
+                    item.offsetHeight; // trigger reflow
+                    item.style.animation = null; 
+                });
+            }
+        }
+
+        // Auth Context Switcher
+        function switchAuth(isAuthed) {
+            switchState('preview');
+            if(isAuthed) {
+                ctas.authed.classList.remove('hidden');
+                ctas.unauthed.classList.add('hidden');
+                ctas.unauthedHelper.classList.add('hidden');
+            } else {
+                ctas.authed.classList.add('hidden');
+                ctas.unauthed.classList.remove('hidden');
+                ctas.unauthedHelper.classList.remove('hidden');
+            }
+        }
+
+        // Action Handlers
+        function simulateJoin() {
+            if (isOffline) {
+                showToast("Queued join — will complete when online.", "amber");
+            } else {
+                const btn = document.querySelector('#cta-authed button:first-child');
+                const originalContent = btn.innerHTML;
+                
+                // Active loading state on button
+                btn.innerHTML = `<i class="ph ph-spinner-gap animate-spin text-lg"></i>`;
+                btn.style.pointerEvents = 'none';
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalContent;
+                    btn.style.pointerEvents = 'auto';
+                    showToast("Successfully joined Organic Chemistry!", "emerald");
+                    
+                    // Simulate redirect transition
+                    document.getElementById('main-panel').style.transform = 'scale(0.95)';
+                    document.getElementById('main-panel').style.opacity = '0';
+                    setTimeout(() => resetState(), 800);
+                }, 1000);
+            }
+        }
+
+        function resetState() {
+            document.getElementById('main-panel').style.transform = 'scale(1)';
+            document.getElementById('main-panel').style.opacity = '1';
+            switchState('loading');
+            setTimeout(() => switchState('preview'), 600);
+        }
+
+        // Offline Wedge Toggle
+        function toggleOffline() {
+            isOffline = !isOffline;
+            if (isOffline) {
+                connDot.className = "w-1.5 h-1.5 rounded-full bg-danger shadow-[0_0_8px_rgba(239,68,68,0.8)]";
+                connText.innerText = "Offline";
+                connText.className = "text-xs text-danger font-medium";
+                connState.classList.add('border-danger/30', 'bg-danger/10');
+            } else {
+                connDot.className = "w-1.5 h-1.5 rounded-full bg-accent-emerald shadow-[0_0_8px_rgba(16,185,129,0.8)]";
+                connText.innerText = "Online";
+                connText.className = "text-xs text-text-secondary font-medium";
+                connState.classList.remove('border-danger/30', 'bg-danger/10');
+                showToast("Reconnected! Syncing data...", "emerald");
+            }
+        }
+
+        // Toast Factory (Meso-Architecture Polishing)
+        function showToast(message, type = "emerald") {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            const colorClass = type === 'emerald' ? 'bg-accent-emerald' : type === 'amber' ? 'bg-accent-amber' : 'bg-danger';
+            const icon = type === 'emerald' ? 'ph-check-circle' : type === 'amber' ? 'ph-cloud-slash' : 'ph-warning-circle';
+
+            toast.className = `flex items-center gap-3 bg-surface-800 border border-surface-600 shadow-pop p-3 rounded-lg animate-slide-up relative overflow-hidden pointer-events-auto`;
+            
+            toast.innerHTML = `
+                <div class="absolute left-0 top-0 bottom-0 w-1 ${colorClass}"></div>
+                <i class="ph ${icon} text-${type === 'emerald' ? 'accent-emerald' : type === 'amber' ? 'accent-amber' : 'danger'} text-lg ml-1"></i>
+                <span class="text-sm font-medium text-text-primary mr-4">${message}</span>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Auto remove
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(10px)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+    </script>
+</body>
+</html>

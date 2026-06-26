@@ -511,3 +511,6 @@ Full-page view (not modal). Dark theme. Left sidebar with tabs, main content are
 - **Invite link expiry defaults:** Never (recommended for study groups, keeps invite usable), 1 day (high-security), 7 days (common), custom. Default is "Never" for UX simplicity.
 
 - **Channel reorder persistence:** Display order is stored in the `display_order` column (integer, sortable). Drag-reorder updates this field. Channels are fetched sorted by `display_order`.
+
+---
+**Approved design (v9):** `design/server-settings.html`

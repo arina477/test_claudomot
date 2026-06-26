@@ -643,3 +643,6 @@ These bots are fragile, require admin permission, have no data portability.
 - Error tracking: Sentry or similar (capture message send failures, sync errors, offline cache issues).
 - Analytics: event tracking for messaging engagement, offline behavior, feature usage.
 - Performance monitoring: message send latency, load time, offline cache size.
+
+---
+**Approved design (v9):** `design/server-channel-view.html`

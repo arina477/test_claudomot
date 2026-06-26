@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en" class="antialiased dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Settings — StudyHall</title>
+  
+  <!-- Fonts: Geist / Fallbacks -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <style>
+    :root {
+      /* Palette: Near-black layered zinc */
+      --surface-950: #0a0a0b;
+      --surface-900: #121214;
+      --surface-800: #1c1c1f;
+      --surface-700: #27272a;
+      --surface-600: #3f3f46;
+      --surface-500: #52525b;
+      
+      --border-hairline: rgba(255, 255, 255, 0.06);
+      --border-hover: rgba(255, 255, 255, 0.10);
+      
+      --text-primary: rgba(255, 255, 255, 0.92);
+      --text-secondary: rgba(255, 255, 255, 0.60);
+      --text-muted: rgba(255, 255, 255, 0.40);
+      
+      --accent-emerald: #10b981;
+      --accent-emerald-alpha: rgba(16, 185, 129, 0.15);
+      --accent-amber: #f59e0b;
+      --danger: #ef4444;
+      --danger-alpha: rgba(239, 68, 68, 0.1);
+      
+      /* Radii */
+      --radius-sm: 2px;
+      --radius-md: 6px;
+      --radius-lg: 10px;
+      --radius-xl: 12px;
+      --radius-full: 9999px;
+      
+      /* Elevation */
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+      --shadow-pop: 0 8px 24px rgba(0,0,0,0.5), 0 0 0 1px var(--border-hairline);
+      --glow-focus: 0 0 0 2px rgba(16,185,129,0.4);
+      --glow-subtle: 0 0 15px rgba(255,255,255,0.03);
+    }
+
+    body {
+      font-family: 'Geist', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--surface-950);
+      color: var(--text-primary);
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--surface-600); border-radius: var(--radius-full); }
+    ::-webkit-scrollbar-thumb:hover { background: var(--surface-500); }
+
+    /* Custom Primitives */
+    .focus-ring:focus-visible {
+      outline: none;
+      box-shadow: var(--glow-focus);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      font-weight: 600;
+      font-size: 0.875rem;
+      border-radius: var(--radius-md);
+      transition: all 150ms ease;
+      cursor: pointer;
+    }
+    
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-md { height: 34px; padding: 0 1rem; }
+    .btn-lg { height: 40px; padding: 0 1.25rem; }
+
+    .btn-primary {
+      background-color: var(--accent-emerald);
+      color: #fff;
+    }
+    .btn-primary:hover:not(:disabled) {
+      background-color: #0ea5e9; /* slightly lighter in real env, using hex shift fallback visually */
+      filter: brightness(1.1);
+    }
+
+    .btn-secondary {
+      background-color: var(--surface-700);
+      color: var(--text-primary);
+      border: 1px solid var(--border-hairline);
+    }
+    .btn-secondary:hover:not(:disabled) {
+      background-color: var(--surface-600);
+    }
+
+    .btn-destructive {
+      background-color: var(--danger);
+      color: white;
+    }
+    .btn-destructive:hover:not(:disabled) {
+      filter: brightness(1.1);
+    }
+
+    /* Custom Input Radios */
+    .radio-container {
+      display: flex;
+      gap: 1rem;
+      padding: 1rem;
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-md);
+      background: var(--surface-900);
+      transition: all 150ms ease;
+      cursor: pointer;
+    }
+    .radio-container:hover {
+      border-color: var(--border-hover);
+      background: var(--surface-800);
+    }
+    .radio-container[data-disabled] {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .radio-input {
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid var(--surface-500);
+      background: transparent;
+      margin-top: 2px;
+      position: relative;
+      outline: none;
+      transition: all 200ms ease;
+      flex-shrink: 0;
+    }
+    .radio-input:focus-visible {
+      box-shadow: var(--glow-focus);
+    }
+    .radio-input:checked {
+      border-color: var(--accent-emerald);
+    }
+    .radio-input:checked::after {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--accent-emerald);
+    }
+    .radio-input:checked ~ .radio-text .radio-title {
+      color: var(--text-primary);
+    }
+    .radio-container:has(.radio-input:checked) {
+      border-color: var(--accent-emerald-alpha);
+      background: rgba(16, 185, 129, 0.02);
+      box-shadow: var(--glow-subtle);
+    }
+
+    /* Custom Toggles */
+    .toggle-wrapper {
+      position: relative;
+      display: inline-block;
+      width: 36px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+    .toggle-input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+      position: absolute;
+    }
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: var(--surface-600);
+      transition: .3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      border-radius: 20px;
+    }
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 14px; width: 14px;
+      left: 3px; bottom: 3px;
+      background-color: white;
+      transition: .3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      border-radius: 50%;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+    .toggle-input:focus-visible + .toggle-slider {
+      box-shadow: var(--glow-focus);
+    }
+    .toggle-input:checked + .toggle-slider {
+      background-color: var(--accent-emerald);
+    }
+    .toggle-input:checked + .toggle-slider:before {
+      transform: translateX(16px);
+    }
+
+    /* Collapsible */
+    details > summary {
+      list-style: none;
+      cursor: pointer;
+    }
+    details > summary::-webkit-details-marker {
+      display: none;
+    }
+    details[open] .summary-icon {
+      transform: rotate(180deg);
+    }
+    
+    /* Modals & Overlays */
+    .modal-backdrop {
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 250ms ease;
+    }
+    .modal-backdrop.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .modal-panel {
+      transform: scale(0.95) translateY(10px);
+      transition: transform 300ms cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 300ms ease;
+      opacity: 0;
+      box-shadow: var(--shadow-pop);
+      background: var(--surface-900);
+      border: 1px solid var(--border-hairline);
+    }
+    .modal-backdrop.active .modal-panel {
+      transform: scale(1) translateY(0);
+      opacity: 1;
+    }
+
+    /* Toasts */
+    .toast-container {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      z-index: 100;
+      pointer-events: none;
+    }
+    .toast {
+      background: var(--surface-700);
+      border-radius: var(--radius-md);
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      box-shadow: var(--shadow-pop);
+      border: 1px solid var(--border-hairline);
+      animation: slideIn 400ms cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+      pointer-events: auto;
+    }
+    .toast.removing {
+      animation: slideOut 300ms ease forwards;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(120%) scale(0.9); opacity: 0; }
+      to { transform: translateX(0) scale(1); opacity: 1; }
+    }
+    @keyframes slideOut {
+      to { transform: translateX(120%); opacity: 0; }
+    }
+
+    /* Staggered entrance for macro layout */
+    .stagger-item {
+      opacity: 0;
+      animation: fadeUp 600ms cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Cards */
+    .setting-card {
+      background: var(--surface-800);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* Connection Wedge */
+    .offline-wedge {
+      background: var(--surface-900);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-full);
+      padding: 4px 12px 4px 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      box-shadow: var(--shadow-sm);
+    }
+  </style>
+</head>
+<body class="overflow-hidden flex min-h-[100dvh]">
+
+  <!-- SIDEBAR (Macro-Architecture Context) -->
+  <aside class="hidden md:flex flex-col w-[260px] flex-shrink-0 bg-[var(--surface-900)] border-r border-[var(--border-hairline)] h-full">
+    <!-- Header -->
+    <div class="h-14 px-4 flex items-center border-b border-[var(--border-hairline)] shrink-0">
+      <a href="#" class="flex items-center gap-2 text-[var(--text-secondary)] hover:text-white transition-colors focus-ring rounded-sm">
+        <i class="ph ph-arrow-left text-lg"></i>
+        <span class="text-sm font-medium">Back to StudyHall</span>
+      </a>
+    </div>
+
+    <!-- Nav list -->
+    <div class="p-3 flex-1 overflow-y-auto thin-scrollbar">
+      <div class="text-[11px] font-semibold tracking-wider text-[var(--text-muted)] uppercase px-2 mb-2">User Settings</div>
+      <nav class="flex flex-col gap-0.5">
+        <a href="#" class="px-2.5 py-1.5 rounded-[var(--radius-md)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-800)] hover:text-white transition-colors focus-ring">My Account</a>
+        <a href="#" class="px-2.5 py-1.5 rounded-[var(--radius-md)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-800)] hover:text-white transition-colors focus-ring">Profiles</a>
+        <a href="#" class="px-2.5 py-1.5 rounded-[var(--radius-md)] text-sm font-semibold text-[var(--accent-emerald)] bg-[var(--surface-700)] focus-ring">Privacy & Safety</a>
+        <a href="#" class="px-2.5 py-1.5 rounded-[var(--radius-md)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-800)] hover:text-white transition-colors focus-ring">Notifications</a>
+        <a href="#" class="px-2.5 py-1.5 rounded-[var(--radius-md)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-800)] hover:text-white transition-colors focus-ring">Connections</a>
+      </nav>
+      
+      <div class="h-[1px] bg-[var(--border-hairline)] my-4 mx-2"></div>
+      
+      <div class="text-[11px] font-semibold tracking-wider text-[var(--text-muted)] uppercase px-2 mb-2">App Settings</div>
+      <nav class="flex flex-col gap-0.5">
+        <a href="#" class="px-2.5 py-1.5 rounded-[var(--radius-md)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-800)] hover:text-white transition-colors focus-ring">Appearance</a>
+        <a href="#" class="px-2.5 py-1.5 rounded-[var(--radius-md)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-800)] hover:text-white transition-colors focus-ring">Voice & Video</a>
+      </nav>
+    </div>
+  </aside>
+
+  <!-- MAIN SCROLLABLE AREA -->
+  <main class="flex-1 h-full overflow-y-auto thin-scrollbar bg-[var(--surface-950)] relative pt-safe">
+    
+    <!-- Top Nav Wedge Container (Absolute top right) -->
+    <div class="absolute top-4 right-6 z-10 hidden sm:flex">
+      <div class="offline-wedge">
+        <div class="w-2 h-2 rounded-full bg-[var(--accent-emerald)]"></div>
+        Online Context Active
+      </div>
+    </div>
+
+    <!-- Mobile Header Fallback -->
+    <div class="md:hidden flex items-center h-14 px-4 border-b border-[var(--border-hairline)] bg-[var(--surface-900)] shrink-0 sticky top-0 z-20">
+      <button class="flex items-center gap-2 text-[var(--text-secondary)] hover:text-white transition-colors focus-ring rounded-sm">
+        <i class="ph ph-list text-xl"></i>
+      </button>
+      <span class="ml-3 text-sm font-semibold">Privacy Settings</span>
+    </div>
+
+    <!-- Content Wrapper -->
+    <div class="max-w-[720px] mx-auto px-4 sm:px-8 py-10 sm:py-16 pb-32">
+      
+      <!-- Header -->
+      <header class="mb-10 stagger-item" style="--index: 1;">
+        <h1 class="text-2xl sm:text-[28px] font-semibold tracking-tight text-white mb-2 line-height-tight">Privacy Settings</h1>
+        <p class="text-[var(--text-secondary)] text-sm sm:text-base max-w-[90%]">
+          Your data is yours. StudyHall doesn't track you for ads or sell your data. We give you full control over what you share and who can interact with you.
+        </p>
+      </header>
+
+      <div class="flex flex-col gap-6">
+
+        <!-- Panel 1: Profile Visibility -->
+        <section class="setting-card stagger-item" style="--index: 2;">
+          <h2 class="text-[17px] font-semibold text-white mb-1">Who can see your profile?</h2>
+          <p class="text-[13px] text-[var(--text-secondary)] mb-5">Your profile card (avatar, display name) is shown in member lists. Control who can find you across StudyHall.</p>
+          
+          <div class="flex flex-col gap-3">
+            
+            <label class="radio-container focus-within:ring-2 focus-within:ring-[var(--accent-emerald)] focus-within:-outline-offset-2 ring-transparent transition-shadow">
+              <input type="radio" name="visibility" value="private" class="radio-input absolute opacity-0 pointer-events-none" onchange="triggerSaveToast('Profile visibility updated')">
+              <div class="radio-input-mock h-5 w-5 rounded-full border-2 border-[var(--surface-500)] mt-0.5 flex items-center justify-center transition-colors"></div>
+              <div class="radio-text flex-1">
+                <div class="radio-title text-sm font-semibold text-[var(--text-secondary)] transition-colors">Private</div>
+                <div class="text-[13px] text-[var(--text-muted)] mt-0.5 leading-snug">Only members of servers you've actively joined can view your profile.</div>
+              </div>
+            </label>
+
+            <label class="radio-container focus-within:ring-2 focus-within:ring-[var(--accent-emerald)] focus-within:-outline-offset-2 ring-transparent transition-shadow">
+              <!-- Using standard input but relying on custom CSS for the visual circle to avoid JS complexity for simple state -->
+              <input type="radio" name="visibility" value="servers" class="radio-input absolute opacity-0 pointer-events-none" checked onchange="triggerSaveToast('Profile visibility updated')">
+              <div class="radio-input-mock h-5 w-5 rounded-full border-2 border-[var(--accent-emerald)] mt-0.5 flex items-center justify-center transition-colors relative">
+                <div class="absolute w-2 h-2 rounded-full bg-[var(--accent-emerald)]"></div>
+              </div>
+              <div class="radio-text flex-1">
+                <div class="text-sm font-semibold text-white transition-colors flex items-center gap-2">
+                  Servers only <span class="bg-[var(--surface-700)] text-[var(--text-muted)] text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full">Default</span>
+                </div>
+                <div class="text-[13px] text-[var(--text-muted)] mt-0.5 leading-snug">Members of your servers can see your profile. Not discoverable in directory searches.</div>
+              </div>
+            </label>
+
+            <label class="radio-container group" data-disabled="true">
+              <input type="radio" name="visibility" value="discoverable" class="radio-input absolute opacity-0 pointer-events-none" disabled>
+              <div class="radio-input-mock h-5 w-5 rounded-full border-2 border-[var(--surface-600)] mt-0.5 flex items-center justify-center"></div>
+              <div class="radio-text flex-1">
+                <div class="text-sm font-semibold text-[var(--text-muted)] flex items-center gap-2">
+                  Discoverable <span class="bg-[var(--surface-800)] border border-[var(--border-hairline)] text-[var(--text-muted)] text-[10px] uppercase font-bold px-2 py-0.5 rounded-full">Coming Soon</span>
+                </div>
+                <div class="text-[13px] text-[var(--text-muted)] mt-0.5 leading-snug">Allow other students in school-wide networks to find your profile.</div>
+              </div>
+            </label>
+          </div>
+          
+          <div class="mt-4 pt-4 border-t border-[var(--border-hairline)]">
+             <p class="text-[12px] text-[var(--text-muted)] leading-relaxed"><i class="ph-fill ph-info mr-1"></i> Even in stricter modes, Server Organizers maintain visibility over member lists to manage academic roles.</p>
+          </div>
+        </section>
+
+        <!-- Panel 2: Direct Messages (Placeholder) -->
+        <section class="setting-card stagger-item !bg-[var(--surface-900)] opacity-70" style="--index: 3;">
+          <div class="flex justify-between items-start mb-1">
+            <h2 class="text-[17px] font-semibold text-white flex items-center gap-2">
+              Who can message you?
+              <span class="bg-[var(--surface-700)] text-[var(--text-muted)] text-[10px] uppercase font-bold px-2 py-0.5 rounded-full">Beta Feature</span>
+            </h2>
+          </div>
+          <p class="text-[13px] text-[var(--text-secondary)] mb-4">Direct messaging is rolling out soon. Once available, you'll control who can initiate 1-on-1 conversations.</p>
+          
+          <div class="flex flex-col gap-2 pointer-events-none opacity-50 grayscale select-none">
+            <div class="flex items-center gap-3 p-3 border border-[var(--border-hairline)] rounded-[var(--radius-md)] bg-[var(--surface-800)]">
+              <div class="w-5 h-5 rounded-full border-2 border-[var(--surface-500)] flex items-center justify-center">
+                <div class="w-2.5 h-2.5 rounded-full bg-[var(--surface-500)]"></div>
+              </div>
+              <span class="text-sm text-[var(--text-secondary)] font-medium">Anyone in my servers</span>
+            </div>
+            <div class="flex items-center gap-3 p-3 border border-[var(--border-hairline)] rounded-[var(--radius-md)]">
+              <div class="w-5 h-5 rounded-full border-2 border-[var(--surface-600)]"></div>
+              <span class="text-sm text-[var(--text-muted)] font-medium">Only friends & mutuals</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Panel 3: General Privacy Settings -->
+        <section class="setting-card stagger-item" style="--index: 4;">
+          <h2 class="text-[17px] font-semibold text-white mb-1">General privacy</h2>
+          <p class="text-[13px] text-[var(--text-secondary)] mb-5">Manage secondary privacy controls and presence visibility.</p>
+          
+          <div class="flex flex-col divide-y divide-[var(--border-hairline)]">
+            
+            <!-- Toggle 1 -->
+            <div class="py-4 first:pt-0 flex justify-between items-center gap-4">
+              <div class="flex-1 pr-6">
+                <div class="text-sm font-semibold text-white mb-0.5">Show me in online status</div>
+                <div class="text-[13px] text-[var(--text-secondary)] leading-snug">Let server members see when you're online. Turning this off shows you as 'away', but Voice Room presence remains visible while connected.</div>
+              </div>
+              <label class="toggle-wrapper">
+                <input type="checkbox" class="toggle-input focus-ring" checked onchange="triggerSaveToast('Online status updated')">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <!-- Toggle 2 -->
+            <div class="py-4 flex justify-between items-center gap-4">
+              <div class="flex-1 pr-6">
+                <div class="text-sm font-semibold text-white mb-0.5">Email notifications for reminders</div>
+                <div class="text-[13px] text-[var(--text-secondary)] leading-snug">Receive email reminders for assignment due dates and urgent @mentions. In-app notifications will always show.</div>
+              </div>
+              <label class="toggle-wrapper">
+                <input type="checkbox" class="toggle-input focus-ring" checked onchange="triggerSaveToast('Notification preferences updated')">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <!-- Toggle 3 -->
+            <div class="py-4 pb-0 flex justify-between items-center gap-4">
+              <div class="flex-1 pr-6">
+                <div class="text-sm font-semibold text-[var(--text-secondary)] mb-0.5">Allow anonymized analytics</div>
+                <div class="text-[13px] text-[var(--text-muted)] leading-snug">Help us improve StudyHall by sharing basic usage data (e.g. page load times). No personal or message data is ever included.</div>
+              </div>
+              <label class="toggle-wrapper">
+                <input type="checkbox" class="toggle-input focus-ring" onchange="triggerSaveToast('Analytics preferences updated')">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- Panel 4: Data Export & Rights -->
+        <section class="setting-card stagger-item" style="--index: 5;">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-5">
+            <div>
+              <h2 class="text-[17px] font-semibold text-white mb-1">Your data</h2>
+              <p class="text-[13px] text-[var(--text-secondary)]">StudyHall stores your profile info, messages, and academic activity. Review it, or download a copy for yourself.</p>
+            </div>
+            <button class="btn btn-primary btn-md w-full md:w-auto shrink-0 focus-ring" onclick="openModal('exportModal')">
+              <i class="ph ph-download-simple"></i> Download data
+            </button>
+          </div>
+          
+          <!-- Collapsible Data Description -->
+          <details class="group bg-[var(--surface-900)] border border-[var(--border-hairline)] rounded-[var(--radius-md)] focus-within:ring-2 focus-within:ring-[var(--surface-600)]">
+            <summary class="p-3 text-sm font-semibold flex justify-between items-center select-none text-[var(--text-secondary)] hover:text-white transition-colors focus:outline-none">
+              <div class="flex items-center gap-2"><i class="ph ph-database text-lg"></i> What data do we store about you?</div>
+              <i class="ph ph-caret-down summary-icon transition-transform duration-200"></i>
+            </summary>
+            
+            <div class="p-4 pt-0 text-[13px] text-[var(--text-secondary)] leading-relaxed border-t border-[var(--border-hairline)] flex flex-col gap-3 mt-1 pb-4">
+              <p class="text-[var(--text-muted)] mb-2">We only store what is required to provide the StudyHall experience. We do not partner with data brokers or advertisers.</p>
+              
+              <ul class="space-y-4">
+                <li class="flex items-start gap-3">
+                  <div class="mt-0.5 p-1 bg-[var(--surface-800)] rounded text-[var(--text-muted)]"><i class="ph ph-user-circle"></i></div>
+                  <div>
+                    <span class="block font-medium text-white mb-0.5">Profile Information</span>
+                    Your username, display name, avatar, chosen accent color, encrypted password hash, and active email address.
+                  </div>
+                </li>
+                <li class="flex items-start gap-3">
+                  <div class="mt-0.5 p-1 bg-[var(--surface-800)] rounded text-[var(--text-muted)]"><i class="ph ph-chat-text"></i></div>
+                  <div>
+                    <span class="block font-medium text-white mb-0.5">Message History (Server-side Encrypted)</span>
+                    Text messages and media attachments sent within study servers, retained until you or the server organizer deletes them.
+                  </div>
+                </li>
+                <li class="flex items-start gap-3">
+                  <div class="mt-0.5 p-1 bg-[var(--surface-800)] rounded text-[var(--text-muted)]"><i class="ph ph-chalkboard-teacher"></i></div>
+                  <div>
+                    <span class="block font-medium text-white mb-0.5">Academic Interactions</span>
+                    Assignments marked complete, voice room session metadata (join/leave times, but <strong>never</strong> recordings), and server membership lists.
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </details>
+
+        </section>
+
+        <!-- Panel 5: Danger Zone (Deletion) -->
+        <section class="stagger-item border-2 border-[var(--danger-alpha)] rounded-[var(--radius-lg)]" style="--index: 6;">
+          <div class="setting-card border-none bg-[var(--surface-950)] relative overflow-hidden">
+             <!-- Red tint overlay -->
+             <div class="absolute inset-0 bg-[var(--danger)] opacity-[0.02] pointer-events-none"></div>
+             
+             <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+               <div class="flex-1">
+                 <h2 class="text-[17px] font-semibold text-[var(--danger)] flex items-center gap-2 mb-1">
+                   Delete your account
+                 </h2>
+                 <p class="text-[13px] text-[var(--text-secondary)]">Permanently delete your profile, sever all server associations, and wipe your data. This action requires email verification and initiates a 30-day grace period.</p>
+               </div>
+               <button class="btn btn-destructive btn-md w-full md:w-auto shrink-0 shadow-sm focus-ring outline-none ring-offset-2 ring-offset-[var(--surface-950)]" onclick="openModal('deleteModal')">
+                 Delete account
+               </button>
+             </div>
+          </div>
+        </section>
+        
+      </div> <!-- End Panels Wrap -->
+      
+      <!-- Footer Note -->
+      <div class="mt-12 text-center text-[12px] text-[var(--text-muted)] stagger-item" style="--index: 7;">
+        Review our full <a href="#" class="text-[var(--accent-emerald)] hover:underline focus-ring rounded-sm">Privacy Policy</a> or <a href="#" class="text-[var(--accent-emerald)] hover:underline focus-ring rounded-sm">Terms of Service</a>.
+      </div>
+      
+    </div>
+  </main>
+
+  <!-- MODALS -->
+  
+  <!-- Export Modal -->
+  <div id="exportModal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4" aria-hidden="true">
+    <div class="modal-panel w-full max-w-[480px] rounded-[var(--radius-lg)] flex flex-col pointer-events-auto" role="dialog" aria-labelledby="exportTitle" aria-modal="true">
+      
+      <div class="p-5 border-b border-[var(--border-hairline)] flex justify-between items-center">
+        <h2 id="exportTitle" class="text-lg font-semibold text-white flex items-center gap-2">
+          <i class="ph ph-download-simple text-xl text-[var(--accent-emerald)]"></i> Request Data Export
+        </h2>
+        <button class="text-[var(--text-secondary)] hover:text-white transition-colors focus-ring rounded p-1" onclick="closeModal('exportModal')" aria-label="Close">
+          <i class="ph ph-x text-lg"></i>
+        </button>
+      </div>
+
+      <div class="p-6 overflow-y-auto">
+        <p class="text-sm text-[var(--text-secondary)] mb-5 leading-relaxed">
+          We'll compile a highly structured <code>.zip</code> file containing your profile info, text messages, assignment states, and activity logs. This process runs in the background.
+        </p>
+
+        <div class="space-y-3 bg-[var(--surface-950)] border border-[var(--border-hairline)] p-4 rounded-[var(--radius-md)] mb-2">
+          <label class="flex items-start gap-3 cursor-pointer group">
+            <input type="checkbox" checked class="mt-1 flex-shrink-0 w-4 h-4 rounded-sm border-[var(--surface-500)] text-[var(--accent-emerald)] bg-transparent focus:ring-[var(--accent-emerald)] focus:ring-offset-[var(--surface-950)] pointer-events-none" style="accent-color: var(--accent-emerald);">
+            <div>
+              <span class="block text-sm font-medium text-white mb-0.5">Include message history</span>
+              <span class="block text-[12px] text-[var(--text-muted)]">Export all text messages sent in channels and DMs (JSON format).</span>
+            </div>
+          </label>
+          <div class="h-[1px] w-full bg-[var(--border-hairline)]"></div>
+          <label class="flex items-start gap-3 cursor-pointer group">
+            <input type="checkbox" checked class="mt-1 flex-shrink-0 w-4 h-4 rounded-sm border-[var(--surface-500)] text-[var(--accent-emerald)] bg-transparent focus:ring-[var(--accent-emerald)] focus:ring-offset-[var(--surface-950)] pointer-events-none" style="accent-color: var(--accent-emerald);">
+            <div>
+              <span class="block text-sm font-medium text-white mb-0.5">Include file attachments</span>
+              <span class="block text-[12px] text-[var(--text-muted)]">Download actual images and files uploaded. May significantly increase file size.</span>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div class="p-5 border-t border-[var(--border-hairline)] bg-[var(--surface-950)] rounded-b-[var(--radius-lg)] flex justify-end gap-3">
+        <button class="btn btn-secondary btn-md focus-ring" onclick="closeModal('exportModal')">Cancel</button>
+        <button class="btn btn-primary btn-md focus-ring" onclick="handleExportSubmit()" id="exportBtn">Start Export</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Delete Modal -->
+  <div id="deleteModal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4" aria-hidden="true">
+    <div class="modal-panel w-full max-w-[500px] rounded-[var(--radius-lg)] flex flex-col pointer-events-auto border-[var(--danger-alpha)]" role="alertdialog" aria-labelledby="deleteTitle" aria-modal="true">
+      
+      <div class="p-5 border-b border-[var(--border-hairline)] flex justify-between items-center bg-[rgba(239,68,68,0.03)] rounded-t-[var(--radius-lg)]">
+        <h2 id="deleteTitle" class="text-lg font-semibold text-[var(--danger)] flex items-center gap-2">
+          <i class="ph-fill ph-warning-circle text-xl"></i> Delete Account
+        </h2>
+        <button class="text-[var(--text-secondary)] hover:text-white transition-colors focus-ring rounded p-1" onclick="closeModal('deleteModal')" aria-label="Close">
+          <i class="ph ph-x text-lg"></i>
+        </button>
+      </div>
+
+      <div class="p-6">
+        <p class="text-sm text-white font-medium mb-2">This action is permanent and cannot be undone.</p>
+        <p class="text-[13px] text-[var(--text-secondary)] mb-6 leading-relaxed">
+          Deleting your account will immediately remove you from all study servers. Your messages will remain but attribute to a "Deleted User" to preserve academic context for your peers. Your personal data forms will be wiped.
+        </p>
+
+        <div class="mb-5">
+          <label class="block text-[12px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-2">Help us improve (Optional)</label>
+          <textarea class="w-full bg-[var(--surface-950)] border border-[var(--surface-600)] focus:border-[var(--accent-emerald)] rounded-[var(--radius-md)] p-3 text-sm text-white placeholder-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-emerald)] resize-none transition-colors" rows="2" placeholder="Why are you leaving?"></textarea>
+        </div>
+
+        <div class="bg-[rgba(239,68,68,0.05)] border border-[var(--danger-alpha)] rounded-[var(--radius-md)] p-4 mb-2">
+          <label class="flex items-start gap-3 cursor-pointer group">
+            <input type="checkbox" id="deleteConfirmCheck" class="mt-0.5 flex-shrink-0 w-4 h-4 rounded-sm border-[var(--danger)] bg-transparent text-[var(--danger)] focus:ring-[var(--danger)] focus:ring-offset-[var(--surface-950)]" onchange="toggleDeleteBtn(this)" style="accent-color: var(--danger);">
+            <span class="block text-[13px] text-[var(--text-secondary)] font-medium leading-tight select-none">
+              I understand that my account will be permanently deleted and I will lose access to all study materials.
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <div class="p-5 border-t border-[var(--border-hairline)] bg-[var(--surface-950)] rounded-b-[var(--radius-lg)] flex flex-col-reverse sm:flex-row justify-end gap-3">
+        <button class="btn btn-secondary btn-md focus-ring" onclick="closeModal('deleteModal')">Nevermind, keep my data</button>
+        <button class="btn btn-destructive btn-md focus-ring" id="deleteBtn" disabled onclick="handleDeleteSubmit()">Send Verification Email</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Toasts Container -->
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+  <!-- Script Engine for interaction logic & physical simulation -->
+  <script>
+    // Visual DOM enhancements to radios to avoid repeating complex HTML
+    document.querySelectorAll('.radio-container').forEach(label => {
+      const input = label.querySelector('input');
+      if(input && !input.disabled) {
+        // Handle keyboard a11y visually
+        input.addEventListener('focus', () => label.classList.add('ring-2', 'ring-[var(--accent-emerald)]'));
+        input.addEventListener('blur', () => label.classList.remove('ring-2', 'ring-[var(--accent-emerald)]'));
+        
+        // Custom visual sync logic for non-standard HTML approach if needed, 
+        // though standard CSS handles the checked state perfectly here via siblings.
+      }
+    });
+
+    // Toast System
+    function triggerSaveToast(message) {
+      showToast(message, 'success', 'ph-check-circle');
+    }
+
+    function showToast(message, type = 'success', iconName = 'ph-check-circle') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = 'toast relative overflow-hidden';
+      
+      // Determine accent color
+      const colorMap = {
+        'success': 'var(--accent-emerald)',
+        'warning': 'var(--accent-amber)',
+        'error': 'var(--danger)',
+        'info': 'var(--surface-500)'
+      };
+      const accent = colorMap[type];
+
+      toast.innerHTML = `
+        <div class="absolute inset-y-0 left-0 w-1 bg-[${accent}]"></div>
+        <div class="flex items-center justify-center w-6 h-6 rounded-full bg-[${accent}] bg-opacity-20 text-[${accent}]">
+          <i class="ph ${iconName} text-lg"></i>
+        </div>
+        <span class="text-sm font-medium text-white shadow-sm">${message}</span>
+      `;
+      
+      container.appendChild(toast);
+
+      // Auto-remove
+      setTimeout(() => {
+        toast.classList.add('removing');
+        toast.addEventListener('animationend', () => toast.remove());
+      }, 4000);
+    }
+
+    // Modal System
+    function openModal(id) {
+      const modal = document.getElementById(id);
+      modal.classList.remove('hidden');
+      // trigger reflow
+      void modal.offsetWidth;
+      modal.classList.add('active');
+      modal.setAttribute('aria-hidden', 'false');
+      
+      // Trap focus conceptually (simplified for this mockup)
+      const firstFocusable = modal.querySelector('button, input, select, textarea');
+      if(firstFocusable) setTimeout(() => firstFocusable.focus(), 100);
+    }
+
+    function closeModal(id) {
+      const modal = document.getElementById(id);
+      modal.classList.remove('active');
+      modal.setAttribute('aria-hidden', 'true');
+      
+      setTimeout(() => {
+         modal.classList.add('hidden'); // Optional: truly hide if relying on display none, but opacity is enough with pointer-events-none
+      }, 300); // match transition duration
+    }
+
+    // Close on escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const activeModal = document.querySelector('.modal-backdrop.active');
+        if (activeModal) closeModal(activeModal.id);
+      }
+    });
+
+    // Specific Flows
+    function handleExportSubmit() {
+      const btn = document.getElementById('exportBtn');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Processing...';
+      btn.disabled = true;
+
+      // Mock network request
+      setTimeout(() => {
+        closeModal('exportModal');
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        
+        setTimeout(() => {
+          showToast('Data export queued. Check your email shortly.', 'success', 'ph-envelope-simple');
+        }, 400); // wait for modal to close
+      }, 1200);
+    }
+
+    function toggleDeleteBtn(checkbox) {
+      document.getElementById('deleteBtn').disabled = !checkbox.checked;
+    }
+
+    function handleDeleteSubmit() {
+      const btn = document.getElementById('deleteBtn');
+      btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Sending link...';
+      btn.disabled = true;
+
+      setTimeout(() => {
+        closeModal('deleteModal');
+        btn.innerHTML = 'Send Verification Email';
+        // Keep disabled in real app until re-checked, reset for mockup
+        document.getElementById('deleteConfirmCheck').checked = false;
+        btn.disabled = true;
+
+        setTimeout(() => {
+          showToast('Verification email sent to your inbox.', 'warning', 'ph-envelope-open');
+        }, 400);
+      }, 1500);
+    }
+  </script>
+</body>
+</html>

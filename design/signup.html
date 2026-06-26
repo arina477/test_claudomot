@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>StudyHall - Create your account</title>
+    
+    <!-- 
+      aesthetic_dna: BENTO_2.0_ACADEMIC
+      ui_paradigm: CENTERED_SPATIAL_CARD_WITH_INVITE_CONTEXT
+      palette: DEEP_ZINC_AND_EMERALD
+    -->
+
+    <!-- Fonts -->
+    <link href="https://cdn.jsdelivr.net/npm/geist@1.0.3/dist/fonts/geist-sans/style.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/geist@1.0.3/dist/fonts/geist-mono/style.css" rel="stylesheet">
+    
+    <!-- Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        surface: {
+                            950: '#0a0a0b',
+                            900: '#121214',
+                            800: '#1c1c1f',
+                            700: '#27272a',
+                            600: '#3f3f46',
+                            500: '#52525b',
+                        },
+                        accent: {
+                            emerald: '#10b981',
+                            amber: '#f59e0b',
+                        },
+                        danger: '#ef4444',
+                        text: {
+                            primary: 'rgba(255,255,255,0.92)',
+                            secondary: 'rgba(255,255,255,0.60)',
+                            muted: 'rgba(255,255,255,0.40)',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Geist', '-apple-system', 'Segoe UI', 'sans-serif'],
+                        mono: ['Geist Mono', 'ui-monospace', 'monospace'],
+                    },
+                    boxShadow: {
+                        'sm': '0 1px 2px rgba(0,0,0,0.4)',
+                        'pop': '0 8px 24px rgba(0,0,0,0.5)',
+                        'glow-focus': '0 0 0 2px rgba(16,185,129,0.4)',
+                        'glow-error': '0 0 0 2px rgba(239,68,68,0.4)',
+                        'inner-glass': 'inset 0 1px 0 rgba(255,255,255,0.06)'
+                    },
+                    transitionTimingFunction: {
+                        'spring': 'cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Base resets & typography scale */
+        body {
+            background-color: #0a0a0b;
+            color: rgba(255,255,255,0.92);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Ambient spatial background */
+        .academic-grid {
+            position: fixed;
+            inset: -50%;
+            width: 200%;
+            height: 200%;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 32px 32px;
+            background-position: center;
+            transform: perspective(500px) rotateX(60deg) translateY(-100px) translateZ(-200px);
+            pointer-events: none;
+            z-index: 0;
+            animation: pane-shift 60s linear infinite;
+        }
+
+        .ambient-glow {
+            position: fixed;
+            top: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 400px;
+            background: radial-gradient(ellipse at center, rgba(16,185,129,0.04) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        @keyframes pane-shift {
+            0% { transform: perspective(500px) rotateX(60deg) translateY(0) translateZ(-200px); }
+            100% { transform: perspective(500px) rotateX(60deg) translateY(32px) translateZ(-200px); } /* 32px matches grid size */
+        }
+
+        /* Form primitive overrides */
+        .glass-panel {
+            background: rgba(18, 18, 20, 0.8);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255,255,255,0.06);
+            box-shadow: 0 24px 64px -16px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04);
+        }
+
+        .input-base {
+            background-color: #0a0a0b;
+            border: 1px solid rgba(255,255,255,0.06);
+            transition: all 200ms ease;
+        }
+        
+        .input-base:focus-within, .input-base:focus {
+            border-color: #10b981;
+            box-shadow: 0 0 0 2px rgba(16,185,129,0.2);
+            /* Physical push simulation */
+            transform: scale([1.005]); 
+        }
+        
+        .input-base.error:focus-within {
+            border-color: #ef4444;
+            box-shadow: 0 0 0 2px rgba(239,68,68,0.2);
+        }
+
+        /* Animation Keyframes */
+        @keyframes fade-slide-up {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .stagger-reveal {
+            opacity: 0;
+            animation: fade-slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: calc(var(--stagger) * 50ms);
+        }
+
+        /* Smooth strength meter transition */
+        .strength-bar { transition: background-color 0.3s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        
+        /* Auto-fill dark mode fix */
+        input:-webkit-autofill,
+        input:-webkit-autofill:focus {
+            transition: background-color 600000s 0s, color 600000s 0s;
+            -webkit-text-fill-color: rgba(255,255,255,0.92) !important;
+            box-shadow: inset 0 0 0 1000px #0a0a0b !important;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 99px; }
+        ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+
+        /* Loader */
+        .dot-flashing {
+            position: relative;
+            width: 6px;
+            height: 6px;
+            border-radius: 5px;
+            background-color: #0a0a0b;
+            color: #0a0a0b;
+            animation: dot-flashing 1s infinite linear alternate;
+            animation-delay: .5s;
+        }
+        .dot-flashing::before, .dot-flashing::after {
+            content: '';
+            display: inline-block;
+            position: absolute;
+            top: 0;
+        }
+        .dot-flashing::before {
+            left: -12px;
+            width: 6px;
+            height: 6px;
+            border-radius: 5px;
+            background-color: #0a0a0b;
+            color: #0a0a0b;
+            animation: dot-flashing 1s infinite alternate;
+            animation-delay: 0s;
+        }
+        .dot-flashing::after {
+            left: 12px;
+            width: 6px;
+            height: 6px;
+            border-radius: 5px;
+            background-color: #0a0a0b;
+            color: #0a0a0b;
+            animation: dot-flashing 1s infinite alternate;
+            animation-delay: 1s;
+        }
+        @keyframes dot-flashing {
+            0% { background-color: #0a0a0b; }
+            50%, 100% { background-color: rgba(10,10,11,0.2); }
+        }
+        
+        /* Checkbox primitive */
+        .checkbox-custom {
+            appearance: none;
+            background-color: #0a0a0b;
+            margin: 0;
+            font: inherit;
+            color: currentColor;
+            width: 16px;
+            height: 16px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 4px;
+            display: grid;
+            place-content: center;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .checkbox-custom::before {
+            content: "";
+            width: 10px;
+            height: 10px;
+            clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+            transform: scale(0);
+            background-color: #0a0a0b;
+            transition: 120ms transform ease-in-out;
+        }
+        .checkbox-custom:checked {
+            background-color: #10b981;
+            border-color: #10b981;
+        }
+        .checkbox-custom:checked::before { transform: scale(1); }
+    </style>
+</head>
+<body class="min-h-[100dvh] flex flex-col items-center justify-center relative p-4 selection:bg-accent-emerald selection:text-surface-950">
+
+    <!-- Architectural Background Layers -->
+    <div class="academic-grid"></div>
+    <div class="ambient-glow"></div>
+
+    <!-- Connection State Wedge (Macro-Architecture Feature) -->
+    <div id="connection-wedge" class="fixed top-4 right-4 z-50 flex items-center gap-2 bg-surface-900 border border-white/5 shadow-sm rounded-full px-3 py-1.5 transition-colors duration-300">
+        <span id="wedge-dot" class="w-1.5 h-1.5 rounded-full bg-accent-emerald shadow-[0_0_8px_var(--accent-emerald)]"></span>
+        <span id="wedge-text" class="text-xs font-medium text-text-secondary select-none">Online</span>
+    </div>
+
+    <!-- Main Spatial Container -->
+    <div class="w-full max-w-[440px] z-10 my-auto flex flex-col relative" style="perspective: 1000px;">
+        
+        <!-- Header -->
+        <header class="text-center mb-6 stagger-reveal" style="--stagger: 0">
+            <div class="w-10 h-10 rounded-[10px] bg-surface-800 border border-white/5 flex items-center justify-center mx-auto mb-4 shadow-sm relative overflow-hidden group">
+                <div class="absolute inset-0 bg-accent-emerald/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <i class="ph ph-books text-xl text-accent-emerald"></i>
+            </div>
+            <h1 class="text-2xl font-semibold tracking-tight text-text-primary">Create your account</h1>
+            <p class="text-sm text-text-secondary mt-1.5">Join the study session.</p>
+        </header>
+
+        <!-- Form Card (Meso-Architecture) -->
+        <main class="glass-panel rounded-[1rem] p-6 lg:p-8 w-full stagger-reveal relative" style="--stagger: 1">
+            
+            <!-- Invite Preview Bento Row (Data Density constraint) -->
+            <div id="invite-preview" class="mb-8 p-3 rounded-lg bg-surface-950 border border-white/5 shadow-inner-glass flex items-center gap-3 relative overflow-hidden group">
+                <div class="absolute w-[1px] h-full bg-accent-emerald left-0 top-0 opacity-80"></div>
+                <!-- Server Icon -->
+                <div class="w-12 h-12 rounded-[10px] overflow-hidden flex-shrink-0 bg-surface-800 relative">
+                    <img src="https://images.unsplash.com/photo-1550439062-609e1531270e?auto=format&fit=crop&w=150&q=80" alt="Data Structures Server Icon" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-[10px]"></div>
+                </div>
+                
+                <!-- Server Details -->
+                <div class="flex-1 min-w-0">
+                    <div class="text-[11px] uppercase tracking-wider text-accent-emerald font-semibold mb-0.5">You're invited context</div>
+                    <div class="text-sm font-medium text-text-primary truncate">CS 301: Data Structures</div>
+                    <div class="flex items-center gap-2 mt-0.5">
+                        <span class="flex items-center gap-1 text-[11px] text-text-secondary">
+                            <span class="w-1.5 h-1.5 rounded-full bg-accent-emerald/80"></span> 112 Online
+                        </span>
+                        <span class="text-[11px] text-text-muted">•</span>
+                        <span class="flex items-center gap-1 text-[11px] text-text-secondary">
+                            <i class="ph ph-users text-[12px]"></i> 1.2k Members
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Global Error Banner (Hidden by default) -->
+            <div id="global-error" class="hidden mb-6 p-3 rounded-md bg-danger/10 border border-danger/20 flex items-start gap-2 text-danger text-sm shadow-[0_0_15px_rgba(239,68,68,0.1)]">
+                <i class="ph-fill ph-warning-circle text-[16px] mt-0.5"></i>
+                <span id="global-error-text">Email already in use. Try logging in.</span>
+            </div>
+
+            <form id="signup-form" class="flex flex-col gap-5 relative z-10" novalidate>
+                
+                <!-- Field Group: Email -->
+                <div class="flex flex-col gap-1.5 stagger-reveal" style="--stagger: 2">
+                    <label for="email" class="text-[13px] font-medium text-text-secondary flex justify-between">
+                        Email <span id="email-status" class="text-xs transition-opacity opacity-0"></span>
+                    </label>
+                    <div class="relative group">
+                        <div class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted transition-colors group-focus-within:text-accent-emerald">
+                            <i class="ph ph-envelope text-[16px]"></i>
+                        </div>
+                        <input type="email" id="email" required autocomplete="email" placeholder="you@university.edu"
+                            class="input-base w-full h-10 rounded-md pl-9 pr-10 text-sm text-text-primary placeholder:text-text-muted outline-none">
+                        <!-- Validation Icon -->
+                        <div class="absolute right-3 top-1/2 -translate-y-1/2 hidden" id="email-icon">
+                            <i class="ph-fill ph-check-circle text-accent-emerald text-[16px]"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Field Group: Username -->
+                <div class="flex flex-col gap-1.5 stagger-reveal" style="--stagger: 3">
+                    <label for="username" class="text-[13px] font-medium text-text-secondary">Username</label>
+                    <div class="relative group">
+                        <div class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted transition-colors group-focus-within:text-accent-emerald">
+                            <i class="ph ph-at text-[16px]"></i>
+                        </div>
+                        <input type="text" id="username" required autocomplete="username" placeholder="what should we call you?"
+                            class="input-base w-full h-10 rounded-md pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted outline-none">
+                    </div>
+                </div>
+
+                <!-- Field Group: Password -->
+                <div class="flex flex-col gap-1.5 stagger-reveal" style="--stagger: 4">
+                    <label for="password" class="text-[13px] font-medium text-text-secondary flex justify-between">
+                        Password
+                        <span id="pw-label" class="text-[11px] text-text-muted">12+ chars, mixed</span>
+                    </label>
+                    <div class="relative group">
+                        <div class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted transition-colors group-focus-within:text-accent-emerald">
+                            <i class="ph ph-lock-key text-[16px]"></i>
+                        </div>
+                        <input type="password" id="password" required autocomplete="new-password" placeholder="••••••••••••"
+                            class="input-base w-full h-10 rounded-md pl-9 pr-10 text-sm text-text-primary placeholder:text-text-muted outline-none">
+                        
+                        <!-- Toggle Visibility -->
+                        <button type="button" id="toggle-pw" class="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors focus:outline-none">
+                            <i class="ph ph-eye-slash text-[16px]" id="eye-icon"></i>
+                        </button>
+                    </div>
+
+                    <!-- Strength Meter -->
+                    <div class="flex gap-1 mt-1 h-1 w-full" id="strength-meter">
+                        <div class="strength-bar flex-1 rounded-full bg-surface-600"></div>
+                        <div class="strength-bar flex-1 rounded-full bg-surface-600"></div>
+                        <div class="strength-bar flex-1 rounded-full bg-surface-600"></div>
+                        <div class="strength-bar flex-1 rounded-full bg-surface-600"></div>
+                    </div>
+                </div>
+
+                <!-- Field Group: Confirm Password -->
+                <div class="flex flex-col gap-1.5 stagger-reveal" style="--stagger: 5">
+                    <label for="confirm" class="text-[13px] font-medium text-text-secondary flex justify-between">
+                        Confirm password
+                        <span id="confirm-status" class="text-xs transition-opacity opacity-0"></span>
+                    </label>
+                    <div class="relative group">
+                        <div class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted transition-colors group-focus-within:text-accent-emerald">
+                            <i class="ph ph-check-square-offset text-[16px]"></i>
+                        </div>
+                        <input type="password" id="confirm" required autocomplete="new-password" placeholder="••••••••••••"
+                            class="input-base w-full h-10 rounded-md pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted outline-none">
+                    </div>
+                </div>
+
+                <!-- Terms Checkbox -->
+                <div class="flex items-start gap-3 mt-2 stagger-reveal" style="--stagger: 6">
+                    <input type="checkbox" id="terms" class="checkbox-custom mt-0.5" required>
+                    <label for="terms" class="text-xs text-text-secondary leading-snug cursor-pointer select-none">
+                        I agree to StudyHall's <a href="#" class="text-accent-emerald hover:underline focus:outline-none focus:underline rounded-sm">Terms of Service</a> & <a href="#" class="text-accent-emerald hover:underline focus:outline-none focus:underline rounded-sm">Privacy Policy</a>
+                    </label>
+                </div>
+
+                <!-- Submit Action (Micro-architecture interactive states) -->
+                <button type="submit" id="btn-submit" disabled
+                    class="mt-4 h-10 w-full rounded-md bg-surface-600 font-semibold text-text-muted flex items-center justify-center gap-2 transition-all duration-300 ease-out 
+                    disabled:opacity-50 disabled:cursor-not-allowed
+                    enabled:bg-accent-emerald enabled:text-surface-950 enabled:shadow-[0_4px_14px_0_rgba(16,185,129,0.39)] enabled:hover:-translate-y-[1px] enabled:active:scale-[0.98] enabled:hover:shadow-[0_6px_20px_rgba(16,185,129,0.23)]">
+                    <span id="btn-text">Create Account</span>
+                    <i class="ph-bold ph-arrow-right text-[16px] transition-transform group-hover:translate-x-1" id="btn-icon"></i>
+                    <div id="btn-loader" class="hidden dot-flashing translate-y-[2px]"></div>
+                </button>
+            </form>
+
+            <!-- Footer Links -->
+            <div class="mt-8 text-center text-[13px] text-text-secondary stagger-reveal" style="--stagger: 7">
+                Already have an account? 
+                <a href="/login" class="text-text-primary font-medium hover:text-accent-emerald transition-colors focus:outline-none focus:ring-2 focus:ring-accent-emerald focus:ring-offset-2 focus:ring-offset-surface-900 rounded-sm">Log in</a>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Offline Mock/Dev Tool (To show offline state behavior as required) -->
+    <button onclick="toggleConnection()" class="fixed bottom-4 right-4 text-[10px] uppercase font-mono tracking-widest text-text-muted hover:text-text-primary z-50 py-1 px-2 border border-white/10 rounded bg-surface-900 shadow-sm transition-colors">
+        Dev: Toggle Conn
+    </button>
+
+    <!-- Script: Emulating React/Complex State Logic & Framer Motion -->
+    <script>
+        // DOM Elements
+        const form = document.getElementById('signup-form');
+        const emailInput = document.getElementById('email');
+        const userInput = document.getElementById('username');
+        const pwInput = document.getElementById('password');
+        const confInput = document.getElementById('confirm');
+        const termsCheck = document.getElementById('terms');
+        const btnSubmit = document.getElementById('btn-submit');
+        
+        // Status Elements
+        const emailStatus = document.getElementById('email-status');
+        const emailIcon = document.getElementById('email-icon');
+        const pwBars = document.querySelectorAll('.strength-bar');
+        const pwLabel = document.getElementById('pw-label');
+        const confStatus = document.getElementById('confirm-status');
+        
+        // State
+        let isOnline = true;
+        let isSubmitting = false;
+        
+        // Validator Regex
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+        // Score Password (Simulated zxcvbn logic)
+        function calculateStrength(pw) {
+            let score = 0;
+            if (!pw) return 0;
+            if (pw.length > 8) score += 1;
+            if (pw.length >= 12) score += 1;
+            if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score += 1;
+            if (/[0-9]/.test(pw) && /[^A-Za-z0-9]/.test(pw)) score += 1;
+            return Math.min(4, score);
+        }
+
+        function updateFormState() {
+            if(isSubmitting) return;
+
+            // 1. Email check
+            const emailVal = emailInput.value;
+            const emailValid = emailRegex.test(emailVal);
+            if(emailVal.length > 0) {
+                if(emailValid) {
+                    emailStatus.textContent = "✓ Valid";
+                    emailStatus.className = "text-xs text-accent-emerald opacity-100 transition-opacity";
+                    emailInput.classList.remove('border-danger');
+                    emailIcon.classList.remove('hidden');
+                } else {
+                    emailStatus.textContent = "✗ Invalid format";
+                    emailStatus.className = "text-xs text-danger opacity-100 transition-opacity";
+                    emailInput.classList.add('border-danger');
+                    emailIcon.classList.add('hidden');
+                }
+            } else {
+                emailStatus.style.opacity = '0';
+                emailInput.classList.remove('border-danger');
+                emailIcon.classList.add('hidden');
+            }
+
+            // 2. Password Strength Check
+            const pwVal = pwInput.value;
+            const score = calculateStrength(pwVal);
+            
+            // Reset bars
+            pwBars.forEach(b => {
+                b.style.backgroundColor = '#3f3f46'; // surface-600
+                b.style.boxShadow = 'none';
+            });
+
+            let scoreColor = '#3f3f46';
+            if (pwVal.length > 0) {
+                if (score <= 1) {
+                    scoreColor = '#ef4444'; // danger
+                    pwLabel.textContent = "Weak";
+                    pwLabel.style.color = scoreColor;
+                } else if (score == 2 || score == 3) {
+                    scoreColor = '#f59e0b'; // amber
+                    pwLabel.textContent = "Fair";
+                    pwLabel.style.color = scoreColor;
+                } else if (score >= 4) {
+                    scoreColor = '#10b981'; // emerald
+                    pwLabel.textContent = "Strong";
+                    pwLabel.style.color = scoreColor;
+                    pwBars[3].style.boxShadow = '0 0 10px rgba(16,185,129,0.4)';
+                }
+                
+                for(let i=0; i<score; i++) {
+                    if(pwBars[i]) pwBars[i].style.backgroundColor = scoreColor;
+                }
+            } else {
+                pwLabel.textContent = "12+ chars, mixed";
+                pwLabel.style.color = 'var(--text-muted, rgba(255,255,255,0.4))';
+            }
+
+            // 3. Confirm Match Check
+            const confVal = confInput.value;
+            let matchValid = false;
+            
+            if(confVal.length > 0 && pwVal.length > 0) {
+                if(confVal === pwVal) {
+                    matchValid = true;
+                    confStatus.textContent = "Passwords match";
+                    confStatus.className = "text-xs text-accent-emerald opacity-100 transition-opacity";
+                    confInput.classList.remove('border-danger');
+                } else {
+                    confStatus.textContent = "Passwords don't match";
+                    confStatus.className = "text-xs text-danger opacity-100 transition-opacity";
+                    confInput.classList.add('border-danger', 'error');
+                }
+            } else {
+                confStatus.style.opacity = '0';
+                confInput.classList.remove('border-danger', 'error');
+            }
+
+            // 4. Global validation for Button State
+            const isUserValid = userInput.value.trim().length > 2;
+            const isTermsValid = termsCheck.checked;
+            
+            const isAllValid = (emailValid && score >= 2 && matchValid && isUserValid && isTermsValid && isOnline);
+            
+            if (isAllValid) {
+                btnSubmit.removeAttribute('disabled');
+            } else {
+                btnSubmit.setAttribute('disabled', 'true');
+            }
+        }
+
+        // Event Listeners for real-time validation
+        ['input', 'keyup', 'change'].forEach(evt => {
+            emailInput.addEventListener(evt, updateFormState);
+            userInput.addEventListener(evt, updateFormState);
+            pwInput.addEventListener(evt, updateFormState);
+            confInput.addEventListener(evt, updateFormState);
+            termsCheck.addEventListener(evt, updateFormState);
+        });
+
+        // Toggle Password Visibility
+        document.getElementById('toggle-pw').addEventListener('click', () => {
+            const type = pwInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            pwInput.setAttribute('type', type);
+            // Conf input follows suite
+            confInput.setAttribute('type', type);
+            
+            const icon = document.getElementById('eye-icon');
+            if(type === 'text') {
+                icon.className = 'ph ph-eye text-[16px] text-text-primary';
+            } else {
+                icon.className = 'ph ph-eye-slash text-[16px] text-text-muted';
+            }
+        });
+
+        // Form Submit Simulation
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if(btnSubmit.disabled) return;
+            
+            isSubmitting = true;
+            
+            // UI to Loading State
+            document.getElementById('btn-text').classList.add('opacity-0');
+            document.getElementById('btn-icon').classList.add('opacity-0');
+            document.getElementById('btn-loader').classList.remove('hidden');
+            btnSubmit.classList.add('cursor-wait');
+            btnSubmit.classList.remove('hover:-translate-y-[1px]');
+            
+            // Disable inputs during req
+            [emailInput, userInput, pwInput, confInput, termsCheck].forEach(el => el.disabled = true);
+            
+            // Network request simulation
+            setTimeout(() => {
+                // Simulate Rate Limit Error structurally
+                const errorBanner = document.getElementById('global-error');
+                if (emailInput.value.includes('error')) {
+                    errorBanner.classList.remove('hidden');
+                    errorBanner.classList.add('animate-pulse');
+                    setTimeout(() => errorBanner.classList.remove('animate-pulse'), 500);
+                    
+                    // Reset UI
+                    isSubmitting = false;
+                    document.getElementById('btn-text').classList.remove('opacity-0');
+                    document.getElementById('btn-icon').classList.remove('opacity-0');
+                    document.getElementById('btn-loader').classList.add('hidden');
+                    btnSubmit.classList.remove('cursor-wait');
+                    [emailInput, userInput, pwInput, confInput, termsCheck].forEach(el => el.disabled = false);
+                    updateFormState(); // Re-evaluate btn status
+                } else {
+                    // Success (Green flash, redirect simulation)
+                    btnSubmit.classList.replace('bg-accent-emerald', 'bg-[#059669]'); // Darker success
+                    document.getElementById('btn-loader').classList.add('hidden');
+                    document.getElementById('btn-icon').className = 'ph-bold ph-check text-[20px] text-surface-950 absolute';
+                    document.getElementById('btn-icon').classList.remove('opacity-0');
+                    
+                    // Proceed to /verify
+                    // window.location.href = `/verify?email=${emailInput.value}`;
+                }
+            }, 1200);
+        });
+
+        // Offline state engine simulation
+        function toggleConnection() {
+            isOnline = !isOnline;
+            const wedge = document.getElementById('connection-wedge');
+            const dot = document.getElementById('wedge-dot');
+            const txt = document.getElementById('wedge-text');
+            
+            if(!isOnline) {
+                wedge.classList.replace('bg-surface-900', 'bg-danger/20');
+                wedge.classList.replace('border-white/5', 'border-danger/30');
+                dot.className = 'w-1.5 h-1.5 rounded-full bg-danger shadow-[0_0_8px_var(--danger)]';
+                txt.textContent = 'Offline';
+                txt.className = 'text-xs font-medium text-danger select-none';
+                
+                // Show offline tooltip warning on button
+                btnSubmit.setAttribute('title', 'Internet connection required to sign up');
+            } else {
+                // Reconnecting transition
+                txt.textContent = 'Reconnecting...';
+                dot.className = 'w-1.5 h-1.5 rounded-full bg-accent-amber animate-pulse shadow-[0_0_8px_var(--accent-amber)]';
+                txt.className = 'text-xs font-medium text-accent-amber select-none';
+                wedge.className = 'fixed top-4 right-4 z-50 flex items-center gap-2 bg-surface-900 border border-accent-amber/30 shadow-sm rounded-full px-3 py-1.5 transition-colors duration-300';
+                
+                setTimeout(() => {
+                    if(isOnline) {
+                        wedge.className = 'fixed top-4 right-4 z-50 flex items-center gap-2 bg-surface-900 border border-white/5 shadow-sm rounded-full px-3 py-1.5 transition-colors duration-300';
+                        dot.className = 'w-1.5 h-1.5 rounded-full bg-accent-emerald shadow-[0_0_8px_var(--accent-emerald)]';
+                        txt.textContent = 'Online';
+                        txt.className = 'text-xs font-medium text-text-secondary select-none';
+                        btnSubmit.removeAttribute('title');
+                    }
+                }, 1500);
+            }
+            updateFormState(); // re-eval button state
+        }
+    </script>
+</body>
+</html>

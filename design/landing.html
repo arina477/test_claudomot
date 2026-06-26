@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyHall — Replace Notion + Discord.</title>
+    <!--
+    aesthetic_dna: calm, focused, academic, low-noise, brutalist-utility overlay
+    ui_paradigm: immersive asymmetric scroll-path, high-density CSS mockups over raster images, organic vertical flow
+    palette: surface zincs (-950 to -500), accent emerald, amber warnings, danger red.
+    -->
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        surface: {
+                            950: '#0a0a0b',
+                            900: '#121214',
+                            800: '#1c1c1f',
+                            700: '#27272a',
+                            600: '#3f3f46',
+                            500: '#52525b',
+                        },
+                        accent: {
+                            emerald: '#10b981',
+                            amber: '#f59e0b',
+                        },
+                        danger: '#ef4444',
+                        text: {
+                            primary: 'rgba(255, 255, 255, 0.92)',
+                            secondary: 'rgba(255, 255, 255, 0.60)',
+                            muted: 'rgba(255, 255, 255, 0.40)',
+                        },
+                        border: {
+                            hairline: 'rgba(255, 255, 255, 0.06)',
+                            hover: 'rgba(255, 255, 255, 0.10)',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Geist', '-apple-system', 'Segoe UI', 'sans-serif'],
+                        mono: ['Geist Mono', 'ui-monospace', 'monospace'],
+                    },
+                    boxShadow: {
+                        'sm-dark': '0 1px 2px rgba(0,0,0,0.4)',
+                        'pop': '0 8px 24px rgba(0,0,0,0.5)',
+                        'glow-focus': '0 0 0 2px rgba(16,185,129,0.4)',
+                        'glow-subtle': '0 0 15px rgba(255,255,255,0.05)',
+                        'emerald-wash': '0 0 120px -30px rgba(16,185,129,0.15)',
+                    },
+                    transitionTimingFunction: {
+                        'spring': 'cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                        'smooth': 'cubic-bezier(0.4, 0, 0.2, 1)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            color-scheme: dark;
+            --sb-track-color: #121214;
+            --sb-thumb-color: #3f3f46;
+            --sb-size: 6px;
+        }
+
+        body {
+            background-color: #0a0a0b;
+            color: rgba(255, 255, 255, 0.92);
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Custom Scrollbar styled per app specs */
+        body::-webkit-scrollbar, .custom-scroll::-webkit-scrollbar {
+            width: var(--sb-size);
+            height: var(--sb-size);
+        }
+        body::-webkit-scrollbar-track, .custom-scroll::-webkit-scrollbar-track {
+            background: var(--sb-track-color);
+        }
+        body::-webkit-scrollbar-thumb, .custom-scroll::-webkit-scrollbar-thumb {
+            background: var(--sb-thumb-color);
+            border-radius: 9999px;
+        }
+        body::-webkit-scrollbar-thumb:hover, .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: #52525b; /* surface-500 */
+        }
+
+        /* Refraction Glass Utility */
+        .glass-refract {
+            position: relative;
+        }
+        .glass-refract::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.1), rgba(255,255,255,0.02));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+
+        /* Continuous Animations */
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-8px) rotate(-1deg); }
+        }
+        
+        @keyframes pulse-emerald {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.4); }
+            50% { box-shadow: 0 0 0 4px rgba(16,185,129,0); }
+        }
+
+        @keyframes infiniteScroll {
+            from { transform: translateX(0); }
+            to { transform: translateX(-50%); }
+        }
+
+        /* The Wedge: Offline state simulator in mockups */
+        @keyframes connectionState {
+            0%, 20% { 
+                background-color: #ef4444; /* danger */
+                box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+            }
+            25%, 60% { 
+                background-color: #f59e0b; /* amber reconnecting */
+                box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+            }
+            65%, 100% { 
+                background-color: #10b981; /* emerald online */
+                box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+            }
+        }
+        @keyframes connectionText {
+            0%, 20% { content: "Offline"; color: #ef4444; }
+            25%, 60% { content: "Reconnecting..."; color: #f59e0b; }
+            65%, 100% { content: "Online"; color: #10b981; }
+        }
+
+        .animate-network-dot { animation: connectionState 12s infinite; }
+        .animate-network-text::after { content: "Online"; animation: connectionText 12s infinite; }
+
+        /* Staggered Reveal Engine */
+        .reveal-node {
+            opacity: 0;
+            transform: translateY(24px) scale(0.98);
+            transition: all 800ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition-delay: calc(var(--idx) * 100ms);
+        }
+        .reveal-node.is-visible {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        /* Squircle Morph targeting */
+        .server-icon {
+            transition: border-radius 300ms ease, background-color 150ms ease;
+        }
+        .server-icon:hover {
+            border-radius: 8px; /* From lg to md */
+            background-color: #3f3f46; /* surface-600 */
+        }
+        
+    </style>
+</head>
+<body class="selection:bg-accent-emerald/30 selection:text-white">
+
+    <!-- Navbar: Macro Shell Layer -->
+    <header class="fixed top-0 w-full z-50 bg-surface-950/70 backdrop-blur-xl border-b border-white/[0.06] transition-all duration-300" id="global-nav">
+        <div class="max-w-[1400px] mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-[10px] bg-accent-emerald flex items-center justify-center shadow-emerald-wash shrink-0">
+                    <i class="ph ph-books text-surface-950 font-bold text-xl"></i>
+                </div>
+                <span class="font-semibold text-text-primary tracking-tight text-lg hidden sm:block">StudyHall</span>
+            </div>
+            
+            <nav class="flex items-center gap-6 text-sm font-medium">
+                <a href="/auth/signin" class="text-text-secondary hover:text-text-primary transition-colors hidden sm:block">Already a member? Sign in</a>
+                <a href="/auth/signin" class="text-text-secondary hover:text-text-primary transition-colors sm:hidden">Sign in</a>
+                <!-- btn-primary primitive -->
+                <button onclick="triggerCTA()" class="h-[34px] px-4 rounded-md bg-accent-emerald text-white hover:bg-emerald-500 active:bg-emerald-600 transition-all shadow-sm-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-emerald/50 active:scale-[0.98] flex items-center gap-2">
+                    <span class="btn-text">Create free account</span>
+                    <i class="ph ph-spinner animate-spin hidden btn-spinner"></i>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="w-full">
+        <!-- Hero Section: Dynamic Asymmetry & Density Injection -->
+        <section class="min-h-[100dvh] pt-32 pb-16 flex items-center relative overflow-hidden">
+            <!-- Ambient Backdrop -->
+            <div class="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-accent-emerald/10 rounded-full blur-[120px] pointer-events-none"></div>
+
+            <div class="max-w-[1400px] mx-auto px-6 w-full grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center relative z-10">
+                
+                <!-- Left Stack: Copy -->
+                <div class="lg:col-span-5 flex flex-col items-start gap-8">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/[0.06] bg-surface-900 shadow-sm-dark text-xs font-medium text-text-secondary reveal-node" style="--idx:0">
+                        <span class="w-2 h-2 rounded-full bg-accent-emerald relative flex items-center justify-center">
+                            <span class="absolute inline-flex h-full w-full rounded-full bg-accent-emerald opacity-50 animate-ping"></span>
+                        </span>
+                        <span>v1.0 is now available</span>
+                    </div>
+
+                    <h1 class="text-5xl md:text-[80px] leading-[0.95] tracking-tight font-semibold text-text-primary reveal-node relative" style="--idx:1">
+                        The single<br>
+                        <span class="text-text-secondary">tool that</span><br>
+                        replaces<br>
+                        Notion 
+                        <span class="text-surface-700 mx-1">+</span> 
+                        Discord.
+                    </h1>
+
+                    <p class="text-lg md:text-xl text-text-secondary leading-relaxed max-w-md reveal-node" style="--idx:2">
+                        Study over voice, track assignments, and stay connected — <strong class="font-medium text-text-primary">even when the internet isn't.</strong> Built for unreliable connectivity.
+                    </p>
+
+                    <div class="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mt-4 reveal-node" style="--idx:3">
+                        <button onclick="triggerCTA()" class="h-12 px-6 rounded-md bg-accent-emerald text-white hover:bg-emerald-500 transition-all font-semibold shadow-sm-dark active:scale-[0.98] w-full sm:w-auto text-base flex justify-center items-center">
+                            Get started for free
+                        </button>
+                        <p class="text-xs text-text-muted text-center sm:text-left self-center">No credit card required.<br>Create a server in 30s.</p>
+                    </div>
+                </div>
+
+                <!-- Right Stack: 3D App Mockup (Visual Tension & Materiality) -->
+                <div class="lg:col-span-7 h-[500px] md:h-[650px] relative w-full reveal-node drop-shadow-[0_30px_60px_rgba(0,0,0,0.8)]" style="--idx:4; animation: float 10s ease-in-out infinite;">
+                    
+                    <!-- App Frame -->
+                    <div class="absolute inset-0 rounded-2xl glass-refract border border-white/[0.06] bg-surface-950 flex overflow-hidden lg:-mr-12">
+                        
+                        <!-- Panel 1: Server Rail (surface-950) -->
+                        <div class="w-[72px] shrink-0 border-r border-white/[0.06] flex flex-col items-center py-4 gap-3 bg-surface-950 z-20">
+                            <!-- Home -->
+                            <div class="w-12 h-12 rounded-[16px] server-icon bg-surface-800 flex items-center justify-center cursor-pointer text-text-secondary hover:text-text-primary">
+                                <i class="ph ph-house text-xl"></i>
+                            </div>
+                            <div class="w-8 h-[2px] bg-surface-700 rounded-full my-1"></div>
+                            
+                            <!-- Server 1 (Active) -->
+                            <div class="relative group">
+                                <div class="absolute -left-3 top-1/2 -translate-y-1/2 w-[4px] h-[32px] bg-accent-emerald rounded-r-full"></div>
+                                <div class="w-12 h-12 rounded-[12px] bg-surface-700 flex items-center justify-center cursor-pointer text-text-primary font-bold overflow-hidden">
+                                     <!-- Abstract SVG placeholder for server icon -->
+                                     <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><rect width="48" height="48" fill="#27272a"/><path d="M24 16v16M16 24h16" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+                                </div>
+                            </div>
+
+                            <!-- Server 2 (Unread) -->
+                            <div class="relative group mt-1">
+                                <div class="absolute -left-3 top-1/2 -translate-y-1/2 w-[4px] h-[8px] bg-white rounded-r-full"></div>
+                                <div class="w-12 h-12 rounded-[16px] server-icon bg-surface-800 flex items-center justify-center cursor-pointer text-text-primary font-bold text-lg">CS</div>
+                            </div>
+                        </div>
+
+                        <!-- Panel 2: Channel Sidebar (surface-900) -->
+                        <div class="w-60 shrink-0 bg-surface-900 border-r border-white/[0.06] flex flex-col z-10 hidden sm:flex">
+                            <div class="h-14 px-4 flex items-center justify-between border-b border-white/[0.06] shadow-sm-dark z-10 shrink-0">
+                                <span class="font-semibold text-text-primary text-base truncate pr-2">Stanford Study Collective</span>
+                                <i class="ph ph-caret-down text-text-secondary text-sm"></i>
+                            </div>
+                            
+                            <div class="flex-1 p-3 flex flex-col gap-1 custom-scroll overflow-y-auto">
+                                <div class="text-[11px] font-bold text-text-muted uppercase tracking-wider mt-2 mb-1 px-1">Study Channels</div>
+                                <!-- Channel Active -->
+                                <div class="flex items-center gap-2 px-2 py-1.5 rounded-md bg-surface-700 text-text-primary cursor-pointer hover:bg-surface-700 text-sm font-medium">
+                                    <i class="ph ph-hash text-text-secondary"></i>
+                                    <span>algorithms-prep</span>
+                                </div>
+                                <!-- Channel Inactive -->
+                                <div class="flex items-center gap-2 px-2 py-1.5 rounded-md text-text-secondary cursor-pointer hover:bg-surface-800 hover:text-text-primary text-sm font-medium transition-colors">
+                                    <i class="ph ph-hash"></i>
+                                    <span>general</span>
+                                </div>
+                                
+                                <div class="text-[11px] font-bold text-text-muted uppercase tracking-wider mt-5 mb-1 px-1 flex justify-between items-center">
+                                    <span>Voice Rooms</span>
+                                    <i class="ph ph-plus cursor-pointer hover:text-text-primary"></i>
+                                </div>
+                                <!-- Voice Room Active -->
+                                <div class="flex flex-col gap-1">
+                                    <div class="flex items-center gap-2 px-2 py-1.5 rounded-md text-text-secondary hover:bg-surface-800 hover:text-text-primary text-sm font-medium cursor-pointer transition-colors">
+                                        <i class="ph ph-speaker-high"></i>
+                                        <span>Late Night Lounge</span>
+                                    </div>
+                                    <!-- Occupants -->
+                                    <div class="flex flex-col gap-1 pl-6">
+                                        <div class="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-surface-800 cursor-pointer">
+                                            <div class="w-5 h-5 rounded-full bg-surface-700 flex items-center justify-center ring-2 ring-accent-emerald ring-offset-1 ring-offset-surface-900 border border-surface-900">
+                                                <i class="ph ph-user text-[10px] text-text-primary"></i>
+                                            </div>
+                                            <span class="text-xs text-text-secondary font-medium">Alex M.</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Panel 3: Main Canvas (surface-800) -->
+                        <div class="flex-1 bg-surface-800 flex flex-col min-w-0">
+                            <!-- Header with The Wedge (Connection Indicator) -->
+                            <div class="h-14 px-4 flex items-center justify-between border-b border-white/[0.06] shadow-sm-dark bg-surface-800/90 backdrop-blur-sm z-10 shrink-0">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <i class="ph ph-hash text-text-secondary text-lg"></i>
+                                    <span class="font-semibold text-text-primary text-base truncate">algorithms-prep</span>
+                                </div>
+                                <!-- The Dynamic offline wedge -->
+                                <div class="shrink-0 flex items-center gap-2 px-2.5 py-1 rounded-full bg-surface-900 border border-white/[0.06] shadow-sm-dark text-xs font-mono">
+                                    <div class="w-2 h-2 rounded-full animate-network-dot"></div>
+                                    <span class="animate-network-text text-text-secondary font-medium"></span>
+                                </div>
+                            </div>
+
+                            <!-- Message Stream -->
+                            <div class="flex-1 p-4 flex flex-col justify-end gap-5 overflow-hidden relative">
+                                <!-- Message Row 1 -->
+                                <div class="flex gap-4 group mt-auto">
+                                    <div class="w-10 h-10 rounded-full bg-surface-600 shrink-0 mt-0.5 object-cover" style="background-image: url('https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?auto=format&fit=crop&w=80&q=80'); background-size: cover;"></div>
+                                    <div class="flex flex-col basis-full min-w-0">
+                                        <div class="flex items-baseline gap-2">
+                                            <span class="font-medium text-text-primary text-base">Sarah Jenks</span>
+                                            <span class="text-xs text-text-muted">Today at 10:42 AM</span>
+                                        </div>
+                                        <p class="text-text-primary text-sm leading-relaxed mt-1">Has anyone figured out the time complexity for problem 4? I'm getting O(n log n) but the lecture slides hint at O(n).</p>
+                                    </div>
+                                </div>
+
+                                <!-- Message Row 2 (Pending State - Wedge Highlight) -->
+                                <div class="flex gap-4 group opacity-70">
+                                    <div class="w-10 h-10 rounded-full bg-accent-emerald shrink-0 mt-0.5 text-white flex items-center justify-center font-semibold pb-0.5">You</div>
+                                    <div class="flex flex-col basis-full min-w-0">
+                                        <div class="flex items-baseline gap-2">
+                                            <span class="font-medium text-text-primary text-base">You</span>
+                                            <span class="text-xs text-text-muted">Just now</span>
+                                        </div>
+                                        <p class="text-text-primary text-sm leading-relaxed mt-1 flex flex-col gap-2">
+                                            <span>I think you need a hash map to bring it down to O(n). Wrote my notes up here:</span>
+                                            <!-- Attachment mock -->
+                                            <span class="inline-flex max-w-[240px] items-center gap-3 p-3 rounded-lg border border-white/[0.06] bg-surface-900">
+                                                <i class="ph ph-file-code text-accent-emerald text-2xl"></i>
+                                                <span class="flex flex-col min-w-0">
+                                                    <span class="text-sm text-text-primary font-medium truncate">solution_v2.py</span>
+                                                    <span class="text-xs text-text-muted">2.4 KB</span>
+                                                </span>
+                                            </span>
+                                        </p>
+                                        <div class="flex items-center gap-1.5 mt-1">
+                                            <i class="ph ph-clock text-accent-amber text-xs"></i>
+                                            <span class="text-xs text-accent-amber">Sending... (Offline)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Composer area -->
+                            <div class="p-4 pt-0 shrink-0">
+                                <div class="bg-surface-900 border border-white/[0.06] rounded-lg p-2.5 flex items-end gap-2 shadow-sm-dark">
+                                    <div class="w-8 h-8 flex items-center justify-center text-text-secondary hover:text-text-primary cursor-pointer shrink-0 transition-colors bg-surface-800 rounded-md">
+                                        <i class="ph ph-plus"></i>
+                                    </div>
+                                    <div class="flex-1 py-1 px-1">
+                                        <div class="text-text-muted text-sm cursor-text">Message #algorithms-prep</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Social Proof / Logos (Meso density) -->
+        <section class="border-y border-white/[0.06] bg-surface-900/50 py-10 overflow-hidden reveal-node w-full" style="--idx:0">
+            <div class="max-w-[1400px] mx-auto px-6 mb-6">
+                <p class="text-sm font-medium text-text-muted text-center tracking-wide uppercase">Trusted by study nodes across 40+ universities</p>
+            </div>
+            <!-- Marquee container -->
+            <div class="w-full flex overflow-hidden mask-edges relative">
+                <div class="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-[#0a0a0b] to-transparent z-10 pointer-events-none"></div>
+                <div class="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-[#0a0a0b] to-transparent z-10 pointer-events-none"></div>
+                <div class="flex gap-16 min-w-full items-center whitespace-nowrap pl-16 opacity-50" style="animation: infiniteScroll 40s linear infinite;">
+                    <div class="flex items-center gap-3 text-lg font-mono font-medium text-text-secondary"><i class="ph ph-graduation-cap text-2xl"></i> Stanford Collective</div>
+                    <div class="flex items-center gap-3 text-lg font-mono font-medium text-text-secondary"><i class="ph ph-atom text-2xl"></i> MIT Remote Cohort</div>
+                    <div class="flex items-center gap-3 text-lg font-mono font-medium text-text-secondary"><i class="ph ph-dna text-2xl"></i> Oxford Med Node</div>
+                    <div class="flex items-center gap-3 text-lg font-mono font-medium text-text-secondary"><i class="ph ph-code text-2xl"></i> Berkeley CS Grads</div>
+                    <div class="flex items-center gap-3 text-lg font-mono font-medium text-text-secondary"><i class="ph ph-globe text-2xl"></i> LSE Distance Group</div>
+                    <!-- Duplicate for infinite effect -->
+                    <div class="flex items-center gap-3 text-lg font-mono font-medium text-text-secondary"><i class="ph ph-graduation-cap text-2xl"></i> Stanford Collective</div>
+                    <div class="flex items-center gap-3 text-lg font-mono font-medium text-text-secondary"><i class="ph ph-atom text-2xl"></i> MIT Remote Cohort</div>
+                    <div class="flex items-center gap-3 text-lg font-mono font-medium text-text-secondary"><i class="ph ph-dna text-2xl"></i> Oxford Med Node</div>
+                    <div class="flex items-center gap-3 text-lg font-mono font-medium text-text-secondary"><i class="ph ph-code text-2xl"></i> Berkeley CS Grads</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Feature Deep Dives: Asymmetric Row Structures -->
+        <section class="max-w-[1400px] mx-auto px-6 py-32 flex flex-col gap-0 select-none border-x border-white/[0.06] bg-surface-950">
+            
+            <!-- Context Header -->
+            <div class="mb-20 max-w-2xl reveal-node" style="--idx:0">
+                <h2 class="text-3xl md:text-5xl font-semibold text-text-primary tracking-tight mb-4">Focus required. <br>Distractions stripped.</h2>
+                <p class="text-xl text-text-secondary">A workspace designed geographically for academic squads. Less gaming overlay, more functional clarity.</p>
+            </div>
+
+            <!-- Row 1: Servers & Voice -->
+            <article class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 py-24 border-t border-white/[0.06] reveal-node group" style="--idx:1">
+                <div class="lg:col-span-5 flex flex-col gap-6 justify-center">
+                    <div class="w-12 h-12 rounded-xl bg-surface-900 border border-white/[0.06] flex items-center justify-center text-text-primary shadow-sm-dark group-hover:border-accent-emerald/50 group-hover:text-accent-emerald transition-colors duration-500">
+                        <i class="ph ph-users-three text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl lg:text-3xl font-semibold text-text-primary tracking-tight">Study servers you own</h3>
+                    <p class="text-lg text-text-secondary leading-relaxed">
+                        Create a study server, invite your cohort, and drop into voice study rooms anytime — no scheduling needed. Uncapped and completely free.
+                    </p>
+                </div>
+                <div class="lg:col-span-1"></div>
+                <div class="lg:col-span-6 relative aspect-[4/3] rounded-2xl bg-surface-900 border border-white/[0.06] shadow-sm-dark overflow-hidden flex items-center justify-center p-8 group-hover:-translate-y-2 group-hover:shadow-glow-subtle transition-all duration-700 ease-out">
+                    <!-- Abstract Voice UI Mock -->
+                    <div class="w-full max-w-sm bg-surface-800 rounded-xl border border-white/[0.06] p-4 flex flex-col gap-4">
+                        <div class="flex items-center justify-between border-b border-surface-700 pb-3">
+                            <div class="flex items-center gap-2 text-text-primary font-medium"><i class="ph ph-speaker-high text-accent-emerald"></i> Late Night Lounge</div>
+                            <div class="text-xs text-text-muted">4 studying</div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="aspect-square bg-surface-700 rounded-lg flex flex-col items-center justify-center gap-2 ring-2 ring-accent-emerald ring-offset-2 ring-offset-surface-800 relative">
+                                <div class="w-10 h-10 rounded-full bg-surface-900 border border-surface-600 flex items-center justify-center"><i class="ph ph-user text-text-muted"></i></div>
+                                <span class="text-xs font-medium bg-surface-950/80 px-2 py-0.5 rounded text-text-primary">Alex (You)</span>
+                            </div>
+                            <div class="aspect-square bg-surface-700 rounded-lg flex flex-col items-center justify-center gap-2">
+                                <div class="w-10 h-10 rounded-full bg-surface-900 border border-surface-600 flex items-center justify-center"><i class="ph ph-user text-text-muted"></i></div>
+                                <span class="text-xs font-medium text-text-secondary text-center truncate px-2 w-full">Sam J.</span>
+                                <div class="absolute top-2 right-2"><i class="ph ph-microphone-slash text-danger/80"></i></div>
+                            </div>
+                        </div>
+                        <div class="flex justify-center gap-2 mt-2">
+                            <button class="w-10 h-10 rounded-full bg-surface-700 flex items-center justify-center hover:bg-surface-600 text-text-primary transition-colors"><i class="ph ph-microphone"></i></button>
+                            <button class="w-10 h-10 rounded-full flex items-center justify-center bg-danger hover:bg-red-600 text-white transition-colors"><i class="ph ph-phone-disconnect"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Row 2: Assignments (Zig-Zag) -->
+            <article class="flex flex-col-reverse lg:grid lg:grid-cols-12 gap-12 lg:gap-8 py-24 border-t border-white/[0.06] reveal-node group" style="--idx:2">
+                <div class="lg:col-span-6 relative aspect-[4/3] rounded-2xl bg-surface-900 border border-white/[0.06] shadow-sm-dark overflow-hidden flex flex-col p-8 group-hover:-translate-y-2 group-hover:shadow-glow-subtle transition-all duration-700 ease-out z-10 glass-refract">
+                    <!-- Assignment Card UI Mock -->
+                    <div class="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-4">Board / To-do</div>
+                    <div class="flex flex-col gap-3 relative z-10">
+                        
+                        <div class="bg-surface-800 rounded-lg border border-white/[0.06] p-4 flex gap-4 items-start shadow-sm-dark transition-all hover:border-text-secondary">
+                            <div class="w-5 h-5 rounded-md border-2 border-surface-600 mt-0.5 shrink-0 flex items-center justify-center text-transparent hover:border-accent-emerald cursor-pointer">
+                                <i class="ph ph-check text-xs font-bold"></i>
+                            </div>
+                            <div class="flex flex-col gap-1 w-full box-border">
+                                <h4 class="text-base text-text-primary font-medium tracking-tight">Readings: Chapter 4-5</h4>
+                                <p class="text-sm text-text-secondary line-clamp-2">Complete the associated quiz module before lecture.</p>
+                                <div class="flex items-center justify-between mt-2">
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-surface-700 text-xs font-medium text-text-primary"><i class="ph ph-hash text-[10px] text-text-secondary"></i> info-systems</span>
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-accent-amber/10 text-accent-amber border border-accent-amber/20 text-xs font-medium"><i class="ph ph-clock text-[10px]"></i> Due tomorrow</span>
+                                </div>
+                            </div>
+                        </div>
+
+                         <div class="bg-surface-800 rounded-lg border border-white/[0.06] p-4 flex gap-4 items-start shadow-sm-dark opacity-60">
+                            <div class="w-5 h-5 rounded-md border-2 border-accent-emerald bg-accent-emerald mt-0.5 shrink-0 flex items-center justify-center text-white">
+                                <i class="ph ph-check text-xs font-bold"></i>
+                            </div>
+                            <div class="flex flex-col gap-1 w-full box-border">
+                                <h4 class="text-base text-text-primary font-medium tracking-tight line-through opacity-70">Submit final project proposal</h4>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                <div class="lg:col-span-1"></div>
+                <div class="lg:col-span-5 flex flex-col gap-6 justify-center">
+                    <div class="w-12 h-12 rounded-xl bg-surface-900 border border-white/[0.06] flex items-center justify-center text-text-primary shadow-sm-dark group-hover:border-accent-amber/50 group-hover:text-accent-amber transition-colors duration-500">
+                        <i class="ph ph-clipboard-text text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl lg:text-3xl font-semibold text-text-primary tracking-tight">Track coursework, not tabs</h3>
+                    <p class="text-lg text-text-secondary leading-relaxed">
+                        View assignments, due dates, and check them off alongside the people you're studying with. Break the Notion context-switch penalty.
+                    </p>
+                </div>
+            </article>
+
+            <!-- Row 3: Offline Sync -->
+            <article class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 py-24 border-t border-white/[0.06] reveal-node group" style="--idx:3">
+                <div class="lg:col-span-5 flex flex-col gap-6 justify-center">
+                    <div class="w-12 h-12 rounded-xl bg-surface-900 border border-white/[0.06] flex items-center justify-center text-text-primary shadow-sm-dark group-hover:border-danger/50 group-hover:text-danger transition-colors duration-500">
+                        <i class="ph ph-wifi-slash text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl lg:text-3xl font-semibold text-text-primary tracking-tight">Unreliable internet? Still works.</h3>
+                    <p class="text-lg text-text-secondary leading-relaxed">
+                        Compose messages, read channels, and track assignments completely offline. Our sync engine automatically handles the backlog when you connect.
+                    </p>
+                </div>
+                <div class="lg:col-span-1"></div>
+                
+                <div class="lg:col-span-6 relative rounded-2xl bg-surface-900 border border-white/[0.06] shadow-sm-dark overflow-hidden flex flex-col justify-end group-hover:-translate-y-2 group-hover:shadow-glow-subtle transition-all duration-700 ease-out h-[300px] border-b-0 rounded-b-none">
+                    
+                    <!-- Composer Offline Mock -->
+                    <div class="bg-surface-800 p-6 flex flex-col gap-3 rounded-t-xl border border-white/[0.06] border-b-0 mx-8 translate-y-4 shadow-pop relative glass-refract">
+                        <!-- Connection Alert Bar -->
+                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-danger text-white text-xs font-semibold px-3 py-1 rounded-full shadow-[0_0_15px_rgba(239,68,68,0.3)] flex items-center gap-1.5 animate-pulse">
+                            <i class="ph ph-warning-circle"></i> Offline
+                        </div>
+
+                        <div class="flex items-end gap-3 opacity-50 relative pointer-events-none">
+                             <div class="w-8 h-8 rounded-full bg-surface-600 shrink-0"></div>
+                             <div class="flex-1 bg-surface-700/50 rounded-lg p-3 text-sm text-text-secondary">Did you catch the homework definition?</div>
+                        </div>
+
+                        <div class="mt-4 border border-surface-600 focus-within:border-accent-emerald bg-surface-950 p-3 rounded-lg flex gap-2 w-full transition-colors relative z-10">
+                            <span class="text-sm font-medium text-text-primary flex-1">Yeah, it's problem set 4. I'll upload it when I'm back on campus wifi.</span>
+                            <div class="w-6 h-6 rounded bg-surface-600 flex items-center justify-center shrink-0">
+                                <i class="ph ph-paper-plane-right text-text-muted text-xs"></i>
+                            </div>
+                        </div>
+                        <div class="flex justifying-end">
+                            <span class="text-[11px] text-danger font-medium flex items-center gap-1"><i class="ph ph-clock"></i> 1 message will sync when online</span>
+                        </div>
+                    </div>
+                </div>
+            </article>
+        </section>
+
+        <!-- Testimonial (Optional Meso block embedded inside main flow) -->
+        <section class="max-w-[1000px] mx-auto px-6 py-20 border-y border-white/[0.06] reveal-node text-center bg-surface-950" style="--idx:0">
+            <i class="ph-fill ph-quotes text-4xl text-surface-600 mb-6 mx-auto"></i>
+            <p class="text-2xl md:text-4xl text-text-primary tracking-tight font-medium leading-[1.3] text-balance">
+                "Finally, we can stop context-switching between Discord and our assignment tracker. StudyHall just works — especially when our campus WiFi drops."
+            </p>
+            <div class="mt-8 flex items-center justify-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-surface-800 border border-surface-600 flex items-center justify-center font-semibold text-text-primary">A</div>
+                <div class="flex flex-col text-left">
+                    <span class="text-sm font-semibold text-text-primary">Alex Chen</span>
+                    <span class="text-xs text-text-secondary">Computer Science, Remote Learner</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Final CTA Area -->
+        <section class="w-full relative py-40 overflow-hidden bg-surface-950">
+            <div class="absolute inset-0 bg-gradient-to-b from-surface-950 to-[#0d1512] z-0"></div> <!-- Subtle dark emerald descent -->
+            
+            <div class="max-w-3xl mx-auto px-6 relative z-10 flex flex-col items-center text-center reveal-node" style="--idx:1">
+                <div class="w-16 h-16 rounded-[16px] bg-accent-emerald flex items-center justify-center shadow-emerald-wash mb-8 shadow-[0_0_60px_-10px_rgba(16,185,129,0.4)] relative">
+                    <div class="absolute inset-0 rounded-[16px] border border-white/20"></div>
+                    <i class="ph ph-books text-surface-950 font-bold text-3xl"></i>
+                </div>
+                
+                <h2 class="text-5xl md:text-7xl font-semibold text-text-primary tracking-tighter mb-6">Start studying smarter.</h2>
+                <p class="text-xl text-text-secondary mb-10 max-w-xl">
+                    Join thousands of students who have upgraded their workspace. Claim your free server in seconds.
+                </p>
+                <button onclick="triggerCTA()" class="h-[48px] px-8 rounded-md bg-accent-emerald text-white hover:bg-emerald-500 hover:-translate-y-[1px] active:translate-y-[0px] active:bg-emerald-600 transition-all font-semibold shadow-[0_8px_20px_-6px_rgba(16,185,129,0.3)] shadow-sm-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-950 focus-visible:ring-accent-emerald active:scale-[0.98] text-lg flex items-center gap-3">
+                    <span class="btn-text">Get started for free</span>
+                    <i class="ph ph-spinner animate-spin hidden btn-spinner"></i>
+                </button>
+                <span class="mt-4 text-xs text-text-muted uppercase tracking-wider font-semibold">No Ads. No Data Brokers.</span>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer: Macro layer termination -->
+    <footer class="border-t border-white/[0.06] bg-[#080809] pt-12 pb-8">
+        <div class="max-w-[1400px] mx-auto px-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+            
+            <div class="flex flex-col gap-2">
+                <div class="flex items-center gap-2">
+                    <i class="ph ph-books text-text-secondary text-lg"></i>
+                    <span class="font-semibold text-text-primary text-sm tracking-tight">StudyHall</span>
+                </div>
+                <p class="text-[12px] text-text-muted max-w-[280px] leading-relaxed">
+                    StudyHall is built for students. We don't track you for ads or sell your data. Your academic space stays yours.
+                </p>
+                <span class="text-[11px] text-text-muted mt-2">&copy; 2024 StudyHall Inc.</span>
+            </div>
+
+            <div class="flex gap-8 text-sm">
+                <div class="flex flex-col gap-3">
+                    <span class="font-semibold text-text-primary text-xs uppercase tracking-wider">Product</span>
+                    <a href="#" class="text-text-secondary hover:text-text-primary transition-colors">Download App</a>
+                    <a href="/auth/signin" class="text-text-secondary hover:text-text-primary transition-colors">Sign in</a>
+                </div>
+                <div class="flex flex-col gap-3">
+                    <span class="font-semibold text-text-primary text-xs uppercase tracking-wider">Legal</span>
+                    <a href="/privacy" class="text-text-secondary hover:text-text-primary transition-colors flex items-center gap-1.5"><i class="ph ph-shield-check text-accent-emerald"></i> Privacy Controls</a>
+                    <a href="/terms" class="text-text-secondary hover:text-text-primary transition-colors">Terms of Service</a>
+                </div>
+                <div class="flex flex-col gap-3">
+                    <span class="font-semibold text-text-primary text-xs uppercase tracking-wider">Social</span>
+                    <a href="#" class="text-text-secondary hover:text-text-primary transition-colors flex items-center gap-2"><i class="ph ph-x-logo"></i> Twitter</a>
+                    <a href="#" class="text-text-secondary hover:text-text-primary transition-colors flex items-center gap-2"><i class="ph ph-github-logo"></i> GitHub</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-[100] flex flex-col gap-2 pointer-events-none"></div>
+
+    <script>
+        /**
+         * StudyHall Interactions & Mechanics Simulator
+         */
+
+        // 1. Intersection Observer for Scroll Reveals (Macro-Polish)
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries, obs) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('is-visible');
+                    obs.unobserve(entry.target); // Run once per node
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.reveal-node').forEach(node => {
+            observer.observe(node);
+        });
+
+        // 2. Navigation Blur adjustment on scroll
+        const nav = document.getElementById('global-nav');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 20) {
+                nav.classList.add('shadow-sm-dark');
+                nav.style.borderBottomColor = 'rgba(255,255,255,0.1)';
+            } else {
+                nav.classList.remove('shadow-sm-dark');
+                nav.style.borderBottomColor = 'rgba(255,255,255,0.06)';
+            }
+        });
+
+        // 3. CTA Mechanics (Loading State -> Routing simulation)
+        function triggerCTA() {
+            // Find the specific button clicked to apply state locally
+            const btns = document.querySelectorAll('button');
+            const targetBtn = event.currentTarget || btns[0];
+            
+            const textSpan = targetBtn.querySelector('.btn-text');
+            const spinner = targetBtn.querySelector('.btn-spinner');
+
+            if (!textSpan || !spinner || targetBtn.disabled) return;
+
+            // Enter loading state
+            targetBtn.disabled = true;
+            targetBtn.classList.add('opacity-80', 'cursor-not-allowed');
+            textSpan.classList.add('hidden');
+            spinner.classList.remove('hidden');
+
+            // Simulate network request before routing
+            setTimeout(() => {
+                // Simulate success routing to /auth/signup. 
+                // For mockup purposes, show toast, then reset.
+                showToast('Routing to F1 Signup...', 'success');
+                
+                setTimeout(() => {
+                   targetBtn.disabled = false;
+                   targetBtn.classList.remove('opacity-80', 'cursor-not-allowed');
+                   textSpan.classList.remove('hidden');
+                   spinner.classList.add('hidden');
+                }, 1000);
+
+            }, 800);
+        }
+
+        // 4. Toast Primitive System (As defined in Design System bounds)
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            // Design system primitive colors
+            const indicatorColor = type === 'success' ? 'bg-accent-emerald' : 
+                                   type === 'error' ? 'bg-danger' : 'bg-surface-500';
+            
+            const icon = type === 'success' ? '<i class="ph ph-check-circle text-accent-emerald"></i>' : 
+                         type === 'error' ? '<i class="ph ph-warning-circle text-danger"></i>' : '';
+
+            toast.className = `transform translate-y-4 opacity-0 transition-all duration-300 pointer-events-auto bg-surface-700 rounded-md shadow-pop flex items-center p-3 pr-4 gap-3 border border-surface-600 relative overflow-hidden min-w-[280px]`;
+            toast.innerHTML = `
+                <div class="absolute left-0 top-0 bottom-0 w-1 ${indicatorColor}"></div>
+                <div class="w-5 h-5 flex items-center justify-center shrink-0 ml-1">
+                    ${icon}
+                </div>
+                <span class="text-sm text-text-primary font-medium tracking-tight">${message}</span>
+            `;
+
+            container.appendChild(toast);
+
+            // Animate in
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-4', 'opacity-0');
+            });
+
+            // Auto dismiss (4s)
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'scale-95');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // 5. App Start Simulator (Check URL for Invite Codes)
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if(urlParams.has('invite')) {
+                // Future Implementation: Render Over-the-top Modal for Invite Preview
+                setTimeout(() => {
+                   showToast(`Invite code ${urlParams.get('invite')} detected. Please sign in to join.`, 'success') 
+                }, 1000);
+            }
+        });
+    </script>
+</body>
+</html>

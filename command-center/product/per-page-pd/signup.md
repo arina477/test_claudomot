@@ -104,3 +104,6 @@ The entry point for new students to create a StudyHall account. This page captur
 - Confirm-password field reduces support load from typos
 - Invite link pre-fill proves StudyHall's server-first (not user-first) design
 - Dark theme from frame one reinforces brand identity and student preference
+
+---
+**Approved design (v9):** `design/signup.html`

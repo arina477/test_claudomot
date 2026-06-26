@@ -143,3 +143,6 @@ The email verification page for newly signed-up students. After signup, users mu
 - 10-minute code expiry is standard in fintech/banking (students expect it)
 - Single-use tokens prevent code reuse even if someone else has access to the email
 - Consider sending a "new device signed in" notification after verification (helps users detect account takeover attempts)
+
+---
+**Approved design (v9):** `design/email-verify.html`

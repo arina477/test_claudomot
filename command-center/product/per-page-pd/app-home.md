@@ -186,3 +186,6 @@ None at this stage (no real-time elements on the home page).
 - Invite codes are URL-safe base64; max 50 char input.
 - Once a server is joined, it appears in the rail; user is redirected away from `/app` into the first channel.
 - `prefers-color-scheme: dark` is the v0 default; light mode is optional future UX.
+
+---
+**Approved design (v9):** `design/app-home.html`

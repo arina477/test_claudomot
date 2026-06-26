@@ -560,3 +560,6 @@ From left to right:
 - SFU auth token is short-lived (5min expiry)
 - No recording without explicit user consent (H2 feature)
 - SRTP key agreement is negotiated at call start (not shared externally)
+
+---
+**Approved design (v9):** `design/voice-study-room.html`

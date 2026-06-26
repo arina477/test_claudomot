@@ -464,3 +464,6 @@ file_metadata table:
 - **Related pages:** Landing (hero CTA leads to F1 → this page), settings-privacy (account data includes profile info), server settings (member list shows profile cards)
 - **Competitive benchmarks:** Discord (avatar, username, theme), Notion (workspace creator profile), Teams (Azure AD + custom avatar)
 
+
+---
+**Approved design (v9):** `design/settings-profile.html`

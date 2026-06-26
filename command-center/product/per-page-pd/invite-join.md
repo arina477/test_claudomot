@@ -353,3 +353,6 @@ Displays once invite metadata is loaded (whether authed or not).
 - **Default member role:** Configured per-server by P2 in server settings (feature 11, role management). Common default: "Member" (can read all channels, cannot edit server or ban). More restrictive defaults (e.g., "Guest" with limited channel access) can be set by P2.
 - **Presence data on preview:** Member count is always available; online count is fetched but optional (may omit if presence service is slow). Fall back to member count only if latency > 500ms.
 - **Channel visibility filtering:** Only channels the default member role can see are shown in the preview. If P2 has locked down permissions (no visible channels), show "No channels visible to new members yet." to signal a permission mismatch.
+
+---
+**Approved design (v9):** `design/invite-join.html`

@@ -541,3 +541,6 @@ The Assignments panel is a prime showcase for offline-first reliability (the cor
 - **Competitive benchmarks:** Discord (no academics), Notion (no comms), Teams (enterprise-locked), Telegram (no structure)
 - **Related pages:** Landing (assignments mentioned as feature highlight), server settings (assignment retention/export), settings-privacy (data download includes assignment status)
 
+
+---
+**Approved design (v9):** `design/assignments-panel.html`

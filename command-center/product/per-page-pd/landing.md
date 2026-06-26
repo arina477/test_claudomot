@@ -239,3 +239,6 @@ The public landing page is the first surface a prospective student sees when ope
 - **Analytics:** Events defined; tracking IDs assigned.
 - **A/B testing readiness:** CTA copy variants (e.g., "Get started" vs. "Create a free account") + feature card order testable post-MVP.
 - **Accessibility:** Text contrast ≥4.5:1 on dark theme; hero visual alt text; focus states on buttons.
+
+---
+**Approved design (v9):** `design/landing.html`
