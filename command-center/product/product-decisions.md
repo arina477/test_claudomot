@@ -81,7 +81,13 @@ _(empty)_
 
 ## Process & Workflow
 
-_(empty)_
+### [2026-Q2] Roadmap planned — 13 milestones (v10)
+**Category**: Process
+**Status**: Active
+**Context**: v10 onboarding planning. Founder away in automatic mode; milestone shape authored and logged on their behalf (revisable at first refresh ritual). Zero child tasks per the per-wave-decomposition contract.
+**Decision**: 13 theme-based milestones (`status='todo'`) in the `milestones` table. **H1 (MVP, 7):** M1 Foundation (shell/auth/profiles), M2 Servers/channels/membership, M3 Real-time messaging, M4 **Offline-first reliability (the wedge)**, M5 Assignments, M6 Voice/video study rooms, M7 Privacy/notifications/launch polish. **H2 (4):** M8 Educator tools & deeper academics, M9 Monetization (freemium tiers), M10 Compliance & data rights (self-use-mvp → H2 default, promote on paying-school requirement), M11 Growth/discovery. **H3 (2):** M12 Offline-first moat, M13 Institution partnerships & portable identity. Sequencing: M1→M2→M3→M4 first (text MVP + the wedge), then M5/M6/M7; voice (M6) last in H1 given XL complexity + LiveKit cost decision. All 14 pages, 16 MVP features, all MVP modules, and all SDKs are covered in H1 milestone `## Scope` prose (v10 step-7 audit passed).
+**Rationale**: Theme-based, one theme per milestone; offline-first isolated as its own milestone (M4) so the differentiator gets first-class attention. Child tasks come per-wave via the decomposition ritual.
+**Alternatives considered**: One broad MVP milestone (the v1 seed — superseded/repurposed into M1); trim-to-MVP-only (kept H2/H3 themes as planned-but-inactive for roadmap visibility).
 
 ## Data Model Decisions
 
