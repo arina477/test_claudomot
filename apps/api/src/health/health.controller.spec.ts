@@ -4,6 +4,9 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { HealthResponseSchema } from '@studyhall/shared';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppModule } from '../app.module';
+import { initSuperTokens } from '../auth/supertokens.config';
+import { EmailService } from '../email/email.service';
+import { UsersService } from '../users/users.service';
 
 // Minimal type shim — supertest ships no bundled declarations
 type SuperTestResponse = { status: number; body: Record<string, unknown> };
@@ -16,6 +19,16 @@ describe('GET /health', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
+    // Mirror what bootstrap() does before NestFactory.create():
+    // SuperTokens must be initialized before the middleware handles any request.
+    // In production, bootstrap() runs initSuperTokens() before NestFactory.create().
+    // Tests never run bootstrap(), so we call it here instead.
+    // UsersService and EmailService have no injected constructor arguments — safe to
+    // instantiate directly, identical to what bootstrap() does. The idempotency guard
+    // in supertokens.config.ts makes this safe to call even if another test file
+    // initializes first.
+    initSuperTokens(new UsersService(), new EmailService());
+
     const moduleRef: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
