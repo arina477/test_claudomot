@@ -9,7 +9,10 @@
     "start": "node dist/src/main.js",
     "test": "vitest run",
     "test:ci": "vitest run --reporter=verbose",
-    "clean": "rimraf dist *.tsbuildinfo"
+    "clean": "rimraf dist *.tsbuildinfo",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:seed": "tsx src/db/seed.ts"
   },
   "dependencies": {
     "@anatine/zod-nestjs": "^2.0.4",
