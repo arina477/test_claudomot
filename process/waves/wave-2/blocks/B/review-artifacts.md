@@ -12,8 +12,8 @@
 | B-1 | process/waves/wave-2/stages/B-1-contracts.md | done | MeResponse Zod (d12e3c2) |
 | B-2 | process/waves/wave-2/stages/B-2-backend.md | done | full auth backend (f89f1b6); G-1 handled |
 | B-3 | process/waves/wave-2/stages/B-3-frontend.md | skipped | backend-only |
-| B-4 | process/waves/wave-2/stages/B-4-wiring.md | pending | |
-| B-5 | process/waves/wave-2/stages/B-5-verify.md | pending | |
+| B-4 | process/waves/wave-2/stages/B-4-wiring.md | done | AppModule+main.ts (in B-2) |
+| B-5 | process/waves/wave-2/stages/B-5-verify.md | done | lint/typecheck/build/test green; smoke→deploy |
 | B-6 | process/waves/wave-2/stages/B-6-review.md | pending | |
 
 ## Block-specific context
