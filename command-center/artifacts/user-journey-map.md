@@ -1,7 +1,7 @@
 ---
 name: User Journey Map
 description: Canonical inventory of every user flow, screen, route, API endpoint. Regenerated at T-9 from production state.
-last_updated: 2026-06-26 (v4 onboarding baseline)
+last_updated: 2026-06-26 (T-9 wave-1 regen)
 version: 0.2
 status_legend:
   - "✅ Live: page renders correctly with real content in production"
@@ -38,6 +38,18 @@ Canonical inventory of every screen / route / surface + flow cross-reference. Re
 | 16 | User settings — privacy | `/settings/privacy` | P1 | F1 | privacy controls | full |
 
 **Compliance-surface quota (self-use-mvp, ≤~10%):** 2 stub pages (Privacy policy, Terms) of 16 ≈ 12% — within tolerance; stubbed, no full fan-out. `/settings/privacy` is a product surface (feature 16), not a compliance-doc page → full PD.
+
+
+## Deployment status — wave-1 (M1 foundation, shipped)
+
+Live on Railway: web https://web-production-bce1a8.up.railway.app · api https://api-production-b93e.up.railway.app/health (200).
+Verified via HTTP + CI RTL component tests (live-browser crawl deferred — Playwright MCP chrome-channel absent in env; a CI chromium job is queued for the next UI wave).
+
+| Surface | Status | Note |
+|---|---|---|
+| App shell chrome (server rail + channel sidebar + main column) | 🟡 Live but degraded | renders live (dark theme, ConnectionStateIndicator) with placeholder content; no real servers/channels/messages yet |
+| `GET /health` (api) | ✅ Live | 200 `{status:ok,service,version}` |
+| All other pages (auth, real server view, assignments, voice, settings) | ❌ Not built | per per-page-pd; auth = next wave (b9118041) |
 
 ## Flows cross-reference
 
