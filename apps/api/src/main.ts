@@ -4,8 +4,29 @@ import { NestFactory } from '@nestjs/core';
 import supertokens from 'supertokens-node';
 import { AppModule } from './app.module';
 import { SupertokensExceptionFilter } from './auth/auth.exception.filter';
+import { initSuperTokens } from './auth/supertokens.config';
+import { EmailService } from './email/email.service';
+import { UsersService } from './users/users.service';
 
 async function bootstrap(): Promise<void> {
+  // ORDERING GUARANTEE: supertokens.init() MUST run before NestFactory.create(),
+  // before getAllCORSHeaders(), and before any HTTP request can be served.
+  //
+  // Why not onModuleInit(): NestJS fires onModuleInit() lazily, during app.listen()
+  // (or app.init()), which is AFTER enableCors() has already called getAllCORSHeaders().
+  // The SDK throws "Initialisation not done" if any SDK function is called before init().
+  //
+  // Why new UsersService() / new EmailService() here: both classes have no injected
+  // constructor arguments — UsersService uses the db module-level singleton directly,
+  // EmailService reads env vars in its constructor. They are safe to instantiate
+  // without Nest DI. AuthModule still provides them via DI for all other consumers
+  // (guards, controllers, etc.); these pre-DI instances are used only for the
+  // initSuperTokens override closures that run inside the SDK itself.
+  //
+  // initSuperTokens is idempotent (guarded by _initialized flag) so AuthModule's
+  // providers constructing these services via DI later causes no double-init.
+  initSuperTokens(new UsersService(), new EmailService());
+
   const app = await NestFactory.create(AppModule);
 
   // Split WEB_ORIGIN on comma to support multiple origins (e.g. localhost + prod)
@@ -14,7 +35,8 @@ async function bootstrap(): Promise<void> {
   const origin = allowedOrigins.length === 1 ? (allowedOrigins[0] ?? rawOrigin) : allowedOrigins;
 
   // CORS must be configured before routes. SuperTokens CORS headers are required
-  // for the SDK to function across origins (e.g. cookie negotiation).
+  // for the SDK to function across origins (e.g. cookie negotiation). getAllCORSHeaders()
+  // is safe here because initSuperTokens() ran above, before NestFactory.create().
   app.enableCors({
     origin,
     credentials: true,
