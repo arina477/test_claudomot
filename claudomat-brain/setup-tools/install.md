@@ -160,7 +160,7 @@ agentmail auth login
 
 | If project uses... | Install |
 |---|---|
-| Railway for deploy | `npm install -g @railway/cli` then `railway login` |
+| Railway for deploy | Nothing to install — the brain talks to Railway over its GraphQL API (`https://backboard.railway.com/graphql/v2`) with `curl` + `jq`, using `RAILWAY_TOKEN` / `RAILWAY_PROJECT_ID` from the environment. Do **not** install the Railway CLI. See `claudomat-brain/monitors/railway-deploy.md` and C-2 Action 0. |
 | Netlify for deploy | `npm install -g netlify-cli` then `netlify login` |
 | Vercel for deploy | `npm install -g vercel` then `vercel login` |
 | AWS CDK / CloudFormation | `npm install -g aws-cdk` + AWS CLI per platform |

@@ -168,7 +168,7 @@ Does NOT escalate yet — surfaces the anomaly early so the log shows a clear ma
 | Never | Why |
 |---|---|
 | Omit `failure_condition`. | Monitor sits forever on a failed deploy. |
-| Use `/healthz` as `success_condition` instead of the platform's deploy-state endpoint (`railway status --json`, `vercel inspect`, `gh run list`). | A health 200 can keep serving old code after the new deploy failed. |
+| Use `/healthz` as `success_condition` instead of the platform's deploy-state endpoint (Railway's GraphQL `deployments` query, `vercel inspect`, `gh run list`). | A health 200 can keep serving old code after the new deploy failed. |
 | Omit a finite `timeout_budget`. | Infinite-wait monitors are how sessions die unnoticed and the loop ticks forever. |
 | Retry on `failure_condition` exit 0. | Automatic retry of a failed deploy ships bad code or hides the same failure silently. |
 | Check a commit-SHA match against HEAD instead of the platform's own state flag. | Platforms lag on reporting the shipped commit — the poll fires before propagation. (Exception: Netlify's `commit_ref` check; see `claudomat-brain/monitors/netlify-deploy.md`.) |
