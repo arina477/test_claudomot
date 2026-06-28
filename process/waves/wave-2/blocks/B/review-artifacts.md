@@ -9,9 +9,9 @@
 | Stage | Deliverable file | Status | Notes |
 |---|---|---|---|
 | B-0 | process/waves/wave-2/stages/B-0-branch-and-schema.md | done | branch+deps+env+infra(Postgres+ST core live)+Drizzle users schema/migration |
-| B-1 | process/waves/wave-2/stages/B-1-contracts.md | pending | MeResponse Zod (shared) |
-| B-2 | process/waves/wave-2/stages/B-2-backend.md | pending | DbModule/UsersModule/AuthModule/EmailModule/MeController — Resend key needed |
-| B-3 | process/waves/wave-2/stages/B-3-frontend.md | pending | SKIP (backend-only) |
+| B-1 | process/waves/wave-2/stages/B-1-contracts.md | done | MeResponse Zod (d12e3c2) |
+| B-2 | process/waves/wave-2/stages/B-2-backend.md | done | full auth backend (f89f1b6); G-1 handled |
+| B-3 | process/waves/wave-2/stages/B-3-frontend.md | skipped | backend-only |
 | B-4 | process/waves/wave-2/stages/B-4-wiring.md | pending | |
 | B-5 | process/waves/wave-2/stages/B-5-verify.md | pending | |
 | B-6 | process/waves/wave-2/stages/B-6-review.md | pending | |
