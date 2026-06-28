@@ -62,7 +62,7 @@ merge_strategy: "squash"
 deploy_targets:
   # Read by C-2. One entry per platform the wave deploys to.
   - platform: "railway"
-    project: "studyhall"   # generic placeholder; brain provisions + back-fills the real Railway project at first deploy (C-2 Action 0)
+    project: "app-arina-89ejyn"   # Railway project ae55c191 (studio-provisioned). Live: web-production-bce1a8.up.railway.app, api-production-b93e.up.railway.app
     service_name_template: "studyhall-${SERVICE}"
     health_endpoint: "/health"
     canary_threshold_dau: 1000

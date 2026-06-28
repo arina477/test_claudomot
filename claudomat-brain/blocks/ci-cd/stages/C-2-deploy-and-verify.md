@@ -12,9 +12,9 @@ Verify every configured deploy target received the merged commit and is serving 
 ## Prerequisites
 
 - C-1 exited (PR merged to main; merge commit SHA captured).
-- READ `project.yaml: deploy_targets[]` for configured deploy targets, health endpoints (`health_endpoint`), and per-target canary threshold (`canary_threshold_dau`). Deploy is **bring-your-own** — `deploy_targets[]` may be empty on a first deploy until Action 0 collects a credential and the brain provisions the target.
+- READ `project.yaml: deploy_targets[]` for configured deploy targets, health endpoints (`health_endpoint`), and per-target canary threshold (`canary_threshold_dau`). For the **default Railway path** the credential is already provided (see Action 0); `deploy_targets[]` may be empty on a first deploy until Action 0 confirms the credential and the brain provisions the target.
 - READ `claudomat-brain/management/<mode>-mode.md` for async-deploy handling under autonomous modes.
-- READ `claudomat-brain/monitors/railway-deploy.md` § "Project-token vs account/workspace-token" before probing for a Railway credential in Action 0 — `whoami` / `list` / account-flavored `status` can fail on a valid project token; never read "no access" from those.
+- READ `claudomat-brain/monitors/railway-deploy.md` § "Project-scoped token — `Project-Access-Token` header, never `me { … }`" before probing for the Railway credential in Action 0 — Railway is GraphQL-only (no Railway CLI), the token authenticates via the `Project-Access-Token` header, and the deploy-scoped GraphQL probe (not `me { … }`) tells you whether the credential is usable.
 
 ## Skip condition
 
@@ -26,17 +26,28 @@ Canary sub-actions (Action 5–7) skip when project's real-user traffic is below
 
 ## Actions
 
-### Action 0 — Ensure a deploy credential (bring-your-own)
+### Action 0 — Confirm the Railway deploy credential (provided by default)
 
-Deploy is **bring-your-own**: nothing is pre-provisioned. Before any target work, confirm the brain actually holds a usable credential for this project's `stack.deploy_platform` (Railway by default). If it does, skip straight to Action 1 and let the brain provision and deploy. If it does NOT, **pause and ask the founder for one** — never declare "no access", never invent a manual workaround, never hand the deploy back to the founder to do themselves.
+For the **default Railway path the credential is already provided** in the environment: a project-scoped `RAILWAY_TOKEN` (plus its `RAILWAY_PROJECT_ID`). Nothing for the founder to set up. Detect it and use it directly over Railway's GraphQL API — there is no Railway CLI. If the token is present and usable, proceed to Action 1 and let the brain provision and deploy. Only the explicitly-non-default opt-out branches below (founder declines Railway, or no Railway token at all) pause and ask the founder.
 
-**Probe for a usable credential — deploy-scoped, not account-flavored.** A `railway` token may be a project token or an account/workspace token; `railway whoami` / `railway list` / account-flavored `railway status` can fail on a perfectly valid project token. Do NOT conclude "no credential" from those. Verify with a deploy-scoped command per `claudomat-brain/monitors/railway-deploy.md` § "Project-token vs account/workspace-token". Treat the credential as **present** only when a deploy-scoped Railway call succeeds (or, before any project exists, when `RAILWAY_TOKEN` / `RAILWAY_API_TOKEN` is set in the environment); treat it as **absent** only when no Railway token is in the environment at all.
+**Probe for a usable credential — deploy-scoped GraphQL, never `me { … }`.** Railway is GraphQL-only at `https://backboard.railway.com/graphql/v2`, and the project token authenticates via the **`Project-Access-Token: $RAILWAY_TOKEN` header** (NOT `Authorization: Bearer`). Run the deploy-scoped probe per `claudomat-brain/monitors/railway-deploy.md` § "Project-scoped token — `Project-Access-Token` header, never `me { … }`":
 
-**Env-var presence is a provisional 'attempt' signal, not proof of validity.** Before any project exists there is no deploy-scoped call to make, so a token exported in the environment is taken as "present" and the brain proceeds to provision. But that token may be stale / expired / revoked. If the **first real deploy-scoped Railway call** during provisioning (create project / service, `railway domain`, deploy) fails with an **auth / unauthorized** error — as opposed to a "no project / service yet" error — treat that as **credential-absent** and route back to this Action 0 founder-ask pause (`AskUserQuestion` in `founder-review` / `default`, or `STATUS: BLOCKED` per the `automatic` / `degenerate` branch below). Do NOT declare a hard deploy failure for an auth error on a bring-your-own token; the founder needs to mint a fresh one.
+```bash
+# Self-discover the project/environment id if needed, then probe the deploy surface.
+curl -sS https://backboard.railway.com/graphql/v2 \
+  -H "Project-Access-Token: $RAILWAY_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"query\":\"query(\$id:String!){ project(id:\$id){ id services { edges { node { id name } } } } }\",\"variables\":{\"id\":\"$RAILWAY_PROJECT_ID\"}}" \
+  | jq -e '.data.project != null and (.errors | not)'   # exit 0 ⇒ token usable
+```
 
-**If a credential is present:** proceed to Action 1. With the founder's own (full-power) token the brain itself runs the whole flow — create the Railway project / service / database, generate a public domain (`railway domain`), deploy, and report the resulting live URL to the founder. Do not pause.
+Treat the credential as **present** when this probe succeeds (or, before any project exists, when `RAILWAY_TOKEN` is set in the environment); treat it as **absent** only when no `RAILWAY_TOKEN` is in the environment at all. Never use `me { … }` — a project-scoped token gets `Not Authorized` on it.
 
-**If no credential is present:** PAUSE via the **existing** founder-review path — do NOT invent a new mechanism.
+**Env-var presence is a provisional 'attempt' signal, not proof of validity.** Before any project exists there is no deploy-scoped call to make, so `RAILWAY_TOKEN` exported in the environment is taken as "present" and the brain proceeds to provision. But that token may be stale / expired / revoked. If the **first real deploy-scoped GraphQL call** during provisioning (create project / service via `serviceCreate`, create a domain via `serviceDomainCreate`, trigger a deploy) returns an **auth / unauthorized** `errors` payload — as opposed to a "no project / service yet" empty result — treat that as **credential-absent** and route to the non-default opt-out pause below (`AskUserQuestion` in `founder-review` / `default`, or `STATUS: BLOCKED` per the `automatic` / `degenerate` branch). Do NOT declare a hard deploy failure for an auth error; the credential needs replacing.
+
+**If the credential is present (the default):** proceed to Action 1. The brain itself runs the whole flow over GraphQL — create the Railway service / database (`serviceCreate` against `RAILWAY_PROJECT_ID`, environment `production`), generate a public domain (`serviceDomainCreate`), trigger the deploy, and report the resulting live URL to the founder. Do not pause. (The project already has exactly one environment, `production` — do NOT create environments.)
+
+**If the credential is absent OR the founder opts out of Railway (the non-default branch):** PAUSE via the **existing** founder-review path — do NOT invent a new mechanism.
 
 - **`founder-review` / `default` mode** — fire an `AskUserQuestion` in chat (plain, product-first language per always-on rule 16). Ask the founder to set up their own hosting and paste an API token. Include these exact steps:
 
@@ -48,9 +59,9 @@ Deploy is **bring-your-own**: nothing is pre-provisioned. Before any target work
   >
   > Once I have it, I'll set up the project, database, and a public web address, deploy your app, and send you the live link. I never store the token in your codebase — it lives only in the deploy environment."
 
-  Options: **Paste token now** (founder pastes it → store it in the deploy environment / platform secrets, never commit it, then re-enter Action 0) · **I'll use a different host** (founder names Netlify / Vercel / AWS / … → update `project.yaml` `stack.deploy_platform` + `deploy_targets[]` and ask for that provider's token instead) · **Custom** (free-text).
+  Options: **Paste token now** (founder pastes it → store it in the deploy environment / platform secrets as `RAILWAY_TOKEN`, never commit it, then re-enter Action 0) · **I'll use a different host** (founder names Netlify / Vercel / AWS / … → update `project.yaml` `stack.deploy_platform` + `deploy_targets[]` and ask for that provider's token instead) · **Custom** (free-text).
 
-- **`automatic` / `degenerate` mode** — a missing deploy credential is an **infra-readiness hard stop** (no safe technical default exists — only the founder can create an account and mint a token; always-on rule 17 keeps account-issued credentials founder-supplied). Write `STATUS: BLOCKED` to `process/session/status-check.yaml` with `pause_evidence.trigger=d-hard-stop-verdict` and `measurement.shape: infra-readiness` (siblings under `measurement`: `source: deploy-credential-missing`, `platform: <stack.deploy_platform>`, and a `founder_action:` field carrying the same 3-step account+token instructions as above). End the turn — do NOT call `ScheduleWakeup`, do NOT provision, do NOT proceed to Action 1. `BLOCKED` is terminal until the founder pastes a token (resume via ESC + chat or by editing `status-check.yaml`). On resume, re-enter Action 0 from the top.
+- **`automatic` / `degenerate` mode** — a missing deploy credential with no founder-supplied alternative is an **infra-readiness hard stop** (no safe technical default exists — only the founder can create an account and mint a token; always-on rule 17 keeps account-issued credentials founder-supplied). Write `STATUS: BLOCKED` to `process/session/status-check.yaml` with `pause_evidence.trigger=d-hard-stop-verdict` and `measurement.shape: infra-readiness` (siblings under `measurement`: `source: deploy-credential-missing`, `platform: <stack.deploy_platform>`, and a `founder_action:` field carrying the same 3-step account+token instructions as above). End the turn — do NOT call `ScheduleWakeup`, do NOT provision, do NOT proceed to Action 1. `BLOCKED` is terminal until the founder pastes a token (resume via ESC + chat or by editing `status-check.yaml`). On resume, re-enter Action 0 from the top.
 
 Record the outcome (credential present → provisioned-by-brain, or paused-for-token) in the C-2 deliverable `note:` field.
 
@@ -60,7 +71,7 @@ Read `project.yaml: deploy_targets[]` for declared deploy platforms. Each target
 
 ### Action 2 — Per-target deploy verification
 
-For each declared target, run the platform's CLI to confirm the merge commit deployed and is healthy.
+For each declared target, run the platform's CLI (or, for Railway, its GraphQL API) to confirm the merge commit deployed and is healthy.
 
 **GitHub Pages / GitHub Actions deploy job**
 ```
@@ -74,17 +85,17 @@ netlify api listSiteDeploys --data '{"site_id":"<id>","per_page":"3"}'
 ```
 Expected: latest deploy `state: ready` and `commit_ref: <merge-commit-sha>`.
 
-**Railway**
+**Railway** (GraphQL only — no Railway CLI)
+```bash
+# Query the latest deployment for the service over GraphQL. Project token authenticates via
+# the Project-Access-Token header (NOT Bearer); never use me{}. See railway-deploy.md
+# § "Project-scoped token — `Project-Access-Token` header, never `me { … }`".
+curl -sS https://backboard.railway.com/graphql/v2 \
+  -H "Project-Access-Token: $RAILWAY_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"query\":\"query(\$pid:String!,\$sid:String!){ deployments(first:3, input:{ projectId:\$pid, serviceId:\$sid }){ edges { node { status meta staticUrl } } } }\",\"variables\":{\"pid\":\"$RAILWAY_PROJECT_ID\",\"sid\":\"$RAILWAY_SERVICE_ID\"}}"
 ```
-# CLI first (per block dispatcher's CLI-over-MCP rule). `railway deployment list`
-# (SINGULAR) is the deploy-scoped command — it has -s/--service + --json and returns a
-# bare array (latest deployment is .[0]); see railway-deploy.md § "Project-token vs
-# account/workspace-token". `railway status` is account-flavored and is NOT the deploy probe.
-railway deployment list --limit 3 --json --service "$RAILWAY_SERVICE"
-# MCP fallback only if CLI unavailable in this environment
-# mcp__Railway__list-deployments
-```
-Expected: latest deployment (`.[0]`) `SUCCESS` (NOT `SKIPPED`) with `commitHash: <merge-commit-sha>`. Never lead with the MCP call when the Railway CLI is installed.
+Expected: latest deployment (`.data.deployments.edges[0].node`) `status: SUCCESS` (NOT `SKIPPED`) with the merge commit in its `meta` (Railway records the deployed commit under the deployment `meta`).
 
 **Vercel**
 ```
@@ -252,7 +263,7 @@ Per Iron Law: do NOT fix directly.
 |---|---|---|
 | Netlify build error: secrets scanner block | Secret committed in source/config | Hard stop. Rotate secret at issuing platform, rewrite history, force-push, re-trigger. Never disable the scanner. |
 | Netlify build error: missing env var | Platform env var not configured | Add via platform UI / CLI; rerun deploy. |
-| Railway SKIPPED | Railway deprioritized OR no detected change in service | `railway redeploy --service <name>` to force; if persistent, investigate. |
+| Railway SKIPPED | Railway deprioritized OR no detected change in service | Force a redeploy via the GraphQL `serviceInstanceRedeploy` (or `deploymentRedeploy`) mutation against the service id; if persistent, investigate. |
 | Health endpoint 5xx | Runtime crash on new commit | `/investigate` → likely B-2 / B-4 defect; revert PR if production-critical (head-builder respawn for revert wave). |
 | Stale uptime > 300s, old commit | Platform did not redeploy | Force redeploy via platform CLI; if recurring, escalate. |
 
