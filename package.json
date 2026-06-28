@@ -16,11 +16,11 @@
     "test": "turbo run test",
     "test:ci": "turbo run test:ci",
     "test:watch": "turbo run test -- --watch",
-    "db:generate": "echo 'no DB yet (deferred)' && exit 0",
-    "db:migrate": "echo 'no DB yet (deferred)' && exit 0",
-    "db:migrate:test": "echo 'no DB yet (deferred)' && exit 0",
-    "db:seed": "echo 'no DB yet (deferred)' && exit 0",
-    "db:studio": "echo 'no DB yet (deferred)' && exit 0",
+    "db:generate": "turbo run db:generate --filter=@studyhall/api",
+    "db:migrate": "turbo run db:migrate --filter=@studyhall/api",
+    "db:migrate:test": "turbo run db:migrate:test --filter=@studyhall/api",
+    "db:seed": "pnpm --filter @studyhall/api db:seed",
+    "db:studio": "cd apps/api && drizzle-kit studio",
     "clean": "turbo run clean && rimraf node_modules"
   },
   "devDependencies": {
