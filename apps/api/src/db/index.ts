@@ -15,6 +15,23 @@ function getPool(): Pool {
   return _pool;
 }
 
-export const db = drizzle(getPool, { schema });
+// Lazy drizzle instance — resolved on first property access so that importing
+// this module at test time (without DATABASE_URL set) does not throw.
+type DrizzleDb = ReturnType<typeof drizzle<typeof schema>>;
+
+let _db: DrizzleDb | undefined;
+
+function getDb(): DrizzleDb {
+  if (!_db) {
+    _db = drizzle(getPool(), { schema });
+  }
+  return _db;
+}
+
+export const db: DrizzleDb = new Proxy({} as DrizzleDb, {
+  get(_target, prop: string | symbol) {
+    return (getDb() as unknown as Record<string | symbol, unknown>)[prop];
+  },
+});
 
 export { getPool as pool };
