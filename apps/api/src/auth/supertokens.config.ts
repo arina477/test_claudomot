@@ -5,7 +5,15 @@ import Session from 'supertokens-node/recipe/session';
 import type { EmailService } from '../email/email.service';
 import type { UsersService } from '../users/users.service';
 
+// Guard against accidental double-init (e.g. if a future refactor calls this
+// from both bootstrap() and a module). The SDK itself throws on double-init, so
+// this provides a clear message instead of a cryptic SDK error.
+let _initialized = false;
+
 export function initSuperTokens(usersService: UsersService, emailService: EmailService): void {
+  if (_initialized) return;
+  _initialized = true;
+
   supertokens.init({
     framework: 'express',
     appInfo: {
