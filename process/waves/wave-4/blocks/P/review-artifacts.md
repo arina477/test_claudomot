@@ -3,9 +3,9 @@
 | Stage | Deliverable | Status | Notes |
 |---|---|---|---|
 | P-0 | stages/P-0-frame.md | done | PROCEED (both reviewers); storage cred founder-ask flagged for B-0 |
-| P-1 | stages/P-1-decompose.md | pending | |
-| P-2 | stages/P-2-spec.md | pending | |
-| P-3 | stages/P-3-plan.md | pending | |
+| P-1 | stages/P-1-decompose.md | done | PROCEED single-spec; design_gap_flag=false |
+| P-2 | stages/P-2-spec.md | done | 10 ACs; username-collision + presign + shared FilesModule; storage cred founder-ask B-0 |
+| P-3 | stages/P-3-plan.md | done | full-stack profile + shared FilesModule(presign); storage-cred plan at B-0 |
 | P-4 | blocks/P/gate-verdict.md | pending | |
 ## Context
 - wave_db_id 82387899 (wave 4); M1; seed 2a655960 (split from wave-3). no-prior-spec → full P-1..P-3.
