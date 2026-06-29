@@ -632,7 +632,7 @@
                       <i class="ph ph-prohibit text-base text-danger shrink-0" aria-hidden="true"></i>
                       <div class="min-w-0 flex-1">
                         <p class="text-sm font-medium t-muted truncate line-through" style="font-family:'Geist Mono', ui-monospace, monospace;">…pA8wQs</p>
-                        <p class="text-xs text-danger">Revoked — this link no longer works.</p>
+                        <p class="text-xs t-primary">Revoked — this link no longer works.</p>
                       </div>
                     </li>
                     <!-- remaining active row -->
@@ -671,7 +671,7 @@
     <!-- Showcase footer note -->
     <footer class="max-w-7xl mx-auto mt-12 pt-8 border-t b-hairline text-center">
       <p class="text-xs t-muted">wave-9 delta — 8 states rendered. (8b) DEFAULT = the server's PERMANENT invite link, labeled "Permanent"; "Generate a limited invite" is a lower-emphasis secondary action. (revoke) limited-invites list with per-row trash control → inline danger confirm → honest "Revoked — no longer works" row + Toast. Owner/creator only; NO role/RBAC UI; permanent-code rotation out of scope (display only).</p>
-      <p class="text-xs t-muted mt-2">Composed strictly from Modal + Button (primary emerald / secondary surface-700 / destructive danger / ghost) + Input + Toast + inline Alert + list primitives (no new component class, no new token). Geist Mono for code strings. Emerald focus-visible ring on all controls; danger focus ring on destructive revoke controls. A11y: focus-trap (close → link → Copy → Generate → list revoke controls → Done); Esc/scrim/close dismiss + focus restore; Toast role="status"; error + confirm role="alert"; revoked state conveyed by icon + text + color (not color alone); icon-only buttons carry aria-label. WCAG AA: text-surface-950 on emerald + on danger fills; danger #ef4444 text on surface-800 for revoked label.</p>
+      <p class="text-xs t-muted mt-2">Composed strictly from Modal + Button (primary emerald / secondary surface-700 / destructive danger / ghost) + Input + Toast + inline Alert + list primitives (no new component class, no new token). Geist Mono for code strings. Emerald focus-visible ring on all controls; danger focus ring on destructive revoke controls. A11y: focus-trap (close → link → Copy → Generate → list revoke controls → Done); Esc/scrim/close dismiss + focus restore; Toast role="status"; error + confirm role="alert"; revoked state conveyed by icon + text + color (not color alone); icon-only buttons carry aria-label. WCAG AA: text-surface-950 on emerald + on danger fills; revoked-row label uses t-primary (white) text — the danger/revoked signal is carried by the ph-prohibit icon + strikethrough + dimming, not by low-contrast colored text.</p>
     </footer>
   </main>
 
