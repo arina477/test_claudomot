@@ -2,7 +2,7 @@
 **Block:** V · **Wave topic:** Profile customization live (username/accent verified; avatar path built, bucket pending) · **Gate:** V-3 · **Status:** in-progress
 | Stage | File(s) | Status | Notes |
 |---|---|---|---|
-| V-1 | V-1-karen.md + V-1-jenny.md + V-1-summary.md | in-progress | |
+| V-1 | V-1-karen.md + V-1-jenny.md + V-1-summary.md | done | Karen+jenny APPROVE (9/10; AC7 Medium→84e09891) |
 | V-2 | V-2-triage.md | pending | |
 | V-3 | V-3-fast-fix.md | pending | |
 ## Context
