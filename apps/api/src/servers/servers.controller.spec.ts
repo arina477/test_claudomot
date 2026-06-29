@@ -34,7 +34,7 @@ const mockSummaries: ServerSummary[] = [
 ];
 
 const mockDetail: ServerDetail = {
-  server: { id: 'server-1', name: 'Study Hall', ownerId: 'user-abc' },
+  server: { id: 'server-1', name: 'Study Hall', ownerId: 'user-abc', inviteCode: 'perm-code-abc' },
   categories: [
     {
       id: 'cat-1',
@@ -57,6 +57,7 @@ function makeController() {
     createInvite: vi.fn<() => Promise<InviteResponse>>(),
     getInvitePreview: vi.fn<() => Promise<InvitePreview>>(),
     joinViaInvite: vi.fn<() => Promise<JoinResult>>(),
+    revokeInvite: vi.fn<() => Promise<void>>(),
   };
   // biome-ignore lint/suspicious/noExplicitAny: test mock — full type not needed
   const controller = new ServersController(serversService as any);
@@ -351,5 +352,55 @@ describe('InvitesController — public preview guard contract', () => {
 
     expect(serversService.joinViaInvite).toHaveBeenCalledWith('abc123', 'verified-user');
     expect(result).toEqual({ serverId: 'server-1' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /invites/:code/revoke (task 863c10ef) — AuthGuard required
+// ---------------------------------------------------------------------------
+
+describe('InvitesController.revokeInvite', () => {
+  let invitesController: InvitesController;
+  let serversService: ReturnType<typeof makeController>['serversService'];
+
+  beforeEach(() => {
+    ({ invitesController, serversService } = makeController());
+  });
+
+  it('returns void (200) on successful revoke by owner/creator', async () => {
+    serversService.revokeInvite.mockResolvedValue(undefined);
+
+    const result = await invitesController.revokeInvite(makeReq('owner-1'), 'rev-code-123');
+
+    expect(result).toBeUndefined();
+    expect(serversService.revokeInvite).toHaveBeenCalledWith('rev-code-123', 'owner-1');
+  });
+
+  it('is idempotent — re-revoking returns void (200) without error', async () => {
+    serversService.revokeInvite.mockResolvedValue(undefined);
+
+    const result = await invitesController.revokeInvite(makeReq('owner-1'), 'rev-code-123');
+
+    expect(result).toBeUndefined();
+  });
+
+  it('propagates ForbiddenException (403) when caller is not owner/creator', async () => {
+    serversService.revokeInvite.mockRejectedValue(
+      new ForbiddenException('Not authorized to revoke this invite'),
+    );
+
+    await expect(
+      invitesController.revokeInvite(makeReq('stranger-99'), 'rev-code-123'),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it('propagates NotFoundException (404) for permanent code or nonexistent code', async () => {
+    serversService.revokeInvite.mockRejectedValue(
+      new NotFoundException('Invite not found or invalid'),
+    );
+
+    await expect(invitesController.revokeInvite(makeReq('owner-1'), 'perm-code')).rejects.toThrow(
+      NotFoundException,
+    );
   });
 });

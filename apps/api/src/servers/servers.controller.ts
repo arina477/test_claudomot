@@ -127,4 +127,23 @@ export class InvitesController {
     const userId = req.session.getUserId();
     return await this.serversService.joinViaInvite(code, userId);
   }
+
+  /**
+   * POST /invites/:code/revoke
+   * Requires authentication (AuthGuard).
+   * Caller must be the server owner OR the invite creator — else 403.
+   * Idempotent: re-revoking an already-revoked invite returns 200.
+   * Permanent codes (servers.invite_code) are not in the invites table → 404.
+   * After revoke: GET /invites/:code → 404, POST /:code/join → 404.
+   */
+  @Post(':code/revoke')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async revokeInvite(
+    @Req() req: SessionAugmentedRequest,
+    @Param('code') code: string,
+  ): Promise<void> {
+    const userId = req.session.getUserId();
+    await this.serversService.revokeInvite(code, userId);
+  }
 }

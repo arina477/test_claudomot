@@ -38,6 +38,23 @@ function makeInsertChain(returningValue: unknown[]) {
   return chain;
 }
 
+/**
+ * Thennable mock chain for db.update(table).set(data).where(cond).
+ * Supports both `await chain` (resolves undefined) and `.where(...)` chained call.
+ */
+function makeUpdateChain() {
+  const whereChain: Record<string, unknown> = {
+    // biome-ignore lint/suspicious/noThenProperty: intentional thenable mock for drizzle update chain
+    then: (res: (v: unknown) => unknown, rej?: (e: unknown) => unknown) =>
+      Promise.resolve(undefined).then(res, rej),
+  };
+  const setChain: Record<string, unknown> = {};
+  setChain.where = vi.fn().mockReturnValue(whereChain);
+  const chain: Record<string, unknown> = {};
+  chain.set = vi.fn().mockReturnValue(setChain);
+  return chain;
+}
+
 // ---------------------------------------------------------------------------
 // db module mock — replaced before any import of the module under test
 // ---------------------------------------------------------------------------
@@ -59,6 +76,7 @@ type MockFn = ReturnType<typeof vi.fn>;
 const mockTransaction = db.transaction as unknown as MockFn;
 const mockSelect = db.select as unknown as MockFn;
 const mockInsert = db.insert as unknown as MockFn;
+const mockUpdate = db.update as unknown as MockFn;
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -266,7 +284,12 @@ describe('ServersService.findServerDetail', () => {
 
     const result = await service.findServerDetail('user-1', 'server-1');
 
-    expect(result.server).toEqual({ id: 'server-1', name: 'Test Server', ownerId: 'user-1' });
+    expect(result.server).toEqual({
+      id: 'server-1',
+      name: 'Test Server',
+      ownerId: 'user-1',
+      inviteCode: null,
+    });
     expect(result.categories).toHaveLength(1);
     expect(result.categories[0]).toMatchObject({ id: 'cat-1', name: 'General', position: 0 });
     expect(result.categories[0]?.channels).toHaveLength(1);
@@ -302,6 +325,52 @@ describe('ServersService.findServerDetail', () => {
 
     expect(result.categories[0]?.channels[0]?.id).toBe('ch-1');
     expect(result.categories[1]?.channels[0]?.id).toBe('ch-2');
+  });
+
+  it('exposes invite_code as inviteCode in server detail (8b)', async () => {
+    const serverWithCode = { ...mockServer, invite_code: 'perm-code-xyz' };
+    let callCount = 0;
+
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      switch (callCount) {
+        case 1:
+          return makeSelectChain([serverWithCode]);
+        case 2:
+          return makeSelectChain([mockMember]);
+        case 3:
+          return makeSelectChain([mockCategory]);
+        default:
+          return makeSelectChain([mockChannel]);
+      }
+    });
+
+    const result = await service.findServerDetail('user-1', 'server-1');
+
+    expect(result.server.inviteCode).toBe('perm-code-xyz');
+  });
+
+  it('returns inviteCode: null when server has no permanent invite_code (8b)', async () => {
+    const serverNoCode = { ...mockServer, invite_code: null };
+    let callCount = 0;
+
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      switch (callCount) {
+        case 1:
+          return makeSelectChain([serverNoCode]);
+        case 2:
+          return makeSelectChain([mockMember]);
+        case 3:
+          return makeSelectChain([mockCategory]);
+        default:
+          return makeSelectChain([mockChannel]);
+      }
+    });
+
+    const result = await service.findServerDetail('user-1', 'server-1');
+
+    expect(result.server.inviteCode).toBeNull();
   });
 });
 
@@ -728,5 +797,112 @@ describe('ServersService.joinViaInvite', () => {
     // The loser's join throws (invite exhausted by concurrent winner) and the
     // transaction would have rolled back the member INSERT on a real DB.
     await expect(service.joinViaInvite('abc123', 'user-loser')).rejects.toThrow(NotFoundException);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ServersService — revokeInvite (task 863c10ef)
+// ---------------------------------------------------------------------------
+
+describe('ServersService.revokeInvite', () => {
+  let service: ServersService;
+
+  const mockServerOwner = {
+    id: 'server-1',
+    name: 'Test Server',
+    owner_id: 'owner-1',
+    invite_code: null,
+    created_at: new Date('2026-01-01T00:00:00Z'),
+  };
+
+  const mockInviteByOwner = {
+    id: 'invite-rev-1',
+    server_id: 'server-1',
+    code: 'rev-code-123',
+    created_by: 'owner-1',
+    max_uses: null,
+    uses: 0,
+    expires_at: null,
+    revoked: false,
+    created_at: new Date('2026-01-01T00:00:00Z'),
+  };
+
+  const mockInviteByMember = {
+    ...mockInviteByOwner,
+    id: 'invite-rev-2',
+    code: 'rev-code-456',
+    created_by: 'member-1',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    service = new ServersService();
+  });
+
+  it('returns void (200) when owner revokes their own invite', async () => {
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      return makeSelectChain(callCount === 1 ? [mockInviteByOwner] : [mockServerOwner]);
+    });
+    mockUpdate.mockReturnValue(makeUpdateChain());
+
+    await expect(service.revokeInvite('rev-code-123', 'owner-1')).resolves.toBeUndefined();
+    expect(mockUpdate).toHaveBeenCalledOnce();
+  });
+
+  it('returns void (200) when the invite creator (non-owner member) revokes their invite', async () => {
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      return makeSelectChain(callCount === 1 ? [mockInviteByMember] : [mockServerOwner]);
+    });
+    mockUpdate.mockReturnValue(makeUpdateChain());
+
+    await expect(service.revokeInvite('rev-code-456', 'member-1')).resolves.toBeUndefined();
+    expect(mockUpdate).toHaveBeenCalledOnce();
+  });
+
+  it('throws ForbiddenException (403) for non-owner, non-creator caller', async () => {
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      return makeSelectChain(callCount === 1 ? [mockInviteByOwner] : [mockServerOwner]);
+    });
+
+    await expect(service.revokeInvite('rev-code-123', 'stranger-99')).rejects.toThrow(
+      ForbiddenException,
+    );
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it('throws NotFoundException (404) for a code not in the invites table (permanent code or nonexistent)', async () => {
+    mockSelect.mockReturnValue(makeSelectChain([]));
+
+    await expect(service.revokeInvite('no-such-code', 'owner-1')).rejects.toThrow(
+      NotFoundException,
+    );
+  });
+
+  it('is idempotent — re-revoking an already-revoked invite calls UPDATE and returns void', async () => {
+    const alreadyRevoked = { ...mockInviteByOwner, revoked: true };
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      return makeSelectChain(callCount === 1 ? [alreadyRevoked] : [mockServerOwner]);
+    });
+    mockUpdate.mockReturnValue(makeUpdateChain());
+
+    await expect(service.revokeInvite('rev-code-123', 'owner-1')).resolves.toBeUndefined();
+    expect(mockUpdate).toHaveBeenCalledOnce();
+  });
+
+  it('after revoke — getInvitePreview throws NotFoundException (404) for revoked invite', async () => {
+    // Simulate: revoked invite exists and is returned by the ad-hoc lookup
+    const revokedInvite = { ...mockInviteByOwner, revoked: true };
+    mockSelect.mockReturnValue(makeSelectChain([revokedInvite]));
+
+    // validateInviteActive inside getInvitePreview throws on revoked
+    await expect(service.getInvitePreview('rev-code-123')).rejects.toThrow(NotFoundException);
   });
 });

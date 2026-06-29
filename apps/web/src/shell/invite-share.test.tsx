@@ -1,12 +1,17 @@
 /**
- * Tests for InviteShareModal.
+ * Tests for InviteShareModal (wave-9 delta).
  *
  * Coverage:
- *   - Renders loading skeleton while fetching invite
- *   - Renders link + Copy button once invite loads
- *   - Copy button triggers clipboard write + shows Copied state
- *   - Error state + Retry when createInvite fails
- *   - Close button calls onClose
+ *   8b regression guard: opening the modal does NOT call createInvite (no ad-hoc mint on open).
+ *   8b: modal renders the PERMANENT link passed via inviteCode prop immediately.
+ *   8b: null inviteCode → fallback message shown, no link input.
+ *   Copy button writes permanent URL to clipboard + shows Copied state.
+ *   "Generate a limited invite" calls createInvite and shows the invite in the list.
+ *   Revoke trash button → confirm row appears (two-step).
+ *   Cancel in confirm row → row returns to normal.
+ *   Confirm revoke → calls revokeInvite + marks row as revoked + shows Toast.
+ *   Close button calls onClose.
+ *   Done button calls onClose.
  */
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
@@ -17,6 +22,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockApi = vi.hoisted(() => ({
   createInvite: vi.fn(),
+  revokeInvite: vi.fn(),
   getInvitePreview: vi.fn(),
   joinViaInvite: vi.fn(),
   getMe: vi.fn(),
@@ -27,8 +33,6 @@ vi.mock('../auth/api', () => ({ api: mockApi }));
 
 // ── Mock clipboard ────────────────────────────────────────────────────────────
 
-// jsdom's navigator.clipboard is configurable via vi.stubGlobal but NOT via
-// Object.defineProperty (non-configurable once set). Use vi.stubGlobal instead.
 const mockWriteText = vi.fn();
 vi.stubGlobal('navigator', {
   ...globalThis.navigator,
@@ -39,8 +43,13 @@ vi.stubGlobal('navigator', {
 
 let InviteShareModal: typeof import('./InviteShareModal').InviteShareModal;
 
+const PERMANENT_CODE = 'PERM_ABC123';
+// jsdom sets window.location.origin = 'http://localhost' by default
+const PERMANENT_URL = `${window.location.origin}/invite/${PERMANENT_CODE}`;
+
 const defaultProps = {
   serverId: 'srv-1',
+  inviteCode: PERMANENT_CODE as string | null,
   onClose: vi.fn(),
 };
 
@@ -57,89 +66,160 @@ beforeEach(async () => {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-describe('InviteShareModal', () => {
-  it('shows loading skeleton while creating invite', () => {
-    // Never resolves — stays loading
-    mockApi.createInvite.mockReturnValue(new Promise(() => {}));
-
+describe('InviteShareModal — 8b permanent-default', () => {
+  it('[8b regression guard] does NOT call createInvite on open', () => {
     renderModal();
-
-    // Loading state: Copy button disabled, Done button disabled
-    expect(screen.getByLabelText(/copy invite link to clipboard/i)).toBeDisabled();
+    // After mount, createInvite must NOT have been called (no ad-hoc mint on open)
+    expect(mockApi.createInvite).not.toHaveBeenCalled();
   });
 
-  it('renders invite link once createInvite resolves', async () => {
-    mockApi.createInvite.mockResolvedValue({ code: 'XY7K', url: 'https://app.test/invite/XY7K' });
-
+  it('renders the permanent invite link immediately without loading state', () => {
     renderModal();
-
-    await waitFor(() => {
-      expect(screen.getByDisplayValue('https://app.test/invite/XY7K')).toBeInTheDocument();
-    });
-
-    expect(screen.getByLabelText(/copy invite link to clipboard/i)).not.toBeDisabled();
+    // The permanent URL is in the input immediately — no async wait needed
+    expect(screen.getByDisplayValue(PERMANENT_URL)).toBeInTheDocument();
+    expect(screen.getByLabelText(/copy permanent invite link to clipboard/i)).not.toBeDisabled();
   });
 
-  it('copies link to clipboard and shows Copied state', async () => {
-    mockApi.createInvite.mockResolvedValue({ code: 'XY7K', url: 'https://app.test/invite/XY7K' });
+  it('shows "Permanent" badge next to the link label', () => {
+    renderModal();
+    expect(screen.getByText('Permanent')).toBeInTheDocument();
+  });
 
+  it('shows fallback message when inviteCode is null', () => {
+    renderModal({ inviteCode: null });
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.getByText(/permanent link unavailable/i)).toBeInTheDocument();
+  });
+
+  it('copies permanent link to clipboard and shows Copied state', async () => {
     renderModal();
 
-    await waitFor(() => {
-      expect(screen.getByDisplayValue('https://app.test/invite/XY7K')).toBeInTheDocument();
-    });
+    // Link is visible immediately
+    expect(screen.getByDisplayValue(PERMANENT_URL)).toBeInTheDocument();
 
-    // Use fireEvent to avoid userEvent.setup() re-defining navigator.clipboard
-    fireEvent.click(screen.getByLabelText(/copy invite link to clipboard/i));
+    fireEvent.click(screen.getByLabelText(/copy permanent invite link to clipboard/i));
 
-    expect(mockWriteText).toHaveBeenCalledWith('https://app.test/invite/XY7K');
+    expect(mockWriteText).toHaveBeenCalledWith(PERMANENT_URL);
 
     await waitFor(() => {
       expect(screen.getByLabelText(/invite link copied/i)).toBeInTheDocument();
     });
   });
+});
 
-  it('shows error state when createInvite fails', async () => {
-    mockApi.createInvite.mockRejectedValue(new Error('500 Server Error'));
+describe('InviteShareModal — limited invites / revoke', () => {
+  it('calls createInvite when "Generate a limited invite" is clicked', async () => {
+    mockApi.createInvite.mockResolvedValue({
+      code: 'ADHOC1',
+      url: 'http://localhost/invite/ADHOC1',
+    });
 
     renderModal();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId('generate-limited-invite'));
+
+    expect(mockApi.createInvite).toHaveBeenCalledWith('srv-1');
+
+    await waitFor(() => {
+      // Row appears in the list
+      expect(screen.getByLabelText(/revoke limited invite ending/i)).toBeInTheDocument();
+    });
+  });
+
+  it('shows error when createInvite fails', async () => {
+    mockApi.createInvite.mockRejectedValue(new Error('500'));
+
+    renderModal();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId('generate-limited-invite'));
 
     await waitFor(() => {
       expect(screen.getByRole('alert')).toBeInTheDocument();
     });
-
-    expect(screen.getByText(/couldn.*t load the invite link/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
   });
 
-  it('retries fetch when Retry is clicked', async () => {
-    mockApi.createInvite
-      .mockRejectedValueOnce(new Error('500'))
-      .mockResolvedValueOnce({ code: 'XY7K', url: 'https://app.test/invite/XY7K' });
+  it('shows confirm row (two-step) when trash is clicked', async () => {
+    mockApi.createInvite.mockResolvedValue({
+      code: 'ADHOC2',
+      url: 'http://localhost/invite/ADHOC2',
+    });
 
     renderModal();
 
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
-    });
-
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /retry/i }));
+    await user.click(screen.getByTestId('generate-limited-invite'));
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue('https://app.test/invite/XY7K')).toBeInTheDocument();
+      expect(screen.getByLabelText(/revoke limited invite ending/i)).toBeInTheDocument();
     });
+
+    // Click trash
+    await user.click(screen.getByLabelText(/revoke limited invite ending/i));
+
+    // Confirm row must appear
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /confirm revoke/i })).toBeInTheDocument();
   });
 
-  it('calls onClose when close button is clicked', async () => {
-    const onClose = vi.fn();
-    mockApi.createInvite.mockResolvedValue({ code: 'XY7K', url: 'https://app.test/invite/XY7K' });
+  it('cancels revoke confirm and returns row to normal', async () => {
+    mockApi.createInvite.mockResolvedValue({
+      code: 'ADHOC3',
+      url: 'http://localhost/invite/ADHOC3',
+    });
 
-    renderModal({ onClose });
+    renderModal();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId('generate-limited-invite'));
 
     await waitFor(() => {
-      expect(screen.getByLabelText(/close invite dialog/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/revoke limited invite ending/i)).toBeInTheDocument();
     });
+
+    await user.click(screen.getByLabelText(/revoke limited invite ending/i));
+
+    // Cancel
+    await user.click(screen.getByRole('button', { name: /cancel/i }));
+
+    // Confirm row gone, trash button back
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/revoke limited invite ending/i)).toBeInTheDocument();
+  });
+
+  it('calls revokeInvite and marks row as revoked on confirm', async () => {
+    mockApi.createInvite.mockResolvedValue({
+      code: 'ADHOC4',
+      url: 'http://localhost/invite/ADHOC4',
+    });
+    mockApi.revokeInvite.mockResolvedValue(undefined);
+
+    renderModal();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId('generate-limited-invite'));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/revoke limited invite ending/i)).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByLabelText(/revoke limited invite ending/i));
+    await user.click(screen.getByRole('button', { name: /confirm revoke/i }));
+
+    expect(mockApi.revokeInvite).toHaveBeenCalledWith('ADHOC4');
+
+    await waitFor(() => {
+      expect(screen.getByText(/revoked — this link no longer works/i)).toBeInTheDocument();
+    });
+  });
+});
+
+describe('InviteShareModal — close', () => {
+  it('calls onClose when close button is clicked', async () => {
+    const onClose = vi.fn();
+    renderModal({ onClose });
 
     const user = userEvent.setup();
     await user.click(screen.getByLabelText(/close invite dialog/i));
@@ -149,13 +229,7 @@ describe('InviteShareModal', () => {
 
   it('calls onClose when Done button is clicked', async () => {
     const onClose = vi.fn();
-    mockApi.createInvite.mockResolvedValue({ code: 'XY7K', url: 'https://app.test/invite/XY7K' });
-
     renderModal({ onClose });
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /done/i })).toBeInTheDocument();
-    });
 
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /done/i }));

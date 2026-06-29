@@ -230,7 +230,7 @@ describe('ChannelSidebar', () => {
 
   it('renders categories and channels when server detail is loaded', () => {
     const detail: ServerDetail = {
-      server: { id: 's1', name: 'Organic Chem', ownerId: 'u1' },
+      server: { id: 's1', name: 'Organic Chem', ownerId: 'u1', inviteCode: null },
       categories: [
         {
           id: 'cat1',
@@ -257,7 +257,7 @@ describe('ChannelSidebar', () => {
 
   it('renders the server name in the header when loaded', () => {
     const detail: ServerDetail = {
-      server: { id: 's1', name: 'Organic Chem', ownerId: 'u1' },
+      server: { id: 's1', name: 'Organic Chem', ownerId: 'u1', inviteCode: null },
       categories: [],
     };
     renderSidebar({

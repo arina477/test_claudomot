@@ -1,0 +1,2 @@
+# Wave 9 — B-3 Frontend (5331b7d5+863c10ef, 3859b61)
+InviteShareModal rewrite: 8b removed mint-on-open useEffect → permanent /invite/<server.inviteCode> default (from selectedDetail), copy+Toast, NULL→friendly fallback. revoke: generate-limited (createInvite) + session-scoped limited-invites list + per-row trash → two-step role=alert confirm → revokeInvite → revoked row (dim+strikethrough+prohibit)+Toast. api.revokeInvite. 73 web tests. Known gap (noted): list is session-scoped (no list-ad-hoc-invites GET endpoint) — acceptable, not over-built.

@@ -114,4 +114,12 @@ export const api = {
    */
   createInvite: (serverId: string) =>
     request<InviteResponse>(`/servers/${serverId}/invites`, { method: 'POST', body: '{}' }),
+
+  /**
+   * POST /invites/:code/revoke → revokes an ad-hoc invite.
+   * Requires auth; owner/creator-gated. Idempotent (200 even if already revoked).
+   * Throws: 403 non-owner/creator, 404 not found.
+   */
+  revokeInvite: (code: string) =>
+    request<void>(`/invites/${code}/revoke`, { method: 'POST', body: '{}' }),
 };
