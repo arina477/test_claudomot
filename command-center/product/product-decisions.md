@@ -157,3 +157,10 @@ _(empty)_
 
 ## 2026-06-29 — wave-9: permanent invite_code rotation deferred (tracked)
 **Decision (P-4 Gemini flag; karen+jenny follow-up):** wave-9's 8b makes the permanent servers.invite_code the default shared link, but revoke is scoped to ad-hoc invites → the permanent link is irrevocable if leaked. Deferred to a tracked M2 task (rotate permanent invite_code, owner-gated regenerate) NOT folded into wave-9 (0 prod servers = zero current exposure; rotation is additive, no rework risk; no unmet wave-9 AC). Trigger: first real external users / pre-launch link distribution.
+
+## 2026-06-29 — M2 (Servers, channels & membership): RBAC bundle authored — 4 tasks
+Next-wave (wave-10) bundle for M2's unshipped RBAC scope clause — server roles + channel-level permissions + owner-lockout safeguard + role-management UI. Closes the unmet success-metric clause "members join and see the right channels per role." Honors the wave-8 N / wave-9 L binding condition (RBAC is wave-10's seed, unconditionally). The 4 existing M2 tech-debt follow-ups (browser-E2E, verified-prod fixture, PG-rollback test, invite-code rotation) were left untouched — N-2 picks them naturally.
+- **Bundle:** seed `Build RbacModule: roles table, RbacService.can(), role CRUD + assignment` (35f191f4) + 3 siblings — channel-level permission overrides + ChannelPermissionGuard (2c927c44), owner-lockout last-owner invariant (7a10f13d), role-management UI in server settings (0b9bcf35).
+- **Security note:** RBAC is authz-critical — all four tasks require server-side authorization re-derivation via `RbacService.can()` (never client-supplied role/permission trust; route-param-only context) and the owner-lockout invariant; flags T-8 Security downstream.
+- caller: N-1-next-bundle
+- decomposed by: milestone-decomposer sub-agent
