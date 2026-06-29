@@ -52,8 +52,8 @@ VERIFY:
 - [x] V-3 Fast-fix loop (or close) — APPROVED; empty queue, Phase 2 skipped
 
 LEARN:
-- [ ] L-1 Docs
-- [ ] L-2 Distill
+- [x] L-1 Docs
+- [x] L-2 Distill
 
 NEXT:
 - [ ] N-1 Survey & triggers
