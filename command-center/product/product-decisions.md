@@ -131,3 +131,7 @@ _(empty)_
 **Decision**: Use **LiveKit Cloud** for the voice/video study rooms, not self-hosted LiveKit on Railway.
 **Rationale**: WebRTC media needs a UDP port range (50000–60000) + TURN; Railway only exposes TCP services, so a self-hosted LiveKit on Railway leaves symmetric-NAT users without media connectivity. LiveKit Cloud handles the SFU + TURN. The api still mints short-lived room-scoped tokens server-side (server stays out of the media path). Verified against official LiveKit self-hosting docs (`command-center/dev/SDK-Docs/LiveKit/livekit.md`).
 **Alternatives considered**: self-host on a UDP-capable VPS (viable later if cost/control demands; deferred — adds ops burden at self-use-mvp).
+
+## 2026-06-29 — /me email-verification gating: low-friction (verify-banner), not hard-gate
+**Decision (wave-3, resolves a3328023):** Authenticated-but-unverified users CAN reach the app shell, shown a persistent "verify your email" banner; backend exempts /me + app-shell routes from the global SuperTokens EmailVerification REQUIRED claim (verification emails still send; sensitive actions may gate later). Rationale: maximizes first-run activation for the student/offline-first context vs a hard pre-verification wall; reversible. Applied as a sensible default under automatic mode (low-friction is the standard SaaS pattern); founder can override to force-verify-first.
+**Wave-3 scope split (founder-approved):** auth pages + display_name profile this wave; username/avatar-upload/accent-color split to task 2a655960 (next wave).
