@@ -18,3 +18,14 @@
 - **Preserve (both reviewers approved):** the permanent-default labeling + Permanent pill (8b), the secondary "Generate a limited invite" demotion, the limited-invites list + per-row trash + inline danger confirm two-step, the honest revoked row structure (icon + strikethrough + dimming), all token usage, all focus rings (emerald + danger), all aria-labels / roles.
 
 A's 4 non-blocking polish notes are acknowledged but NOT required for adoption (they do not block the brief's job); not looped.
+
+## Phase 1 re-run after iteration 1 (final)
+
+- **Reviewer A:** APPROVE (iteration 0; no blocking change requested; the fix did not touch anything A reviewed).
+- **Reviewer B (re-audited fresh on refined file):** APPROVE — revoked label now t-primary; all text pairs meet WCAG AA (primary 17.8:1, emerald button 10.9:1, danger button 5.8:1); 10/10 success criteria PASS; zero invented tokens; full keyboard + screen-reader coverage.
+
+| Reviewer A | Reviewer B | Action |
+|---|---|---|
+| APPROVE | APPROVE | → D-3 Phase 2 (fresh head-designer gate verdict) |
+
+**Final destination:** Phase 2 head-designer spawn.
