@@ -3,9 +3,9 @@
 | Stage | Deliverable | Status | Notes |
 |---|---|---|---|
 | P-0 | stages/P-0-frame.md | done | PROCEED; multi-spec hardening; P-1 decouple (avatar cred-gated) |
-| P-1 | stages/P-1-decompose.md | pending | multi-spec (2 tasks) |
-| P-2 | stages/P-2-spec.md | pending | |
-| P-3 | stages/P-3-plan.md | pending | |
+| P-1 | stages/P-1-decompose.md | done | RESCOPE-AUTO-MERGE → 6-spec M1-hardening; design_gap_flag=false |
+| P-2 | stages/P-2-spec.md | done | 6-block multi-spec (rate-limit/avatar/version/node20/branch-protect/CI-E2E) |
+| P-3 | stages/P-3-plan.md | done | per-spec plan; specialists validated; avatar cred-gated; ci.yml coord noted |
 | P-4 | blocks/P/gate-verdict.md | pending | |
 ## Context
 - wave_db_id ae9e80b2 (wave 5); M1. claimed [839af17f rate-limit, 84e09891 avatar-storage]. multi-spec.
