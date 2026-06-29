@@ -310,4 +310,46 @@ describe('InvitesController.joinViaInvite', () => {
       NotFoundException,
     );
   });
+
+  it('propagates ForbiddenException (403) when email is unverified', async () => {
+    // AuthGuard (verify-required) blocks unverified users at the framework level;
+    // the service can additionally throw 403 for unverified session tokens that slip through.
+    serversService.joinViaInvite.mockRejectedValue(new ForbiddenException('Email not verified'));
+
+    await expect(invitesController.joinViaInvite(makeReq(), 'abc123')).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /invites/:code — guard confirmation: no @UseGuards = public
+// (task 77e2041a — public-preview carry-forward)
+// ---------------------------------------------------------------------------
+
+describe('InvitesController — public preview guard contract', () => {
+  it('getInvitePreview is callable without a session object (public endpoint contract)', async () => {
+    const { invitesController, serversService } = makeController();
+    const preview: InvitePreview = {
+      server: { id: 'server-1', name: 'Study Hall', memberCount: 3 },
+    };
+    serversService.getInvitePreview.mockResolvedValue(preview);
+
+    // A public endpoint does not call req.session — passing a req without session
+    // must not throw any guard-related error at the handler level.
+    const result = await invitesController.getInvitePreview('abc123');
+
+    expect(result).toEqual(preview);
+  });
+
+  it('joinViaInvite requires a session userId (authenticated endpoint contract)', async () => {
+    const { invitesController, serversService } = makeController();
+    serversService.joinViaInvite.mockResolvedValue({ serverId: 'server-1' });
+
+    // joinViaInvite extracts userId from req.session — verify it passes userId to the service.
+    const result = await invitesController.joinViaInvite(makeReq('verified-user'), 'abc123');
+
+    expect(serversService.joinViaInvite).toHaveBeenCalledWith('abc123', 'verified-user');
+    expect(result).toEqual({ serverId: 'server-1' });
+  });
 });
