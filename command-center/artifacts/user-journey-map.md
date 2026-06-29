@@ -1,8 +1,8 @@
 ---
 name: User Journey Map
 description: Canonical inventory of every user flow, screen, route, API endpoint. Regenerated at T-9 from production state.
-last_updated: 2026-06-26 (T-9 wave-1 regen)
-version: 0.2
+last_updated: 2026-06-29 (T-9 wave-4 regen — HTTP/code-level; browser crawl deferred c51589cd)
+version: 0.3
 status_legend:
   - "✅ Live: page renders correctly with real content in production"
   - "🟡 Live but degraded: renders but missing data, broken interaction, or minor known issue"
@@ -60,6 +60,16 @@ Live: web https://web-production-bce1a8.up.railway.app (SPA + client routes) · 
 | /settings/profile | ✅ Live | display_name edit (GET/PATCH /profile); username/avatar/accent 'coming soon' (→ 2a655960) |
 | Verify-email banner (app shell, unverified) | ✅ Live | unverified users reach shell + banner; /me 200 emailVerified:false |
 | First-run: signup→verify→profile→app-home | ✅ Wired | core flow live (curl-verified); full browser click-through deferred to CI chromium job (c51589cd) |
+
+## Deployment status — wave-4 (M1 profile customization, shipped)
+Live: web https://web-production-bce1a8.up.railway.app · api https://api-production-b93e.up.railway.app/health (200). HTTP/code-level verification (browser crawl deferred — Playwright chrome-channel absent, tracked c51589cd). Migration `0001` applied to prod Postgres: users +username (unique, lower() idx) / avatar_url / accent_color.
+| Surface | Status | Note |
+|---|---|---|
+| /settings/profile | ✅ Live | username field (taken/available + 409 on dup), accent-color picker — both persist + render across shell; replaces wave-3 'coming soon' stubs |
+| GET/PATCH /profile (4 fields) | ✅ Live | display_name + username + accentColor live-verified (set→200, dup→409, bad→400); avatarUrl field present |
+| App shell avatar + accent render | ✅ Live | avatar initials-fallback + accent CSS var render from /profile |
+| POST /profile/avatar/presign | 🟡 Live but degraded | endpoint live; returns 503 STORAGE_NOT_CONFIGURED until Railway Bucket creds provisioned (founder-pending, tracked 84e09891). Path built + key/MIME/scope secured + graceful-503-verified; real S3 PUT→confirm→render unverified pending bucket |
+| Avatar real-upload round-trip | 🚫 Deferred | infra-blocked (no bucket); not user-reachable until 84e09891 resolved |
 
 ## Flows cross-reference
 
