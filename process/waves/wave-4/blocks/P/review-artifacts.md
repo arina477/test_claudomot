@@ -6,7 +6,7 @@
 | P-1 | stages/P-1-decompose.md | done | PROCEED single-spec; design_gap_flag=false |
 | P-2 | stages/P-2-spec.md | done | 10 ACs; username-collision + presign + shared FilesModule; storage cred founder-ask B-0 |
 | P-3 | stages/P-3-plan.md | done | full-stack profile + shared FilesModule(presign); storage-cred plan at B-0 |
-| P-4 | blocks/P/gate-verdict.md | pending | |
+| P-4 | blocks/P/gate-verdict.md | done | PASS (head-product APPROVED; Karen+jenny APPROVE; Gemini non-material) |
 ## Context
 - wave_db_id 82387899 (wave 4); M1; seed 2a655960 (split from wave-3). no-prior-spec → full P-1..P-3.
 - Scope: users +username(unique)/avatar_url/accent_color + profile GET/PATCH (extends wave-3 /profile) + FilesModule (avatar upload, Railway Buckets/S3 presign, 2MB, image-validate) + wire settings-profile avatar/username/accent controls (currently 'coming soon').
