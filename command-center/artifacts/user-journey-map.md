@@ -1,8 +1,8 @@
 ---
 name: User Journey Map
 description: Canonical inventory of every user flow, screen, route, API endpoint. Regenerated at T-9 from production state.
-last_updated: 2026-06-29 (T-9 wave-4 regen — HTTP/code-level; browser crawl deferred c51589cd)
-version: 0.3
+last_updated: 2026-06-29 (T-9 wave-7 regen — M2 servers/channels first slice LIVE; HTTP/code-level + live-probe; authed browser crawl deferred c51589cd)
+version: 0.4
 status_legend:
   - "✅ Live: page renders correctly with real content in production"
   - "🟡 Live but degraded: renders but missing data, broken interaction, or minor known issue"
@@ -70,6 +70,20 @@ Live: web https://web-production-bce1a8.up.railway.app · api https://api-produc
 | App shell avatar + accent render | ✅ Live | avatar initials-fallback + accent CSS var render from /profile |
 | POST /profile/avatar/presign | 🟡 Live but degraded | endpoint live; returns 503 STORAGE_NOT_CONFIGURED until Railway Bucket creds provisioned (founder-pending, tracked 84e09891). Path built + key/MIME/scope secured + graceful-503-verified; real S3 PUT→confirm→render unverified pending bucket |
 | Avatar real-upload round-trip | 🚫 Deferred | infra-blocked (no bucket); not user-reachable until 84e09891 resolved |
+
+## Deployment status — wave-7 (M2 servers/channels, first slice — LIVE)
+Live: web https://web-production-bce1a8.up.railway.app · api https://api-production-b93e.up.railway.app/health (200, live-verified at T-9). Migration `0002_certain_miek.sql` (servers / server_members / categories / channels) applied to prod Postgres. PR#17 merge 585112f. Verification: HTTP/code-level + live probe (C-2: POST /servers 201, GET /servers lists, GET /servers/:id shows #general; unauthed→401 live-verified at T-9; unverified/non-member→403). Authed full-browser click-through deferred (chrome channel + verified prod fixture absent — c51589cd; L-flag for a persistent verified fixture).
+| Surface | Status | Note |
+|---|---|---|
+| App home `/app` — server rail with REAL servers | ✅ Live | rail lists the caller's servers from `GET /servers` (membership-scoped, server-side innerJoin); selected server highlighted (`aria-current`); empty + loading states render. Replaces wave-1 placeholder rail. |
+| Create server (page 11) — `/app` modal | ✅ Live | "+" opens single-step name modal → `POST /servers {name}` → 201 → server appended + selected → `#general` shown. Client-side name validation (empty/whitespace disabled; trimmed); API-failure banner (`role=alert`). Atomic server-side seeding: owner membership + default "General" category + `#general` channel in one txn. |
+| Channel sidebar (within server view) | 🟡 Live but degraded | renders categories + channels from `GET /servers/:id` when a server is selected (no-server prompt / loading / error states all present). Active channel hardcoded to `#general` — no channel routing yet (out of M2 first-slice scope). Full 3-pane messaging (page 9) NOT built (no messaging/presence this wave). |
+| `POST /servers` (api) | ✅ Live | AuthGuard + verify-required + Zod (name 1–100, trimmed); 201 ServerResponse. Atomic txn (server + owner-member + General category + #general). |
+| `GET /servers` (api) | ✅ Live | membership-scoped (innerJoin server_members on session userId); returns only the caller's servers; [] when none. |
+| `GET /servers/:id` (api) | ✅ Live | 404-before-403 (exists-check then member-check — no existence fingerprinting); returns nested categories+channels for members. userId always from session, never body/params. |
+| Server settings / invites / roles (page 13, F8) | ❌ Not built | RBAC/invites/roles are later M2+ milestones; create-server first slice is STRUCTURE only. |
+
+**Access-control note (T-8 verified):** server creation + both reads are auth-gated (401 unauthed, 403 email-unverified) and membership-scoped server-side — the boundary is enforced in NestJS (AuthGuard + session-derived userId + DB innerJoin / 404-before-403), not in the UI. IDOR via param substitution is closed (userId never read from request body/params).
 
 ## Flows cross-reference
 
