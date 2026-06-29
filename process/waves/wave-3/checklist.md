@@ -14,7 +14,7 @@ DESIGN (skip — all 6 mockups exist, design_gap_flag=false):
 - [ ] D-3 Review & adopt
 
 BUILD:
-- [ ] B-0 Branch & schema
+- [x] B-0 Branch & schema
 - [ ] B-1 Contracts
 - [ ] B-2 Backend
 - [ ] B-3 Frontend
