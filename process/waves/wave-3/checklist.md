@@ -34,8 +34,8 @@ TEST:
 - [ ] T-5 E2E
 - [ ] T-6 Layout
 - [ ] T-7 Perf
-- [ ] T-8 Security
-- [ ] T-9 Journey
+- [x] T-8 Security
+- [x] T-9 Journey
 
 VERIFY:
 - [ ] V-1 Independent reviews
