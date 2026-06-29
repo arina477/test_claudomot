@@ -1,0 +1,15 @@
+# Wave 3 — B-6 Verdict
+
+**Reviewer:** head-builder (fresh spawn)
+**Reviewed against:** process/waves/wave-3/blocks/B/review-artifacts.md
+**Attempt:** 1  (first gate)
+
+## Verdict
+APPROVED
+
+## Rationale
+The wave-3 auth frontend meets the spec contract on every load-bearing axis, and the security-tightened invariant — the one that gets this role fired if it leaks — holds end to end. The verification-exemption is implemented exactly as a3328023 specified: backend keeps `EmailVerification.init({ mode: 'REQUIRED' })` globally fail-closed and leaves the shared `AuthGuard` (plain `verifySession()`, full global claims) untouched; the per-route exemption lives in a dedicated `SessionNoVerifyGuard` that calls `verifySession({ overrideGlobalClaimValidators: () => [] })` and is applied to exactly three decorators — `GET /me`, `GET /profile`, `PATCH /profile` — and nowhere else. Session validity (access token) is still fully verified on those routes; only the EmailVerification claim validator is stripped. Any future protected route that omits an override therefore inherits the REQUIRED default and fails closed automatically — no fail-open `OPTIONAL` switch was introduced. The frontend `SessionAuth overrideGlobalClaimValidators={() => []}` on `/app` + `/settings/profile` is UX-only (lets unverified users reach the shell behind the verify-email banner) and loosens nothing the server enforces; the server remains the real gate, so there is no auth-bypass. Auth doors are sound: `GuestGuard` redirects authenticated users off `/login` `/signup` `/forgot-password`; `AuthGuard` requires a session on app routes; `userId` is always taken from `session.getUserId()` (never body/query), and `updateDisplayName` is scoped to that session user's id. Profile writes are validated server-side via `UpdateProfileSchema` (displayName 1..50, returns 422 on failure); the `display_name` DB column is nullable `text`, consistent with the nullable `ProfileResponse`. Recipe wiring is correct for supertokens-auth-react 0.51 — `signUp`/`signIn`/`sendPasswordResetEmail`/`getResetPasswordTokenFromURL`+`submitNewPassword`/`getEmailVerificationTokenFromURL`+`verifyEmail`+`sendVerificationEmail` — and every non-happy state is handled without crashing or leaking: duplicate-email → FIELD_ERROR inline; wrong creds → generic "Wrong email or password"; expired/used verify or reset token → handled error + resend/restart; forgot-password is no-user-enumeration (always shows success). Cookie sessions cross-origin via `credentials: 'include'`; no tokens are placed in JS storage; the secret sweep is clean (`.env.example` carries only a public API origin). Scope discipline holds: username/avatar/accent render genuinely disabled "coming soon" (deferred to 2a655960), not half-wired, with no object-storage creep. B-5 reports lint/typecheck/build/test green (27/27); the only deferral — live-browser E2E to T-5 — is legitimate because the SDK needs the live backend + a real browser. Proceeding to Phase 2 (/review).
+
+## Footer
+- verdict_complete: true
+- rework_attempt_cap_remaining: 3
