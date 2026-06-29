@@ -1,7 +1,7 @@
 # Wave 9 — P-3 Plan (M2 invite-completion, multi-spec; build order 8a→8b→revoke)
 
-## 8a backfill (08ff762f) — B-0, backend-developer/database-administrator
-- A committed drizzle migration: `UPDATE servers SET invite_code = translate(encode(gen_random_bytes(16),'base64'),'+/=','-_') WHERE invite_code IS NULL` (pgcrypto gen_random_bytes = CSPRNG; translate→base64url). Idempotent (WHERE NULL). Collision: UNIQUE(invite_code) guards; for the rare bulk-collision do a guarded loop OR (0 prod rows) accept + document the retry note. NOT auto-migrate-on-boot (committed SQL, applied at C-2 via db:migrate). Verify: no NULL invite_code after.
+## 8a backfill (08ff762f) — B-0, backend-developer
+- **FIX (P-4 REWORK): pgcrypto is NOT installed → gen_random_bytes unavailable.** Use the wave-8 APP-SIDE generator `randomBytes(16).toString('base64url')` (servers.service.ts:25) in a committed BACKFILL SCRIPT (a TS one-off, e.g. apps/api/src/db/backfill-invite-codes.ts, run at C-2 alongside db:migrate via a `pnpm --filter @studyhall/api db:backfill` step) that: SELECTs servers WHERE invite_code IS NULL, per-row generates a CSPRNG code, UPDATEs with the existing 23505 per-row collision-retry (servers.service.ts:203-233 pattern). Idempotent (WHERE NULL → re-run no-op), true per-row collision-safety. NOT auto-migrate-on-boot. (0 prod servers → effectively moot but must be correct + re-runnable.) Verify: no NULL invite_code after. (Alt: CREATE EXTENSION pgcrypto + SQL gen — rejected: bulk UPDATE can't per-row retry collisions; app-side stays on the locked pattern.)
 
 ## 8b share-modal-permanent (5331b7d5) — B-2 (tiny) + B-3, backend-developer + react-specialist
 - Backend: expose servers.invite_code to MEMBERS in server detail (GET /servers/:id already returns the server; add invite_code field for members) OR a small GET /servers/:id/invite-code. (Member-gated.)

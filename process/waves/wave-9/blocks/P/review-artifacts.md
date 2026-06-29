@@ -6,7 +6,7 @@
 | P-1 | done (multi-spec, whole, 8a→8b→revoke) |
 | P-2 | done (3-block; revoke-authz + 404 + idempotent-backfill) |
 | P-3 | done (backfill migration + revoke endpoint + share-modal; D-delta) |
-| P-4 | pending | |
+| P-4 | done | PASS (head-product APPROVED attempt2; Karen+jenny APPROVE; rotation→follow-up; 4 T-8 conditions) | |
 ## Context
 - wave_db_id 88aff17b (wave 9); M2 41e61975. claimed [863c10ef invite-revoke (seed), 5331b7d5 share-modal-permanent (8b), 08ff762f invite_code-backfill (8a)]. Finishes the invites feature (wave-8 deferrals/drifts). UI wave (revoke UI + share modal) → D-block delta likely.
 - BOARD binding conditions (wave-8 N): (1) RBAC is wave-10's seed unconditionally. (2) backfill must be idempotent + collision-safe vs UNIQUE(invite_code), CSPRNG, committed migration (not auto-migrate). (3) invite-revoke needs honest revoked-link affordance + server-side authorization; T-8 applies (access-control surface). 

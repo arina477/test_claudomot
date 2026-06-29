@@ -154,3 +154,6 @@ _(empty)_
 - **P-3 must spec the invite_code backfill (08ff762f) as idempotent + collision-safe** against the existing `UNIQUE(servers.invite_code)` constraint, CSPRNG codes, applied via a committed migration (NOT auto-migrate-on-boot), re-runnable (risk-officer).
 - **Invite-revoke (863c10ef) must surface an honest "this link no longer works" affordance** to a member clicking a revoked link + a path to request re-invite (user-advocate); revoke must re-derive identity/authorization server-side, never from client-supplied invite/server id.
 - **decided by:** BOARD (automatic) — strategist/risk-officer/user-advocate/industry-expert/founder-proxy APPROVE, realist ABSTAIN, counter-thinker REJECT. head-next gate: APPROVED.
+
+## 2026-06-29 — wave-9: permanent invite_code rotation deferred (tracked)
+**Decision (P-4 Gemini flag; karen+jenny follow-up):** wave-9's 8b makes the permanent servers.invite_code the default shared link, but revoke is scoped to ad-hoc invites → the permanent link is irrevocable if leaked. Deferred to a tracked M2 task (rotate permanent invite_code, owner-gated regenerate) NOT folded into wave-9 (0 prod servers = zero current exposure; rotation is additive, no rework risk; no unmet wave-9 AC). Trigger: first real external users / pre-launch link distribution.
