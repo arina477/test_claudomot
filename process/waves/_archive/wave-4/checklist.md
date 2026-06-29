@@ -51,6 +51,6 @@ LEARN:
 - [x] L-2 Distill (task 2a655960 done; 4 obs, 0 promotions — karen REJECT)
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers (M1 stays in_progress; state-repaired 839af17f+84e09891 into wave-5 bundle; no rituals)
+- [x] N-2 Seed (seed=839af17f rate-limit + sibling=84e09891 avatar; validation pass)
+- [x] N-3 Handoff (wave-5 opened; wave-4 archived + closed)
