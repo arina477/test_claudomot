@@ -51,6 +51,16 @@ Verified via HTTP + CI RTL component tests (live-browser crawl deferred — Play
 | `GET /health` (api) | ✅ Live | 200 `{status:ok,service,version}` |
 | All other pages (auth, real server view, assignments, voice, settings) | ❌ Not built | per per-page-pd; auth = next wave (b9118041) |
 
+
+## Deployment status — wave-3 (auth frontend, shipped)
+Live: web https://web-production-bce1a8.up.railway.app (SPA + client routes) · api auth backend.
+| Surface | Status | Note |
+|---|---|---|
+| /login, /signup, /forgot-password (+reset), /verify-email | ✅ Live | supertokens-auth-react custom forms wired to live backend |
+| /settings/profile | ✅ Live | display_name edit (GET/PATCH /profile); username/avatar/accent 'coming soon' (→ 2a655960) |
+| Verify-email banner (app shell, unverified) | ✅ Live | unverified users reach shell + banner; /me 200 emailVerified:false |
+| First-run: signup→verify→profile→app-home | ✅ Wired | core flow live (curl-verified); full browser click-through deferred to CI chromium job (c51589cd) |
+
 ## Flows cross-reference
 
 ### F1 — Sign up & create profile (P1)

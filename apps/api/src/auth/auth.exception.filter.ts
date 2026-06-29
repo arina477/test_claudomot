@@ -1,9 +1,12 @@
 import { Catch, HttpException, HttpStatus } from '@nestjs/common';
 import type { ArgumentsHost, ExceptionFilter } from '@nestjs/common';
-import Session from 'supertokens-node/recipe/session';
 
 // Minimal response interface — avoids @types/express dependency.
+// headersSent: true when SuperTokens' own errorHandler already sent the response
+// (CSRF rejection, session-error paths). Checking this prevents the double-send
+// that previously caused ERR_HTTP_HEADERS_SENT and a process crash-loop.
 interface HttpResponse {
+  headersSent: boolean;
   status(code: number): { json(body: unknown): void };
 }
 
@@ -13,25 +16,19 @@ export class SupertokensExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const res = ctx.getResponse<HttpResponse>();
 
-    if (err instanceof Session.Error) {
-      switch (err.type) {
-        case Session.Error.TRY_REFRESH_TOKEN:
-          res.status(HttpStatus.UNAUTHORIZED).json({ code: 'SESSION_EXPIRED' });
-          return;
-        case Session.Error.UNAUTHORISED:
-          res.status(HttpStatus.UNAUTHORIZED).json({ code: 'UNAUTHORISED' });
-          return;
-        case Session.Error.TOKEN_THEFT_DETECTED:
-          res.status(HttpStatus.UNAUTHORIZED).json({ code: 'TOKEN_THEFT_DETECTED' });
-          return;
-        case Session.Error.INVALID_CLAIMS:
-          res.status(HttpStatus.FORBIDDEN).json({ code: 'EMAIL_NOT_VERIFIED' });
-          return;
-        default:
-          // Fall through to generic error for unrecognised Session errors
-          break;
-      }
+    // SuperTokens' middleware() and verifySession() call supertokens.errorHandler()
+    // internally, which sends the 401/403 response before propagating the error to
+    // NestJS. Calling res.status().json() a second time causes ERR_HTTP_HEADERS_SENT
+    // and crashes the process. Guard here so every code path below is safe.
+    if (res.headersSent) {
+      return;
     }
+
+    // Session.Error cases (TRY_REFRESH_TOKEN, UNAUTHORISED, INVALID_CLAIMS, etc.) are
+    // handled exclusively by the SuperTokens SDK's own errorHandler. They must NOT be
+    // handled here — the SDK already sent a clean 401/403 and set headersSent=true.
+    // If a Session.Error somehow reaches this filter with headersSent=false (SDK bug or
+    // misconfiguration), fall through to the generic 500 so the process stays up.
 
     // Forward HttpExceptions (BadRequestException, NotFoundException, etc.) as-is so
     // NestJS-style validation errors return the correct 4xx status instead of crashing.

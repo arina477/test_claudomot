@@ -80,7 +80,20 @@ export function initSuperTokens(usersService: UsersService, emailService: EmailS
         },
       }),
       Session.init({
-        cookieSameSite: 'lax',
+        // SameSite=None is required when the web frontend and api are on different
+        // Railway subdomains (web-production-*.up.railway.app vs
+        // api-production-*.up.railway.app). Cross-site requests (including
+        // credentialed XHR/fetch with credentials:'include') will not attach
+        // SameSite=Lax cookies — the browser silently drops them, breaking every
+        // authenticated request. SameSite=None requires Secure=true (HTTPS).
+        //
+        // In local dev both origins are localhost so SameSite=Lax works and
+        // avoids needing HTTPS on loopback. CROSS_ORIGIN_PROD is set on the
+        // Railway api service to signal the cross-origin prod topology.
+        cookieSameSite:
+          process.env.NODE_ENV === 'production' && process.env.CROSS_ORIGIN_PROD === 'true'
+            ? 'none'
+            : 'lax',
         cookieSecure: process.env.NODE_ENV === 'production',
       }),
     ],
