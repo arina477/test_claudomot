@@ -6,6 +6,7 @@ import { FilesModule } from './files/files.module';
 import { HealthModule } from './health/health.module';
 import { MeModule } from './me/me.module';
 import { ProfileModule } from './profile/profile.module';
+import { ServersModule } from './servers/servers.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { ProfileModule } from './profile/profile.module';
     MeModule,
     ProfileModule,
     FilesModule,
+    ServersModule,
   ],
   providers: [
     // ThrottlerGuard as APP_GUARD covers all NestJS-handled routes.
