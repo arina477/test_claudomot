@@ -32,11 +32,16 @@ function authRateLimiter(req: any, res: any, next: () => void): void {
     return;
   }
 
-  // With trust proxy set, req.ip reflects the leftmost X-Forwarded-For entry
-  // (the real client IP). Fall back to the raw XFF header, then socket address.
+  // Key on the leftmost X-Forwarded-For entry: that is always the real originating
+  // client IP, regardless of how many proxy hops Railway inserts. With Railway's
+  // two-hop topology (public edge + internal LB), XFF arrives as:
+  //   X-Forwarded-For: <client-ip>, <railway-internal-lb-ip>
+  // Using req.ip (trust-proxy walk from the right) would yield the Railway internal
+  // LB IP, which varies per node and makes the per-IP counter never accumulate.
+  // Keying on XFF[0] gives a stable, client-specific key in every request.
   const xff = req.headers['x-forwarded-for'];
-  const xffIp = typeof xff === 'string' ? xff.split(',')[0]?.trim() : undefined;
-  const ip = (req.ip ?? xffIp ?? req.socket?.remoteAddress ?? 'unknown') as string;
+  const xffFirstHop = typeof xff === 'string' ? xff.split(',')[0]?.trim() : undefined;
+  const ip = (xffFirstHop ?? req.socket?.remoteAddress ?? 'unknown') as string;
   const now = Date.now();
   const windowStart = now - AUTH_RATE_LIMIT_WINDOW_MS;
 
@@ -78,13 +83,15 @@ async function bootstrap(): Promise<void> {
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // Tell Express to trust the Railway edge proxy so that req.ip resolves to the
-  // real client IP from X-Forwarded-For, not the proxy's internal socket address.
-  // Without this, every request from behind the proxy arrives with a different
-  // (proxy-sourced) IP, so the per-IP rate-limit counter never accumulates and
-  // no 429 fires. hop-count=1 means "trust exactly one proxy hop in front of us",
-  // which matches Railway's single-layer edge topology.
-  app.set('trust proxy', 1);
+  // Tell Express to trust the Railway edge proxy. Railway injects two hops:
+  // the public edge and an internal load-balancer, so XFF arrives as:
+  //   X-Forwarded-For: <real-client-ip>, <railway-internal-lb-ip>
+  // With trust proxy=true (or a subnet list), req.ip would walk from the right and
+  // land on the railway-internal IP (which varies per LB node). The rate-limiter
+  // instead keys on the leftmost XFF entry directly (the real client IP), which is
+  // the robust approach regardless of hop count. Setting trust proxy=true is still
+  // correct for req.secure, req.hostname, and other Express features.
+  app.set('trust proxy', true);
 
   // Split WEB_ORIGIN on comma to support multiple origins (e.g. localhost + prod)
   const rawOrigin = process.env.WEB_ORIGIN ?? 'http://localhost:5173';
