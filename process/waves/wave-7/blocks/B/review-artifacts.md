@@ -1,0 +1,7 @@
+# Wave 7 — B-block review artifacts (multi-spec, commit-per-spec) [REBUILD post-restart]
+**Block:** B · **Wave topic:** M2 servers/channels/membership · **Gate:** B-6 · **Status:** in-progress
+| Stage | Status | Notes |
+|---|---|---|
+| B-0/B-1/B-2 | rebuilding | backend lost in restart; rebuild from DB spec then PUSH |
+| B-3 | pending | frontend (after D-block redo) |
+## CARRY (P-4): build shared BEFORE api; AuthGuard for create; channels.is_private in migration; atomic create-server txn; member-scoping server-side; NO real-time; owner-only. /api/v1 NOT applied (existing /me+/profile bare paths — match them, don't break live routes). Designs: design/create-server.html (re-scope to single-step) + server-rail-sidebar.html (regen).
