@@ -1,4 +1,9 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  type CanActivate,
+  type ExecutionContext,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
 import { RbacService } from './rbac.service';
 
@@ -39,8 +44,8 @@ export class ChannelPermissionGuard implements CanActivate {
     const userId = req.session.getUserId();
 
     // Extract resource IDs from ROUTE PARAMS only — never from body
-    const serverId = req.params['id'];
-    const channelId = req.params['channelId'];
+    const serverId = req.params.id;
+    const channelId = req.params.channelId;
 
     if (!serverId || !channelId) {
       throw new ForbiddenException('Missing route params: id and channelId required');

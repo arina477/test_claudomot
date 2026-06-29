@@ -1,9 +1,4 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import type {
   AssignRoleInput,
   ChannelOverride,
@@ -26,11 +21,7 @@ import {
 // Permission key type — the 4 fixed RBAC flags
 // ---------------------------------------------------------------------------
 
-export type Permission =
-  | 'manage_server'
-  | 'manage_roles'
-  | 'manage_channels'
-  | 'manage_members';
+export type Permission = 'manage_server' | 'manage_roles' | 'manage_channels' | 'manage_members';
 
 // ---------------------------------------------------------------------------
 // RbacService
@@ -79,11 +70,7 @@ export class RbacService {
     }
 
     // Load the role and check the specific flag
-    const [role] = await db
-      .select()
-      .from(roles)
-      .where(eq(roles.id, member.role_id))
-      .limit(1);
+    const [role] = await db.select().from(roles).where(eq(roles.id, member.role_id)).limit(1);
 
     if (!role) {
       return false; // default-deny: role row missing (data inconsistency)
@@ -226,9 +213,7 @@ export class RbacService {
     const [targetMember] = await db
       .select({ id: server_members.id })
       .from(server_members)
-      .where(
-        and(eq(server_members.server_id, serverId), eq(server_members.user_id, targetUserId)),
-      )
+      .where(and(eq(server_members.server_id, serverId), eq(server_members.user_id, targetUserId)))
       .limit(1);
 
     if (!targetMember) {
@@ -251,9 +236,7 @@ export class RbacService {
     await db
       .update(server_members)
       .set({ role_id: input.roleId })
-      .where(
-        and(eq(server_members.server_id, serverId), eq(server_members.user_id, targetUserId)),
-      );
+      .where(and(eq(server_members.server_id, serverId), eq(server_members.user_id, targetUserId)));
   }
 
   // -------------------------------------------------------------------------
@@ -451,10 +434,7 @@ export class RbacService {
         can_view: input.canView,
       })
       .onConflictDoUpdate({
-        target: [
-          channel_permission_overrides.channel_id,
-          channel_permission_overrides.role_id,
-        ],
+        target: [channel_permission_overrides.channel_id, channel_permission_overrides.role_id],
         set: { can_view: input.canView },
       })
       .returning();

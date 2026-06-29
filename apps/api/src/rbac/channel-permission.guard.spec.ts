@@ -8,7 +8,7 @@
  * the params (not the body).
  */
 
-import { ExecutionContext, ForbiddenException } from '@nestjs/common';
+import { type ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ChannelPermissionGuard } from './channel-permission.guard';
 import type { RbacService } from './rbac.service';
@@ -87,8 +87,8 @@ describe('ChannelPermissionGuard — route-param-only, no body-spoof', () => {
     // canViewChannel must be called with ROUTE PARAMS — not the body values
     expect(rbacMock.canViewChannel).toHaveBeenCalledWith(
       'user-1',
-      'real-server',   // from params.id, NOT body.id
-      'real-channel',  // from params.channelId, NOT body.channelId
+      'real-server', // from params.id, NOT body.id
+      'real-channel', // from params.channelId, NOT body.channelId
     );
     expect(rbacMock.canViewChannel).not.toHaveBeenCalledWith(
       expect.anything(),

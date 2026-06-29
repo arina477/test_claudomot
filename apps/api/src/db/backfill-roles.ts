@@ -58,7 +58,7 @@ async function backfill(): Promise<void> {
 
       if (roleResult.rows.length > 0) {
         // Freshly inserted
-        defaultRoleId = roleResult.rows[0]!.id;
+        defaultRoleId = (roleResult.rows[0] as { id: string }).id;
         rolesCreated++;
       } else {
         // Already exists — fetch it

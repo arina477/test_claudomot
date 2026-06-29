@@ -85,9 +85,7 @@ const mockUpdate = db.update as unknown as MockFn;
 
 import type { RbacService } from '../rbac/rbac.service';
 
-function makeRbacServiceMock(
-  getVisibleChannelIdsReturn: Set<string> | null = null,
-): RbacService {
+function makeRbacServiceMock(getVisibleChannelIdsReturn: Set<string> | null = null): RbacService {
   return {
     getVisibleChannelIds: vi.fn().mockResolvedValue(getVisibleChannelIdsReturn),
     can: vi.fn().mockResolvedValue(false),
@@ -459,10 +457,14 @@ describe('ServersService.findServerDetail — server-side channel filtering', ()
     mockSelect.mockImplementation(() => {
       callCount++;
       switch (callCount) {
-        case 1: return makeSelectChain([mockServer]);
-        case 2: return makeSelectChain([mockMember]);
-        case 3: return makeSelectChain([mockCategory]);
-        default: return makeSelectChain([privateChannel]);
+        case 1:
+          return makeSelectChain([mockServer]);
+        case 2:
+          return makeSelectChain([mockMember]);
+        case 3:
+          return makeSelectChain([mockCategory]);
+        default:
+          return makeSelectChain([privateChannel]);
       }
     });
 
@@ -485,10 +487,14 @@ describe('ServersService.findServerDetail — server-side channel filtering', ()
     mockSelect.mockImplementation(() => {
       callCount++;
       switch (callCount) {
-        case 1: return makeSelectChain([mockServer]);
-        case 2: return makeSelectChain([mockMember]);
-        case 3: return makeSelectChain([mockCategory]);
-        default: return makeSelectChain([mockChannel, privateChannel]);
+        case 1:
+          return makeSelectChain([mockServer]);
+        case 2:
+          return makeSelectChain([mockMember]);
+        case 3:
+          return makeSelectChain([mockCategory]);
+        default:
+          return makeSelectChain([mockChannel, privateChannel]);
       }
     });
 
@@ -506,10 +512,14 @@ describe('ServersService.findServerDetail — server-side channel filtering', ()
     mockSelect.mockImplementation(() => {
       callCount++;
       switch (callCount) {
-        case 1: return makeSelectChain([mockServer]);
-        case 2: return makeSelectChain([mockMember]);
-        case 3: return makeSelectChain([mockCategory]);
-        default: return makeSelectChain([mockChannel]);
+        case 1:
+          return makeSelectChain([mockServer]);
+        case 2:
+          return makeSelectChain([mockMember]);
+        case 3:
+          return makeSelectChain([mockCategory]);
+        default:
+          return makeSelectChain([mockChannel]);
       }
     });
 

@@ -14,11 +14,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type { Role } from '@studyhall/shared';
-import {
-  AssignRoleSchema,
-  CreateRoleSchema,
-  UpdateRoleSchema,
-} from '@studyhall/shared';
+import { AssignRoleSchema, CreateRoleSchema, UpdateRoleSchema } from '@studyhall/shared';
 import { AuthGuard } from '../auth/auth.guard';
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
 import { RbacService } from './rbac.service';

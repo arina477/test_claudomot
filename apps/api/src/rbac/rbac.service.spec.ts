@@ -162,8 +162,9 @@ describe('RbacService.can() — default-deny', () => {
   });
 
   it('returns true for owner on all 4 permissions (superuser)', async () => {
-    const permissions: Array<'manage_server' | 'manage_roles' | 'manage_channels' | 'manage_members'> =
-      ['manage_server', 'manage_roles', 'manage_channels', 'manage_members'];
+    const permissions: Array<
+      'manage_server' | 'manage_roles' | 'manage_channels' | 'manage_members'
+    > = ['manage_server', 'manage_roles', 'manage_channels', 'manage_members'];
 
     for (const perm of permissions) {
       vi.clearAllMocks();
