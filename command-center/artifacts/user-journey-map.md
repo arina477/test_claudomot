@@ -1,8 +1,8 @@
 ---
 name: User Journey Map
 description: Canonical inventory of every user flow, screen, route, API endpoint. Regenerated at T-9 from production state.
-last_updated: 2026-06-29 (T-9 wave-8 regen — M2 invites/join LIVE; new public /invite/:code route + verified atomic join + invite-share; HTTP/code-level + live-probe; authed browser crawl deferred c51589cd, fixture 4a2ad286)
-version: 0.5
+last_updated: 2026-06-29 (T-9 wave-9 light touch — M2 invite-completion LIVE; invite-revoke endpoint+UI + share-modal permanent-default link + servers.invite_code backfill; SAME /invite surface, no new route; HTTP/code-level + live-probe; invite-rotation deferred d058283d; authed crawl deferred c51589cd, fixture 4a2ad286)
+version: 0.6
 status_legend:
   - "✅ Live: page renders correctly with real content in production"
   - "🟡 Live but degraded: renders but missing data, broken interaction, or minor known issue"
@@ -93,10 +93,20 @@ Live: web https://web-production-bce1a8.up.railway.app · api https://api-produc
 | `GET /invites/:code` (api, public preview) | ✅ Live | Public, no auth. Returns minimal `{server:{id,name,memberCount}}` ONLY — NO channels / members / presence / owner / invite internals. Invalid code → 404 generic (no existence fingerprinting / leak). Live-verified minimal + 404. |
 | `POST /invites/:code/join` (api, verified join) | ✅ Live | AuthGuard + EmailVerification REQUIRED (401 unauthed / 403 unverified — live). Atomic max_uses consume: conditional `UPDATE...WHERE uses<max_uses RETURNING` + throw-on-zero-rows rolls back member insert (per-row lock serializes concurrent joiners → exactly one wins at max_uses=1; TOCTOU fixed 92cc0f3, concurrency-tested). Idempotent re-join: `ON CONFLICT(server_id,user_id) DO NOTHING`, uses NOT incremented on re-join. Authed success path covered by 179 tests + CI integration (not live-probed). |
 | `POST /servers/:id/invites` (api, create invite) | ✅ Live | AuthGuard + member-gated: 401 unauthed (live), 403 non-member. Mints CSPRNG `base64url(randomBytes(16))` (~128-bit, non-enumerable over UUID PKs) → `{code,url}`. Two-tier: per-server permanent `servers.invite_code` (auto-set at server creation) + ad-hoc `invites` rows with optional max_uses. |
-| Invite-share modal (within server) | ✅ Live | Copy-link share UI (4 states: default / copied / loading / error) per design/invite-share.html (D-3 APPROVED). Entry point for F8 invite step. |
-| Invite revoke (revoke endpoint / UI) | ❌ Not built | `invites.revoked` column exists (join honors it) but no revoke endpoint/UI this wave — schema-forward, later bundle. |
+| Invite-share modal (within server) | ✅ Live | Copy-link share UI per design/invite-share.html (D-3 APPROVED). **wave-9: defaults to the permanent per-server `invite_code` link on plain open** (8b) — mints NO ad-hoc `invites` row on open (regression-guarded). Now also surfaces the limited-invites revoke list (see below). Entry point for F8 invite step. |
+| Invite revoke (revoke endpoint / UI) | ✅ Live | **wave-9: NEW.** `POST /invites/:code/revoke` — owner-or-creator gated (server-side, userId from session, no IDOR): 401 unauthed (live-verified), 403 non-owner/non-creator (test-covered), permanent code → 404 (not revocable via this path). After revoke, both `GET /invites/:code` preview + `POST /:code/join` → 404 (shared validateInviteActive honors `invites.revoked`). Idempotent re-revoke. UI: limited-invites list + trash + two-step confirm + revoked state, per D-3. Session-scoped list (no list-ad-hoc GET endpoint — honest gap). |
 
 **Access-control note (T-8 verified, invites = access-control surface):** invite codes are CSPRNG non-enumerable (no sequential id surface — UUID PKs); the public preview is minimum-summary ONLY (the D-block caught + stripped the mockup's channels/members leak; the live API was verified minimal); join is verify-required (401/403) with atomic max_uses (one winner under concurrency, loser rolled back) and idempotent re-join (no use double-count). No residual leak / enumeration / overshoot. The boundary is enforced in NestJS, not the UI.
+
+## Deployment status — wave-9 (M2 invite-completion: revoke + permanent-default + backfill, LIVE)
+Live: web https://web-production-bce1a8.up.railway.app · api https://api-production-b93e.up.railway.app/health (200, live-verified at T-9). NO new migration (invites table + servers.invite_code shipped wave-8); 8a backfill ran as run-once prod script (clean no-op, 0 rows). PR#19 merge 371b9fe. Changes are to the EXISTING `/invite/:code` + share-modal surface — no new route. Verification: HTTP/code-level + live probe (T-9 re-confirmed: revoke unauthed 401, preview unknown 404, server-detail unauthed 401, health 200). 196 tests (123 api + 73 web). Authed revoke/join browser e2e still deferred (no persistent verified prod fixture — 4a2ad286; recorded V-2 gap, carry-forward not regression).
+| Surface | Status | Note |
+|---|---|---|
+| Invite revoke (page 12 / F8) — `POST /invites/:code/revoke` + revoke UI | ✅ Live | NEW. Owner-or-creator gated, no IDOR (userId from session). 401 unauthed (live), 403 non-owner/creator (test), permanent code 404. Revoked invite → 404 on preview + join (shared validateInviteActive). Idempotent re-revoke. Completes invite lifecycle: create → join → revoke. |
+| Invite-share modal permanent-default (8b) | ✅ Live | Modal defaults to the per-server permanent `invite_code` link on plain open; mints NO ad-hoc `invites` row on open (regression-guarded). |
+| `servers.invite_code` backfill (8a) | ✅ Ran clean | App-side idempotent run-once script (WHERE invite_code IS NULL, randomBytes base64url, 23505 retry). 0 rows on prod (no pre-existing servers needing backfill). Not auto-migrate/pgcrypto. |
+
+**Deferrals (non-blocking, info-severity):** permanent `invite_code` rotation is irrevocable — no rotate endpoint (deferred d058283d, Gemini flag; 0 prod servers so no live exposure). Limited-invites revoke list is session-scoped — no list-ad-hoc GET endpoint (honest gap, not a defect).
 
 ## Flows cross-reference
 
@@ -130,9 +140,9 @@ Live: web https://web-production-bce1a8.up.railway.app · api https://api-produc
 - Entry: `/app` → Create server (+ in rail) → single-step name modal → `POST /servers {name}` (seeds owner membership + default "General" category + `#general` server-side) → new server selected in rail, `#general` shown. (M2 STRUCTURE only; icon/template/invite are later milestones.)
 - Features: 5
 
-### F8 — Invite + roles/permissions (P2) — invite link LIVE (wave-8); roles/perms later
-- Entry (invite, LIVE): server view → invite-share modal (copy link) OR `POST /servers/:id/invites` (member-gated, CSPRNG `{code,url}`) → shareable `/invite/:code`. Two-tier: permanent per-server `invite_code` + ad-hoc max_uses invites.
-- Entry (roles/perms, NOT built): `/servers/:id/settings` → roles → assign → remove/ban (later M2+ milestone). Invite revoke also later (revoked column schema-forward).
+### F8 — Invite + roles/permissions (P2) — invite lifecycle LIVE (wave-8 create/join, wave-9 revoke); roles/perms later
+- Entry (invite, LIVE): server view → invite-share modal (copy link, defaults to permanent per-server `invite_code` on open — wave-9 8b) OR `POST /servers/:id/invites` (member-gated, CSPRNG `{code,url}`) → shareable `/invite/:code`. Two-tier: permanent per-server `invite_code` + ad-hoc max_uses invites. **Revoke (wave-9): owner-or-creator → `POST /invites/:code/revoke` → revoked invite 404s on preview + join.** Lifecycle now complete: create → join → revoke.
+- Entry (roles/perms, NOT built): `/servers/:id/settings` → roles → assign → remove/ban (later M2+ milestone). Invite-code rotation deferred (d058283d).
 - Features: 10, 11
 
 ### F9 — Post assignment / pin schedule (P2)
