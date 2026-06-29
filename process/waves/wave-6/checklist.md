@@ -33,8 +33,8 @@ BUILD:
 - [ ] B-6 Review
 
 CI/CD:
-- [ ] C-1 PR, CI & merge
-- [ ] C-2 Deploy & verify (canary armed when real users > 1000)
+- [x] C-1 PR, CI & merge (PR #16 merged 75e7d9d; all 6 required checks green incl. boot-probe)
+- [x] C-2 Deploy & verify (CI-only no-op deploy; prod /health 200; canary skipped <1000 DAU)
 
 TEST:
 - [ ] T-1 Static
