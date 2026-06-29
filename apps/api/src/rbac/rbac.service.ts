@@ -6,13 +6,21 @@ import {
 } from '@nestjs/common';
 import type {
   AssignRoleInput,
+  ChannelOverride,
   CreateRoleInput,
   Role,
   UpdateRoleInput,
+  UpsertChannelOverrideInput,
 } from '@studyhall/shared';
 import { and, eq } from 'drizzle-orm';
 import { db } from '../db/index';
-import { roles, server_members, servers } from '../db/schema/index';
+import {
+  channel_permission_overrides,
+  channels,
+  roles,
+  server_members,
+  servers,
+} from '../db/schema/index';
 
 // ---------------------------------------------------------------------------
 // Permission key type — the 4 fixed RBAC flags
@@ -247,6 +255,265 @@ export class RbacService {
         and(eq(server_members.server_id, serverId), eq(server_members.user_id, targetUserId)),
       );
   }
+
+  // -------------------------------------------------------------------------
+  // canViewChannel — server-side channel visibility check
+  //
+  // Rules (P-4 carry-forward):
+  //   1. Owner → can always view all channels.
+  //   2. Public channel (is_private=false) + no override → visible.
+  //   3. Public channel + override.can_view=false → NOT visible.
+  //   4. Private channel (is_private=true) + no override → DEFAULT-DENY (false).
+  //   5. Private channel + override.can_view=true → visible.
+  //   6. No membership → false.
+  //   7. No role_id (null role) → treated as default-member for visibility:
+  //      public visible (unless explicit deny override), private always deny.
+  // -------------------------------------------------------------------------
+
+  async canViewChannel(userId: string, serverId: string, channelId: string): Promise<boolean> {
+    // Owner superuser — always visible
+    const [server] = await db
+      .select({ owner_id: servers.owner_id })
+      .from(servers)
+      .where(eq(servers.id, serverId))
+      .limit(1);
+
+    if (!server) return false;
+    if (server.owner_id === userId) return true;
+
+    // Membership check
+    const [member] = await db
+      .select({ role_id: server_members.role_id })
+      .from(server_members)
+      .where(and(eq(server_members.server_id, serverId), eq(server_members.user_id, userId)))
+      .limit(1);
+
+    if (!member) return false;
+
+    // Load the channel
+    const [channel] = await db
+      .select({ is_private: channels.is_private, server_id: channels.server_id })
+      .from(channels)
+      .where(and(eq(channels.id, channelId), eq(channels.server_id, serverId)))
+      .limit(1);
+
+    if (!channel) return false;
+
+    // Check override for the member's role (if any)
+    let overrideCanView: boolean | null = null;
+    if (member.role_id) {
+      const [override] = await db
+        .select({ can_view: channel_permission_overrides.can_view })
+        .from(channel_permission_overrides)
+        .where(
+          and(
+            eq(channel_permission_overrides.channel_id, channelId),
+            eq(channel_permission_overrides.role_id, member.role_id),
+          ),
+        )
+        .limit(1);
+
+      if (override !== undefined) {
+        overrideCanView = override.can_view;
+      }
+    }
+
+    if (channel.is_private) {
+      // Private: default-deny unless override explicitly grants can_view=true
+      return overrideCanView === true;
+    }
+
+    // Public: visible unless override explicitly denies (can_view=false)
+    if (overrideCanView === false) return false;
+    return true;
+  }
+
+  // -------------------------------------------------------------------------
+  // getVisibleChannelIds — return the set of channel IDs visible to the user
+  // Used by findServerDetail to filter channels server-side.
+  //
+  // If userId is owner → return all channelIds (null = all).
+  // Otherwise compute per-channel visibility for this member's role.
+  // -------------------------------------------------------------------------
+
+  async getVisibleChannelIds(
+    userId: string,
+    serverId: string,
+    allChannelIds: string[],
+  ): Promise<Set<string> | null> {
+    // Owner sees everything
+    const [server] = await db
+      .select({ owner_id: servers.owner_id })
+      .from(servers)
+      .where(eq(servers.id, serverId))
+      .limit(1);
+
+    if (!server) return new Set();
+    if (server.owner_id === userId) return null; // null = all channels
+
+    // Get membership + role
+    const [member] = await db
+      .select({ role_id: server_members.role_id })
+      .from(server_members)
+      .where(and(eq(server_members.server_id, serverId), eq(server_members.user_id, userId)))
+      .limit(1);
+
+    if (!member) return new Set(); // not a member → no channels visible
+
+    // Load overrides for this role across all channels in the server (if role set)
+    const overrideMap = new Map<string, boolean>(); // channel_id → can_view
+    if (member.role_id) {
+      const overrideRows = await db
+        .select({
+          channel_id: channel_permission_overrides.channel_id,
+          can_view: channel_permission_overrides.can_view,
+        })
+        .from(channel_permission_overrides)
+        .where(eq(channel_permission_overrides.role_id, member.role_id));
+
+      for (const row of overrideRows) {
+        overrideMap.set(row.channel_id, row.can_view);
+      }
+    }
+
+    // Load channel privacy flags for all channels in this server
+    const channelRows = await db
+      .select({ id: channels.id, is_private: channels.is_private })
+      .from(channels)
+      .where(eq(channels.server_id, serverId));
+
+    const visibleIds = new Set<string>();
+    for (const ch of channelRows) {
+      if (!allChannelIds.includes(ch.id)) continue; // only consider requested channels
+      const overrideCanView = overrideMap.get(ch.id) ?? null;
+      if (ch.is_private) {
+        if (overrideCanView === true) visibleIds.add(ch.id);
+      } else {
+        if (overrideCanView !== false) visibleIds.add(ch.id);
+      }
+    }
+
+    return visibleIds;
+  }
+
+  // -------------------------------------------------------------------------
+  // channel_permission_overrides CRUD
+  // Requires: can(manage_channels)
+  // -------------------------------------------------------------------------
+
+  /** List all overrides for a channel */
+  async listChannelOverrides(serverId: string, channelId: string): Promise<ChannelOverride[]> {
+    const [channel] = await db
+      .select({ id: channels.id })
+      .from(channels)
+      .where(and(eq(channels.id, channelId), eq(channels.server_id, serverId)))
+      .limit(1);
+
+    if (!channel) throw new NotFoundException('Channel not found');
+
+    const rows = await db
+      .select()
+      .from(channel_permission_overrides)
+      .where(eq(channel_permission_overrides.channel_id, channelId));
+
+    return rows.map(overrideToDto);
+  }
+
+  /** Upsert (insert or update) a channel override */
+  async upsertChannelOverride(
+    serverId: string,
+    channelId: string,
+    input: UpsertChannelOverrideInput,
+  ): Promise<ChannelOverride> {
+    const [channel] = await db
+      .select({ id: channels.id })
+      .from(channels)
+      .where(and(eq(channels.id, channelId), eq(channels.server_id, serverId)))
+      .limit(1);
+
+    if (!channel) throw new NotFoundException('Channel not found');
+
+    // Verify role belongs to this server
+    const [role] = await db
+      .select({ id: roles.id })
+      .from(roles)
+      .where(and(eq(roles.id, input.roleId), eq(roles.server_id, serverId)))
+      .limit(1);
+
+    if (!role) throw new NotFoundException('Role not found in server');
+
+    // Upsert: insert or update on UNIQUE(channel_id, role_id)
+    const result = await db
+      .insert(channel_permission_overrides)
+      .values({
+        channel_id: channelId,
+        role_id: input.roleId,
+        can_view: input.canView,
+      })
+      .onConflictDoUpdate({
+        target: [
+          channel_permission_overrides.channel_id,
+          channel_permission_overrides.role_id,
+        ],
+        set: { can_view: input.canView },
+      })
+      .returning();
+
+    const row = result[0];
+    if (!row) throw new Error('Channel override upsert failed unexpectedly');
+    return overrideToDto(row);
+  }
+
+  /** Delete a channel override */
+  async deleteChannelOverride(serverId: string, channelId: string, roleId: string): Promise<void> {
+    const [channel] = await db
+      .select({ id: channels.id })
+      .from(channels)
+      .where(and(eq(channels.id, channelId), eq(channels.server_id, serverId)))
+      .limit(1);
+
+    if (!channel) throw new NotFoundException('Channel not found');
+
+    const [existing] = await db
+      .select({ id: channel_permission_overrides.id })
+      .from(channel_permission_overrides)
+      .where(
+        and(
+          eq(channel_permission_overrides.channel_id, channelId),
+          eq(channel_permission_overrides.role_id, roleId),
+        ),
+      )
+      .limit(1);
+
+    if (!existing) throw new NotFoundException('Override not found');
+
+    await db
+      .delete(channel_permission_overrides)
+      .where(
+        and(
+          eq(channel_permission_overrides.channel_id, channelId),
+          eq(channel_permission_overrides.role_id, roleId),
+        ),
+      );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Mapper: DB row → ChannelOverride DTO
+// ---------------------------------------------------------------------------
+
+function overrideToDto(row: {
+  id: string;
+  channel_id: string;
+  role_id: string;
+  can_view: boolean;
+}): ChannelOverride {
+  return {
+    id: row.id,
+    channelId: row.channel_id,
+    roleId: row.role_id,
+    canView: row.can_view,
+  };
 }
 
 // ---------------------------------------------------------------------------

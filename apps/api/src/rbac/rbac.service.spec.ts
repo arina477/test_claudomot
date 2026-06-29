@@ -378,6 +378,110 @@ describe('RbacService.deleteRole', () => {
 });
 
 // ---------------------------------------------------------------------------
+// canViewChannel — private default-deny + override logic (P-4 T-8)
+// ---------------------------------------------------------------------------
+
+describe('RbacService.canViewChannel — private default-deny', () => {
+  let service: RbacService;
+
+  const mockChannel = {
+    id: 'ch-1',
+    server_id: 'server-1',
+    is_private: false,
+  };
+  const mockPrivateChannel = {
+    id: 'ch-private',
+    server_id: 'server-1',
+    is_private: true,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    service = new RbacService();
+  });
+
+  it('owner can view private channel (superuser)', async () => {
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return makeSelectChain([mockServer]); // server
+      return makeSelectChain([]);
+    });
+
+    const result = await service.canViewChannel('owner-1', 'server-1', 'ch-private');
+    expect(result).toBe(true);
+  });
+
+  it('returns false when user is not a member', async () => {
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return makeSelectChain([mockServer]);
+      return makeSelectChain([]); // no membership
+    });
+
+    const result = await service.canViewChannel('outsider', 'server-1', 'ch-1');
+    expect(result).toBe(false);
+  });
+
+  it('private channel: default-deny (no override → false)', async () => {
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return makeSelectChain([mockServer]);
+      if (callCount === 2) return makeSelectChain([mockMemberWithRole]);
+      if (callCount === 3) return makeSelectChain([mockPrivateChannel]); // channel
+      return makeSelectChain([]); // no override
+    });
+
+    const result = await service.canViewChannel('user-member', 'server-1', 'ch-private');
+    expect(result).toBe(false);
+  });
+
+  it('private channel: visible when override grants can_view=true', async () => {
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return makeSelectChain([mockServer]);
+      if (callCount === 2) return makeSelectChain([mockMemberWithRole]);
+      if (callCount === 3) return makeSelectChain([mockPrivateChannel]);
+      return makeSelectChain([{ can_view: true }]); // override grants view
+    });
+
+    const result = await service.canViewChannel('user-member', 'server-1', 'ch-private');
+    expect(result).toBe(true);
+  });
+
+  it('public channel: visible by default (no override)', async () => {
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return makeSelectChain([mockServer]);
+      if (callCount === 2) return makeSelectChain([mockMemberWithRole]);
+      if (callCount === 3) return makeSelectChain([mockChannel]); // public channel
+      return makeSelectChain([]); // no override
+    });
+
+    const result = await service.canViewChannel('user-member', 'server-1', 'ch-1');
+    expect(result).toBe(true);
+  });
+
+  it('public channel: hidden when override sets can_view=false', async () => {
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return makeSelectChain([mockServer]);
+      if (callCount === 2) return makeSelectChain([mockMemberWithRole]);
+      if (callCount === 3) return makeSelectChain([mockChannel]);
+      return makeSelectChain([{ can_view: false }]); // override denies
+    });
+
+    const result = await service.canViewChannel('user-member', 'server-1', 'ch-1');
+    expect(result).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // assignRole — no self-promote (P-4 T-8 security condition)
 // ---------------------------------------------------------------------------
 

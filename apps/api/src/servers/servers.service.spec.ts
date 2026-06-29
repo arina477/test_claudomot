@@ -79,6 +79,31 @@ const mockInsert = db.insert as unknown as MockFn;
 const mockUpdate = db.update as unknown as MockFn;
 
 // ---------------------------------------------------------------------------
+// RbacService mock factory
+// Default: getVisibleChannelIds returns null (owner → all visible)
+// ---------------------------------------------------------------------------
+
+import type { RbacService } from '../rbac/rbac.service';
+
+function makeRbacServiceMock(
+  getVisibleChannelIdsReturn: Set<string> | null = null,
+): RbacService {
+  return {
+    getVisibleChannelIds: vi.fn().mockResolvedValue(getVisibleChannelIdsReturn),
+    can: vi.fn().mockResolvedValue(false),
+    canViewChannel: vi.fn().mockResolvedValue(true),
+    listRoles: vi.fn(),
+    createRole: vi.fn(),
+    updateRole: vi.fn(),
+    deleteRole: vi.fn(),
+    assignRole: vi.fn(),
+    listChannelOverrides: vi.fn(),
+    upsertChannelOverride: vi.fn(),
+    deleteChannelOverride: vi.fn(),
+  } as unknown as RbacService;
+}
+
+// ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
 
@@ -116,7 +141,7 @@ describe('ServersService.createServer', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new ServersService();
+    service = new ServersService(makeRbacServiceMock());
   });
 
   /** Build a spied transaction mock that tracks per-insert values. */
@@ -198,7 +223,7 @@ describe('ServersService.findMyServers', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new ServersService();
+    service = new ServersService(makeRbacServiceMock());
   });
 
   it('returns servers mapped to ServerSummary', async () => {
@@ -239,7 +264,7 @@ describe('ServersService.findServerDetail', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new ServersService();
+    service = new ServersService(makeRbacServiceMock());
   });
 
   it('throws NotFoundException (404) when server does not exist', async () => {
@@ -375,6 +400,126 @@ describe('ServersService.findServerDetail', () => {
 });
 
 // ---------------------------------------------------------------------------
+// ServersService — findServerDetail (server-side channel filtering, P-4 T-8)
+// ---------------------------------------------------------------------------
+
+describe('ServersService.findServerDetail — server-side channel filtering', () => {
+  /**
+   * These tests verify that channels not visible to the caller's role are
+   * ABSENT from the response (no hidden-channel enumeration).
+   * The RbacService mock controls which channel IDs are visible.
+   */
+
+  it('hides non-visible channels from response (no enumeration)', async () => {
+    // Two channels: ch-1 (visible), ch-2 (private, not in visibleIds set)
+    const privateChannel = {
+      ...mockChannel,
+      id: 'ch-2',
+      name: 'secret',
+      is_private: true,
+    };
+    const visibleSet = new Set(['ch-1']); // ch-2 hidden
+    const rbacMock = makeRbacServiceMock(visibleSet);
+    const svc = new ServersService(rbacMock);
+
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      switch (callCount) {
+        case 1:
+          return makeSelectChain([mockServer]);
+        case 2:
+          return makeSelectChain([mockMember]);
+        case 3:
+          return makeSelectChain([mockCategory]);
+        default:
+          return makeSelectChain([mockChannel, privateChannel]);
+      }
+    });
+
+    const result = await svc.findServerDetail('user-1', 'server-1');
+
+    const channelIds = result.categories.flatMap((c) => c.channels.map((ch) => ch.id));
+    expect(channelIds).toContain('ch-1');
+    expect(channelIds).not.toContain('ch-2'); // must be absent — no enumeration
+  });
+
+  it('private channel default-deny: absent when visibleIds does not include it', async () => {
+    const privateChannel = {
+      ...mockChannel,
+      id: 'ch-private',
+      name: 'private-chat',
+      is_private: true,
+    };
+    // Empty visible set — private channel hidden by default-deny
+    const emptySet = new Set<string>();
+    const svc = new ServersService(makeRbacServiceMock(emptySet));
+
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      switch (callCount) {
+        case 1: return makeSelectChain([mockServer]);
+        case 2: return makeSelectChain([mockMember]);
+        case 3: return makeSelectChain([mockCategory]);
+        default: return makeSelectChain([privateChannel]);
+      }
+    });
+
+    const result = await svc.findServerDetail('user-member', 'server-1');
+    const channelIds = result.categories.flatMap((c) => c.channels.map((ch) => ch.id));
+    expect(channelIds).not.toContain('ch-private');
+  });
+
+  it('owner sees all channels (getVisibleChannelIds returns null = all)', async () => {
+    const privateChannel = {
+      ...mockChannel,
+      id: 'ch-private',
+      name: 'private-chat',
+      is_private: true,
+    };
+    // null = all visible (owner path)
+    const svc = new ServersService(makeRbacServiceMock(null));
+
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      switch (callCount) {
+        case 1: return makeSelectChain([mockServer]);
+        case 2: return makeSelectChain([mockMember]);
+        case 3: return makeSelectChain([mockCategory]);
+        default: return makeSelectChain([mockChannel, privateChannel]);
+      }
+    });
+
+    const result = await svc.findServerDetail('owner-1', 'server-1');
+    const channelIds = result.categories.flatMap((c) => c.channels.map((ch) => ch.id));
+    expect(channelIds).toContain('ch-1');
+    expect(channelIds).toContain('ch-private');
+  });
+
+  it('getVisibleChannelIds is called with correct serverId and channelIds', async () => {
+    const rbacMock = makeRbacServiceMock(null);
+    const svc = new ServersService(rbacMock);
+
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      switch (callCount) {
+        case 1: return makeSelectChain([mockServer]);
+        case 2: return makeSelectChain([mockMember]);
+        case 3: return makeSelectChain([mockCategory]);
+        default: return makeSelectChain([mockChannel]);
+      }
+    });
+
+    await svc.findServerDetail('user-1', 'server-1');
+
+    expect(rbacMock.getVisibleChannelIds).toHaveBeenCalledWith('user-1', 'server-1', ['ch-1']);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Invite fixtures
 // ---------------------------------------------------------------------------
 
@@ -399,7 +544,7 @@ describe('ServersService.createInvite', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new ServersService();
+    service = new ServersService(makeRbacServiceMock());
   });
 
   it('throws ForbiddenException (403) when caller is not a member', async () => {
@@ -510,7 +655,7 @@ describe('ServersService.getInvitePreview', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new ServersService();
+    service = new ServersService(makeRbacServiceMock());
   });
 
   it('returns minimal preview (id, name, memberCount) for a valid ad-hoc invite', async () => {
@@ -610,7 +755,7 @@ describe('ServersService.joinViaInvite', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new ServersService();
+    service = new ServersService(makeRbacServiceMock());
   });
 
   /**
@@ -836,7 +981,7 @@ describe('ServersService.revokeInvite', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new ServersService();
+    service = new ServersService(makeRbacServiceMock());
   });
 
   it('returns void (200) when owner revokes their own invite', async () => {
