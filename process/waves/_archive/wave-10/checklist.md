@@ -62,6 +62,6 @@ LEARN:
 - [x] L-2 Distill — 4 tasks done; 6 observations; 2 promotions (VERIFY rule 1, BUILD rule 3); 4a2ad286 → wave-11 seed (NOT promoted as rule)
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers — M2 in_progress→done (feature-complete); M3 todo→in_progress (founder-pre-authorized pivot); 4 open M2 tasks reassigned to M3; no decomposition (M3 has 4 seed candidates)
+- [x] N-2 Seed — wave-11 seed = 4a2ad286 (verified-prod fixture), single-task bundle; validation pass; claimed_task_ids=[4a2ad286]
+- [x] N-3 Handoff — wave-10 closed (status=ok); single-move archive → _archive/wave-10; .last-wave-completed.yaml written; loop_state ready
