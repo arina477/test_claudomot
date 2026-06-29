@@ -1,5 +1,6 @@
 import { Catch, HttpStatus } from '@nestjs/common';
-import type { ArgumentsHost, ExceptionFilter } from '@nestjs/common';
+import type { ArgumentsHost } from '@nestjs/common';
+import { BaseExceptionFilter } from '@nestjs/core';
 import Session from 'supertokens-node/recipe/session';
 
 // Minimal response interface — avoids @types/express dependency.
@@ -8,8 +9,8 @@ interface HttpResponse {
 }
 
 @Catch()
-export class SupertokensExceptionFilter implements ExceptionFilter {
-  catch(err: unknown, host: ArgumentsHost): void {
+export class SupertokensExceptionFilter extends BaseExceptionFilter {
+  override catch(err: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const res = ctx.getResponse<HttpResponse>();
 
@@ -28,12 +29,13 @@ export class SupertokensExceptionFilter implements ExceptionFilter {
           res.status(HttpStatus.FORBIDDEN).json({ code: 'EMAIL_NOT_VERIFIED' });
           return;
         default:
-          // Fall through to re-throw for unrecognised Session errors
+          // Fall through to base handler for unrecognised Session errors
           break;
       }
     }
 
-    // Not a SuperTokens error — re-throw so NestJS default handler processes it
-    throw err;
+    // Delegate to NestJS BaseExceptionFilter so HttpExceptions (e.g. BadRequestException,
+    // NotFoundException) are serialised correctly instead of crashing the process.
+    super.catch(err, host);
   }
 }
