@@ -1,4 +1,4 @@
-import { ServiceUnavailableException } from '@nestjs/common';
+import { PayloadTooLargeException, ServiceUnavailableException } from '@nestjs/common';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // vi.mock is hoisted to the top of the file by vitest — the factory must not
@@ -7,6 +7,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('@aws-sdk/s3-request-presigner', () => ({
   getSignedUrl: vi.fn().mockResolvedValue('https://signed.example.com/put-url'),
 }));
+
+// Stub the S3Client so HeadObjectCommand calls are interceptable without real AWS creds.
+// The factory must be static — vi.mock is hoisted; no local var references.
+vi.mock('@aws-sdk/client-s3', async (importOriginal) => {
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic import in mock factory
+  const actual = await importOriginal<any>();
+  return {
+    ...actual,
+    S3Client: vi.fn().mockImplementation(() => ({
+      send: vi.fn(),
+    })),
+  };
+});
 
 // Import FilesService after the mock is set up.
 import { FilesService } from './files.service';
@@ -98,6 +111,72 @@ describe('FilesService', () => {
 
       expect(result.uploadUrl).toBe('https://signed.example.com/put-url');
       expect(result.key).toMatch(/^avatars\/user-xyz\/.+\.png$/);
+    });
+  });
+
+  // ── checkAvatarSize — server-side 2MB enforcement (task 84e09891) ───────────
+
+  describe('checkAvatarSize — storage env UNSET', () => {
+    it('throws ServiceUnavailableException with code STORAGE_NOT_CONFIGURED', async () => {
+      const service = new FilesService();
+      await expect(service.checkAvatarSize('avatars/user-abc/file.png')).rejects.toThrow(
+        ServiceUnavailableException,
+      );
+    });
+  });
+
+  describe('checkAvatarSize — storage env SET', () => {
+    beforeEach(() => {
+      setStorageEnv();
+    });
+
+    it('resolves without throwing when ContentLength is within 2MB', async () => {
+      const { S3Client } = await import('@aws-sdk/client-s3');
+      const mockSend = vi.fn().mockResolvedValue({ ContentLength: 1024 * 1024 }); // 1 MB
+      // biome-ignore lint/suspicious/noExplicitAny: mock constructor
+      (S3Client as any).mockImplementation(() => ({ send: mockSend }));
+
+      const service = new FilesService();
+      await expect(service.checkAvatarSize('avatars/user-abc/file.png')).resolves.toBeUndefined();
+    });
+
+    it('throws PayloadTooLargeException when ContentLength exceeds 2MB', async () => {
+      const { S3Client } = await import('@aws-sdk/client-s3');
+      const mockSend = vi.fn().mockResolvedValue({ ContentLength: 3 * 1024 * 1024 }); // 3 MB
+      // biome-ignore lint/suspicious/noExplicitAny: mock constructor
+      (S3Client as any).mockImplementation(() => ({ send: mockSend }));
+
+      const service = new FilesService();
+      await expect(service.checkAvatarSize('avatars/user-abc/file.png')).rejects.toThrow(
+        PayloadTooLargeException,
+      );
+    });
+
+    it('throws PayloadTooLargeException with code AVATAR_TOO_LARGE when file is too big', async () => {
+      const { S3Client } = await import('@aws-sdk/client-s3');
+      const mockSend = vi.fn().mockResolvedValue({ ContentLength: 2 * 1024 * 1024 + 1 }); // 1 byte over
+      // biome-ignore lint/suspicious/noExplicitAny: mock constructor
+      (S3Client as any).mockImplementation(() => ({ send: mockSend }));
+
+      const service = new FilesService();
+      try {
+        await service.checkAvatarSize('avatars/user-abc/file.png');
+        expect.fail('Should have thrown');
+      } catch (err) {
+        expect(err).toBeInstanceOf(PayloadTooLargeException);
+        const exc = err as PayloadTooLargeException;
+        expect(exc.getResponse()).toMatchObject({ code: 'AVATAR_TOO_LARGE' });
+      }
+    });
+
+    it('allows exactly 2MB (boundary condition)', async () => {
+      const { S3Client } = await import('@aws-sdk/client-s3');
+      const mockSend = vi.fn().mockResolvedValue({ ContentLength: 2 * 1024 * 1024 }); // exactly 2 MB
+      // biome-ignore lint/suspicious/noExplicitAny: mock constructor
+      (S3Client as any).mockImplementation(() => ({ send: mockSend }));
+
+      const service = new FilesService();
+      await expect(service.checkAvatarSize('avatars/user-abc/file.png')).resolves.toBeUndefined();
     });
   });
 });

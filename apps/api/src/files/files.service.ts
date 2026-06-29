@@ -1,7 +1,12 @@
 import { randomUUID } from 'node:crypto';
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { HeadObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  PayloadTooLargeException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 
 // Allowed MIME types for avatar uploads — allowlist only.
 const AVATAR_ALLOWED_MIME: Record<string, string> = {
@@ -11,6 +16,12 @@ const AVATAR_ALLOWED_MIME: Record<string, string> = {
 };
 
 const PRESIGN_EXPIRY_SECONDS = 300; // 5 minutes
+
+// Server-side size cap enforced at confirm time via HeadObject.
+// A presigned-PUT cannot carry a content-length-range condition (that is a
+// presigned-POST feature only), so we check the uploaded object size after
+// the client completes the PUT, before we persist the avatar URL.
+const AVATAR_MAX_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
 
 function buildPublicUrl(endpoint: string, bucket: string, key: string): string {
   // Tigris / R2 style: https://<endpoint>/<bucket>/<key>
@@ -91,11 +102,9 @@ export class FilesService {
       Bucket: bucket,
       Key: key,
       ContentType: contentType,
-      // 2 MB cap enforced at the server-controlled key level via metadata.
-      // Clients exceeding this will receive a 403 from the storage provider.
-      // Note: ContentLengthRange is a presigned-POST feature only; for presigned
-      // PUT the size constraint is advisory — the 2MB check should also be done
-      // client-side. The server-controlled key prevents path traversal regardless.
+      // ContentLengthRange is a presigned-POST-only feature and cannot be
+      // applied here. Server-side 2MB enforcement is performed at confirm time
+      // via checkAvatarSize() (HeadObject → ContentLength comparison).
     });
 
     const uploadUrl = await getSignedUrl(client, command, {
@@ -103,6 +112,47 @@ export class FilesService {
     });
 
     return { uploadUrl, key };
+  }
+
+  /**
+   * Server-side 2MB avatar size enforcement (task 84e09891).
+   *
+   * Called by the controller BEFORE persisting avatar_url. Issues a HeadObject
+   * request against the uploaded key; if ContentLength > 2MB, throws
+   * PayloadTooLargeException (413) so the URL is never persisted.
+   *
+   * This is the enforcement mechanism that replaces the client-side-only cap
+   * from wave-4 AC7. presigned-PUT cannot carry ContentLengthRange (that is a
+   * presigned-POST feature) — the confirm-time HEAD check is the cleanest
+   * approach with no frontend contract change.
+   *
+   * Throws:
+   *   - ServiceUnavailableException (503) if storage env is unconfigured.
+   *   - PayloadTooLargeException (413) if the uploaded file exceeds 2MB.
+   */
+  async checkAvatarSize(key: string): Promise<void> {
+    const client = this.getS3Client();
+    if (!client) {
+      throw new ServiceUnavailableException({ code: 'STORAGE_NOT_CONFIGURED' });
+    }
+
+    const bucket = process.env.STORAGE_BUCKET_NAME;
+    if (!bucket) {
+      throw new ServiceUnavailableException({ code: 'STORAGE_NOT_CONFIGURED' });
+    }
+
+    const head = await client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
+
+    const contentLength = head.ContentLength ?? 0;
+    if (contentLength > AVATAR_MAX_SIZE_BYTES) {
+      this.logger.warn(
+        `Avatar upload rejected — size ${contentLength} bytes exceeds ${AVATAR_MAX_SIZE_BYTES} byte cap (key: ${key})`,
+      );
+      throw new PayloadTooLargeException({
+        code: 'AVATAR_TOO_LARGE',
+        message: `Avatar must be ≤ 2 MB. Uploaded file is ${Math.ceil(contentLength / 1024)} KB.`,
+      });
+    }
   }
 
   /**
