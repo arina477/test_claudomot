@@ -5,5 +5,5 @@ allowBuilds:
   '@biomejs/biome': true
   '@nestjs/core': true
   '@scarf/scarf': false
-  browser-tabs-lock: set this to true or false
+  browser-tabs-lock: true
   esbuild: true

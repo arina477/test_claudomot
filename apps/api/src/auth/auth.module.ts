@@ -5,6 +5,7 @@ import { UsersModule } from '../users/users.module';
 import { SupertokensExceptionFilter } from './auth.exception.filter';
 import { AuthGuard } from './auth.guard';
 import { SupertokensMiddleware } from './auth.middleware';
+import { SessionNoVerifyGuard } from './session-no-verify.guard';
 
 // NOTE: initSuperTokens() is called in main.ts bootstrap(), before NestFactory.create(),
 // to ensure the SDK is initialized before getAllCORSHeaders() and before the middleware
@@ -13,8 +14,8 @@ import { SupertokensMiddleware } from './auth.middleware';
 
 @Module({
   imports: [UsersModule, EmailModule],
-  providers: [AuthGuard, SupertokensExceptionFilter],
-  exports: [AuthGuard, SupertokensExceptionFilter],
+  providers: [AuthGuard, SessionNoVerifyGuard, SupertokensExceptionFilter],
+  exports: [AuthGuard, SessionNoVerifyGuard, SupertokensExceptionFilter],
 })
 export class AuthModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
