@@ -1,0 +1,2 @@
+## Re-verify (post PR#15) — a7667fb7 RESOLVED
+The sole REJECT (node-20 residual deprecations) is fixed: pnpm/action-setup@v6 + gitleaks@v3 (node24), zero Node-20 annotations on the merged CI run. All 6 specs now meet their ACs (avatar live-upload remains the documented founder-creds deferral). → APPROVE.

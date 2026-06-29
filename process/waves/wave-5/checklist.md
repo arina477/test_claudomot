@@ -45,9 +45,9 @@ TEST:
 - [ ] T-9 Journey
 
 VERIFY:
-- [ ] V-1 Independent reviews (Karen + jenny, parallel)
-- [ ] V-2 Triage
-- [ ] V-3 Fast-fix loop (or close)
+- [x] V-1 Independent reviews (Karen REJECT node-20 Low + jenny APPROVE)
+- [x] V-2 Triage (node-20 sole blocking → fast-fix; rest non-blocking)
+- [x] V-3 Fast-fix loop — head-verifier APPROVED; node-20 fast-fixed (PR#15), CI-verified zero annotations
 
 LEARN:
 - [ ] L-1 Docs
