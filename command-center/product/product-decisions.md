@@ -164,3 +164,6 @@ Next-wave (wave-10) bundle for M2's unshipped RBAC scope clause — server roles
 - **Security note:** RBAC is authz-critical — all four tasks require server-side authorization re-derivation via `RbacService.can()` (never client-supplied role/permission trust; route-param-only context) and the owner-lockout invariant; flags T-8 Security downstream.
 - caller: N-1-next-bundle
 - decomposed by: milestone-decomposer sub-agent
+
+## 2026-06-29 — wave-10 RBAC: channel-override table name = channel_permission_overrides (override of _library)
+**Decision (P-4 karen+jenny):** the channel-level permission table is named `channel_permission_overrides` (UNIQUE(channel_id,role_id) + INDEX(channel_id)), NOT `permissions`. `_library.md` is internally contradictory (L144 `permissions` vs L58 `channel_permission_overrides`), so the "doc wins" rule can't pick; `channel_permission_overrides` is self-documenting + already used in the spec/plan/shared-types. Role permission FLAGS are boolean columns on `roles` (per resolved decision #6 single-role-per-member — NO `role_permissions` join table; the stale L58/L144 entries are pre-v6b drift, optional L-housekeeping to strike).
