@@ -8,6 +8,7 @@ export const servers = pgTable('servers', {
   owner_id: text('owner_id')
     .notNull()
     .references(() => users.id),
+  invite_code: text('invite_code').unique(),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
