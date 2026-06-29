@@ -182,7 +182,7 @@ describe('ServerRolesPage', () => {
     renderPage();
     await waitFor(() => expect(screen.getByTestId('role-editor')).toBeInTheDocument());
     const nameInput = screen.getByTestId('role-name-input');
-    expect(nameInput).toHaveValue('TA (Admin)');
+    await waitFor(() => expect(nameInput).toHaveValue('TA (Admin)'));
   });
 
   it('marks role dirty and enables Save when role name changes', async () => {
@@ -246,7 +246,7 @@ describe('ServerRolesPage', () => {
     expect(screen.getByTestId('role-name-input')).toHaveValue('Edited');
 
     fireEvent.click(screen.getByTestId('discard-btn'));
-    expect(screen.getByTestId('role-name-input')).toHaveValue('TA (Admin)');
+    await waitFor(() => expect(screen.getByTestId('role-name-input')).toHaveValue('TA (Admin)'));
   });
 
   // ── Permission flag toggles ───────────────────────────────────────────────
