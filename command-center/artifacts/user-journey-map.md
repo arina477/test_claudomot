@@ -1,8 +1,8 @@
 ---
 name: User Journey Map
 description: Canonical inventory of every user flow, screen, route, API endpoint. Regenerated at T-9 from production state.
-last_updated: 2026-06-29 (T-9 wave-9 light touch — M2 invite-completion LIVE; invite-revoke endpoint+UI + share-modal permanent-default link + servers.invite_code backfill; SAME /invite surface, no new route; HTTP/code-level + live-probe; invite-rotation deferred d058283d; authed crawl deferred c51589cd, fixture 4a2ad286)
-version: 0.6
+last_updated: 2026-06-29 (T-9 wave-10 — M2 RBAC capstone LIVE; roles CRUD + can() + role assignment + per-role channel visibility (channel-list now role-gated server-side) + channel_permission_overrides + ChannelPermissionGuard + transactional owner-lockout; roles surface is a full-screen overlay opened from the channel-sidebar "Server settings — Roles" button within the existing /servers/:id shell — NO new route; HTTP/code-level + live 401-boundary probe re-confirmed at gate; M2 "channels per role" metric MET → M2 feature-complete; 403-non-permitted + authed crawl still deferred — verified-prod fixture 4a2ad286 ESCALATION-CRITICAL, 4 waves running)
+version: 0.7
 status_legend:
   - "✅ Live: page renders correctly with real content in production"
   - "🟡 Live but degraded: renders but missing data, broken interaction, or minor known issue"
@@ -32,7 +32,7 @@ Canonical inventory of every screen / route / surface + flow cross-reference. Re
 | 10 | Voice/video study room | `/servers/:id/voice/:channelId` | P1 | F4 | WebRTC SFU, voice-room UI, presence | full |
 | 11 | Create server | `/app` (modal/flow) | P2 | F7 | server mgmt, channel mgmt | full |
 | 12 | Invite preview / join | `/invite/:code` | P1 | F2 | invite system, server mgmt | full |
-| 13 | Server settings (roles / members / channels) | `/servers/:id/settings` | P2 | F8 | RBAC, member mgmt, channel mgmt | full |
+| 13 | Roles Management (full-screen overlay) | `/servers/:id` shell → "Server settings — Roles" button (no dedicated route) | P2 | F8 | RBAC, role mgmt, member-role assign, per-channel visibility | full |
 | 14 | Assignments panel | `/servers/:id/assignments` | P1,P2 | F6, F9 | assignment module, notifications | full |
 | 15 | User settings — profile | `/settings/profile` | P1 | F1 | profile mgmt, file upload | full |
 | 16 | User settings — privacy | `/settings/privacy` | P1 | F1 | privacy controls | full |
@@ -108,6 +108,20 @@ Live: web https://web-production-bce1a8.up.railway.app · api https://api-produc
 
 **Deferrals (non-blocking, info-severity):** permanent `invite_code` rotation is irrevocable — no rotate endpoint (deferred d058283d, Gemini flag; 0 prod servers so no live exposure). Limited-invites revoke list is session-scoped — no list-ad-hoc GET endpoint (honest gap, not a defect).
 
+## Deployment status — wave-10 (M2 RBAC capstone — the access-control core, LIVE)
+Live: web https://web-production-bce1a8.up.railway.app · api https://api-production-b93e.up.railway.app/health (200, live-verified at T-9). Migration `0004_green_madripoor.sql` (roles table + channel_permission_overrides + server_members.role_id FK) applied to prod Postgres; `db:backfill-roles` ran idempotent-clean (0 servers → no-op). PR#20 merge `3cf63bf`. Verification: 270 tests (173 api incl. all 6 security conditions + 97 web) green in CI against real Postgres 16; live 401 unauthed boundary verified across every role/override/member endpoint (C-2) and independently re-confirmed at the gate (`POST/GET /servers/:id/roles → 401`). **M2 success metric "channels per role" now MET → M2 feature-complete.** Authed full-browser click-through + 403-non-permitted live-probe still deferred — no persistent verified-prod fixture (4a2ad286, now 4 waves running; ESCALATION-CRITICAL → L). Concurrent owner-demote race is unit-modelled, not multi-connection-executed (prod code has the correct `SELECT FOR UPDATE` lock).
+
+| Surface | Status | Note |
+|---|---|---|
+| Roles Management overlay (page 13, F8) | ✅ Live | NEW. Full-screen overlay opened from the channel-sidebar "Server settings — Roles" button (`data-testid=server-settings-btn`, `aria-label="Server settings — Roles"`); rendered within the existing `/servers/:id` shell, NOT a dedicated route. Roles list / create / delete, 4 fixed permission toggles (no free-form matrix — the spec-violating matrix tab was caught + replaced at D-3), per-channel visibility editor, member-role assignment, owner-lockout 409 surfaced honestly. 97 web tests; 5 a11y fixes per design/server-roles.html. (UI tests lean on `getByTestId` for state hooks — recorded a11y-as-contract note, not a gate blocker.) |
+| Channel sidebar — per-role visibility | ✅ Live | `GET /servers/:id` channel list is now ROLE-GATED server-side: `findServerDetail` filters via `getVisibleChannelIds` so non-visible channels are ABSENT from the response (no enumeration). Replaces wave-7's show-all-channels behaviour. |
+| `GET /servers/:id/roles` + `POST /servers/:id/roles` + role CRUD (api) | ✅ Live | AuthGuard + `can(manage_roles)`; 401 unauthed live-verified (gate-confirmed). userId from session (no IDOR). |
+| `PATCH /servers/:id/members/:userId/role` (assign role) | ✅ Live | `can(manage_members)`; self-promote blocked at controller + service (defence-in-depth); 401 unauthed live. |
+| `GET/POST/DELETE /servers/:id/channels/:channelId/overrides` (api) | ✅ Live | ChannelPermissionGuard reads ROUTE PARAMS only (body-spoof rejected — test proves route-param wins); `can(manage_channels)`; 401 unauthed live. Private channel default-DENY unless override `can_view=true`. |
+| Owner-lockout (demote / remove / leave) | ✅ Live | Transactional: `db.transaction` + `SELECT FOR UPDATE` row-lock; last-owner action → 409 (`ConflictException`, asserted). transferOwnership atomic. Concurrent-race serialization unit-modelled (not multi-connection-run). |
+
+**Access-control note (T-8 verified, RBAC = the access-control CORE):** `can()` is server-side and default-DENY (owner_id superuser; else explicit role flag; no membership / no role / null role_id / false flag → false). userId is always session-derived — IDOR via param/body substitution is closed. Channel enumeration is closed server-side (non-visible channels absent from the list, not merely hidden in the UI). Private channels are default-deny. Owner-lockout is transactional with a row-lock + last-owner-409 invariant. The boundary is enforced in NestJS, not the UI. The 401 door is live-verified on every new endpoint; the 403-non-permitted path is CI-tested (270 tests incl. 6 conditions) but NOT live-probed — gated on the verified-prod fixture (4a2ad286), the recurring M2 live-verification gap.
+
 ## Flows cross-reference
 
 ### F1 — Sign up & create profile (P1)
@@ -140,9 +154,9 @@ Live: web https://web-production-bce1a8.up.railway.app · api https://api-produc
 - Entry: `/app` → Create server (+ in rail) → single-step name modal → `POST /servers {name}` (seeds owner membership + default "General" category + `#general` server-side) → new server selected in rail, `#general` shown. (M2 STRUCTURE only; icon/template/invite are later milestones.)
 - Features: 5
 
-### F8 — Invite + roles/permissions (P2) — invite lifecycle LIVE (wave-8 create/join, wave-9 revoke); roles/perms later
-- Entry (invite, LIVE): server view → invite-share modal (copy link, defaults to permanent per-server `invite_code` on open — wave-9 8b) OR `POST /servers/:id/invites` (member-gated, CSPRNG `{code,url}`) → shareable `/invite/:code`. Two-tier: permanent per-server `invite_code` + ad-hoc max_uses invites. **Revoke (wave-9): owner-or-creator → `POST /invites/:code/revoke` → revoked invite 404s on preview + join.** Lifecycle now complete: create → join → revoke.
-- Entry (roles/perms, NOT built): `/servers/:id/settings` → roles → assign → remove/ban (later M2+ milestone). Invite-code rotation deferred (d058283d).
+### F8 — Invite + roles/permissions (P2) — invite lifecycle LIVE (wave-8/9); roles/permissions LIVE (wave-10 RBAC capstone)
+- Entry (invite, LIVE): server view → invite-share modal (copy link, defaults to permanent per-server `invite_code` on open — wave-9 8b) OR `POST /servers/:id/invites` (member-gated, CSPRNG `{code,url}`) → shareable `/invite/:code`. Two-tier: permanent per-server `invite_code` + ad-hoc max_uses invites. **Revoke (wave-9): owner-or-creator → `POST /invites/:code/revoke` → revoked invite 404s on preview + join.** Lifecycle complete: create → join → revoke.
+- Entry (roles/permissions, LIVE wave-10): server view → channel-sidebar "Server settings — Roles" button → Roles Management overlay → create/delete role (4 fixed permission toggles) → assign role to member (`PATCH /servers/:id/members/:userId/role`) → set per-channel visibility (`channel_permission_overrides` via ChannelPermissionGuard). Channel list is now role-gated server-side (non-visible channels absent). Owner-lockout enforced: last-owner demote/remove/leave → 409. `can()` server-side default-deny gates every management op. Invite-code rotation still deferred (d058283d).
 - Features: 10, 11
 
 ### F9 — Post assignment / pin schedule (P2)
