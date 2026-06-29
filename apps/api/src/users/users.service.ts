@@ -14,4 +14,11 @@ export class UsersService {
     const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
     return result[0];
   }
+
+  async updateDisplayName(id: string, displayName: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ display_name: displayName, updated_at: new Date() })
+      .where(eq(users.id, id));
+  }
 }
