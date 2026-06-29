@@ -22,6 +22,7 @@ All notable changes to StudyHall are documented here. Format follows
 - Sign-in attempts are now rate-limited, so repeated rapid login tries are blocked to protect accounts from abuse. (#12, #14)
 - Browser-based end-to-end testing and protected-branch rules now run on every change, so regressions are caught before release. (#12, #15)
 - A pre-merge boot check now starts the built server and confirms its health endpoint responds before any change can merge, so a build that would crash on deploy is caught first. (#16)
+- Create a study server: it starts with a General category and a #general channel and makes you its owner. Your servers appear in the server rail and their channels in the sidebar. (#17)
 
 ### Fixed
 
