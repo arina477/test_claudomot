@@ -161,7 +161,7 @@ describe('ServersService.createServer', () => {
 
   it('executes all inserts inside db.transaction and returns ServerResponse', async () => {
     const capturedValues: unknown[] = [];
-    const txMock = buildTxMock([[mockServer], [], [mockCategory], []], capturedValues);
+    const txMock = buildTxMock([[mockServer], [], [], [mockCategory], []], capturedValues);
     mockTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(txMock));
 
     const result = await service.createServer('user-1', 'Test Server');
@@ -173,36 +173,55 @@ describe('ServersService.createServer', () => {
     expect(result.createdAt).toBe('2026-01-01T00:00:00.000Z');
   });
 
-  it('inserts 4 rows in order: server → member → category → channel', async () => {
+  it('inserts 5 rows in order: server → role → member → category → channel', async () => {
     const capturedValues: unknown[] = [];
-    const txMock = buildTxMock([[mockServer], [], [mockCategory], []], capturedValues);
+    const txMock = buildTxMock([[mockServer], [], [], [mockCategory], []], capturedValues);
     mockTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(txMock));
 
     await service.createServer('user-1', 'Test Server');
 
-    expect(txMock.insert).toHaveBeenCalledTimes(4);
+    expect(txMock.insert).toHaveBeenCalledTimes(5);
+  });
+
+  it('seeds default Member role with is_default=true and all four permission flags false', async () => {
+    const capturedValues: unknown[] = [];
+    const txMock = buildTxMock([[mockServer], [], [], [mockCategory], []], capturedValues);
+    mockTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(txMock));
+
+    await service.createServer('user-1', 'Test Server');
+
+    // index 1 is the roles insert (after server at index 0)
+    expect(capturedValues[1]).toMatchObject({
+      name: 'Member',
+      position: 0,
+      is_default: true,
+      manage_server: false,
+      manage_roles: false,
+      manage_channels: false,
+      manage_members: false,
+    });
   });
 
   it('seeds General category with position 0', async () => {
     const capturedValues: unknown[] = [];
-    const txMock = buildTxMock([[mockServer], [], [mockCategory], []], capturedValues);
+    const txMock = buildTxMock([[mockServer], [], [], [mockCategory], []], capturedValues);
     mockTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(txMock));
 
     await service.createServer('user-1', 'Test Server');
 
-    // index 2 is the categories insert
-    expect(capturedValues[2]).toMatchObject({ name: 'General', position: 0 });
+    // index 3 is the categories insert (server=0, role=1, member=2, category=3)
+    expect(capturedValues[3]).toMatchObject({ name: 'General', position: 0 });
   });
 
   it('seeds #general channel as text, not private, linked to General category', async () => {
     const capturedValues: unknown[] = [];
-    const txMock = buildTxMock([[mockServer], [], [mockCategory], []], capturedValues);
+    const txMock = buildTxMock([[mockServer], [], [], [mockCategory], []], capturedValues);
     mockTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(txMock));
 
     await service.createServer('user-1', 'Test Server');
 
-    // index 3 is the channels insert
-    expect(capturedValues[3]).toMatchObject({
+    // index 4 is the channels insert (server=0, role=1, member=2, category=3, channel=4)
+    expect(capturedValues[4]).toMatchObject({
       name: 'general',
       type: 'text',
       is_private: false,
