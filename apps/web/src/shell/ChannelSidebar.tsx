@@ -196,6 +196,7 @@ export function ChannelSidebar() {
       {inviteModalOpen && selectedId && (
         <InviteShareModal
           serverId={selectedId}
+          inviteCode={selectedDetail?.server.inviteCode ?? null}
           onClose={() => setInviteModalOpen(false)}
           triggerRef={inviteBtnRef}
         />
