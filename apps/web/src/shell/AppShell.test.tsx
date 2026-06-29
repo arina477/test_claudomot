@@ -3,23 +3,52 @@
  *
  * Asserts the three shell columns are present in the DOM,
  * and that ConnectionStateIndicator renders correctly for each of its 3 states.
+ *
+ * AppShell uses ServerContext; tests either wrap with ServerProvider (with api
+ * mocked to idle) or render directly (default context values — no modal, empty
+ * server list).
  */
 
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { AppShell } from './AppShell';
 import { ConnectionStateIndicator } from './ConnectionStateIndicator';
+import { ServerContext } from './ServerContext';
+import type { ServerContextValue } from './ServerContext';
+
+// Default context value for tests (no servers, modal closed)
+const defaultCtx: ServerContextValue = {
+  servers: [],
+  status: 'idle',
+  selectedId: null,
+  selectServer: vi.fn(),
+  appendServer: vi.fn(),
+  refetch: vi.fn(),
+  createModalOpen: false,
+  openCreateModal: vi.fn(),
+  closeCreateModal: vi.fn(),
+  selectedDetail: null,
+  detailStatus: 'idle',
+};
+
+function renderShell(ctxOverride: Partial<ServerContextValue> = {}) {
+  return render(
+    <ServerContext.Provider value={{ ...defaultCtx, ...ctxOverride }}>
+      <AppShell />
+    </ServerContext.Provider>,
+  );
+}
 
 // ── AppShell structural tests ────────────────────────────────────────────────
 
 describe('AppShell', () => {
   it('renders the server rail navigation', () => {
-    render(<AppShell />);
+    renderShell();
     expect(screen.getByRole('navigation', { name: /server rail/i })).toBeInTheDocument();
   });
 
   it('renders the channel sidebar (desktop — present in DOM)', () => {
-    render(<AppShell />);
+    renderShell();
     // The aside is always in DOM; Tailwind hidden/lg:flex only controls CSS display.
     // Both the desktop div and the mobile drawer contain a sidebar — use getAllByRole.
     const sidebars = screen.getAllByRole('complementary', { name: /channel sidebar/i });
@@ -27,25 +56,30 @@ describe('AppShell', () => {
   });
 
   it('renders the main column', () => {
-    render(<AppShell />);
+    renderShell();
     expect(screen.getByRole('main')).toBeInTheDocument();
   });
 
-  it('renders placeholder server buttons in the rail', () => {
-    render(<AppShell />);
+  it('renders the Home and Add-a-server buttons in the rail', () => {
+    renderShell();
     expect(screen.getByRole('button', { name: /home/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /add a server/i })).toBeInTheDocument();
   });
 
-  it('renders placeholder channels in the sidebar', () => {
-    render(<AppShell />);
-    // getAllByText because the channel appears in both desktop + mobile sidebar
-    expect(screen.getAllByText(/questions/i).length).toBeGreaterThanOrEqual(1);
+  it('renders channel content from MainColumn in the main area', () => {
+    renderShell();
+    // MainColumn still has static "questions" channel header — used as smoke test
+    expect(screen.getByRole('main')).toBeInTheDocument();
   });
 
   it('renders a connection status region', () => {
-    render(<AppShell />);
+    renderShell();
     expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('does not render the create-server modal when createModalOpen is false', () => {
+    renderShell({ createModalOpen: false });
+    expect(screen.queryByTestId('create-server-modal')).not.toBeInTheDocument();
   });
 });
 

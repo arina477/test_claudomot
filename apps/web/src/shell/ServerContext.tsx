@@ -1,19 +1,22 @@
 /**
- * ServerContext — shares the server list and the selected server ID
- * across ServerRail, ChannelSidebar, and CreateServerModal.
+ * ServerContext — shares the server list, selected server ID, and selected
+ * server detail (categories + channels) across ServerRail, ChannelSidebar,
+ * and CreateServerModal.
  *
  * Data-fetching strategy: plain fetch hooks (matching the profile/auth pattern —
  * no external library; useEffect + useState with credentials:include via api.ts).
  *
  * After createServer succeeds the new server is appended optimistically then a
- * background re-fetch reconciles against the real list.
+ * background re-fetch reconciles against the real list. Selecting a server
+ * triggers a GET /servers/:id for the detail automatically.
  */
 
-import type { ServerResponse, ServerSummary } from '@studyhall/shared';
+import type { ServerDetail, ServerResponse, ServerSummary } from '@studyhall/shared';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { api } from '../auth/api';
 
 export type ServersStatus = 'idle' | 'loading' | 'loaded' | 'error';
+export type DetailStatus = 'idle' | 'loading' | 'loaded' | 'error';
 
 export type ServerContextValue = {
   servers: ServerSummary[];
@@ -28,6 +31,9 @@ export type ServerContextValue = {
   createModalOpen: boolean;
   openCreateModal: () => void;
   closeCreateModal: () => void;
+  /** Detail for the currently selected server (categories + channels). */
+  selectedDetail: ServerDetail | null;
+  detailStatus: DetailStatus;
 };
 
 export const ServerContext = createContext<ServerContextValue>({
@@ -40,6 +46,8 @@ export const ServerContext = createContext<ServerContextValue>({
   createModalOpen: false,
   openCreateModal: () => {},
   closeCreateModal: () => {},
+  selectedDetail: null,
+  detailStatus: 'idle',
 });
 
 export function useServers(): ServerContextValue {
@@ -53,6 +61,8 @@ export function ServerProvider({ children }: Props) {
   const [status, setStatus] = useState<ServersStatus>('idle');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [selectedDetail, setSelectedDetail] = useState<ServerDetail | null>(null);
+  const [detailStatus, setDetailStatus] = useState<DetailStatus>('idle');
 
   // Prevent state updates after unmount
   const mounted = useRef(true);
@@ -78,10 +88,31 @@ export function ServerProvider({ children }: Props) {
       });
   }, []);
 
-  // Fetch on mount
+  // Fetch server list on mount
   useEffect(() => {
     fetchServers();
   }, [fetchServers]);
+
+  // Fetch server detail whenever the selected server changes
+  useEffect(() => {
+    if (!selectedId) {
+      setSelectedDetail(null);
+      setDetailStatus('idle');
+      return;
+    }
+    setDetailStatus('loading');
+    api
+      .getServerDetail(selectedId)
+      .then((detail) => {
+        if (!mounted.current) return;
+        setSelectedDetail(detail);
+        setDetailStatus('loaded');
+      })
+      .catch(() => {
+        if (!mounted.current) return;
+        setDetailStatus('error');
+      });
+  }, [selectedId]);
 
   const selectServer = useCallback((id: string) => {
     setSelectedId(id);
@@ -90,8 +121,9 @@ export function ServerProvider({ children }: Props) {
   const appendServer = useCallback((s: ServerResponse) => {
     const summary: ServerSummary = { id: s.id, name: s.name, ownerId: s.ownerId };
     setServers((prev) => [...prev, summary]);
+    // Selecting the new server triggers the detail effect automatically
     setSelectedId(s.id);
-    // Reconcile with server truth in the background
+    // Reconcile list with server truth in the background
     api
       .getServers()
       .then((list) => {
@@ -118,6 +150,8 @@ export function ServerProvider({ children }: Props) {
         createModalOpen,
         openCreateModal,
         closeCreateModal,
+        selectedDetail,
+        detailStatus,
       }}
     >
       {children}

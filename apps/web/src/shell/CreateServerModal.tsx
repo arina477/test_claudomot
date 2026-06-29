@@ -71,6 +71,9 @@ export function CreateServerModal({ onSuccess, onClose, triggerRef }: Props) {
 
       if (e.key !== 'Tab') return;
 
+      // Re-check for TypeScript narrowing inside nested closure
+      if (!dialogEl) return;
+
       const focusable = Array.from(
         dialogEl.querySelectorAll<HTMLElement>(
           'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled])',
