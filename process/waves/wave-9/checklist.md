@@ -56,8 +56,8 @@ VERIFY:
 - [x] V-3 Fast-fix loop (or close) — APPROVED, Phase 2 skipped (empty queue)
 
 LEARN:
-- [ ] L-1 Docs
-- [ ] L-2 Distill
+- [x] L-1 Docs (CHANGELOG #19 revoke+permanent-default; M2 11 done, stays in_progress; RBAC→wave-10 flagged)
+- [x] L-2 Distill (3 tasks done; CI-PRINCIPLES bypass adjudicated — 4 reverted, 1 re-promoted; deploy-verification rule)
 
 NEXT:
 - [ ] N-1 Survey & triggers

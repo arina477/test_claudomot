@@ -24,6 +24,8 @@ All notable changes to StudyHall are documented here. Format follows
 - A pre-merge boot check now starts the built server and confirms its health endpoint responds before any change can merge, so a build that would crash on deploy is caught first. (#16)
 - Create a study server: it starts with a General category and a #general channel and makes you its owner. Your servers appear in the server rail and their channels in the sidebar. (#17)
 - Invite people to your study server with a shareable link, and join a server from an invite after a quick preview of where you're headed. (#18)
+- Revoke a study server invite link so it stops working, with an honest "this link no longer works" message for anyone who opens a revoked one. (#19)
+- The share dialog now defaults to your server's permanent invite link, with one-off limited invites moved to a secondary option. (#19)
 
 ### Fixed
 

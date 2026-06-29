@@ -129,14 +129,5 @@ pr_conventions:
 
 ## Rules
 
-1. Confirm the post-deploy Railway deployment id differs from the pre-deploy baseline id before declaring deploy done.
-   Why: A CLI "Deploy complete" can report success while the old revision still serves traffic.
-
-2. Verify a CLI "Deploy complete" against the deployment-state endpoint reading status SUCCESS, never via /health alone.
-   Why: /health can return 200 from the prior revision and hide a SKIPPED or CRASHED deploy.
-
-3. Run a run-once prod data backfill as an explicit script after deploy, never as boot-time auto-migration.
-   Why: Boot-time data mutation reruns on every restart and cannot be verified for row count.
-
-4. Read a prod backfill connection string from the platform public-proxy var at run time, never commit it.
-   Why: A committed prod connection string is a leaked credential and a rotation scramble.
+1. Verify a deploy via the platform deployment-state endpoint reading status SUCCESS, never via /health alone.
+   Why: /health can return 200 from the prior revision and hide a crashed or wrong-revision deploy.
