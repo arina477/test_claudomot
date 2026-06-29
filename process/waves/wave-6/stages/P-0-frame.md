@@ -1,0 +1,6 @@
+# Wave 6 — P-0 Frame
+- wave_db_id f09f5b9b (wave 6); M1; seed da242f6b (L-2 follow-up). single-task CI-hardening.
+- **problem-framer PROCEED:** right cause-layer fix (CI never boots the compiled dist; e2e only hits the deployed URL → crashes caught post-deploy). No antipatterns. Flag→P-2/P-3: the boot ENVELOPE — crashes fire at module-load/app-wiring BEFORE any DB connection (version.ts require, shared-pkg, init-order), so a minimal-env boot reaching /health 200 catches the whole class. supertokens.init registers config but connects to the core LAZILY (first SDK call) — /health is unauth + doesn't touch the SDK → a dummy SUPERTOKENS_CONNECTION_URI boots fine to /health 200. Pick vehicle (node dist vs docker) matching Railway prod-boot.
+- **ceo-reviewer PROCEED (HOLD-SCOPE):** high leverage (4 prod outages from this class incl. 1 this session; ~1-job fix protects every future deploy + M2/M3's larger compiled surfaces). Right-sized; resist harness creep (no node matrix, no prod-parity harness).
+- mvp-thinner: SKIP (M1 platform-foundation).
+- **Framing:** add a pre-merge CI job that boots `node apps/api/dist/src/main.js` against a throwaway Postgres + minimal/dummy env, polls /health until 200 (bounded timeout), asserts 200, kills. Catches compiled-dist module-load/wiring crashes pre-merge.
