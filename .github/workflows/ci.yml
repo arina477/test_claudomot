@@ -73,6 +73,49 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  boot-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_PASSWORD: test, POSTGRES_USER: test, POSTGRES_DB: studyhall_test }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v5
+        with: { node-version-file: .nvmrc, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Start compiled API in background
+        run: node apps/api/dist/src/main.js &> /tmp/api-boot.log &
+        env:
+          PORT: '3000'
+          DATABASE_URL: postgres://test:test@localhost:5432/studyhall_test
+          SUPERTOKENS_CONNECTION_URI: http://localhost:3567
+          SUPERTOKENS_API_KEY: dummy-key-probe
+          API_ORIGIN: http://localhost:3000
+          WEB_ORIGIN: http://localhost:5173
+      - name: Poll /health (30s cap)
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:3000/health | grep -q '"status":"ok"'; then
+              echo "boot-probe: /health returned ok on attempt $i"
+              exit 0
+            fi
+            echo "boot-probe: attempt $i — not ready yet, sleeping 1s"
+            sleep 1
+          done
+          echo "boot-probe: /health never became healthy after 30s — dumping logs:"
+          cat /tmp/api-boot.log
+          exit 1
+      - name: Kill background API
+        if: always()
+        run: pkill -f 'apps/api/dist/src/main.js' || true
+
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 15

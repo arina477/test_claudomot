@@ -54,6 +54,6 @@ LEARN:
 - [x] L-2 Distill (5 obs, 2 candidate-grade, PROMOTE ZERO — obs-1 karen-REJECT as dup of BUILD rule 1; obs-3 held for wave-6; followup da242f6b queued)
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers (M1 disposition: Option A — keep in_progress; seed wave-6 = da242f6b; head-next APPROVED)
+- [x] N-2 Seed (single-task bundle da242f6b; validation pass; head-next APPROVED)
+- [x] N-3 Handoff (wave-5 closed status=ok; archived → _archive/wave-5; wave-6 opened; loop_state ready)
