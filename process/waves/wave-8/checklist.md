@@ -47,9 +47,9 @@ TEST:
 - [ ] T-9 Journey
 
 VERIFY:
-- [ ] V-1 Independent reviews (Karen + jenny, parallel)
-- [ ] V-2 Triage
-- [ ] V-3 Fast-fix loop (or close)
+- [x] V-1 Independent reviews (Karen + jenny, parallel) — both APPROVE
+- [x] V-2 Triage — 0 blocking; 8a/8b + 3 T-9 → deferrals
+- [x] V-3 Fast-fix loop (or close) — APPROVED; empty queue, Phase 2 skipped
 
 LEARN:
 - [ ] L-1 Docs
