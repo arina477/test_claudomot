@@ -12,6 +12,7 @@
  *   Member list is OUT of scope this wave.
  */
 
+import { useProfile } from './ProfileContext';
 import {
   CaretDownIcon,
   ClipboardTextIcon,
@@ -20,6 +21,18 @@ import {
   MicrophoneIcon,
   SpeakerHighIcon,
 } from './icons';
+
+/** Derive 2-character initials from a display name or username. */
+function getInitials(displayName: string | null, username: string | null): string {
+  const name = displayName ?? username ?? '';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    const a = parts[0]?.[0] ?? '';
+    const b = parts[1]?.[0] ?? '';
+    return (a + b).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase() || '?';
+}
 
 type ChannelItemProps = {
   icon: React.ReactNode;
@@ -97,6 +110,13 @@ function Category({ name, children }: CategoryProps) {
 }
 
 export function ChannelSidebar() {
+  const { profile } = useProfile();
+
+  const accentColor = profile?.accentColor ?? '#10b981';
+  const avatarUrl = profile?.avatarUrl ?? null;
+  const initials = getInitials(profile?.displayName ?? null, profile?.username ?? null);
+  const displayLabel = profile?.displayName ?? profile?.username ?? 'You';
+
   return (
     <aside
       aria-label="Channel sidebar"
@@ -227,35 +247,40 @@ export function ChannelSidebar() {
           }}
         >
           {/* Avatar with presence dot */}
-          <div className="relative shrink-0">
+          <div className="relative shrink-0" aria-hidden="true">
             <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-semibold"
-              style={{ backgroundColor: '#27272a', color: 'rgba(255,255,255,0.92)' }}
-              aria-hidden="true"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-semibold overflow-hidden"
+              style={{ backgroundColor: '#27272a', color: accentColor }}
             >
-              ET
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                initials
+              )}
             </div>
             <span
               aria-hidden="true"
               className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full"
               style={{
-                backgroundColor: '#10b981',
+                backgroundColor: accentColor,
                 border: '2px solid #0a0a0b',
               }}
             />
           </div>
 
-          {/* Name + email */}
+          {/* Name */}
           <div className="flex min-w-0 flex-col">
             <span
               className="truncate text-[13px] font-medium"
               style={{ color: 'rgba(255,255,255,0.92)' }}
             >
-              Elias (You)
+              {displayLabel}
             </span>
-            <span className="truncate text-[11px]" style={{ color: 'rgba(255,255,255,0.40)' }}>
-              elias@mit.edu
-            </span>
+            {profile?.username && (
+              <span className="truncate text-[11px]" style={{ color: 'rgba(255,255,255,0.40)' }}>
+                @{profile.username}
+              </span>
+            )}
           </div>
 
           {/* Action icons (appear on hover) */}

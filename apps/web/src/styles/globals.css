@@ -44,6 +44,10 @@
   --text-primary: rgba(255, 255, 255, 0.92);
   --text-secondary: rgba(255, 255, 255, 0.6);
   --text-muted: rgba(255, 255, 255, 0.4);
+
+  /* ── User accent — set by ProfilePage on load / colour select ── */
+  --user-accent: #10b981; /* emerald default */
+  --user-accent-glow: rgba(16, 185, 129, 0.4);
 }
 
 /* ── Dark base ── */
