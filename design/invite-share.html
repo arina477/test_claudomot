@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StudyHall — Invite share modal (all states)</title>
+  <title>StudyHall — Invite share modal (permanent default + revoke, all states)</title>
 
   <!-- Fonts: Geist (canonical — NOT Inter) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -71,6 +71,8 @@
     /* Focus discipline — emerald ring, never bare browser default */
     .focus-ring:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(16,185,129,0.4); }
     input.focus-ring:focus-visible { border-color: #10b981; box-shadow: 0 0 0 2px rgba(16,185,129,0.4); }
+    /* Destructive control gets the danger ring per DESIGN-SYSTEM.md §5 glow-danger */
+    .focus-ring-danger:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(239,68,68,0.4); }
 
     /* Calm spinner — no bouncy easing */
     .spin { animation: spin 0.9s linear infinite; }
@@ -98,9 +100,19 @@
 
   <!-- ============================================================
        STATE SHOWCASE — "Invite people" modal (invite-share).
-       Renders all 4 states side-by-side so a reviewer sees every
-       state at once. In the running app a single modal transitions
-       through these states.
+       wave-9 DELTA over wave-8:
+         (8b) DEFAULT shown link = the PERMANENT server invite link,
+              labeled as such. "Generate a limited invite" is an
+              OPTIONAL SECONDARY action (owner/creator only).
+         (revoke) A list of the server's active LIMITED invites,
+              each with a trash/revoke control + inline confirm +
+              honest "revoked" state. Owner/creator only. No role UI.
+       Permanent-code ROTATION is OUT OF SCOPE — display only, no
+       rotate button this wave.
+
+       Renders every state side-by-side so a reviewer sees them at
+       once. In the running app a single modal transitions through
+       these states.
 
        Modal pattern mirrors create-server.html exactly:
        - header (title + ph-x close) / body / footer
@@ -109,9 +121,11 @@
        - dimmed blurred app-shell behind via -z-10 pattern
        - max-w-[460px]
 
-       Focus-trap intent: Tab order → close → link field → Copy → Done
-       Esc / scrim-click / close button → dismiss, restore focus to trigger.
-       No role/permission/max-uses/expiry/revoke/kick/ban UI (out of scope).
+       Focus-trap intent: Tab → close → link field → Copy link →
+       Generate-limited (secondary) → list revoke controls → Done.
+       Esc / scrim-click / close → dismiss, restore focus to trigger.
+       Composed strictly from Modal + Button + Input + Toast + Alert +
+       list primitives. No new component class. No new token.
   ============================================================= -->
 
   <!-- Dimmed app shell behind all modals (shared context layer) -->
@@ -122,7 +136,6 @@
         <i class="ph ph-books text-xl"></i>
       </div>
       <div class="w-8 h-[2px] bg-surface-700 rounded-full"></div>
-      <!-- Active server with emerald indicator -->
       <div class="relative">
         <span class="absolute -left-3 top-1/2 -translate-y-1/2 w-1 h-7 bg-accent-emerald rounded-r-md"></span>
         <div class="w-12 h-12 rounded-md bg-surface-600 flex items-center justify-center text-sm font-semibold t-primary">OC</div>
@@ -155,81 +168,76 @@
 
   <main class="min-h-[100dvh] w-full px-8 py-12">
     <header class="max-w-7xl mx-auto mb-10 text-center">
-      <p class="text-xs uppercase tracking-widest text-accent-emerald font-semibold mb-2">StudyHall · D-block staging · wave-8</p>
-      <h1 class="text-2xl font-semibold tracking-tight t-primary">Invite share — "Invite people" modal (all 4 states)</h1>
-      <p class="t-secondary text-sm mt-2">Modal opened from within a server. Compose from Modal + Button + Toast + Input primitives only.</p>
+      <p class="text-xs uppercase tracking-widest text-accent-emerald font-semibold mb-2">StudyHall · D-block staging · wave-9 (delta)</p>
+      <h1 class="text-2xl font-semibold tracking-tight t-primary">Invite share — permanent-default link + ad-hoc revoke (all states)</h1>
+      <p class="t-secondary text-sm mt-2">Default = the server's PERMANENT invite link. "Generate a limited invite" + the revoke list are owner/creator only. Composed from Modal + Button + Input + Toast + Alert + list primitives.</p>
     </header>
 
-    <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8 items-start">
+    <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 items-start">
 
-      <!-- ============================================================
-           Shared scrim wrapper for each state — mimics the overlay
-           the modal sits on top of inside the running app.
-      ============================================================= -->
-
-      <!-- ===== STATE 1: default ===== -->
+      <!-- ===== STATE 1: default — PERMANENT link shown (owner/creator view) ===== -->
       <section aria-labelledby="s1-lbl" class="flex flex-col gap-3">
-        <h2 id="s1-lbl" class="text-xs font-semibold uppercase tracking-wider t-secondary">1 · Default (link displayed)</h2>
+        <h2 id="s1-lbl" class="text-xs font-semibold uppercase tracking-wider t-secondary">1 · Default (permanent link — owner view)</h2>
 
-        <!-- Scrim -->
-        <div class="relative rounded-lg overflow-hidden bg-surface-950/60 border b-hairline" style="min-height:360px;">
+        <div class="relative rounded-lg overflow-hidden bg-surface-950/60 border b-hairline" style="min-height:520px;">
           <div class="absolute inset-0 bg-black/60 rounded-lg" aria-hidden="true"></div>
 
-          <!-- Modal -->
           <div class="relative z-10 mx-auto mt-8 w-full max-w-[460px] px-4">
-            <div
-              class="rounded-lg bg-surface-900 border b-hairline shadow-pop"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="s1-dialog-title"
-            >
+            <div class="rounded-lg bg-surface-900 border b-hairline shadow-pop" role="dialog" aria-modal="true" aria-labelledby="s1-dialog-title">
               <!-- Header -->
               <div class="flex items-center justify-between px-4 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
                 <h3 id="s1-dialog-title" class="text-xl font-semibold tracking-tight t-primary">Invite people</h3>
-                <!-- Tab order: close is first focusable element per focus-trap spec -->
-                <button
-                  class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors"
-                  aria-label="Close invite dialog"
-                >
+                <button class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors" aria-label="Close invite dialog">
                   <i class="ph ph-x text-lg" aria-hidden="true"></i>
                 </button>
               </div>
 
               <!-- Body -->
-              <div class="px-4 py-4 flex flex-col gap-3">
-                <p class="text-sm t-secondary">Anyone with this link can join this server.</p>
-
-                <!-- Read-only link field — Geist Mono for the URL string -->
-                <div class="flex gap-2">
-                  <div class="flex-1 min-w-0">
-                    <label for="s1-link" class="sr-only">Invite link</label>
-                    <input
-                      id="s1-link"
-                      type="text"
-                      readonly
-                      value="https://studyhall.app/invite/Xy7Kq2mB9vRtZ4nLpA8wQs"
-                      class="focus-ring w-full bg-surface-950 border b-hover rounded-md px-3 py-2.5 text-sm font-mono t-primary truncate transition-colors select-all cursor-text"
-                      style="font-family: 'Geist Mono', ui-monospace, monospace;"
-                      aria-label="Invite link — read only, click to select all"
-                    >
+              <div class="px-4 py-4 flex flex-col gap-4">
+                <!-- Permanent link block -->
+                <div class="flex flex-col gap-2">
+                  <div class="flex items-center gap-1.5">
+                    <i class="ph ph-globe text-base text-accent-emerald" aria-hidden="true"></i>
+                    <span class="text-sm font-medium t-primary">Server invite link</span>
+                    <span class="ml-1 text-[11px] font-medium px-1.5 py-0.5 rounded-full bg-surface-700 t-secondary">Permanent</span>
                   </div>
-                  <!-- Primary Copy button — Tab order: link field → Copy -->
-                  <button
-                    class="focus-ring shrink-0 rounded-md px-4 py-2.5 text-sm font-semibold bg-accent-emerald text-surface-950 hover:bg-accent-emerald/90 transition-colors flex items-center gap-1.5"
-                    aria-label="Copy invite link to clipboard"
-                  >
-                    <i class="ph ph-copy text-base" aria-hidden="true"></i>
-                    Copy link
+                  <p class="text-xs t-secondary">Anyone with this link can join Organic Chemistry. This link doesn't expire.</p>
+
+                  <div class="flex gap-2">
+                    <div class="flex-1 min-w-0">
+                      <label for="s1-link" class="sr-only">Permanent invite link</label>
+                      <input id="s1-link" type="text" readonly
+                        value="https://studyhall.app/invite/Xy7Kq2mB9vRtZ4nLpA8wQs"
+                        class="focus-ring w-full bg-surface-950 border b-hover rounded-md px-3 py-2.5 text-sm t-primary truncate transition-colors select-all cursor-text"
+                        style="font-family: 'Geist Mono', ui-monospace, monospace;"
+                        aria-label="Permanent invite link — read only, click to select all">
+                    </div>
+                    <button class="focus-ring shrink-0 rounded-md px-4 py-2.5 text-sm font-semibold bg-accent-emerald text-surface-950 hover:bg-accent-emerald/90 transition-colors flex items-center gap-1.5" aria-label="Copy permanent invite link to clipboard">
+                      <i class="ph ph-copy text-base" aria-hidden="true"></i>
+                      Copy link
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Divider -->
+                <div class="border-t b-hairline"></div>
+
+                <!-- Secondary action: generate a limited invite (owner/creator only) -->
+                <div class="flex items-center justify-between gap-3">
+                  <div class="min-w-0">
+                    <p class="text-sm font-medium t-primary">Need a limited invite?</p>
+                    <p class="text-xs t-secondary">Create a link with a max number of uses or an expiry.</p>
+                  </div>
+                  <button class="focus-ring shrink-0 rounded-md px-3 py-2 text-sm font-medium bg-surface-700 t-primary hover:bg-surface-600 border b-hover transition-colors flex items-center gap-1.5">
+                    <i class="ph ph-clock-countdown text-base" aria-hidden="true"></i>
+                    Generate
                   </button>
                 </div>
               </div>
 
               <!-- Footer -->
               <div class="flex items-center justify-end gap-2 px-4 py-4 border-t b-hairline">
-                <!-- Tab order: Done is last focusable element before loop -->
-                <button class="focus-ring rounded-md px-4 py-2 text-sm font-medium t-secondary hover:t-primary hover:bg-surface-700 transition-colors">
-                  Done
-                </button>
+                <button class="focus-ring rounded-md px-4 py-2 text-sm font-medium t-secondary hover:t-primary hover:bg-surface-700 transition-colors">Done</button>
               </div>
             </div>
           </div>
@@ -240,76 +248,66 @@
       <section aria-labelledby="s2-lbl" class="flex flex-col gap-3">
         <h2 id="s2-lbl" class="text-xs font-semibold uppercase tracking-wider t-secondary">2 · Copied (success feedback)</h2>
 
-        <!-- Scrim -->
-        <div class="relative rounded-lg overflow-hidden bg-surface-950/60 border b-hairline" style="min-height:360px;">
+        <div class="relative rounded-lg overflow-hidden bg-surface-950/60 border b-hairline" style="min-height:520px;">
           <div class="absolute inset-0 bg-black/60 rounded-lg" aria-hidden="true"></div>
 
-          <!-- Modal -->
           <div class="relative z-10 mx-auto mt-8 w-full max-w-[460px] px-4">
-            <div
-              class="rounded-lg bg-surface-900 border b-hairline shadow-pop"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="s2-dialog-title"
-            >
-              <!-- Header -->
+            <div class="rounded-lg bg-surface-900 border b-hairline shadow-pop" role="dialog" aria-modal="true" aria-labelledby="s2-dialog-title">
               <div class="flex items-center justify-between px-4 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
                 <h3 id="s2-dialog-title" class="text-xl font-semibold tracking-tight t-primary">Invite people</h3>
-                <button
-                  class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors"
-                  aria-label="Close invite dialog"
-                >
+                <button class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors" aria-label="Close invite dialog">
                   <i class="ph ph-x text-lg" aria-hidden="true"></i>
                 </button>
               </div>
 
-              <!-- Body -->
-              <div class="px-4 py-4 flex flex-col gap-3">
-                <p class="text-sm t-secondary">Anyone with this link can join this server.</p>
-
-                <!-- Link field — still displayed, same read-only field -->
-                <div class="flex gap-2">
-                  <div class="flex-1 min-w-0">
-                    <label for="s2-link" class="sr-only">Invite link</label>
-                    <input
-                      id="s2-link"
-                      type="text"
-                      readonly
-                      value="https://studyhall.app/invite/Xy7Kq2mB9vRtZ4nLpA8wQs"
-                      class="focus-ring w-full bg-surface-950 border b-hover rounded-md px-3 py-2.5 text-sm font-mono t-primary truncate transition-colors select-all cursor-text"
-                      style="font-family: 'Geist Mono', ui-monospace, monospace;"
-                      aria-label="Invite link — read only, click to select all"
-                    >
+              <div class="px-4 py-4 flex flex-col gap-4">
+                <div class="flex flex-col gap-2">
+                  <div class="flex items-center gap-1.5">
+                    <i class="ph ph-globe text-base text-accent-emerald" aria-hidden="true"></i>
+                    <span class="text-sm font-medium t-primary">Server invite link</span>
+                    <span class="ml-1 text-[11px] font-medium px-1.5 py-0.5 rounded-full bg-surface-700 t-secondary">Permanent</span>
                   </div>
-                  <!-- Copy button morphed to transient check state — reverts after ~2s in running app -->
-                  <button
-                    class="focus-ring shrink-0 rounded-md px-4 py-2.5 text-sm font-semibold bg-accent-emerald/80 text-surface-950 transition-colors flex items-center gap-1.5"
-                    aria-label="Invite link copied"
-                    aria-live="polite"
-                  >
-                    <i class="ph ph-check text-base" aria-hidden="true"></i>
-                    Copied
+                  <p class="text-xs t-secondary">Anyone with this link can join Organic Chemistry. This link doesn't expire.</p>
+
+                  <div class="flex gap-2">
+                    <div class="flex-1 min-w-0">
+                      <label for="s2-link" class="sr-only">Permanent invite link</label>
+                      <input id="s2-link" type="text" readonly
+                        value="https://studyhall.app/invite/Xy7Kq2mB9vRtZ4nLpA8wQs"
+                        class="focus-ring w-full bg-surface-950 border b-hover rounded-md px-3 py-2.5 text-sm t-primary truncate transition-colors select-all cursor-text"
+                        style="font-family: 'Geist Mono', ui-monospace, monospace;"
+                        aria-label="Permanent invite link — read only, click to select all">
+                    </div>
+                    <!-- Copy button morphed to transient check state — reverts after ~2s in running app -->
+                    <button class="focus-ring shrink-0 rounded-md px-4 py-2.5 text-sm font-semibold bg-accent-emerald/80 text-surface-950 transition-colors flex items-center gap-1.5" aria-label="Invite link copied" aria-live="polite">
+                      <i class="ph ph-check text-base" aria-hidden="true"></i>
+                      Copied
+                    </button>
+                  </div>
+                </div>
+
+                <div class="border-t b-hairline"></div>
+
+                <div class="flex items-center justify-between gap-3">
+                  <div class="min-w-0">
+                    <p class="text-sm font-medium t-primary">Need a limited invite?</p>
+                    <p class="text-xs t-secondary">Create a link with a max number of uses or an expiry.</p>
+                  </div>
+                  <button class="focus-ring shrink-0 rounded-md px-3 py-2 text-sm font-medium bg-surface-700 t-primary hover:bg-surface-600 border b-hover transition-colors flex items-center gap-1.5">
+                    <i class="ph ph-clock-countdown text-base" aria-hidden="true"></i>
+                    Generate
                   </button>
                 </div>
               </div>
 
-              <!-- Footer -->
               <div class="flex items-center justify-end gap-2 px-4 py-4 border-t b-hairline">
-                <button class="focus-ring rounded-md px-4 py-2 text-sm font-medium t-secondary hover:t-primary hover:bg-surface-700 transition-colors">
-                  Done
-                </button>
+                <button class="focus-ring rounded-md px-4 py-2 text-sm font-medium t-secondary hover:t-primary hover:bg-surface-700 transition-colors">Done</button>
               </div>
             </div>
           </div>
 
           <!-- Toast — role="status" (polite), emerald left accent bar, ph-check-circle -->
-          <!-- Positioned top-right of the scrim wrapper to stay within the showcase card -->
-          <div
-            role="status"
-            aria-live="polite"
-            class="absolute top-3 right-3 z-20 flex items-center gap-2 bg-surface-700 border b-hover rounded-md shadow-pop overflow-hidden max-w-[240px]"
-          >
-            <!-- Emerald left accent bar -->
+          <div role="status" aria-live="polite" class="absolute top-3 right-3 z-20 flex items-center gap-2 bg-surface-700 border b-hover rounded-md shadow-pop overflow-hidden max-w-[240px]">
             <div class="w-1 self-stretch bg-accent-emerald shrink-0 rounded-l-md" aria-hidden="true"></div>
             <div class="flex items-center gap-2 py-2.5 pr-3 pl-1">
               <i class="ph ph-check-circle text-accent-emerald text-base shrink-0" aria-hidden="true"></i>
@@ -321,59 +319,49 @@
 
       <!-- ===== STATE 3: loading ===== -->
       <section aria-labelledby="s3-lbl" class="flex flex-col gap-3">
-        <h2 id="s3-lbl" class="text-xs font-semibold uppercase tracking-wider t-secondary">3 · Loading (link generating)</h2>
+        <h2 id="s3-lbl" class="text-xs font-semibold uppercase tracking-wider t-secondary">3 · Loading (link + list loading)</h2>
 
-        <!-- Scrim -->
-        <div class="relative rounded-lg overflow-hidden bg-surface-950/60 border b-hairline" style="min-height:360px;">
+        <div class="relative rounded-lg overflow-hidden bg-surface-950/60 border b-hairline" style="min-height:520px;">
           <div class="absolute inset-0 bg-black/60 rounded-lg" aria-hidden="true"></div>
 
-          <!-- Modal -->
           <div class="relative z-10 mx-auto mt-8 w-full max-w-[460px] px-4">
-            <div
-              class="rounded-lg bg-surface-900 border b-hairline shadow-pop"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="s3-dialog-title"
-              aria-busy="true"
-            >
-              <!-- Header -->
+            <div class="rounded-lg bg-surface-900 border b-hairline shadow-pop" role="dialog" aria-modal="true" aria-labelledby="s3-dialog-title" aria-busy="true">
               <div class="flex items-center justify-between px-4 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
                 <h3 id="s3-dialog-title" class="text-xl font-semibold tracking-tight t-primary">Invite people</h3>
-                <button
-                  class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors"
-                  aria-label="Close invite dialog"
-                >
+                <button class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors" aria-label="Close invite dialog">
                   <i class="ph ph-x text-lg" aria-hidden="true"></i>
                 </button>
               </div>
 
-              <!-- Body -->
-              <div class="px-4 py-4 flex flex-col gap-3">
-                <p class="text-sm t-secondary">Anyone with this link can join this server.</p>
-
-                <!-- Skeleton in the link field while link generates -->
-                <div class="flex gap-2">
-                  <div class="flex-1 min-w-0">
-                    <!-- Skeleton bar replacing the link input -->
-                    <div class="skel h-10 w-full rounded-md" aria-label="Loading invite link" role="status"></div>
+              <div class="px-4 py-4 flex flex-col gap-4">
+                <div class="flex flex-col gap-2">
+                  <div class="flex items-center gap-1.5">
+                    <i class="ph ph-globe text-base t-muted" aria-hidden="true"></i>
+                    <span class="text-sm font-medium t-primary">Server invite link</span>
                   </div>
-                  <!-- Copy button disabled while loading -->
-                  <button
-                    disabled
-                    aria-busy="true"
-                    class="focus-ring shrink-0 rounded-md px-4 py-2.5 text-sm font-semibold bg-surface-700 t-muted cursor-not-allowed flex items-center gap-1.5"
-                  >
-                    <i class="ph ph-copy text-base" aria-hidden="true"></i>
-                    Copy link
-                  </button>
+                  <div class="flex gap-2">
+                    <div class="flex-1 min-w-0">
+                      <div class="skel h-10 w-full rounded-md" aria-label="Loading invite link" role="status"></div>
+                    </div>
+                    <button disabled aria-busy="true" class="shrink-0 rounded-md px-4 py-2.5 text-sm font-semibold bg-surface-700 t-muted cursor-not-allowed flex items-center gap-1.5">
+                      <i class="ph ph-copy text-base" aria-hidden="true"></i>
+                      Copy link
+                    </button>
+                  </div>
+                </div>
+
+                <div class="border-t b-hairline"></div>
+
+                <!-- limited invites list skeleton rows -->
+                <div class="flex flex-col gap-2">
+                  <span class="text-xs font-semibold uppercase tracking-wider t-secondary">Limited invites</span>
+                  <div class="skel h-12 w-full rounded-md" role="status" aria-label="Loading limited invites"></div>
+                  <div class="skel h-12 w-full rounded-md" aria-hidden="true"></div>
                 </div>
               </div>
 
-              <!-- Footer -->
               <div class="flex items-center justify-end gap-2 px-4 py-4 border-t b-hairline">
-                <button disabled class="rounded-md px-4 py-2 text-sm font-medium t-muted cursor-not-allowed">
-                  Done
-                </button>
+                <button disabled class="rounded-md px-4 py-2 text-sm font-medium t-muted cursor-not-allowed">Done</button>
               </div>
             </div>
           </div>
@@ -384,74 +372,41 @@
       <section aria-labelledby="s4-lbl" class="flex flex-col gap-3">
         <h2 id="s4-lbl" class="text-xs font-semibold uppercase tracking-wider t-secondary">4 · Error (link failed to load)</h2>
 
-        <!-- Scrim -->
-        <div class="relative rounded-lg overflow-hidden bg-surface-950/60 border b-hairline" style="min-height:360px;">
+        <div class="relative rounded-lg overflow-hidden bg-surface-950/60 border b-hairline" style="min-height:520px;">
           <div class="absolute inset-0 bg-black/60 rounded-lg" aria-hidden="true"></div>
 
-          <!-- Modal -->
           <div class="relative z-10 mx-auto mt-8 w-full max-w-[460px] px-4">
-            <div
-              class="rounded-lg bg-surface-900 border b-hairline shadow-pop"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="s4-dialog-title"
-            >
-              <!-- Header -->
+            <div class="rounded-lg bg-surface-900 border b-hairline shadow-pop" role="dialog" aria-modal="true" aria-labelledby="s4-dialog-title">
               <div class="flex items-center justify-between px-4 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
                 <h3 id="s4-dialog-title" class="text-xl font-semibold tracking-tight t-primary">Invite people</h3>
-                <button
-                  class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors"
-                  aria-label="Close invite dialog"
-                >
+                <button class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors" aria-label="Close invite dialog">
                   <i class="ph ph-x text-lg" aria-hidden="true"></i>
                 </button>
               </div>
 
-              <!-- Body -->
               <div class="px-4 py-4 flex flex-col gap-3">
-                <!-- Inline danger alert — role="alert", danger border + bg -->
-                <div
-                  role="alert"
-                  class="flex items-start gap-2 rounded-md border border-danger/40 bg-danger/10 px-3 py-2.5 text-sm"
-                >
+                <div role="alert" class="flex items-start gap-2 rounded-md border border-danger/40 bg-danger/10 px-3 py-2.5 text-sm">
                   <i class="ph ph-warning-circle text-danger mt-0.5 shrink-0" aria-hidden="true"></i>
                   <span class="t-primary">Couldn't load the invite link. Check your connection and try again.</span>
                 </div>
 
-                <!-- Link field showing error state — empty, not copyable -->
                 <div class="flex gap-2">
                   <div class="flex-1 min-w-0">
                     <label for="s4-link" class="sr-only">Invite link</label>
-                    <input
-                      id="s4-link"
-                      type="text"
-                      readonly
-                      disabled
-                      placeholder="Invite link unavailable"
-                      class="w-full bg-surface-950 border rounded-md px-3 py-2.5 text-sm font-mono t-muted cursor-not-allowed"
-                      style="border-color: rgba(239,68,68,0.8); font-family: 'Geist Mono', ui-monospace, monospace;"
-                      aria-invalid="true"
-                    >
+                    <input id="s4-link" type="text" readonly disabled placeholder="Invite link unavailable"
+                      class="w-full bg-surface-950 border rounded-md px-3 py-2.5 text-sm t-muted cursor-not-allowed"
+                      style="border-color: rgba(239,68,68,0.8); font-family: 'Geist Mono', ui-monospace, monospace;" aria-invalid="true">
                   </div>
-                  <!-- Copy button disabled in error state -->
-                  <button
-                    disabled
-                    class="shrink-0 rounded-md px-4 py-2.5 text-sm font-semibold bg-surface-700 t-muted cursor-not-allowed flex items-center gap-1.5 opacity-60"
-                  >
+                  <button disabled class="shrink-0 rounded-md px-4 py-2.5 text-sm font-semibold bg-surface-700 t-muted cursor-not-allowed flex items-center gap-1.5 opacity-60">
                     <i class="ph ph-copy text-base" aria-hidden="true"></i>
                     Copy link
                   </button>
                 </div>
               </div>
 
-              <!-- Footer — Retry as primary action in error state -->
               <div class="flex items-center justify-end gap-2 px-4 py-4 border-t b-hairline">
-                <button class="focus-ring rounded-md px-4 py-2 text-sm font-medium t-secondary hover:t-primary hover:bg-surface-700 transition-colors">
-                  Cancel
-                </button>
-                <button
-                  class="focus-ring rounded-md px-4 py-2 text-sm font-semibold bg-accent-emerald text-surface-950 hover:bg-accent-emerald/90 transition-colors flex items-center gap-1.5"
-                >
+                <button class="focus-ring rounded-md px-4 py-2 text-sm font-medium t-secondary hover:t-primary hover:bg-surface-700 transition-colors">Cancel</button>
+                <button class="focus-ring rounded-md px-4 py-2 text-sm font-semibold bg-accent-emerald text-surface-950 hover:bg-accent-emerald/90 transition-colors flex items-center gap-1.5">
                   <i class="ph ph-arrow-clockwise text-base" aria-hidden="true"></i>
                   Retry
                 </button>
@@ -461,12 +416,262 @@
         </div>
       </section>
 
+      <!-- ===== STATE 5: limited-invites list — populated (owner/creator) ===== -->
+      <section aria-labelledby="s5-lbl" class="flex flex-col gap-3">
+        <h2 id="s5-lbl" class="text-xs font-semibold uppercase tracking-wider t-secondary">5 · Limited invites list (populated)</h2>
+
+        <div class="relative rounded-lg overflow-hidden bg-surface-950/60 border b-hairline" style="min-height:520px;">
+          <div class="absolute inset-0 bg-black/60 rounded-lg" aria-hidden="true"></div>
+
+          <div class="relative z-10 mx-auto mt-8 w-full max-w-[460px] px-4">
+            <div class="rounded-lg bg-surface-900 border b-hairline shadow-pop" role="dialog" aria-modal="true" aria-labelledby="s5-dialog-title">
+              <div class="flex items-center justify-between px-4 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
+                <h3 id="s5-dialog-title" class="text-xl font-semibold tracking-tight t-primary">Invite people</h3>
+                <button class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors" aria-label="Close invite dialog">
+                  <i class="ph ph-x text-lg" aria-hidden="true"></i>
+                </button>
+              </div>
+
+              <div class="px-4 py-4 flex flex-col gap-4">
+                <!-- compact permanent link summary -->
+                <div class="flex gap-2">
+                  <div class="flex-1 min-w-0">
+                    <label for="s5-link" class="sr-only">Permanent invite link</label>
+                    <input id="s5-link" type="text" readonly value="https://studyhall.app/invite/Xy7Kq2mB9vRtZ4nLpA8wQs"
+                      class="focus-ring w-full bg-surface-950 border b-hover rounded-md px-3 py-2.5 text-sm t-primary truncate transition-colors select-all cursor-text"
+                      style="font-family: 'Geist Mono', ui-monospace, monospace;" aria-label="Permanent invite link — read only">
+                  </div>
+                  <button class="focus-ring shrink-0 rounded-md px-4 py-2.5 text-sm font-semibold bg-accent-emerald text-surface-950 hover:bg-accent-emerald/90 transition-colors flex items-center gap-1.5" aria-label="Copy permanent invite link">
+                    <i class="ph ph-copy text-base" aria-hidden="true"></i>
+                    Copy
+                  </button>
+                </div>
+
+                <div class="border-t b-hairline"></div>
+
+                <!-- limited invites list -->
+                <div class="flex flex-col gap-2">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold uppercase tracking-wider t-secondary">Limited invites</span>
+                    <button class="focus-ring rounded-md px-2.5 py-1 text-xs font-medium bg-surface-700 t-primary hover:bg-surface-600 border b-hover transition-colors flex items-center gap-1">
+                      <i class="ph ph-plus text-sm" aria-hidden="true"></i> New
+                    </button>
+                  </div>
+
+                  <ul class="flex flex-col gap-1.5 max-h-[180px] overflow-y-auto" role="list">
+                    <!-- row 1 -->
+                    <li class="flex items-center gap-3 px-3 py-2.5 rounded-md bg-surface-800 border b-hairline">
+                      <div class="min-w-0 flex-1">
+                        <p class="text-sm font-medium t-primary truncate" style="font-family:'Geist Mono', ui-monospace, monospace;">…pA8wQs</p>
+                        <p class="text-xs t-secondary">3 / 10 uses · expires in 6 days</p>
+                      </div>
+                      <button class="focus-ring-danger shrink-0 rounded-md p-1.5 t-muted hover:text-danger hover:bg-danger/10 transition-colors" aria-label="Revoke limited invite ending pA8wQs">
+                        <i class="ph ph-trash text-base" aria-hidden="true"></i>
+                      </button>
+                    </li>
+                    <!-- row 2 -->
+                    <li class="flex items-center gap-3 px-3 py-2.5 rounded-md bg-surface-800 border b-hairline">
+                      <div class="min-w-0 flex-1">
+                        <p class="text-sm font-medium t-primary truncate" style="font-family:'Geist Mono', ui-monospace, monospace;">…7Lm2Qz</p>
+                        <p class="text-xs t-secondary">0 / 25 uses · no expiry</p>
+                      </div>
+                      <button class="focus-ring-danger shrink-0 rounded-md p-1.5 t-muted hover:text-danger hover:bg-danger/10 transition-colors" aria-label="Revoke limited invite ending 7Lm2Qz">
+                        <i class="ph ph-trash text-base" aria-hidden="true"></i>
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-end gap-2 px-4 py-4 border-t b-hairline">
+                <button class="focus-ring rounded-md px-4 py-2 text-sm font-medium t-secondary hover:t-primary hover:bg-surface-700 transition-colors">Done</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== STATE 6: limited-invites list — empty (owner/creator) ===== -->
+      <section aria-labelledby="s6-lbl" class="flex flex-col gap-3">
+        <h2 id="s6-lbl" class="text-xs font-semibold uppercase tracking-wider t-secondary">6 · Limited invites list (empty)</h2>
+
+        <div class="relative rounded-lg overflow-hidden bg-surface-950/60 border b-hairline" style="min-height:520px;">
+          <div class="absolute inset-0 bg-black/60 rounded-lg" aria-hidden="true"></div>
+
+          <div class="relative z-10 mx-auto mt-8 w-full max-w-[460px] px-4">
+            <div class="rounded-lg bg-surface-900 border b-hairline shadow-pop" role="dialog" aria-modal="true" aria-labelledby="s6-dialog-title">
+              <div class="flex items-center justify-between px-4 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
+                <h3 id="s6-dialog-title" class="text-xl font-semibold tracking-tight t-primary">Invite people</h3>
+                <button class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors" aria-label="Close invite dialog">
+                  <i class="ph ph-x text-lg" aria-hidden="true"></i>
+                </button>
+              </div>
+
+              <div class="px-4 py-4 flex flex-col gap-4">
+                <div class="flex gap-2">
+                  <div class="flex-1 min-w-0">
+                    <label for="s6-link" class="sr-only">Permanent invite link</label>
+                    <input id="s6-link" type="text" readonly value="https://studyhall.app/invite/Xy7Kq2mB9vRtZ4nLpA8wQs"
+                      class="focus-ring w-full bg-surface-950 border b-hover rounded-md px-3 py-2.5 text-sm t-primary truncate transition-colors select-all cursor-text"
+                      style="font-family: 'Geist Mono', ui-monospace, monospace;" aria-label="Permanent invite link — read only">
+                  </div>
+                  <button class="focus-ring shrink-0 rounded-md px-4 py-2.5 text-sm font-semibold bg-accent-emerald text-surface-950 hover:bg-accent-emerald/90 transition-colors flex items-center gap-1.5" aria-label="Copy permanent invite link">
+                    <i class="ph ph-copy text-base" aria-hidden="true"></i>
+                    Copy
+                  </button>
+                </div>
+
+                <div class="border-t b-hairline"></div>
+
+                <!-- limited invites empty state -->
+                <div class="flex flex-col gap-2">
+                  <span class="text-xs font-semibold uppercase tracking-wider t-secondary">Limited invites</span>
+                  <div class="flex flex-col items-center text-center gap-2 rounded-md border border-dashed b-hover bg-surface-950/40 px-4 py-6">
+                    <i class="ph ph-clock-countdown text-2xl t-muted" aria-hidden="true"></i>
+                    <p class="text-sm t-secondary">No limited invites yet.</p>
+                    <p class="text-xs t-muted">Use the permanent link above, or create a limited one with a max number of uses or an expiry.</p>
+                    <button class="focus-ring mt-1 rounded-md px-3 py-2 text-sm font-medium bg-surface-700 t-primary hover:bg-surface-600 border b-hover transition-colors flex items-center gap-1.5">
+                      <i class="ph ph-plus text-base" aria-hidden="true"></i>
+                      Generate a limited invite
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-end gap-2 px-4 py-4 border-t b-hairline">
+                <button class="focus-ring rounded-md px-4 py-2 text-sm font-medium t-secondary hover:t-primary hover:bg-surface-700 transition-colors">Done</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== STATE 7: revoke-confirm (inline on a list row) ===== -->
+      <section aria-labelledby="s7-lbl" class="flex flex-col gap-3">
+        <h2 id="s7-lbl" class="text-xs font-semibold uppercase tracking-wider t-secondary">7 · Revoke confirm (inline, destructive)</h2>
+
+        <div class="relative rounded-lg overflow-hidden bg-surface-950/60 border b-hairline" style="min-height:520px;">
+          <div class="absolute inset-0 bg-black/60 rounded-lg" aria-hidden="true"></div>
+
+          <div class="relative z-10 mx-auto mt-8 w-full max-w-[460px] px-4">
+            <div class="rounded-lg bg-surface-900 border b-hairline shadow-pop" role="dialog" aria-modal="true" aria-labelledby="s7-dialog-title">
+              <div class="flex items-center justify-between px-4 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
+                <h3 id="s7-dialog-title" class="text-xl font-semibold tracking-tight t-primary">Invite people</h3>
+                <button class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors" aria-label="Close invite dialog">
+                  <i class="ph ph-x text-lg" aria-hidden="true"></i>
+                </button>
+              </div>
+
+              <div class="px-4 py-4 flex flex-col gap-4">
+                <div class="flex flex-col gap-2">
+                  <span class="text-xs font-semibold uppercase tracking-wider t-secondary">Limited invites</span>
+
+                  <ul class="flex flex-col gap-1.5" role="list">
+                    <!-- row in confirm state -->
+                    <li class="rounded-md bg-surface-800 border border-danger/40">
+                      <div role="alert" class="flex items-start gap-2 px-3 py-2.5">
+                        <i class="ph ph-warning-circle text-danger mt-0.5 shrink-0" aria-hidden="true"></i>
+                        <div class="min-w-0 flex-1">
+                          <p class="text-sm t-primary">Revoke invite <span style="font-family:'Geist Mono', ui-monospace, monospace;">…pA8wQs</span>?</p>
+                          <p class="text-xs t-secondary mt-0.5">It will stop working immediately. People who already joined stay in the server.</p>
+                          <div class="flex items-center gap-2 mt-2.5">
+                            <button class="focus-ring rounded-md px-3 py-1.5 text-xs font-medium t-secondary hover:t-primary hover:bg-surface-700 transition-colors">Cancel</button>
+                            <button class="focus-ring-danger rounded-md px-3 py-1.5 text-xs font-semibold bg-danger text-surface-950 hover:bg-danger/90 transition-colors flex items-center gap-1.5">
+                              <i class="ph ph-trash text-sm" aria-hidden="true"></i>
+                              Revoke
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                    <!-- a normal row below for context -->
+                    <li class="flex items-center gap-3 px-3 py-2.5 rounded-md bg-surface-800 border b-hairline">
+                      <div class="min-w-0 flex-1">
+                        <p class="text-sm font-medium t-primary truncate" style="font-family:'Geist Mono', ui-monospace, monospace;">…7Lm2Qz</p>
+                        <p class="text-xs t-secondary">0 / 25 uses · no expiry</p>
+                      </div>
+                      <button class="focus-ring-danger shrink-0 rounded-md p-1.5 t-muted hover:text-danger hover:bg-danger/10 transition-colors" aria-label="Revoke limited invite ending 7Lm2Qz">
+                        <i class="ph ph-trash text-base" aria-hidden="true"></i>
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-end gap-2 px-4 py-4 border-t b-hairline">
+                <button class="focus-ring rounded-md px-4 py-2 text-sm font-medium t-secondary hover:t-primary hover:bg-surface-700 transition-colors">Done</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== STATE 8: revoked (honest post-revoke row state) ===== -->
+      <section aria-labelledby="s8-lbl" class="flex flex-col gap-3">
+        <h2 id="s8-lbl" class="text-xs font-semibold uppercase tracking-wider t-secondary">8 · Revoked (honest "no longer works")</h2>
+
+        <div class="relative rounded-lg overflow-hidden bg-surface-950/60 border b-hairline" style="min-height:520px;">
+          <div class="absolute inset-0 bg-black/60 rounded-lg" aria-hidden="true"></div>
+
+          <div class="relative z-10 mx-auto mt-8 w-full max-w-[460px] px-4">
+            <div class="rounded-lg bg-surface-900 border b-hairline shadow-pop" role="dialog" aria-modal="true" aria-labelledby="s8-dialog-title">
+              <div class="flex items-center justify-between px-4 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
+                <h3 id="s8-dialog-title" class="text-xl font-semibold tracking-tight t-primary">Invite people</h3>
+                <button class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors" aria-label="Close invite dialog">
+                  <i class="ph ph-x text-lg" aria-hidden="true"></i>
+                </button>
+              </div>
+
+              <div class="px-4 py-4 flex flex-col gap-4">
+                <div class="flex flex-col gap-2">
+                  <span class="text-xs font-semibold uppercase tracking-wider t-secondary">Limited invites</span>
+
+                  <ul class="flex flex-col gap-1.5" role="list">
+                    <!-- revoked row — dimmed, struck code, prohibit icon, honest label -->
+                    <li class="flex items-center gap-3 px-3 py-2.5 rounded-md bg-surface-800/50 border b-hairline opacity-70">
+                      <i class="ph ph-prohibit text-base text-danger shrink-0" aria-hidden="true"></i>
+                      <div class="min-w-0 flex-1">
+                        <p class="text-sm font-medium t-muted truncate line-through" style="font-family:'Geist Mono', ui-monospace, monospace;">…pA8wQs</p>
+                        <p class="text-xs t-primary">Revoked — this link no longer works.</p>
+                      </div>
+                    </li>
+                    <!-- remaining active row -->
+                    <li class="flex items-center gap-3 px-3 py-2.5 rounded-md bg-surface-800 border b-hairline">
+                      <div class="min-w-0 flex-1">
+                        <p class="text-sm font-medium t-primary truncate" style="font-family:'Geist Mono', ui-monospace, monospace;">…7Lm2Qz</p>
+                        <p class="text-xs t-secondary">0 / 25 uses · no expiry</p>
+                      </div>
+                      <button class="focus-ring-danger shrink-0 rounded-md p-1.5 t-muted hover:text-danger hover:bg-danger/10 transition-colors" aria-label="Revoke limited invite ending 7Lm2Qz">
+                        <i class="ph ph-trash text-base" aria-hidden="true"></i>
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-end gap-2 px-4 py-4 border-t b-hairline">
+                <button class="focus-ring rounded-md px-4 py-2 text-sm font-medium t-secondary hover:t-primary hover:bg-surface-700 transition-colors">Done</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Toast confirming the revoke -->
+          <div role="status" aria-live="polite" class="absolute top-3 right-3 z-20 flex items-center gap-2 bg-surface-700 border b-hover rounded-md shadow-pop overflow-hidden max-w-[240px]">
+            <div class="w-1 self-stretch bg-accent-emerald shrink-0 rounded-l-md" aria-hidden="true"></div>
+            <div class="flex items-center gap-2 py-2.5 pr-3 pl-1">
+              <i class="ph ph-check-circle text-accent-emerald text-base shrink-0" aria-hidden="true"></i>
+              <span class="text-sm t-primary font-medium">Invite revoked</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
     </div>
 
     <!-- Showcase footer note -->
     <footer class="max-w-7xl mx-auto mt-12 pt-8 border-t b-hairline text-center">
-      <p class="text-xs t-muted">D-2 staging mockup — all 4 states rendered. Composed strictly from Modal + Button + Toast + Input primitives (no new component class). Geist Mono for link string. Geist sans elsewhere. Emerald focus-visible ring on all controls. WCAG AA contrast: text-surface-950 on bg-accent-emerald primary buttons.</p>
-      <p class="text-xs t-muted mt-2">A11y notes: focus-trap intent (close → link field → Copy → Done); Esc/scrim/close dismiss + focus restore; link field read-only with select-all affordance; Toast role="status" (polite); error alert role="alert"; aria-busy on loading state.</p>
+      <p class="text-xs t-muted">wave-9 delta — 8 states rendered. (8b) DEFAULT = the server's PERMANENT invite link, labeled "Permanent"; "Generate a limited invite" is a lower-emphasis secondary action. (revoke) limited-invites list with per-row trash control → inline danger confirm → honest "Revoked — no longer works" row + Toast. Owner/creator only; NO role/RBAC UI; permanent-code rotation out of scope (display only).</p>
+      <p class="text-xs t-muted mt-2">Composed strictly from Modal + Button (primary emerald / secondary surface-700 / destructive danger / ghost) + Input + Toast + inline Alert + list primitives (no new component class, no new token). Geist Mono for code strings. Emerald focus-visible ring on all controls; danger focus ring on destructive revoke controls. A11y: focus-trap (close → link → Copy → Generate → list revoke controls → Done); Esc/scrim/close dismiss + focus restore; Toast role="status"; error + confirm role="alert"; revoked state conveyed by icon + text + color (not color alone); icon-only buttons carry aria-label. WCAG AA: text-surface-950 on emerald + on danger fills; revoked-row label uses t-primary (white) text — the danger/revoked signal is carried by the ph-prohibit icon + strikethrough + dimming, not by low-contrast colored text.</p>
     </footer>
   </main>
 
