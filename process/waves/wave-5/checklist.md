@@ -30,7 +30,7 @@ BUILD:
 - [ ] B-6 Review
 
 CI/CD:
-- [ ] C-1 PR, CI & merge
+- [x] C-1 PR/CI/merge (PR#12 via branch-protection) · C-2 deploy&verify (rate-limit 429 LIVE; version fixed; avatar pending creds)
 - [ ] C-2 Deploy & verify (canary armed when real users > 1000)
 
 TEST:
