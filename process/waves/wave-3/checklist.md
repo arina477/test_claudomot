@@ -40,7 +40,7 @@ TEST:
 VERIFY:
 - [x] V-1 Independent reviews
 - [x] V-2 Triage
-- [ ] V-3 Fast-fix loop
+- [x] V-3 Fast-fix loop
 
 LEARN:
 - [ ] L-1 Docs
