@@ -13,6 +13,8 @@
 | Web app | https://web-production-bce1a8.up.railway.app |
 | API health check | https://api-production-b93e.up.railway.app/health |
 
+Accounts are live: sign up, log in, verify email, reset password, and set a display name through the app.
+
 ---
 
 ## What this repo is

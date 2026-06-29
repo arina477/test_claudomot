@@ -14,3 +14,6 @@ All notable changes to StudyHall are documented here. Format follows
 - Shared types package so the web app and API validate the same data shapes.
 - Continuous integration on every pull request: lint, typecheck, test, build, and secret scan.
 - Live hosted environment on Railway: web app and API health check both serving in production.
+- Account screens — sign up, log in, verify your email, and reset a forgotten password — wired to the live backend, so people can now create an account and sign in through the app. (#5)
+- An editable profile page where a signed-in user can set their display name. (#5)
+- A reminder banner that prompts unverified users to confirm their email, with the app staying usable in the meantime. (#5)

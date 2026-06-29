@@ -67,4 +67,5 @@ Promoted at L-2 Distill from `process/waves/wave-<N>/blocks/L/observations.md` b
 
 ## Rules
 
-_(no rules yet — promoted from L-2 distill across waves)_
+1. Boot the production-built artifact in a prod-like container and exercise its runtime config before merge.
+   Why: Config and build-arg defects pass local and CI green but surface only on first prod boot.

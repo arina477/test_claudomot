@@ -1,0 +1,20 @@
+# Wave 3 — V-3 Verdict
+
+**Reviewer:** head-verifier (fresh spawn)
+**Reviewed against:** process/waves/wave-3/blocks/V/review-artifacts.md (deliverables at process/waves/wave-3/stages/V-1-karen.md, V-1-jenny.md, V-1-summary.md, V-2-triage.md)
+**Attempt:** 1  (first gate; no prior rework)
+
+## Verdict
+APPROVED
+
+## Rationale
+
+Both V-1 reviewers ran independently against the live Railway deployment on evidence, not assertion, and their verdicts hold up under scrutiny. **Karen (APPROVE)** checked every load-bearing claim against codebase reality — exact paths/lines (`supertokens.config.ts:67`, `AppHome.tsx:26/:30`, `profile.controller.ts` static `BadRequestException` import), the live 400 Zod body for an empty `displayName`, real `gh` merge timestamps for PRs #5–#8, and the four shipped fixes present in source — and confirmed the signup→session→/me(unverified)→/profile GET/PATCH→empty-name-400→unauth-401 chain live. **jenny** did NOT rubber-stamp a complex change: she returned a justified **REJECT** on C1 (the deployed web bundle was built without `VITE_API_ORIGIN`, so every browser-side backend call mis-targeted the web origin), correctly classified it as deploy-introduced spec-drift — not a spec-gap, not a deferral — and surfaced the journey-map overstatement corollary plus the api 502 observation. The Karen-APPROVE / jenny-REJECT split is exactly the reviewer-false-negative guard working: Karen's clean source-level pass was contradicted by jenny's live browser-path probe, and a real Critical surfaced rather than passing silently. The three Criticals (C1 `VITE_API_ORIGIN`; cross-origin `SameSite=Lax`→`None;Secure` cookie drop; exception-filter `ERR_HTTP_HEADERS_SENT` crash-loop) were fix-forwarded in-wave via PR#9 (`04244de`) and jenny re-verified each against its original failing condition — genuine resolution, **not green-by-suppression**: no test weakened, the fixes are real code changes, and the previously-failing conditions no longer reproduce. I did not approve on report — I ran my own independent live spot-checks: api `/health` → 200 with correct body (stable, no crash-loop), `GET /me` no-session → 401 (fail-closed), and the served SPA is the new `index-Bwvmyycs.js` containing **2** occurrences of `api-production-b93e` (was 0 in the broken `index-fjfJ8CA0.js`) — C1 confirmed resolved at the deployed artifact. AC6 (profile GET/PATCH round-trip) and AC8 (`/me`→200 `emailVerified:false`) moved from UNVERIFIED-live to live-confirmed post-fix; 9/9 ACs are satisfied for the verifiable surface, with full email-verify click-through and arbitrary-recipient delivery correctly deferred to the tracked Resend-domain (`a1299e88`) and browser-E2E (`c51589cd`) tasks — documented spec splits, not silent gaps. V-2 triage is correct: severity + disposition on every finding, root-cause classified, no spec-gap patched silently (jenny confirmed "spec-gap: none"), and the fast-fix queue is empty because all blocking findings resolved before V-3 entry, so Phase 2 legitimately skips. Remaining items are correctly non-blocking and tracked: rate-limit `839af17f` (launch-blocker), browser-E2E `c51589cd`, Resend domain `a1299e88`, and the `eed4c3c` direct-push process deviation (flagged → L). The wave's core promise — a working auth front-door a real user can sign up and log into — is live and demonstrably verified end-to-end against the live backend. APPROVED for L-block.
+
+## Process note for L-block (non-blocking)
+
+- **PROCESS-1 (Medium):** Commit `eed4c3c` (the exception-filter fix, on the auth security surface) was direct-pushed to `main`, bypassing the PR/CI-gated review that PRs #5–#8 went through. The code is independently verified correct (Karen F4#3) and its behavior re-confirmed live, so it does not gate the wave — but L-2/retro must capture this merge-discipline deviation, and the C-block should confirm branch protection on `main` going forward to prevent recurrence. This is a process finding, not a code defect.
+
+## Footer
+- verdict_complete: true
+- rework_attempt_cap_remaining: 3

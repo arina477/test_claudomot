@@ -38,15 +38,15 @@ TEST:
 - [x] T-9 Journey
 
 VERIFY:
-- [ ] V-1 Independent reviews
-- [ ] V-2 Triage
-- [ ] V-3 Fast-fix loop
+- [x] V-1 Independent reviews
+- [x] V-2 Triage
+- [x] V-3 Fast-fix loop
 
 LEARN:
-- [ ] L-1 Docs
-- [ ] L-2 Distill
+- [x] L-1 Docs
+- [x] L-2 Distill
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers (M1 stays in_progress; no decomposition; no checkpoint)
+- [x] N-2 Seed (seed=2a655960 profile-customization; 0 siblings; validation pass)
+- [x] N-3 Handoff (wave-3 closed ok; archived; wave-4 opened, loop_state ready)

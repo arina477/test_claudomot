@@ -35,7 +35,12 @@ export class ProfileController {
       throw new NotFoundException('User not found');
     }
 
-    return { displayName: user.display_name ?? null };
+    return {
+      displayName: user.display_name ?? null,
+      username: user.username ?? null,
+      avatarUrl: user.avatar_url ?? null,
+      accentColor: user.accent_color ?? null,
+    };
   }
 
   @Patch()
@@ -50,8 +55,21 @@ export class ProfileController {
     }
 
     const userId = req.session.getUserId();
-    await this.usersService.updateDisplayName(userId, parsed.data.displayName);
 
-    return { displayName: parsed.data.displayName };
+    // Propagates ConflictException (409) when username is already taken (PG 23505).
+    await this.usersService.updateProfile(userId, parsed.data);
+
+    const updated = await this.usersService.findById(userId);
+
+    if (!updated) {
+      throw new NotFoundException('User not found after update');
+    }
+
+    return {
+      displayName: updated.display_name ?? null,
+      username: updated.username ?? null,
+      avatarUrl: updated.avatar_url ?? null,
+      accentColor: updated.accent_color ?? null,
+    };
   }
 }
