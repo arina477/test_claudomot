@@ -10,3 +10,20 @@ export {
   AvatarPresignResponseSchema,
 } from './profile.js';
 export type { ProfileResponse, UpdateProfileInput, AvatarPresignResponse } from './profile.js';
+
+export {
+  CreateServerSchema,
+  ServerResponseSchema,
+  ServerSummarySchema,
+  ChannelSummarySchema,
+  CategoryWithChannelsSchema,
+  ServerDetailSchema,
+} from './servers.js';
+export type {
+  CreateServerInput,
+  ServerResponse,
+  ServerSummary,
+  ChannelSummary,
+  CategoryWithChannels,
+  ServerDetail,
+} from './servers.js';

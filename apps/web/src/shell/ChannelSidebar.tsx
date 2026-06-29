@@ -2,24 +2,25 @@
  * ChannelSidebar — 260px channel list panel.
  *
  * Design system §8 spec (ChannelSidebar item):
- *   #/voice/clipboard glyph + name, 14px, secondary text → primary on hover/active.
+ *   #/voice glyph + name, 14px, secondary text → primary on hover/active.
  *   Active = surface-700 fill + emerald text.
- *   Category headers: 11px uppercase muted, collapsible.
- *   Voice channel expands to show occupants.
+ *   Category headers: 11px uppercase muted, collapsible (UI only — state not persisted).
  *   A11y: nav list, active = aria-current.
  *
- * Wave 1 scope: static placeholder channels — no real data.
- *   Member list is OUT of scope this wave.
+ * Wired to ServerContext: renders the selected server's categories and channels.
+ * States: no-server / loading / loaded / error.
+ * Bottom user panel always visible.
  */
 
 import { useProfile } from './ProfileContext';
+import { useServers } from './ServerContext';
 import {
   CaretDownIcon,
-  ClipboardTextIcon,
   GearIcon,
   HashIcon,
   MicrophoneIcon,
   SpeakerHighIcon,
+  SpinnerIcon,
 } from './icons';
 
 /** Derive 2-character initials from a display name or username. */
@@ -38,10 +39,9 @@ type ChannelItemProps = {
   icon: React.ReactNode;
   name: string;
   active?: boolean;
-  unread?: boolean;
 };
 
-function ChannelItem({ icon, name, active = false, unread = false }: ChannelItemProps) {
+function ChannelItem({ icon, name, active = false }: ChannelItemProps) {
   return (
     <button
       type="button"
@@ -49,7 +49,7 @@ function ChannelItem({ icon, name, active = false, unread = false }: ChannelItem
       className="flex w-full items-center gap-2 rounded px-2 py-1.5 cursor-pointer select-none transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2"
       style={{
         backgroundColor: active ? '#27272a' : 'transparent',
-        color: active ? '#10b981' : unread ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.60)',
+        color: active ? '#10b981' : 'rgba(255,255,255,0.60)',
       }}
       onMouseEnter={(e) => {
         if (!active) {
@@ -60,25 +60,16 @@ function ChannelItem({ icon, name, active = false, unread = false }: ChannelItem
       onMouseLeave={(e) => {
         if (!active) {
           (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
-          (e.currentTarget as HTMLButtonElement).style.color = unread
-            ? 'rgba(255,255,255,0.92)'
-            : 'rgba(255,255,255,0.60)';
+          (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.60)';
         }
       }}
     >
       <span className="shrink-0" style={{ color: active ? '#10b981' : 'rgba(255,255,255,0.40)' }}>
         {icon}
       </span>
-      <span className="text-[14px] truncate" style={{ fontWeight: active || unread ? 500 : 400 }}>
+      <span className="text-[14px] truncate" style={{ fontWeight: active ? 500 : 400 }}>
         {name}
       </span>
-      {unread && !active && (
-        <span
-          aria-label="Unread messages"
-          className="ml-auto inline-block w-2 h-2 rounded-full shrink-0"
-          style={{ backgroundColor: 'rgba(255,255,255,0.85)' }}
-        />
-      )}
     </button>
   );
 }
@@ -109,13 +100,22 @@ function Category({ name, children }: CategoryProps) {
   );
 }
 
+function ChannelIcon({ type }: { type: string }) {
+  if (type === 'voice') return <SpeakerHighIcon size={16} />;
+  return <HashIcon size={16} />;
+}
+
 export function ChannelSidebar() {
   const { profile } = useProfile();
+  const { selectedId, selectedDetail, detailStatus, servers } = useServers();
 
   const accentColor = profile?.accentColor ?? '#10b981';
   const avatarUrl = profile?.avatarUrl ?? null;
   const initials = getInitials(profile?.displayName ?? null, profile?.username ?? null);
   const displayLabel = profile?.displayName ?? profile?.username ?? 'You';
+
+  const selectedServer = servers.find((s) => s.id === selectedId);
+  const serverName = selectedDetail?.server.name ?? selectedServer?.name ?? null;
 
   return (
     <aside
@@ -145,86 +145,71 @@ export function ChannelSidebar() {
           className="truncate pr-2 text-[15px] font-semibold tracking-tight"
           style={{ color: 'rgba(255,255,255,0.92)' }}
         >
-          CS-201 Data Structures
+          {serverName ?? 'StudyHall'}
         </h1>
-        <span style={{ color: 'rgba(255,255,255,0.40)' }} className="shrink-0">
-          <CaretDownIcon size={14} />
-        </span>
+        {serverName && (
+          <span style={{ color: 'rgba(255,255,255,0.40)' }} className="shrink-0">
+            <CaretDownIcon size={14} />
+          </span>
+        )}
       </header>
 
       {/* Scrollable channel list */}
-      <div className="flex-1 overflow-y-auto px-2 py-4 space-y-5">
-        <Category name="Coursework">
-          <ChannelItem icon={<HashIcon size={16} />} name="general" />
-          <ChannelItem icon={<HashIcon size={16} />} name="questions" active />
-          <ChannelItem icon={<ClipboardTextIcon size={16} />} name="assignments" unread />
-          <ChannelItem icon={<HashIcon size={16} />} name="syllabus" />
-        </Category>
-
-        <Category name="Live Study">
-          {/* Voice channel with expanded occupants */}
-          <div
-            className="rounded overflow-hidden"
-            style={{
-              backgroundColor: 'rgba(10,10,11,0.40)',
-              border: '1px solid rgba(255,255,255,0.06)',
-            }}
-          >
-            <ChannelItem icon={<SpeakerHighIcon size={16} />} name="Study Room (Quiet)" />
-            {/* Placeholder occupants */}
-            <div className="pl-8 pr-2 pb-2 space-y-1.5" aria-label="Study room occupants">
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center text-[9px] font-bold"
-                  style={{ backgroundColor: '#27272a', color: 'rgba(255,255,255,0.60)' }}
-                  aria-label="Sarah Jenkins, speaking"
-                >
-                  SJ
-                </div>
-                <span className="text-[12px]" style={{ color: 'rgba(255,255,255,0.60)' }}>
-                  Sarah Jenkins
-                </span>
-                {/* Voice wave indicator (emerald) */}
-                <div
-                  className="ml-auto flex items-end gap-[2px]"
-                  aria-hidden="true"
-                  style={{ height: 12 }}
-                >
-                  {[
-                    { id: 'wb-a', h: 4 },
-                    { id: 'wb-b', h: 8 },
-                    { id: 'wb-c', h: 6 },
-                  ].map((bar) => (
-                    <span
-                      key={bar.id}
-                      className="inline-block w-[2px] rounded-sm"
-                      style={{ height: bar.h, backgroundColor: '#10b981' }}
-                    />
-                  ))}
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center text-[9px] font-bold"
-                  style={{
-                    backgroundColor: '#27272a',
-                    color: 'rgba(255,255,255,0.40)',
-                    opacity: 0.7,
-                  }}
-                  aria-label="David C., muted"
-                >
-                  DC
-                </div>
-                <span
-                  className="text-[12px]"
-                  style={{ color: 'rgba(255,255,255,0.40)', opacity: 0.7 }}
-                >
-                  David C.
-                </span>
-              </div>
-            </div>
+      <div className="flex-1 overflow-y-auto px-2 py-4">
+        {/* No server selected */}
+        {!selectedId && (
+          <div className="flex flex-col items-center justify-center h-full px-4 text-center py-8">
+            <p className="text-[13px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.40)' }}>
+              Select a server from the rail to view its channels.
+            </p>
           </div>
-        </Category>
+        )}
+
+        {/* Loading detail */}
+        {selectedId && detailStatus === 'loading' && (
+          <div
+            className="flex items-center justify-center py-8"
+            style={{ color: 'rgba(255,255,255,0.30)' }}
+          >
+            <SpinnerIcon size={20} className="animate-spin" />
+          </div>
+        )}
+
+        {/* Error fetching detail */}
+        {selectedId && detailStatus === 'error' && (
+          <div className="px-2 py-6 text-center">
+            <p className="text-[13px]" style={{ color: 'rgba(255,255,255,0.40)' }}>
+              Couldn&apos;t load channels.
+            </p>
+          </div>
+        )}
+
+        {/* Loaded — categories + channels */}
+        {selectedId && detailStatus === 'loaded' && selectedDetail && (
+          <div className="space-y-5">
+            {selectedDetail.categories.length === 0 && (
+              <p
+                className="text-center text-[13px] py-4"
+                style={{ color: 'rgba(255,255,255,0.40)' }}
+              >
+                No channels yet.
+              </p>
+            )}
+            {selectedDetail.categories.map((cat) => (
+              <Category key={cat.id} name={cat.name}>
+                {cat.channels.map((ch) => (
+                  <li key={ch.id}>
+                    <ChannelItem
+                      icon={<ChannelIcon type={ch.type} />}
+                      name={ch.name}
+                      active={ch.name === 'general'}
+                    />
+                  </li>
+                ))}
+              </Category>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Current user panel (bottom) */}

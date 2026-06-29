@@ -71,6 +71,7 @@ Dark UI leans on borders + subtle glows, not heavy drop-shadows.
 - `--shadow-sm`: `0 1px 2px rgba(0,0,0,0.4)` — cards, composer.
 - `--shadow-pop`: `0 8px 24px rgba(0,0,0,0.5)` — modals, popovers, tooltips.
 - `--glow-focus`: `0 0 0 2px rgba(16,185,129,0.4)` — emerald focus ring.
+- `--glow-danger`: `0 0 0 2px rgba(239,68,68,0.4)` — danger ring for error/invalid form controls (danger analogue of `--glow-focus`). (wave-7)
 - `--glow-subtle`: `0 0 15px rgba(255,255,255,0.05)` — gentle highlight on elevated/active.
 Elevation order: canvas < sidebar < card/composer < popover < modal < toast.
 

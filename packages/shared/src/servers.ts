@@ -1,0 +1,44 @@
+import { z } from 'zod';
+
+export const CreateServerSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+});
+export type CreateServerInput = z.infer<typeof CreateServerSchema>;
+
+export const ServerResponseSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  ownerId: z.string(),
+  createdAt: z.string(),
+});
+export type ServerResponse = z.infer<typeof ServerResponseSchema>;
+
+export const ServerSummarySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  ownerId: z.string(),
+});
+export type ServerSummary = z.infer<typeof ServerSummarySchema>;
+
+export const ChannelSummarySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: z.string(),
+  isPrivate: z.boolean(),
+  position: z.number(),
+});
+export type ChannelSummary = z.infer<typeof ChannelSummarySchema>;
+
+export const CategoryWithChannelsSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  position: z.number(),
+  channels: z.array(ChannelSummarySchema),
+});
+export type CategoryWithChannels = z.infer<typeof CategoryWithChannelsSchema>;
+
+export const ServerDetailSchema = z.object({
+  server: ServerSummarySchema,
+  categories: z.array(CategoryWithChannelsSchema),
+});
+export type ServerDetail = z.infer<typeof ServerDetailSchema>;

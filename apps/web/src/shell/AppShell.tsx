@@ -8,15 +8,18 @@
  *   <1024px  — ServerRail persists; ChannelSidebar collapses to an overlay drawer
  *              with a toggle button in the MainColumn header.
  *
- * Wave 1 scope:
- *   Member list column is OUT of scope — not rendered.
- *   Connection state is prop-driven (no socket).
+ * Mounts CreateServerModal when createModalOpen is true (driven by ServerContext).
+ * Forwards a ref to the "Add a server" button so focus is restored on modal close.
+ *
+ * NOTE: ServerProvider must be an ancestor. AppHome provides it.
  */
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ChannelSidebar } from './ChannelSidebar';
 import type { ConnectionState } from './ConnectionStateIndicator';
+import { CreateServerModal } from './CreateServerModal';
 import { MainColumn } from './MainColumn';
+import { useServers } from './ServerContext';
 import { ServerRail } from './ServerRail';
 import { XIcon } from './icons';
 
@@ -27,6 +30,8 @@ type Props = {
 
 export function AppShell({ connectionState = 'online' }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { createModalOpen, closeCreateModal, appendServer } = useServers();
+  const addServerBtnRef = useRef<HTMLButtonElement>(null);
 
   function toggleSidebar() {
     setSidebarOpen((prev) => !prev);
@@ -39,7 +44,7 @@ export function AppShell({ connectionState = 'online' }: Props) {
   return (
     <div className="flex h-full w-full overflow-hidden" style={{ backgroundColor: '#0a0a0b' }}>
       {/* ── Pane 1: Server Rail (always visible) ── */}
-      <ServerRail />
+      <ServerRail addServerBtnRef={addServerBtnRef} />
 
       {/* ── Pane 2: Channel Sidebar ── */}
       {/*
@@ -93,6 +98,18 @@ export function AppShell({ connectionState = 'online' }: Props) {
 
       {/* ── Pane 3: Main Column (flex-1, always visible) ── */}
       <MainColumn connectionState={connectionState} onToggleSidebar={toggleSidebar} />
+
+      {/* ── Create Server Modal ── */}
+      {createModalOpen && (
+        <CreateServerModal
+          onSuccess={(server) => {
+            appendServer(server);
+            closeCreateModal();
+          }}
+          onClose={closeCreateModal}
+          triggerRef={addServerBtnRef}
+        />
+      )}
     </div>
   );
 }

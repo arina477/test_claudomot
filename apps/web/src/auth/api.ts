@@ -6,8 +6,12 @@
 
 import type {
   AvatarPresignResponse,
+  CreateServerInput,
   MeResponse,
   ProfileResponse,
+  ServerDetail,
+  ServerResponse,
+  ServerSummary,
   UpdateProfileInput,
 } from '@studyhall/shared';
 
@@ -72,4 +76,17 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ key }),
     }),
+
+  /** POST /servers {name} → 201 {id,name,ownerId,createdAt}. Throws on 400/401. */
+  createServer: (data: CreateServerInput) =>
+    request<ServerResponse>('/servers', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  /** GET /servers → member-scoped server list [{id,name,ownerId}]. */
+  getServers: () => request<ServerSummary[]>('/servers'),
+
+  /** GET /servers/:id → {server, categories:[{id,name,position,channels:[...]}]}. */
+  getServerDetail: (id: string) => request<ServerDetail>(`/servers/${id}`),
 };

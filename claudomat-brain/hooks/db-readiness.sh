@@ -88,4 +88,29 @@ case "$URL" in
     ;;
 esac
 
+# ----------------------------------------- project-context readiness (fail-soft)
+# After the URL is shape-valid, sanity-check that the DB resolves a project for
+# this connection's role: request_project_id() (shipped by studio's multi-tenant
+# keystone) exists and returns a non-empty id. This is a HEADS-UP only — a
+# missing function (pre-keystone DB), an empty result (role not yet mapped to a
+# project), or a brief connection hiccup must NOT block the session: project_id
+# is applied by a column DEFAULT, so brain SQL keeps working. So emit a WARNING
+# (deliberately NOT the [claudomat-db-readiness-FAIL] sentinel — that is a
+# hard-stop per claudomat-brain/CLAUDE.md rule 13) and exit 0. Skipped entirely
+# when psql is unavailable (e.g. running outside a worker image).
+if command -v psql >/dev/null 2>&1; then
+  pid="$(PGCONNECT_TIMEOUT=5 psql "$URL" -tAXc "SELECT request_project_id()" 2>/dev/null | tr -d '[:space:]')"
+  if [[ -z "$pid" ]]; then
+    cat >&2 <<'WARN'
+[claudomat-db-readiness-WARN] project context not resolvable yet
+request_project_id() returned no project id for this connection. The session
+continues (project_id is filled by a column DEFAULT, so brain SQL still works).
+Causes: a pre-keystone database without the resolver, a connection role not yet
+mapped to a project, or a brief unreachable DB. If later writes fail with a
+permission or row-security error, check CLAUDOMAT_DB_URL's role and its
+brain_role_projects mapping. Run `claudomat doctor` for the [db-readiness] check.
+WARN
+  fi
+fi
+
 exit 0

@@ -99,7 +99,7 @@ Live: web https://web-production-bce1a8.up.railway.app · api https://api-produc
 - Features: 15
 
 ### F7 — Create server + channels (P2)
-- Entry: `/app` → Create server → name/icon → template/channels → invite link → `/servers/:id/:channelId`
+- Entry: `/app` → Create server (+ in rail) → single-step name modal → `POST /servers {name}` (seeds owner membership + default "General" category + `#general` server-side) → new server selected in rail, `#general` shown. (M2 STRUCTURE only; icon/template/invite are later milestones.)
 - Features: 5
 
 ### F8 — Invite + roles/permissions (P2)

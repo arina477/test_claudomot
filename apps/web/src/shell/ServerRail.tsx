@@ -8,21 +8,35 @@
  *   "+" create button at bottom.
  *   A11y: button + aria-label = server name, arrow-key nav.
  *
- * Wave 1 scope: static placeholders — no real server data.
+ * Wired to ServerContext: renders real server list from GET /servers.
+ * States: loading (spinner skeleton) / empty / loaded / error.
  */
 
-import { BooksIcon, PlusIcon } from './icons';
+import { useRef } from 'react';
+import { useServers } from './ServerContext';
+import { BooksIcon, PlusIcon, SpinnerIcon } from './icons';
+
+/** Derive 2-character initials from a server name. */
+function serverInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
 
 type ServerIconProps = {
+  id: string;
   label: string;
   active?: boolean;
-  initials?: string;
+  initials: string;
+  onClick: () => void;
 };
 
-function ServerIconButton({ label, active = false, initials }: ServerIconProps) {
+function ServerIconButton({ label, active = false, initials, onClick }: ServerIconProps) {
   return (
     <li className="relative flex w-full justify-center group">
-      {/* Active / hover left-edge indicator bar */}
+      {/* Active left-edge indicator bar */}
       <span
         aria-hidden="true"
         className="absolute left-0 top-1/2 -translate-y-1/2 w-1 rounded-r-full transition-all duration-200"
@@ -32,7 +46,7 @@ function ServerIconButton({ label, active = false, initials }: ServerIconProps) 
           opacity: active ? 1 : 0,
         }}
       />
-      {/* Hover indicator (CSS group-hover can't animate height easily, use opacity) */}
+      {/* Hover indicator */}
       <span
         aria-hidden="true"
         className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity duration-150"
@@ -44,6 +58,7 @@ function ServerIconButton({ label, active = false, initials }: ServerIconProps) 
         aria-label={label}
         aria-current={active ? 'page' : undefined}
         data-active={active}
+        onClick={onClick}
         className="rail-icon w-11 h-11 flex items-center justify-center text-sm font-semibold cursor-pointer focus-visible:outline-none focus-visible:ring-2"
         style={{
           backgroundColor: active ? '#10b981' : '#1c1c1f',
@@ -52,7 +67,7 @@ function ServerIconButton({ label, active = false, initials }: ServerIconProps) 
           transition: 'background-color 150ms ease, color 150ms ease',
         }}
       >
-        {initials ?? null}
+        {initials}
       </button>
 
       {/* Tooltip */}
@@ -71,7 +86,16 @@ function ServerIconButton({ label, active = false, initials }: ServerIconProps) 
   );
 }
 
-export function ServerRail() {
+type Props = {
+  /** Optional ref forwarded to the "Add a server" button for focus restore after modal close. */
+  addServerBtnRef?: React.RefObject<HTMLButtonElement | null>;
+};
+
+export function ServerRail({ addServerBtnRef }: Props) {
+  const { servers, status, selectedId, selectServer, openCreateModal } = useServers();
+  const internalRef = useRef<HTMLButtonElement>(null);
+  const btnRef = addServerBtnRef ?? internalRef;
+
   return (
     <nav
       aria-label="Server rail"
@@ -121,15 +145,45 @@ export function ServerRail() {
         style={{ backgroundColor: '#27272a' }}
       />
 
-      {/* Placeholder servers */}
+      {/* Server list */}
       <ul
         aria-label="Your servers"
         className="flex flex-col items-center gap-2 w-full"
         style={{ listStyle: 'none', padding: 0, margin: 0 }}
       >
-        <ServerIconButton label="CS-201 Data Structures" active initials="CS" />
-        <ServerIconButton label="LIT-104 Literature" initials="LIT" />
-        <ServerIconButton label="Study Group Alpha" initials="SG" />
+        {status === 'loading' && (
+          <li className="flex w-full justify-center" aria-label="Loading servers">
+            <div
+              className="w-11 h-11 flex items-center justify-center"
+              style={{ color: 'rgba(255,255,255,0.30)' }}
+            >
+              <SpinnerIcon size={18} className="animate-spin" />
+            </div>
+          </li>
+        )}
+
+        {status === 'error' && (
+          <li className="flex w-full justify-center px-2">
+            <span
+              className="text-[10px] text-center leading-tight"
+              style={{ color: 'rgba(255,255,255,0.30)' }}
+            >
+              Failed to load
+            </span>
+          </li>
+        )}
+
+        {(status === 'loaded' || status === 'idle') &&
+          servers.map((s) => (
+            <ServerIconButton
+              key={s.id}
+              id={s.id}
+              label={s.name}
+              active={s.id === selectedId}
+              initials={serverInitials(s.name)}
+              onClick={() => selectServer(s.id)}
+            />
+          ))}
       </ul>
 
       {/* Spacer */}
@@ -138,8 +192,10 @@ export function ServerRail() {
       {/* Create / Add server button */}
       <div className="relative flex w-full justify-center group">
         <button
+          ref={btnRef}
           type="button"
           aria-label="Add a server"
+          onClick={openCreateModal}
           className="rail-icon w-11 h-11 flex items-center justify-center cursor-pointer focus-visible:outline-none focus-visible:ring-2"
           style={{
             backgroundColor: '#1c1c1f',
