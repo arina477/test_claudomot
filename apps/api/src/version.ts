@@ -3,20 +3,33 @@
  *
  * process.env.npm_package_version is only set when the process was started
  * via `npm run` / `pnpm run`. In production (node dist/src/main.js) it is
- * absent. This module reads the real version from package.json directly,
- * which is always present next to the compiled dist/ tree.
+ * absent, so we fall back to reading package.json directly.
  *
- * Strategy: require('../package.json') resolves relative to this file's
- * location at runtime.  dist/src/version.js → ../../package.json → apps/api/package.json.
- * The TypeScript source lives at apps/api/src/version.ts, compiles to
- * apps/api/dist/src/version.js, so '../..' from the compiled file lands at
- * apps/api/package.json — the correct location.
+ * The challenge: a single relative literal cannot satisfy both depths:
+ *   - apps/api/src/version.ts  (vitest / tsx)  → '../package.json' is correct
+ *   - apps/api/dist/src/version.js (prod node)  → '../../package.json' is correct
+ *
+ * Strategy: try-both-paths. Attempt '../../package.json' first (prod path),
+ * then '../package.json' (src/vitest path). One of the two will always resolve
+ * to apps/api/package.json regardless of execution context.
  *
  * Fallback: '0.0.1' so health never returns an empty string.
  */
 
-// biome-ignore lint/suspicious/noExplicitAny: require() is fine in CommonJS NestJS build
-const pkg = require('../package.json') as Record<string, any>;
+function readPackageVersion(): string {
+  if (process.env.npm_package_version) {
+    return process.env.npm_package_version;
+  }
+  for (const rel of ['../../package.json', '../package.json']) {
+    try {
+      // biome-ignore lint/suspicious/noExplicitAny: require() is fine in CommonJS NestJS build
+      const p = require(rel) as Record<string, any>;
+      if (p.version) return p.version as string;
+    } catch {
+      // try next path
+    }
+  }
+  return '0.0.1';
+}
 
-export const API_VERSION: string =
-  process.env.npm_package_version ?? (pkg.version as string | undefined) ?? '0.0.1';
+export const API_VERSION: string = readPackageVersion();
