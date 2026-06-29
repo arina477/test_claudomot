@@ -16,6 +16,8 @@ import type {
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../db/index';
 import { categories, channels, invites, server_members, servers } from '../db/schema/index';
+// biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
+import { RbacService } from '../rbac/rbac.service';
 
 // ---------------------------------------------------------------------------
 // CSPRNG code generator — ~128-bit entropy, URL-safe base64url (no +/=)
@@ -48,6 +50,7 @@ function validateInviteActive(invite: {
 
 @Injectable()
 export class ServersService {
+  constructor(private readonly rbacService: RbacService) {}
   /**
    * Create a server in a single atomic transaction:
    * server (with CSPRNG invite_code) → owner server_member → 'General' category → #general channel.
@@ -116,6 +119,16 @@ export class ServersService {
    * Return full server detail including categories + channels.
    * Throws 404 if server does not exist.
    * Throws 403 if the calling user is not a member.
+   *
+   * Security (P-4 carry-forward): channels are filtered server-side by
+   * visibility. Channels not visible to the caller's role are ABSENT from
+   * the response — they are not included at all, preventing enumeration of
+   * private channels (no hidden-channel enumeration via UI suppression alone).
+   *
+   * Visibility rules (delegated to RbacService.getVisibleChannelIds):
+   *   - Owner → all channels
+   *   - Public channel → visible unless override.can_view=false
+   *   - Private channel → default-deny unless override.can_view=true
    */
   async findServerDetail(userId: string, serverId: string): Promise<ServerDetail> {
     const [server] = await db.select().from(servers).where(eq(servers.id, serverId)).limit(1);
@@ -146,6 +159,13 @@ export class ServersService {
       .where(eq(channels.server_id, serverId))
       .orderBy(channels.position);
 
+    // Server-side channel visibility filtering — no enumeration leak
+    const allChannelIds = chanRows.map((ch) => ch.id);
+    const visibleIds = await this.rbacService.getVisibleChannelIds(userId, serverId, allChannelIds);
+    // visibleIds === null means owner (all visible); otherwise filter to set
+    const visibleChanRows =
+      visibleIds === null ? chanRows : chanRows.filter((ch) => visibleIds.has(ch.id));
+
     return {
       server: {
         id: server.id,
@@ -157,7 +177,7 @@ export class ServersService {
         id: cat.id,
         name: cat.name,
         position: cat.position,
-        channels: chanRows
+        channels: visibleChanRows
           .filter((ch) => ch.category_id === cat.id)
           .map((ch) => ({
             id: ch.id,

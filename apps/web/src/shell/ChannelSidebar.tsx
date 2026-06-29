@@ -16,11 +16,13 @@ import { useRef, useState } from 'react';
 import { InviteShareModal } from './InviteShareModal';
 import { useProfile } from './ProfileContext';
 import { useServers } from './ServerContext';
+import { ServerRolesPage } from './ServerRolesPage';
 import {
   CaretDownIcon,
   GearIcon,
   HashIcon,
   MicrophoneIcon,
+  ShieldCheckIcon,
   SpeakerHighIcon,
   SpinnerIcon,
   UserAddIcon,
@@ -112,6 +114,7 @@ export function ChannelSidebar() {
   const { profile } = useProfile();
   const { selectedId, selectedDetail, detailStatus, servers } = useServers();
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [rolesPageOpen, setRolesPageOpen] = useState(false);
   const inviteBtnRef = useRef<HTMLButtonElement>(null);
 
   const accentColor = profile?.accentColor ?? '#10b981';
@@ -184,6 +187,36 @@ export function ChannelSidebar() {
               <UserAddIcon size={15} />
             </button>
           )}
+          {/* Server settings / roles button */}
+          {selectedId && (
+            <button
+              type="button"
+              aria-label="Server settings — Roles"
+              data-testid="server-settings-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                setRolesPageOpen(true);
+              }}
+              className="flex h-7 w-7 items-center justify-center rounded transition-colors duration-150 focus-visible:outline-none"
+              style={{ color: 'rgba(255,255,255,0.40)', backgroundColor: 'transparent' }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#27272a';
+                (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.92)';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+                (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.40)';
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.boxShadow = '0 0 0 2px rgba(16,185,129,0.4)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              <ShieldCheckIcon size={15} />
+            </button>
+          )}
           {serverName && (
             <span style={{ color: 'rgba(255,255,255,0.40)' }}>
               <CaretDownIcon size={14} />
@@ -199,6 +232,17 @@ export function ChannelSidebar() {
           inviteCode={selectedDetail?.server.inviteCode ?? null}
           onClose={() => setInviteModalOpen(false)}
           triggerRef={inviteBtnRef}
+        />
+      )}
+
+      {/* Server Roles page — full-screen overlay */}
+      {rolesPageOpen && selectedId && selectedDetail && (
+        <ServerRolesPage
+          serverId={selectedId}
+          serverName={selectedDetail.server.name}
+          ownerId={selectedDetail.server.ownerId}
+          channels={selectedDetail.categories.flatMap((cat) => cat.channels)}
+          onClose={() => setRolesPageOpen(false)}
         />
       )}
 

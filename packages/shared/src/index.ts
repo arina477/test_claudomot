@@ -37,3 +37,22 @@ export {
   JoinResultSchema,
 } from './invites.js';
 export type { InvitePreview, CreateInviteInput, InviteResponse, JoinResult } from './invites.js';
+
+export {
+  RolePermissionsSchema,
+  RoleSchema,
+  ChannelOverrideSchema,
+  CreateRoleSchema,
+  UpdateRoleSchema,
+  AssignRoleSchema,
+  UpsertChannelOverrideSchema,
+} from './rbac.js';
+export type {
+  RolePermissions,
+  Role,
+  ChannelOverride,
+  CreateRoleInput,
+  UpdateRoleInput,
+  AssignRoleInput,
+  UpsertChannelOverrideInput,
+} from './rbac.js';
