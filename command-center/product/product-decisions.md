@@ -136,6 +136,10 @@ _(empty)_
 **Decision (wave-3, resolves a3328023):** Authenticated-but-unverified users CAN reach the app shell, shown a persistent "verify your email" banner; backend exempts /me + app-shell routes from the global SuperTokens EmailVerification REQUIRED claim (verification emails still send; sensitive actions may gate later). Rationale: maximizes first-run activation for the student/offline-first context vs a hard pre-verification wall; reversible. Applied as a sensible default under automatic mode (low-friction is the standard SaaS pattern); founder can override to force-verify-first.
 **Wave-3 scope split (founder-approved):** auth pages + display_name profile this wave; username/avatar-upload/accent-color split to task 2a655960 (next wave).
 
+[2026-06-29] M2 (Servers, channels & membership): bundle authored — 4 tasks (invites + join-flow: two-tier invite backend, invite-preview/join membership API, invite-join page, invite-create/share UI — the success-metric core that lets an organizer share a link and members join and see channels)
+- caller: N-1-next-bundle
+- decomposed by: milestone-decomposer sub-agent
+
 ## 2026-06-29 — Post-foundation direction: hardening-then-core ("a bit of both")
 **Decision (founder, N-1 wave-4 strategic poll):** M1 foundation is feature-complete + live (shell + auth + profile customization). Founder chose to do the highest-value HARDENING next — login rate-limiting (839af17f) + finish avatar storage (84e09891, needs founder Railway Bucket creds) so profiles are fully done — THEN move to the core product (M2 servers/channels → M3 real-time messaging). Lower-value follow-ups (branch-protection 478e9d43, CI node-20 a7667fb7, version e38c306e, browser-E2E c51589cd) stay tracked, folded in around the work. M1 stays in_progress through the hardening. Rationale: balance safety/completeness with momentum before the bigger messaging build.
 
