@@ -1,4 +1,13 @@
-import { Body, Controller, Get, NotFoundException, Patch, Req, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  NotFoundException,
+  Patch,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import type { ProfileResponse } from '@studyhall/shared';
 import { UpdateProfileSchema } from '@studyhall/shared';
 import { SessionNoVerifyGuard } from '../auth/session-no-verify.guard';
@@ -37,8 +46,6 @@ export class ProfileController {
   ): Promise<ProfileResponse> {
     const parsed = UpdateProfileSchema.safeParse(body);
     if (!parsed.success) {
-      // Re-throw as a NestJS-compatible 422 payload; error mapping stays within module boundary.
-      const { BadRequestException } = await import('@nestjs/common');
       throw new BadRequestException(parsed.error.flatten());
     }
 
