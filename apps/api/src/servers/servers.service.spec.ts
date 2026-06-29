@@ -47,6 +47,7 @@ vi.mock('../db/index', () => ({
     transaction: vi.fn(),
     select: vi.fn(),
     insert: vi.fn(),
+    update: vi.fn(),
   },
 }));
 
@@ -57,6 +58,7 @@ import { db } from '../db/index';
 type MockFn = ReturnType<typeof vi.fn>;
 const mockTransaction = db.transaction as unknown as MockFn;
 const mockSelect = db.select as unknown as MockFn;
+const mockInsert = db.insert as unknown as MockFn;
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -300,5 +302,393 @@ describe('ServersService.findServerDetail', () => {
 
     expect(result.categories[0]?.channels[0]?.id).toBe('ch-1');
     expect(result.categories[1]?.channels[0]?.id).toBe('ch-2');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Invite fixtures
+// ---------------------------------------------------------------------------
+
+const mockInvite = {
+  id: 'invite-1',
+  server_id: 'server-1',
+  code: 'abc123',
+  created_by: 'user-1',
+  max_uses: null,
+  uses: 0,
+  expires_at: null,
+  revoked: false,
+  created_at: new Date('2026-01-01T00:00:00Z'),
+};
+
+// ---------------------------------------------------------------------------
+// ServersService — createInvite (task c7443638)
+// ---------------------------------------------------------------------------
+
+describe('ServersService.createInvite', () => {
+  let service: ServersService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    service = new ServersService();
+  });
+
+  it('throws ForbiddenException (403) when caller is not a member', async () => {
+    // First select (member check) returns empty, second (server lookup) not reached
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      // member check → empty; server → also empty (shouldn't reach)
+      return makeSelectChain(callCount === 1 ? [] : [mockServer]);
+    });
+
+    await expect(service.createInvite('server-1', 'non-member', {})).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  it('throws NotFoundException (404) when server does not exist', async () => {
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      // member check → member found; server check → empty
+      return makeSelectChain(
+        callCount === 1 ? [{ id: 'mem-1', server_id: 'server-1', user_id: 'user-1' }] : [],
+      );
+    });
+
+    await expect(service.createInvite('ghost-server', 'user-1', {})).rejects.toThrow(
+      NotFoundException,
+    );
+  });
+
+  it('inserts invite and returns code with base64url shape (~22 chars)', async () => {
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return makeSelectChain([{ id: 'mem-1', server_id: 'server-1', user_id: 'user-1' }]);
+      }
+      return makeSelectChain([mockServer]);
+    });
+
+    const insertChain = makeInsertChain([]);
+    mockInsert.mockReturnValue(insertChain);
+
+    const result = await service.createInvite('server-1', 'user-1', {});
+
+    expect(result.code).toBeDefined();
+    // base64url: a-z A-Z 0-9 - _  (16 bytes → 22 chars)
+    expect(result.code).toMatch(/^[A-Za-z0-9_-]{22}$/);
+  });
+
+  it('retries on unique constraint violation (code 23505)', async () => {
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return makeSelectChain([{ id: 'mem-1', server_id: 'server-1', user_id: 'user-1' }]);
+      }
+      return makeSelectChain([mockServer]);
+    });
+
+    // First insert throws unique violation; second succeeds
+    let insertAttempt = 0;
+    mockInsert.mockImplementation(() => {
+      const chain: Record<string, unknown> = {};
+      chain.values = vi.fn(() => {
+        insertAttempt++;
+        if (insertAttempt === 1) {
+          return Promise.reject(Object.assign(new Error('unique violation'), { code: '23505' }));
+        }
+        return Promise.resolve([]);
+      });
+      return chain;
+    });
+
+    const result = await service.createInvite('server-1', 'user-1', {});
+    expect(result.code).toBeDefined();
+    expect(insertAttempt).toBe(2);
+  });
+
+  it('generates unique codes across two separate calls', async () => {
+    let totalSelectCalls = 0;
+    mockSelect.mockImplementation(() => {
+      totalSelectCalls++;
+      if (totalSelectCalls % 2 === 1) {
+        return makeSelectChain([{ id: 'mem-1', server_id: 'server-1', user_id: 'user-1' }]);
+      }
+      return makeSelectChain([mockServer]);
+    });
+
+    const insertChain = makeInsertChain([]);
+    mockInsert.mockReturnValue(insertChain);
+
+    const r1 = await service.createInvite('server-1', 'user-1', {});
+    const r2 = await service.createInvite('server-1', 'user-1', {});
+
+    // Statistically guaranteed with 128-bit entropy
+    expect(r1.code).not.toBe(r2.code);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ServersService — getInvitePreview (task 77e2041a)
+// ---------------------------------------------------------------------------
+
+describe('ServersService.getInvitePreview', () => {
+  let service: ServersService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    service = new ServersService();
+  });
+
+  it('returns minimal preview (id, name, memberCount) for a valid ad-hoc invite', async () => {
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      switch (callCount) {
+        case 1:
+          return makeSelectChain([mockInvite]); // invites lookup
+        case 2:
+          return makeSelectChain([mockServer]); // server lookup
+        default:
+          return makeSelectChain([{ count: 5 }]); // member count
+      }
+    });
+
+    const result = await service.getInvitePreview('abc123');
+
+    expect(result).toEqual({ server: { id: 'server-1', name: 'Test Server', memberCount: 5 } });
+  });
+
+  it('does NOT return channels, categories, or member list', async () => {
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      switch (callCount) {
+        case 1:
+          return makeSelectChain([mockInvite]);
+        case 2:
+          return makeSelectChain([mockServer]);
+        default:
+          return makeSelectChain([{ count: 2 }]);
+      }
+    });
+
+    const result = await service.getInvitePreview('abc123');
+
+    expect(result).not.toHaveProperty('channels');
+    expect(result).not.toHaveProperty('categories');
+    expect(result).not.toHaveProperty('members');
+    expect(Object.keys(result)).toEqual(['server']);
+    expect(Object.keys(result.server)).toEqual(['id', 'name', 'memberCount']);
+  });
+
+  it('throws NotFoundException (404) for a revoked invite', async () => {
+    mockSelect.mockReturnValue(makeSelectChain([{ ...mockInvite, revoked: true }]));
+
+    await expect(service.getInvitePreview('abc123')).rejects.toThrow(NotFoundException);
+  });
+
+  it('throws NotFoundException (404) for an expired invite', async () => {
+    const pastDate = new Date(Date.now() - 3600_000); // 1 hour ago
+    mockSelect.mockReturnValue(makeSelectChain([{ ...mockInvite, expires_at: pastDate }]));
+
+    await expect(service.getInvitePreview('abc123')).rejects.toThrow(NotFoundException);
+  });
+
+  it('throws NotFoundException (404) for a maxed-out invite (uses >= max_uses)', async () => {
+    mockSelect.mockReturnValue(makeSelectChain([{ ...mockInvite, max_uses: 5, uses: 5 }]));
+
+    await expect(service.getInvitePreview('abc123')).rejects.toThrow(NotFoundException);
+  });
+
+  it('throws NotFoundException (404) for a code that does not exist in either table', async () => {
+    // ad-hoc lookup → empty; permanent lookup → empty
+    mockSelect.mockReturnValue(makeSelectChain([]));
+
+    await expect(service.getInvitePreview('no-such-code')).rejects.toThrow(NotFoundException);
+  });
+
+  it('falls through to permanent invite when ad-hoc not found', async () => {
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      switch (callCount) {
+        case 1:
+          return makeSelectChain([]); // ad-hoc not found
+        case 2:
+          return makeSelectChain([{ ...mockServer, invite_code: 'perm-code' }]); // server
+        default:
+          return makeSelectChain([{ count: 3 }]); // member count
+      }
+    });
+
+    const result = await service.getInvitePreview('perm-code');
+
+    expect(result.server.memberCount).toBe(3);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ServersService — joinViaInvite (task 77e2041a, carry-forward B)
+// ---------------------------------------------------------------------------
+
+describe('ServersService.joinViaInvite', () => {
+  let service: ServersService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    service = new ServersService();
+  });
+
+  /**
+   * Build a transaction mock that supports select, insert, and update chains.
+   * selectSequence: array of arrays returned in order for each select call.
+   * insertReturning: what the insert(...).onConflictDoNothing().returning() returns.
+   */
+  function buildJoinTxMock(
+    selectSequence: unknown[][],
+    insertReturning: unknown[],
+    captureUpdate?: { called: boolean },
+  ) {
+    let selectIdx = 0;
+    return {
+      select: vi.fn(() => {
+        const result = selectSequence[selectIdx++] ?? [];
+        return makeSelectChain(result);
+      }),
+      insert: vi.fn(() => {
+        const chain: Record<string, unknown> = {};
+        chain.values = vi.fn(() => {
+          const conflictChain: Record<string, unknown> = {};
+          conflictChain.onConflictDoNothing = vi.fn(() => {
+            const returningChain: Record<string, unknown> = {
+              // biome-ignore lint/suspicious/noThenProperty: intentional thenable mock
+              then: (res: (v: unknown) => unknown, rej?: (e: unknown) => unknown) =>
+                Promise.resolve(insertReturning).then(res, rej),
+              returning: vi.fn().mockResolvedValue(insertReturning),
+            };
+            return returningChain;
+          });
+          return conflictChain;
+        });
+        return chain;
+      }),
+      update: vi.fn(() => {
+        const chain: Record<string, unknown> = {};
+        chain.set = vi.fn(() => {
+          chain.where = vi.fn(() => Promise.resolve([]));
+          return chain;
+        });
+        if (captureUpdate) captureUpdate.called = true;
+        return chain;
+      }),
+    };
+  }
+
+  it('returns {serverId} when joining successfully via ad-hoc invite', async () => {
+    const txMock = buildJoinTxMock(
+      [[mockInvite], []], // invite found, (not used further)
+      [{ id: 'mem-new', server_id: 'server-1', user_id: 'user-2' }], // new member inserted
+    );
+    mockTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(txMock));
+
+    const result = await service.joinViaInvite('abc123', 'user-2');
+
+    expect(result).toEqual({ serverId: 'server-1' });
+  });
+
+  it('increments invite uses when a new membership row is inserted (carry-forward B)', async () => {
+    const captureUpdate = { called: false };
+    const txMock = buildJoinTxMock(
+      [[mockInvite]],
+      [{ id: 'mem-new', server_id: 'server-1', user_id: 'user-2' }],
+      captureUpdate,
+    );
+    // Patch update to track call and set called flag eagerly
+    const origUpdate = txMock.update;
+    txMock.update = vi.fn((...args) => {
+      captureUpdate.called = true;
+      return origUpdate(...args);
+    });
+    mockTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(txMock));
+
+    await service.joinViaInvite('abc123', 'user-2');
+
+    expect(captureUpdate.called).toBe(true);
+  });
+
+  it('does NOT increment uses when existing member re-joins (carry-forward B)', async () => {
+    const captureUpdate = { called: false };
+    const txMock = buildJoinTxMock(
+      [[mockInvite]],
+      [], // ON CONFLICT DO NOTHING → empty RETURNING = existing member
+    );
+    txMock.update = vi.fn(() => {
+      captureUpdate.called = true;
+      const chain: Record<string, unknown> = {};
+      chain.set = vi.fn(() => {
+        chain.where = vi.fn(() => Promise.resolve([]));
+        return chain;
+      });
+      return chain;
+    });
+    mockTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(txMock));
+
+    const result = await service.joinViaInvite('abc123', 'user-1');
+
+    expect(result).toEqual({ serverId: 'server-1' });
+    expect(captureUpdate.called).toBe(false);
+  });
+
+  it('does NOT increment uses for permanent (servers.invite_code) join', async () => {
+    const captureUpdate = { called: false };
+    // No ad-hoc invite found, falls through to permanent
+    const txMock = buildJoinTxMock(
+      [[], [{ ...mockServer, invite_code: 'perm-code' }]],
+      [{ id: 'mem-new', server_id: 'server-1', user_id: 'user-3' }],
+    );
+    txMock.update = vi.fn(() => {
+      captureUpdate.called = true;
+      const chain: Record<string, unknown> = {};
+      chain.set = vi.fn(() => {
+        chain.where = vi.fn(() => Promise.resolve([]));
+        return chain;
+      });
+      return chain;
+    });
+    mockTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(txMock));
+
+    const result = await service.joinViaInvite('perm-code', 'user-3');
+
+    expect(result).toEqual({ serverId: 'server-1' });
+    expect(captureUpdate.called).toBe(false);
+  });
+
+  it('throws NotFoundException (404) for invalid code inside transaction', async () => {
+    // ad-hoc not found, permanent not found
+    const txMock = buildJoinTxMock([[], []], []);
+    mockTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(txMock));
+
+    await expect(service.joinViaInvite('bad-code', 'user-1')).rejects.toThrow(NotFoundException);
+  });
+
+  it('throws NotFoundException when ad-hoc invite is revoked (inside txn)', async () => {
+    const txMock = buildJoinTxMock([[{ ...mockInvite, revoked: true }]], []);
+    mockTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(txMock));
+
+    await expect(service.joinViaInvite('abc123', 'user-2')).rejects.toThrow(NotFoundException);
+  });
+
+  it('rejects second distinct user on max_uses=1 invite when first join incremented uses', async () => {
+    // Simulate: invite has max_uses=1, uses=1 (first join already consumed it)
+    const maxedInvite = { ...mockInvite, max_uses: 1, uses: 1 };
+    const txMock = buildJoinTxMock([[maxedInvite]], []);
+    mockTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(txMock));
+
+    await expect(service.joinViaInvite('abc123', 'user-3')).rejects.toThrow(NotFoundException);
   });
 });
