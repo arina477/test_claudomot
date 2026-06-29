@@ -20,6 +20,11 @@ export const ServerSummarySchema = z.object({
 });
 export type ServerSummary = z.infer<typeof ServerSummarySchema>;
 
+export const ServerSummaryWithInviteSchema = ServerSummarySchema.extend({
+  inviteCode: z.string().nullable(),
+});
+export type ServerSummaryWithInvite = z.infer<typeof ServerSummaryWithInviteSchema>;
+
 export const ChannelSummarySchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -38,7 +43,7 @@ export const CategoryWithChannelsSchema = z.object({
 export type CategoryWithChannels = z.infer<typeof CategoryWithChannelsSchema>;
 
 export const ServerDetailSchema = z.object({
-  server: ServerSummarySchema,
+  server: ServerSummaryWithInviteSchema,
   categories: z.array(CategoryWithChannelsSchema),
 });
 export type ServerDetail = z.infer<typeof ServerDetailSchema>;
