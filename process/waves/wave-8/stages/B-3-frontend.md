@@ -1,0 +1,2 @@
+# Wave 8 — B-3 Frontend (72fc08ea+54407e1d, 8697d42)
+InviteJoinPage: public /invite/:code route (outside AuthGuard), 8 states; unauthed→/login?next=/invite/:code→return; join→POST→sessionStorage select-server→/app→ServerContext auto-selects. InviteShareModal: ChannelSidebar "Invite people" (UserAddIcon, when server selected)→modal→POST /servers/:id/invites→link+copy+Toast. api.ts: getInvitePreview/joinViaInvite/createInvite. 68 web tests (+13 new). typecheck/build/lint clean.

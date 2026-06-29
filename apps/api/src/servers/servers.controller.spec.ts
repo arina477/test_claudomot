@@ -1,7 +1,14 @@
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
-import type { ServerDetail, ServerResponse, ServerSummary } from '@studyhall/shared';
+import type {
+  InvitePreview,
+  InviteResponse,
+  JoinResult,
+  ServerDetail,
+  ServerResponse,
+  ServerSummary,
+} from '@studyhall/shared';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ServersController } from './servers.controller';
+import { InvitesController, ServersController } from './servers.controller';
 
 // ---------------------------------------------------------------------------
 // Minimal request helper
@@ -47,10 +54,15 @@ function makeController() {
     createServer: vi.fn<() => Promise<ServerResponse>>(),
     findMyServers: vi.fn<() => Promise<ServerSummary[]>>(),
     findServerDetail: vi.fn<() => Promise<ServerDetail>>(),
+    createInvite: vi.fn<() => Promise<InviteResponse>>(),
+    getInvitePreview: vi.fn<() => Promise<InvitePreview>>(),
+    joinViaInvite: vi.fn<() => Promise<JoinResult>>(),
   };
   // biome-ignore lint/suspicious/noExplicitAny: test mock — full type not needed
   const controller = new ServersController(serversService as any);
-  return { controller, serversService };
+  // biome-ignore lint/suspicious/noExplicitAny: test mock — full type not needed
+  const invitesController = new InvitesController(serversService as any);
+  return { controller, invitesController, serversService };
 }
 
 // ---------------------------------------------------------------------------
@@ -171,5 +183,173 @@ describe('ServersController.getServerDetail', () => {
     await expect(controller.getServerDetail(makeReq(), 'server-1')).rejects.toThrow(
       ForbiddenException,
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /servers/:id/invites (task c7443638)
+// ---------------------------------------------------------------------------
+
+describe('ServersController.createInvite', () => {
+  let controller: ServersController;
+  let serversService: ReturnType<typeof makeController>['serversService'];
+
+  beforeEach(() => {
+    ({ controller, serversService } = makeController());
+  });
+
+  it('returns InviteResponse for a valid member request', async () => {
+    serversService.createInvite.mockResolvedValue({ code: 'abc123def456ghi7' });
+
+    const result = await controller.createInvite(makeReq(), 'server-1', {});
+
+    expect(result.code).toBeDefined();
+    expect(serversService.createInvite).toHaveBeenCalledWith('server-1', 'user-abc', {});
+  });
+
+  it('passes maxUses and expiresAt to service', async () => {
+    serversService.createInvite.mockResolvedValue({ code: 'code-xyz' });
+
+    await controller.createInvite(makeReq(), 'server-1', {
+      maxUses: 10,
+      expiresAt: '2026-12-31T00:00:00Z',
+    });
+
+    expect(serversService.createInvite).toHaveBeenCalledWith('server-1', 'user-abc', {
+      maxUses: 10,
+      expiresAt: '2026-12-31T00:00:00Z',
+    });
+  });
+
+  it('throws BadRequestException (400) for invalid body (negative maxUses)', async () => {
+    await expect(controller.createInvite(makeReq(), 'server-1', { maxUses: -1 })).rejects.toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('propagates ForbiddenException (403) from service when not a member', async () => {
+    serversService.createInvite.mockRejectedValue(
+      new ForbiddenException('Not a member of this server'),
+    );
+
+    await expect(controller.createInvite(makeReq(), 'server-1', {})).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /invites/:code (task 77e2041a) — public, no guard
+// ---------------------------------------------------------------------------
+
+describe('InvitesController.getInvitePreview', () => {
+  let invitesController: InvitesController;
+  let serversService: ReturnType<typeof makeController>['serversService'];
+
+  beforeEach(() => {
+    ({ invitesController, serversService } = makeController());
+  });
+
+  it('returns InvitePreview with server id, name, memberCount', async () => {
+    const preview: InvitePreview = {
+      server: { id: 'server-1', name: 'Study Hall', memberCount: 7 },
+    };
+    serversService.getInvitePreview.mockResolvedValue(preview);
+
+    const result = await invitesController.getInvitePreview('abc123');
+
+    expect(result).toEqual(preview);
+    expect(serversService.getInvitePreview).toHaveBeenCalledWith('abc123');
+  });
+
+  it('propagates NotFoundException (404) for invalid code', async () => {
+    serversService.getInvitePreview.mockRejectedValue(
+      new NotFoundException('Invite not found or invalid'),
+    );
+
+    await expect(invitesController.getInvitePreview('bad-code')).rejects.toThrow(NotFoundException);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /invites/:code/join (task 77e2041a) — AuthGuard required
+// ---------------------------------------------------------------------------
+
+describe('InvitesController.joinViaInvite', () => {
+  let invitesController: InvitesController;
+  let serversService: ReturnType<typeof makeController>['serversService'];
+
+  beforeEach(() => {
+    ({ invitesController, serversService } = makeController());
+  });
+
+  it('returns {serverId} on successful join', async () => {
+    serversService.joinViaInvite.mockResolvedValue({ serverId: 'server-1' });
+
+    const result = await invitesController.joinViaInvite(makeReq(), 'abc123');
+
+    expect(result).toEqual({ serverId: 'server-1' });
+    expect(serversService.joinViaInvite).toHaveBeenCalledWith('abc123', 'user-abc');
+  });
+
+  it('returns {serverId} for existing member re-join (200 no-op)', async () => {
+    // Service returns same shape — re-join is idempotent 200
+    serversService.joinViaInvite.mockResolvedValue({ serverId: 'server-1' });
+
+    const result = await invitesController.joinViaInvite(makeReq(), 'abc123');
+
+    expect(result).toEqual({ serverId: 'server-1' });
+  });
+
+  it('propagates NotFoundException (404) for invalid invite', async () => {
+    serversService.joinViaInvite.mockRejectedValue(
+      new NotFoundException('Invite not found or invalid'),
+    );
+
+    await expect(invitesController.joinViaInvite(makeReq(), 'bad-code')).rejects.toThrow(
+      NotFoundException,
+    );
+  });
+
+  it('propagates ForbiddenException (403) when email is unverified', async () => {
+    // AuthGuard (verify-required) blocks unverified users at the framework level;
+    // the service can additionally throw 403 for unverified session tokens that slip through.
+    serversService.joinViaInvite.mockRejectedValue(new ForbiddenException('Email not verified'));
+
+    await expect(invitesController.joinViaInvite(makeReq(), 'abc123')).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /invites/:code — guard confirmation: no @UseGuards = public
+// (task 77e2041a — public-preview carry-forward)
+// ---------------------------------------------------------------------------
+
+describe('InvitesController — public preview guard contract', () => {
+  it('getInvitePreview is callable without a session object (public endpoint contract)', async () => {
+    const { invitesController, serversService } = makeController();
+    const preview: InvitePreview = {
+      server: { id: 'server-1', name: 'Study Hall', memberCount: 3 },
+    };
+    serversService.getInvitePreview.mockResolvedValue(preview);
+
+    // A public endpoint does not call req.session — passing a req without session
+    // must not throw any guard-related error at the handler level.
+    const result = await invitesController.getInvitePreview('abc123');
+
+    expect(result).toEqual(preview);
+  });
+
+  it('joinViaInvite requires a session userId (authenticated endpoint contract)', async () => {
+    const { invitesController, serversService } = makeController();
+    serversService.joinViaInvite.mockResolvedValue({ serverId: 'server-1' });
+
+    // joinViaInvite extracts userId from req.session — verify it passes userId to the service.
+    const result = await invitesController.joinViaInvite(makeReq('verified-user'), 'abc123');
+
+    expect(serversService.joinViaInvite).toHaveBeenCalledWith('abc123', 'verified-user');
+    expect(result).toEqual({ serverId: 'server-1' });
   });
 });
