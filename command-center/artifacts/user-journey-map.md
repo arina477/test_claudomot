@@ -1,8 +1,8 @@
 ---
 name: User Journey Map
 description: Canonical inventory of every user flow, screen, route, API endpoint. Regenerated at T-9 from production state.
-last_updated: 2026-06-29 (T-9 wave-7 regen — M2 servers/channels first slice LIVE; HTTP/code-level + live-probe; authed browser crawl deferred c51589cd)
-version: 0.4
+last_updated: 2026-06-29 (T-9 wave-8 regen — M2 invites/join LIVE; new public /invite/:code route + verified atomic join + invite-share; HTTP/code-level + live-probe; authed browser crawl deferred c51589cd, fixture 4a2ad286)
+version: 0.5
 status_legend:
   - "✅ Live: page renders correctly with real content in production"
   - "🟡 Live but degraded: renders but missing data, broken interaction, or minor known issue"
@@ -85,6 +85,19 @@ Live: web https://web-production-bce1a8.up.railway.app · api https://api-produc
 
 **Access-control note (T-8 verified):** server creation + both reads are auth-gated (401 unauthed, 403 email-unverified) and membership-scoped server-side — the boundary is enforced in NestJS (AuthGuard + session-derived userId + DB innerJoin / 404-before-403), not in the UI. IDOR via param substitution is closed (userId never read from request body/params).
 
+## Deployment status — wave-8 (M2 invites/join, LIVE)
+Live: web https://web-production-bce1a8.up.railway.app · api https://api-production-b93e.up.railway.app/health (200, live-verified at T-9). Migration `0004` (invites table 9 cols + servers.invite_code unique) applied to prod Postgres. PR#18 merge 8716b4e. Verification: HTTP/code-level + live probe (C-2 throwaway-fixture: invalid preview 404, valid preview 200-minimal, post-delete 404; unauthed join 401; unauthed createInvite 401 — all re-confirmed at T-9). Authed full-browser click-through + authed join deferred (no persistent verified prod fixture — 4a2ad286; e2e for the new public route is a recorded coverage gap → V-2).
+| Surface | Status | Note |
+|---|---|---|
+| Invite preview / join (page 12) — `/invite/:code` | ✅ Live | NEW public route. Anonymous-reachable preview renders server name + member count ONLY (8 states: loading / valid+Join / unauthed / unverified / already-member / joining / joined / invalid). 68 web RTL tests cover all states. Authed browser join not live-probed (fixture 4a2ad286); no Playwright e2e on this route yet (V-2 finding). |
+| `GET /invites/:code` (api, public preview) | ✅ Live | Public, no auth. Returns minimal `{server:{id,name,memberCount}}` ONLY — NO channels / members / presence / owner / invite internals. Invalid code → 404 generic (no existence fingerprinting / leak). Live-verified minimal + 404. |
+| `POST /invites/:code/join` (api, verified join) | ✅ Live | AuthGuard + EmailVerification REQUIRED (401 unauthed / 403 unverified — live). Atomic max_uses consume: conditional `UPDATE...WHERE uses<max_uses RETURNING` + throw-on-zero-rows rolls back member insert (per-row lock serializes concurrent joiners → exactly one wins at max_uses=1; TOCTOU fixed 92cc0f3, concurrency-tested). Idempotent re-join: `ON CONFLICT(server_id,user_id) DO NOTHING`, uses NOT incremented on re-join. Authed success path covered by 179 tests + CI integration (not live-probed). |
+| `POST /servers/:id/invites` (api, create invite) | ✅ Live | AuthGuard + member-gated: 401 unauthed (live), 403 non-member. Mints CSPRNG `base64url(randomBytes(16))` (~128-bit, non-enumerable over UUID PKs) → `{code,url}`. Two-tier: per-server permanent `servers.invite_code` (auto-set at server creation) + ad-hoc `invites` rows with optional max_uses. |
+| Invite-share modal (within server) | ✅ Live | Copy-link share UI (4 states: default / copied / loading / error) per design/invite-share.html (D-3 APPROVED). Entry point for F8 invite step. |
+| Invite revoke (revoke endpoint / UI) | ❌ Not built | `invites.revoked` column exists (join honors it) but no revoke endpoint/UI this wave — schema-forward, later bundle. |
+
+**Access-control note (T-8 verified, invites = access-control surface):** invite codes are CSPRNG non-enumerable (no sequential id surface — UUID PKs); the public preview is minimum-summary ONLY (the D-block caught + stripped the mockup's channels/members leak; the live API was verified minimal); join is verify-required (401/403) with atomic max_uses (one winner under concurrency, loser rolled back) and idempotent re-join (no use double-count). No residual leak / enumeration / overshoot. The boundary is enforced in NestJS, not the UI.
+
 ## Flows cross-reference
 
 ### F1 — Sign up & create profile (P1)
@@ -92,8 +105,9 @@ Live: web https://web-production-bce1a8.up.railway.app · api https://api-produc
 - Steps: `/signup` → `/verify` → `/settings/profile` (first-run) → `/app`
 - Features: 1, 2, 16
 
-### F2 — Join a study server (P1)
-- Entry: `/invite/:code` → (auth if needed) → `/servers/:id/:channelId`
+### F2 — Join a study server (P1) — invite preview + verified join LIVE (wave-8)
+- Entry: `/invite/:code` (public preview: name + member count only) → (signup/login + email-verify if needed) → `POST /invites/:code/join` (atomic max_uses, idempotent re-join) → `/servers/:id/:channelId`
+- Live: public preview (`GET /invites/:code` 200-minimal / 404), verified join gate (401 unauthed / 403 unverified). Authed join success path covered by 179 tests + CI (authed browser flow deferred — fixture 4a2ad286; route e2e gap → V-2).
 - Features: 6
 
 ### F3 — Real-time messaging (P1)
@@ -116,8 +130,9 @@ Live: web https://web-production-bce1a8.up.railway.app · api https://api-produc
 - Entry: `/app` → Create server (+ in rail) → single-step name modal → `POST /servers {name}` (seeds owner membership + default "General" category + `#general` server-side) → new server selected in rail, `#general` shown. (M2 STRUCTURE only; icon/template/invite are later milestones.)
 - Features: 5
 
-### F8 — Invite + roles/permissions (P2)
-- Entry: `/servers/:id/settings` → invite link → roles → assign → remove/ban
+### F8 — Invite + roles/permissions (P2) — invite link LIVE (wave-8); roles/perms later
+- Entry (invite, LIVE): server view → invite-share modal (copy link) OR `POST /servers/:id/invites` (member-gated, CSPRNG `{code,url}`) → shareable `/invite/:code`. Two-tier: permanent per-server `invite_code` + ad-hoc max_uses invites.
+- Entry (roles/perms, NOT built): `/servers/:id/settings` → roles → assign → remove/ban (later M2+ milestone). Invite revoke also later (revoked column schema-forward).
 - Features: 10, 11
 
 ### F9 — Post assignment / pin schedule (P2)
