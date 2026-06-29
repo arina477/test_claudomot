@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import supertokens from 'supertokens-node';
 import { AppModule } from './app.module';
 import { SupertokensExceptionFilter } from './auth/auth.exception.filter';
@@ -31,7 +32,11 @@ function authRateLimiter(req: any, res: any, next: () => void): void {
     return;
   }
 
-  const ip = (req.ip ?? req.socket?.remoteAddress ?? 'unknown') as string;
+  // With trust proxy set, req.ip reflects the leftmost X-Forwarded-For entry
+  // (the real client IP). Fall back to the raw XFF header, then socket address.
+  const xff = req.headers['x-forwarded-for'];
+  const xffIp = typeof xff === 'string' ? xff.split(',')[0]?.trim() : undefined;
+  const ip = (req.ip ?? xffIp ?? req.socket?.remoteAddress ?? 'unknown') as string;
   const now = Date.now();
   const windowStart = now - AUTH_RATE_LIMIT_WINDOW_MS;
 
@@ -71,7 +76,15 @@ async function bootstrap(): Promise<void> {
   // providers constructing these services via DI later causes no double-init.
   initSuperTokens(new UsersService(), new EmailService());
 
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Tell Express to trust the Railway edge proxy so that req.ip resolves to the
+  // real client IP from X-Forwarded-For, not the proxy's internal socket address.
+  // Without this, every request from behind the proxy arrives with a different
+  // (proxy-sourced) IP, so the per-IP rate-limit counter never accumulates and
+  // no 429 fires. hop-count=1 means "trust exactly one proxy hop in front of us",
+  // which matches Railway's single-layer edge topology.
+  app.set('trust proxy', 1);
 
   // Split WEB_ORIGIN on comma to support multiple origins (e.g. localhost + prod)
   const rawOrigin = process.env.WEB_ORIGIN ?? 'http://localhost:5173';
@@ -96,6 +109,8 @@ async function bootstrap(): Promise<void> {
   // /auth/* entirely and never surfaces those requests to NestJS route guards).
   // app.use() on the NestJS adapter registers on the underlying Express instance
   // and runs ahead of the module-level middleware pipeline.
+  // trust proxy (set above) ensures req.ip == real client IP, making the
+  // per-IP counter accumulate correctly and firing 429 after 10 requests.
   app.use(authRateLimiter);
 
   const port = process.env.PORT ?? 3000;
