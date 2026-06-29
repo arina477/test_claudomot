@@ -26,6 +26,7 @@ All notable changes to StudyHall are documented here. Format follows
 - Invite people to your study server with a shareable link, and join a server from an invite after a quick preview of where you're headed. (#18)
 - Revoke a study server invite link so it stops working, with an honest "this link no longer works" message for anyone who opens a revoked one. (#19)
 - The share dialog now defaults to your server's permanent invite link, with one-off limited invites moved to a secondary option. (#19)
+- Server roles and permissions: assign roles to members, choose which roles can see which channels, and owner-protection that stops a server from being left without an owner. (#20, #21)
 
 ### Fixed
 

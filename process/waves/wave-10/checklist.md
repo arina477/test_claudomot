@@ -58,8 +58,8 @@ VERIFY:
 - [ ] V-3 Fast-fix loop (or close)
 
 LEARN:
-- [ ] L-1 Docs
-- [ ] L-2 Distill
+- [x] L-1 Docs — CHANGELOG #20/#21 entry; M2 assessed FEATURE-COMPLETE (success-metric MET, 15/19 done) but transition deferred to N-1 (strategic M2→M3 pivot)
+- [x] L-2 Distill — 4 tasks done; 6 observations; 2 promotions (VERIFY rule 1, BUILD rule 3); 4a2ad286 → wave-11 seed (NOT promoted as rule)
 
 NEXT:
 - [ ] N-1 Survey & triggers

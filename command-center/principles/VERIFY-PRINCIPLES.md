@@ -67,4 +67,5 @@ Promoted at L-2 Distill from `process/waves/wave-<N>/blocks/L/observations.md` b
 
 ## Rules
 
-_(no rules yet — promoted from L-2 distill across waves)_
+1. Verify seeding ACs by inspecting create-path source, not runtime behavior; a safe fallback hides a missing seed.
+   Why: A default-deny or nullable fallback passes runtime probes while the required seed is absent.

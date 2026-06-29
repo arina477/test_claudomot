@@ -72,3 +72,6 @@ Promoted at L-2 Distill from `process/waves/wave-<N>/blocks/L/observations.md` b
 
 2. Push the branch to origin after every B-block and D-block stage before starting the next stage.
    Why: A worker restart resets the local tree; unpushed commits are permanently lost.
+
+3. Any seed applied by a backfill must also appear in the create transaction, column-for-column.
+   Why: A backfill-only seed leaves the forward create path producing a different initial state.
