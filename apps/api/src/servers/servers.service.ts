@@ -318,6 +318,7 @@ export class ServersService {
       let serverId: string;
       let isAdHoc: boolean;
       let inviteId: string | undefined;
+      let adHocMaxUses: number | null = null;
 
       if (adHocInvite) {
         // Validate again inside txn (prevents TOCTOU)
@@ -325,6 +326,7 @@ export class ServersService {
         serverId = adHocInvite.server_id;
         isAdHoc = true;
         inviteId = adHocInvite.id;
+        adHocMaxUses = adHocInvite.max_uses;
       } else {
         // Try permanent invite
         const [server] = await tx
@@ -351,14 +353,42 @@ export class ServersService {
       const newMemberJoined = inserted.length > 0;
 
       // Increment uses ONLY for ad-hoc invites AND only when a new row was inserted.
-      // Max-uses guard: re-checked inside txn so a race between two concurrent joins
-      // on a max_uses=1 invite is safe — the second writer sees uses=1 and the
-      // validateInviteActive check above (re-read inside txn) rejects it.
+      // Atomic conditional consume (TOCTOU-safe):
+      //   - For capped invites (max_uses != null): the WHERE clause includes
+      //     `uses < max_uses` so the UPDATE acquires a per-row lock and only
+      //     succeeds if a slot is still available.  If two concurrent joiners race
+      //     on the last slot, exactly one wins (the other sees 0 rows returned) and
+      //     we throw here → the whole transaction (including the INSERT above) rolls back.
+      //   - For unlimited invites (max_uses == null): increment unconditionally.
+      //   - Re-join (newMemberJoined=false): do NOT increment (carry-forward B).
       if (newMemberJoined && isAdHoc && inviteId) {
-        await tx
-          .update(invites)
-          .set({ uses: sql`${invites.uses} + 1` })
-          .where(eq(invites.id, inviteId));
+        const maxUses = adHocMaxUses;
+
+        if (maxUses !== null) {
+          // Atomic conditional: only succeeds if uses < max_uses at UPDATE time.
+          const consumed = await tx
+            .update(invites)
+            .set({ uses: sql`${invites.uses} + 1` })
+            .where(
+              sql`${invites.id} = ${inviteId}
+                  AND NOT ${invites.revoked}
+                  AND (${invites.expires_at} IS NULL OR ${invites.expires_at} > now())
+                  AND ${invites.uses} < ${maxUses}`,
+            )
+            .returning();
+
+          if (consumed.length === 0) {
+            // A concurrent joiner consumed the last slot between our SELECT and this UPDATE.
+            // Throwing here causes the entire transaction (including the INSERT above) to roll back.
+            throw new NotFoundException('Invite not found or invalid');
+          }
+        } else {
+          // Unlimited invite — no cap to enforce, increment unconditionally.
+          await tx
+            .update(invites)
+            .set({ uses: sql`${invites.uses} + 1` })
+            .where(eq(invites.id, inviteId));
+        }
       }
 
       return { serverId };

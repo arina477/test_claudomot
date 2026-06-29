@@ -548,11 +548,15 @@ describe('ServersService.joinViaInvite', () => {
    * Build a transaction mock that supports select, insert, and update chains.
    * selectSequence: array of arrays returned in order for each select call.
    * insertReturning: what the insert(...).onConflictDoNothing().returning() returns.
+   * updateReturning: what the update(...).set(...).where(...).returning() returns
+   *   (used by the atomic conditional max_uses consume path). Defaults to [{id:'invite-1'}]
+   *   (simulating a successful consume). Pass [] to simulate a concurrent race loss.
    */
   function buildJoinTxMock(
     selectSequence: unknown[][],
     insertReturning: unknown[],
     captureUpdate?: { called: boolean },
+    updateReturning: unknown[] = [{ id: 'invite-1' }],
   ) {
     let selectIdx = 0;
     return {
@@ -577,13 +581,19 @@ describe('ServersService.joinViaInvite', () => {
         });
         return chain;
       }),
-      update: vi.fn(() => {
+      update: vi.fn((..._args: unknown[]) => {
+        if (captureUpdate) captureUpdate.called = true;
         const chain: Record<string, unknown> = {};
         chain.set = vi.fn(() => {
-          chain.where = vi.fn(() => Promise.resolve([]));
+          const whereChain: Record<string, unknown> = {
+            // biome-ignore lint/suspicious/noThenProperty: intentional thenable mock for direct await
+            then: (res: (v: unknown) => unknown, rej?: (e: unknown) => unknown) =>
+              Promise.resolve([]).then(res, rej),
+            returning: vi.fn().mockResolvedValue(updateReturning),
+          };
+          chain.where = vi.fn(() => whereChain);
           return chain;
         });
-        if (captureUpdate) captureUpdate.called = true;
         return chain;
       }),
     };
@@ -690,5 +700,33 @@ describe('ServersService.joinViaInvite', () => {
     mockTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(txMock));
 
     await expect(service.joinViaInvite('abc123', 'user-3')).rejects.toThrow(NotFoundException);
+  });
+
+  it('atomic: concurrent join on max_uses=1 admits exactly one (conditional UPDATE returns 0 rows → txn rolls back)', async () => {
+    // Model the race: two users both read uses=0 and both pass validateInviteActive.
+    // Both INSERT the member row (ON CONFLICT DO NOTHING). The loser's conditional
+    // UPDATE (WHERE uses < max_uses) returns 0 rows because the winner already
+    // incremented uses to max_uses.  The service must throw so the whole transaction
+    // (including the member INSERT) rolls back — leaving the server with exactly one member.
+    const cappedInvite = { ...mockInvite, max_uses: 1, uses: 0 };
+
+    // updateReturning = [] simulates the conditional UPDATE finding no row to update
+    // (concurrent winner already consumed the slot).
+    const txMock = buildJoinTxMock(
+      [[cappedInvite]], // invite select inside txn
+      [{ id: 'mem-new', server_id: 'server-1', user_id: 'user-loser' }], // INSERT returned a row (the losing concurrent joiner did insert)
+      undefined,
+      [], // conditional UPDATE WHERE uses < max_uses → 0 rows (slot already taken)
+    );
+
+    // The transaction mock must propagate the throw so the caller sees it.
+    mockTransaction.mockImplementation(async (fn: (tx: unknown) => unknown) => {
+      // Simulate transaction rollback on throw: just let the error propagate.
+      return fn(txMock);
+    });
+
+    // The loser's join throws (invite exhausted by concurrent winner) and the
+    // transaction would have rolled back the member INSERT on a real DB.
+    await expect(service.joinViaInvite('abc123', 'user-loser')).rejects.toThrow(NotFoundException);
   });
 });
