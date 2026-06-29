@@ -9,12 +9,32 @@ const PG_UNIQUE_VIOLATION = '23505';
 
 interface DatabaseError {
   code?: string;
+  cause?: unknown;
 }
 
+/**
+ * Walk up to two levels of `.cause` to find the Postgres error code.
+ *
+ * drizzle-orm wraps PG driver errors inside `DrizzleQueryError`, so the
+ * real `code: '23505'` lives at `err.cause.code`, not `err.code`.
+ * We also check `err.cause.cause.code` in case future driver or ORM
+ * versions add an extra wrapping layer.
+ */
 function isUniqueViolation(err: unknown): boolean {
-  return (
-    typeof err === 'object' && err !== null && (err as DatabaseError).code === PG_UNIQUE_VIOLATION
-  );
+  if (typeof err !== 'object' || err === null) return false;
+  const e = err as DatabaseError;
+  if (e.code === PG_UNIQUE_VIOLATION) return true;
+  // One level deep (DrizzleQueryError → PG error)
+  if (typeof e.cause === 'object' && e.cause !== null) {
+    const cause1 = e.cause as DatabaseError;
+    if (cause1.code === PG_UNIQUE_VIOLATION) return true;
+    // Two levels deep
+    if (typeof cause1.cause === 'object' && cause1.cause !== null) {
+      const cause2 = cause1.cause as DatabaseError;
+      if (cause2.code === PG_UNIQUE_VIOLATION) return true;
+    }
+  }
+  return false;
 }
 
 @Injectable()
