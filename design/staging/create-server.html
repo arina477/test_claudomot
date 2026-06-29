@@ -106,13 +106,13 @@
       <section aria-labelledby="s1" class="flex flex-col gap-3">
         <h2 id="s1" class="text-xs font-semibold uppercase tracking-wider t-secondary">1 · Default (empty)</h2>
         <div class="rounded-lg bg-surface-900 border b-hairline shadow-pop" role="dialog" aria-modal="true" aria-labelledby="s1-title">
-          <div class="flex items-center justify-between px-5 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
+          <div class="flex items-center justify-between px-4 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
             <h3 id="s1-title" class="text-xl font-semibold tracking-tight t-primary">Create a server</h3>
             <button class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors" aria-label="Close">
-              <i class="ph ph-x text-lg"></i>
+              <i class="ph ph-x text-lg" aria-hidden="true"></i>
             </button>
           </div>
-          <div class="px-5 py-5">
+          <div class="px-4 py-4">
             <p class="t-secondary text-sm mb-5">Give your study server a name. You can change it later.</p>
             <label for="n1" class="block text-sm font-medium t-primary mb-2">Server name</label>
             <div class="relative">
@@ -123,7 +123,7 @@
             </div>
             <p id="n1-help" class="text-xs t-secondary mt-2">1–100 characters.</p>
           </div>
-          <div class="flex items-center justify-end gap-2 px-5 py-4 border-t b-hairline">
+          <div class="flex items-center justify-end gap-2 px-4 py-4 border-t b-hairline">
             <button class="focus-ring rounded-md px-4 py-2 text-sm font-medium t-secondary hover:t-primary hover:bg-surface-700 transition-colors">Cancel</button>
             <button disabled class="rounded-md px-4 py-2 text-sm font-semibold bg-surface-700 t-muted cursor-not-allowed">Create</button>
           </div>
@@ -134,11 +134,11 @@
       <section aria-labelledby="s2" class="flex flex-col gap-3">
         <h2 id="s2" class="text-xs font-semibold uppercase tracking-wider t-secondary">2 · Valid input</h2>
         <div class="rounded-lg bg-surface-900 border b-hairline shadow-pop" role="dialog" aria-modal="true" aria-labelledby="s2-title">
-          <div class="flex items-center justify-between px-5 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
+          <div class="flex items-center justify-between px-4 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
             <h3 id="s2-title" class="text-xl font-semibold tracking-tight t-primary">Create a server</h3>
-            <button class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors" aria-label="Close"><i class="ph ph-x text-lg"></i></button>
+            <button class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors" aria-label="Close"><i class="ph ph-x text-lg" aria-hidden="true"></i></button>
           </div>
-          <div class="px-5 py-5">
+          <div class="px-4 py-4">
             <p class="t-secondary text-sm mb-5">Give your study server a name. You can change it later.</p>
             <label for="n2" class="block text-sm font-medium t-primary mb-2">Server name</label>
             <div class="relative">
@@ -149,7 +149,7 @@
             </div>
             <p id="n2-help" class="text-xs t-secondary mt-2">1–100 characters.</p>
           </div>
-          <div class="flex items-center justify-end gap-2 px-5 py-4 border-t b-hairline">
+          <div class="flex items-center justify-end gap-2 px-4 py-4 border-t b-hairline">
             <button class="focus-ring rounded-md px-4 py-2 text-sm font-medium t-secondary hover:t-primary hover:bg-surface-700 transition-colors">Cancel</button>
             <button class="focus-ring rounded-md px-4 py-2 text-sm font-semibold bg-accent-emerald text-surface-950 hover:bg-accent-emerald/90 transition-colors shadow-glow-subtle">Create</button>
           </div>
@@ -160,22 +160,48 @@
       <section aria-labelledby="s3" class="flex flex-col gap-3">
         <h2 id="s3" class="text-xs font-semibold uppercase tracking-wider t-secondary">3 · Validation error</h2>
         <div class="rounded-lg bg-surface-900 border b-hairline shadow-pop" role="dialog" aria-modal="true" aria-labelledby="s3-title">
-          <div class="flex items-center justify-between px-5 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
+          <div class="flex items-center justify-between px-4 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
             <h3 id="s3-title" class="text-xl font-semibold tracking-tight t-primary">Create a server</h3>
-            <button class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors" aria-label="Close"><i class="ph ph-x text-lg"></i></button>
+            <button class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors" aria-label="Close"><i class="ph ph-x text-lg" aria-hidden="true"></i></button>
           </div>
-          <div class="px-5 py-5">
+          <div class="px-4 py-4">
             <p class="t-secondary text-sm mb-5">Give your study server a name. You can change it later.</p>
             <label for="n3" class="block text-sm font-medium t-primary mb-2">Server name</label>
             <div class="relative">
               <input id="n3" type="text" value="" aria-invalid="true"
-                class="w-full bg-surface-950 border rounded-md pl-3 pr-14 py-2.5 text-sm t-primary placeholder:t-muted transition-colors"
-                style="border-color:#ef4444;" placeholder="e.g. CS-201 Data Structures" aria-describedby="n3-err">
+                class="focus-ring w-full bg-surface-950 border rounded-md pl-3 pr-14 py-2.5 text-sm t-primary placeholder:t-muted transition-colors"
+                style="border-color:#ef4444; box-shadow:0 0 0 2px rgba(239,68,68,0.4);" placeholder="e.g. CS-201 Data Structures" aria-describedby="n3-err">
               <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs t-secondary tabular-nums">0/100</span>
             </div>
             <p id="n3-err" class="text-xs text-danger mt-2 flex items-center gap-1.5"><i class="ph ph-warning-circle"></i> Enter a name between 1 and 100 characters.</p>
           </div>
-          <div class="flex items-center justify-end gap-2 px-5 py-4 border-t b-hairline">
+          <div class="flex items-center justify-end gap-2 px-4 py-4 border-t b-hairline">
+            <button class="focus-ring rounded-md px-4 py-2 text-sm font-medium t-secondary hover:t-primary hover:bg-surface-700 transition-colors">Cancel</button>
+            <button disabled class="rounded-md px-4 py-2 text-sm font-semibold bg-surface-700 t-muted cursor-not-allowed">Create</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- STATE 3b: validation-error (too long, > 100 chars) -->
+      <section aria-labelledby="s3b" class="flex flex-col gap-3">
+        <h2 id="s3b" class="text-xs font-semibold uppercase tracking-wider t-secondary">3b · Validation error (too long)</h2>
+        <div class="rounded-lg bg-surface-900 border b-hairline shadow-pop" role="dialog" aria-modal="true" aria-labelledby="s3b-title">
+          <div class="flex items-center justify-between px-4 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
+            <h3 id="s3b-title" class="text-xl font-semibold tracking-tight t-primary">Create a server</h3>
+            <button class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors" aria-label="Close"><i class="ph ph-x text-lg" aria-hidden="true"></i></button>
+          </div>
+          <div class="px-4 py-4">
+            <p class="t-secondary text-sm mb-5">Give your study server a name. You can change it later.</p>
+            <label for="n3b" class="block text-sm font-medium t-primary mb-2">Server name</label>
+            <div class="relative">
+              <input id="n3b" type="text" value="Advanced Topics in Distributed Systems, Consensus, Replication & Fault Tolerance — Fall" aria-invalid="true"
+                class="focus-ring w-full bg-surface-950 border rounded-md pl-3 pr-16 py-2.5 text-sm t-primary transition-colors truncate"
+                style="border-color:#ef4444; box-shadow:0 0 0 2px rgba(239,68,68,0.4);" aria-describedby="n3b-err">
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-danger tabular-nums">101/100</span>
+            </div>
+            <p id="n3b-err" class="text-xs text-danger mt-2 flex items-center gap-1.5"><i class="ph ph-warning-circle" aria-hidden="true"></i> Server name must be 100 characters or fewer.</p>
+          </div>
+          <div class="flex items-center justify-end gap-2 px-4 py-4 border-t b-hairline">
             <button class="focus-ring rounded-md px-4 py-2 text-sm font-medium t-secondary hover:t-primary hover:bg-surface-700 transition-colors">Cancel</button>
             <button disabled class="rounded-md px-4 py-2 text-sm font-semibold bg-surface-700 t-muted cursor-not-allowed">Create</button>
           </div>
@@ -186,11 +212,11 @@
       <section aria-labelledby="s4" class="flex flex-col gap-3">
         <h2 id="s4" class="text-xs font-semibold uppercase tracking-wider t-secondary">4 · Loading (submitting)</h2>
         <div class="rounded-lg bg-surface-900 border b-hairline shadow-pop" role="dialog" aria-modal="true" aria-labelledby="s4-title" aria-busy="true">
-          <div class="flex items-center justify-between px-5 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
+          <div class="flex items-center justify-between px-4 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
             <h3 id="s4-title" class="text-xl font-semibold tracking-tight t-primary">Create a server</h3>
-            <button class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors" aria-label="Close"><i class="ph ph-x text-lg"></i></button>
+            <button class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors" aria-label="Close"><i class="ph ph-x text-lg" aria-hidden="true"></i></button>
           </div>
-          <div class="px-5 py-5">
+          <div class="px-4 py-4">
             <p class="t-secondary text-sm mb-5">Give your study server a name. You can change it later.</p>
             <label for="n4" class="block text-sm font-medium t-primary mb-2">Server name</label>
             <div class="relative">
@@ -200,9 +226,9 @@
             </div>
             <p class="text-xs t-secondary mt-2">1–100 characters.</p>
           </div>
-          <div class="flex items-center justify-end gap-2 px-5 py-4 border-t b-hairline">
+          <div class="flex items-center justify-end gap-2 px-4 py-4 border-t b-hairline">
             <button disabled class="rounded-md px-4 py-2 text-sm font-medium t-muted cursor-not-allowed">Cancel</button>
-            <button disabled aria-busy="true" class="rounded-md px-5 py-2 text-sm font-semibold bg-accent-emerald/80 text-surface-950 inline-flex items-center justify-center min-w-[84px]">
+            <button disabled aria-busy="true" class="rounded-md px-4 py-2 text-sm font-semibold bg-accent-emerald/80 text-surface-950 inline-flex items-center justify-center min-w-[84px]">
               <i class="ph ph-spinner-gap spin text-base" aria-hidden="true"></i><span class="sr-only">Creating…</span>
             </button>
           </div>
@@ -213,12 +239,12 @@
       <section aria-labelledby="s5" class="flex flex-col gap-3">
         <h2 id="s5" class="text-xs font-semibold uppercase tracking-wider t-secondary">5 · Server error</h2>
         <div class="rounded-lg bg-surface-900 border b-hairline shadow-pop" role="dialog" aria-modal="true" aria-labelledby="s5-title">
-          <div class="flex items-center justify-between px-5 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
+          <div class="flex items-center justify-between px-4 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
             <h3 id="s5-title" class="text-xl font-semibold tracking-tight t-primary">Create a server</h3>
-            <button class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors" aria-label="Close"><i class="ph ph-x text-lg"></i></button>
+            <button class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors" aria-label="Close"><i class="ph ph-x text-lg" aria-hidden="true"></i></button>
           </div>
-          <div class="px-5 py-5">
-            <div role="alert" class="mb-4 flex items-start gap-2 rounded-md border px-3 py-2.5 text-sm" style="border-color:rgba(239,68,68,0.4); background:rgba(239,68,68,0.08);">
+          <div class="px-4 py-4">
+            <div role="alert" class="mb-4 flex items-start gap-2 rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-sm">
               <i class="ph ph-warning-circle text-danger mt-0.5"></i>
               <span class="t-primary">Couldn’t create the server. Check your connection and try again.</span>
             </div>
@@ -230,7 +256,7 @@
             </div>
             <p class="text-xs t-secondary mt-2">1–100 characters.</p>
           </div>
-          <div class="flex items-center justify-end gap-2 px-5 py-4 border-t b-hairline">
+          <div class="flex items-center justify-end gap-2 px-4 py-4 border-t b-hairline">
             <button class="focus-ring rounded-md px-4 py-2 text-sm font-medium t-secondary hover:t-primary hover:bg-surface-700 transition-colors">Cancel</button>
             <button class="focus-ring rounded-md px-4 py-2 text-sm font-semibold bg-accent-emerald text-surface-950 hover:bg-accent-emerald/90 transition-colors inline-flex items-center gap-1.5">
               <i class="ph ph-arrow-clockwise text-base" aria-hidden="true"></i> Retry
@@ -268,7 +294,7 @@
               </div>
             </div>
           </div>
-          <p class="px-4 py-2.5 text-xs t-secondary border-t b-hairline bg-surface-800/40"><i class="ph ph-check-circle text-accent-emerald"></i> Server created — modal closed, new server selected with its #general channel.</p>
+          <p class="px-4 py-3 text-xs t-secondary border-t b-hairline bg-surface-800/40"><i class="ph ph-check-circle text-accent-emerald"></i> Server created — modal closed, new server selected with its #general channel.</p>
         </div>
       </section>
 
