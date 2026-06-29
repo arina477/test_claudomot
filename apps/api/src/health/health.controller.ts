@@ -1,6 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
 import type { HealthResponse } from '@studyhall/shared';
+import { API_VERSION } from '../version';
 
 // Health check must not be throttled — uptime monitors poll this endpoint.
 @SkipThrottle()
@@ -11,7 +12,9 @@ export class HealthController {
     return {
       status: 'ok',
       service: 'studyhall-api',
-      version: process.env.npm_package_version ?? '0.1.0',
+      // API_VERSION reads the real package.json version at runtime,
+      // regardless of whether npm_package_version is set by the process launcher.
+      version: API_VERSION,
     };
   }
 }
