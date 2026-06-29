@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyHall — Server rail + channel sidebar</title>
+
+  <!-- Fonts: Geist (canonical) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Icons: Phosphor -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Geist', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
+          colors: {
+            surface: {
+              950: '#0a0a0b', 900: '#121214', 800: '#1c1c1f',
+              700: '#27272a', 600: '#3f3f46', 500: '#52525b',
+            },
+            accent: { emerald: '#10b981', amber: '#f59e0b' },
+            danger: '#ef4444',
+          },
+          boxShadow: {
+            'sm': '0 1px 2px rgba(0,0,0,0.4)',
+            'glow-focus': '0 0 0 2px rgba(16,185,129,0.4)',
+            'glow-subtle': '0 0 15px rgba(255,255,255,0.05)',
+          },
+          borderRadius: { 'md': '6px', 'lg': '10px' },
+        }
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --text-primary: rgba(255,255,255,0.92);
+      --text-secondary: rgba(255,255,255,0.60);
+      --text-muted: rgba(255,255,255,0.40);
+      --border-hairline: rgba(255,255,255,0.06);
+      --border-hover: rgba(255,255,255,0.10);
+    }
+    body { font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; background: #0a0a0b; color: var(--text-primary); }
+    .t-primary { color: var(--text-primary); }
+    .t-secondary { color: var(--text-secondary); }
+    .t-muted { color: var(--text-muted); }
+    .b-hairline { border-color: var(--border-hairline); }
+    .b-hover { border-color: var(--border-hover); }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+    .focus-ring:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(16,185,129,0.4); }
+    @keyframes shimmer { 100% { transform: translateX(100%); } }
+    .skel { position: relative; overflow: hidden; background: #27272a; }
+    .skel::after { content:''; position:absolute; inset:0; transform:translateX(-100%);
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent); animation: shimmer 1.6s infinite; }
+    /* server-rail icon morph (default rounded-lg -> active rounded-md per DESIGN-SYSTEM §4) */
+    .rail-icon { border-radius: 10px; transition: border-radius .25s ease, background-color .15s ease, color .15s ease; }
+    .group:hover .rail-icon { border-radius: 6px; }
+    .rail-icon.active { border-radius: 6px; }
+  </style>
+</head>
+<body class="antialiased">
+
+  <main class="min-h-[100dvh] w-full px-8 py-12">
+    <header class="max-w-7xl mx-auto mb-10">
+      <p class="text-xs uppercase tracking-widest text-accent-emerald font-semibold mb-2">StudyHall · D-block staging</p>
+      <h1 class="text-2xl font-semibold tracking-tight t-primary">Server rail + channel sidebar — real data, all states</h1>
+      <p class="t-secondary text-sm mt-2">App-shell chrome only. No message canvas, composer, voice, presence, or member list (M3). Structure for M2 servers/channels.</p>
+    </header>
+
+    <!-- =========================================================
+         PRIMARY: loaded rail + loaded sidebar (the canonical view)
+    ========================================================== -->
+    <section aria-labelledby="primary" class="max-w-7xl mx-auto mb-12">
+      <h2 id="primary" class="text-xs font-semibold uppercase tracking-wider t-secondary mb-3">Loaded · rail + sidebar</h2>
+      <div class="flex h-[560px] rounded-lg overflow-hidden border b-hairline shadow-sm">
+
+        <!-- SERVER RAIL (loaded) -->
+        <nav class="w-[72px] bg-surface-950 border-r b-hairline flex flex-col items-center py-4 gap-3 shrink-0" aria-label="Servers">
+          <!-- Home -->
+          <div class="group relative w-full flex justify-center">
+            <button class="focus-ring rail-icon w-12 h-12 bg-surface-800 t-secondary hover:bg-surface-700 hover:t-primary flex items-center justify-center transition-colors" aria-label="Home">
+              <i class="ph ph-books text-xl"></i>
+            </button>
+          </div>
+          <div class="w-8 h-[2px] bg-surface-700 rounded-full" aria-hidden="true"></div>
+
+          <!-- Active server -->
+          <div class="group relative w-full flex justify-center">
+            <span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-accent-emerald rounded-r-md" aria-hidden="true"></span>
+            <button class="focus-ring rail-icon active w-12 h-12 bg-surface-600 text-sm font-semibold t-primary flex items-center justify-center shadow-glow-subtle" aria-label="CS-201 Data Structures" aria-current="true">CS</button>
+          </div>
+          <!-- Other servers -->
+          <div class="group relative w-full flex justify-center">
+            <span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-0 group-hover:h-5 bg-white/80 rounded-r-md transition-all" aria-hidden="true"></span>
+            <button class="focus-ring rail-icon w-12 h-12 bg-surface-800 text-sm font-semibold t-secondary hover:t-primary hover:bg-surface-700 flex items-center justify-center transition-colors" aria-label="Lit-104 Modernism">LIT</button>
+          </div>
+          <div class="group relative w-full flex justify-center">
+            <span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-0 group-hover:h-5 bg-white/80 rounded-r-md transition-all" aria-hidden="true"></span>
+            <button class="focus-ring rail-icon w-12 h-12 bg-surface-800 text-sm font-semibold t-secondary hover:t-primary hover:bg-surface-700 flex items-center justify-center transition-colors" aria-label="Bio Study Group">BG</button>
+          </div>
+
+          <!-- + create (bottom) -->
+          <div class="mt-auto group relative w-full flex justify-center">
+            <button class="focus-ring w-12 h-12 rounded-full border b-hover border bg-surface-800 text-accent-emerald hover:bg-accent-emerald hover:text-surface-950 flex items-center justify-center transition-colors" aria-label="Create a server">
+              <i class="ph ph-plus text-xl"></i>
+            </button>
+          </div>
+        </nav>
+
+        <!-- CHANNEL SIDEBAR (loaded) -->
+        <aside class="w-[260px] bg-surface-900 flex flex-col shrink-0" aria-label="Channels">
+          <header class="h-14 flex items-center justify-between px-4 border-b b-hairline shadow-sm shrink-0">
+            <h2 class="text-sm font-semibold t-primary truncate pr-2 tracking-tight">CS-201 Data Structures</h2>
+            <i class="ph ph-caret-down text-xs t-secondary" aria-hidden="true"></i>
+          </header>
+          <div class="flex-1 overflow-y-auto px-2 py-4 space-y-6">
+            <!-- Category: General -->
+            <div>
+              <button class="focus-ring w-full flex items-center gap-1 px-2 mb-1 rounded" aria-expanded="true">
+                <i class="ph ph-caret-down text-[10px] t-secondary" aria-hidden="true"></i>
+                <span class="text-xs font-semibold uppercase tracking-wider t-secondary">General</span>
+              </button>
+              <div class="space-y-0.5" role="list">
+                <a href="#" role="listitem" aria-current="page" class="focus-ring flex items-center gap-2 px-2 py-1.5 rounded-md bg-surface-700 text-accent-emerald">
+                  <i class="ph ph-hash text-base" aria-hidden="true"></i><span class="text-sm font-medium">general</span>
+                </a>
+                <a href="#" role="listitem" class="focus-ring flex items-center gap-2 px-2 py-1.5 rounded-md t-secondary hover:bg-surface-800 hover:t-primary transition-colors">
+                  <i class="ph ph-hash text-base t-muted" aria-hidden="true"></i><span class="text-sm">announcements</span>
+                </a>
+              </div>
+            </div>
+            <!-- Category: Coursework -->
+            <div>
+              <button class="focus-ring w-full flex items-center gap-1 px-2 mb-1 rounded" aria-expanded="true">
+                <i class="ph ph-caret-down text-[10px] t-secondary" aria-hidden="true"></i>
+                <span class="text-xs font-semibold uppercase tracking-wider t-secondary">Coursework</span>
+              </button>
+              <div class="space-y-0.5" role="list">
+                <a href="#" role="listitem" class="focus-ring flex items-center gap-2 px-2 py-1.5 rounded-md t-secondary hover:bg-surface-800 hover:t-primary transition-colors">
+                  <i class="ph ph-hash text-base t-muted" aria-hidden="true"></i><span class="text-sm">questions</span>
+                </a>
+                <a href="#" role="listitem" class="focus-ring flex items-center gap-2 px-2 py-1.5 rounded-md t-secondary hover:bg-surface-800 hover:t-primary transition-colors">
+                  <i class="ph ph-hash text-base t-muted" aria-hidden="true"></i><span class="text-sm">resources</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- inert content area (NOT M3 chrome — empty placeholder so the panes read in context) -->
+        <div class="flex-1 bg-surface-800 flex items-center justify-center">
+          <p class="t-muted text-sm">Channel content — out of scope (M3)</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         STATE GALLERY
+    ========================================================== -->
+    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+      <!-- RAIL: loading -->
+      <section aria-labelledby="rl" class="flex flex-col gap-3">
+        <h2 id="rl" class="text-xs font-semibold uppercase tracking-wider t-secondary">Rail · loading</h2>
+        <div class="flex h-[320px] rounded-lg overflow-hidden border b-hairline">
+          <nav class="w-[72px] bg-surface-950 border-r b-hairline flex flex-col items-center py-4 gap-3" aria-label="Servers (loading)" aria-busy="true">
+            <div class="skel w-12 h-12 rounded-lg"></div>
+            <div class="w-8 h-[2px] bg-surface-700 rounded-full"></div>
+            <div class="skel w-12 h-12 rounded-lg"></div>
+            <div class="skel w-12 h-12 rounded-lg"></div>
+            <div class="mt-auto w-12 h-12 rounded-full border b-hover border bg-surface-800 text-accent-emerald flex items-center justify-center"><i class="ph ph-plus text-xl"></i></div>
+          </nav>
+          <div class="flex-1 bg-surface-900"></div>
+        </div>
+      </section>
+
+      <!-- RAIL: empty (no servers yet) -->
+      <section aria-labelledby="re" class="flex flex-col gap-3">
+        <h2 id="re" class="text-xs font-semibold uppercase tracking-wider t-secondary">Rail · empty (no servers)</h2>
+        <div class="flex h-[320px] rounded-lg overflow-hidden border b-hairline">
+          <nav class="w-[72px] bg-surface-950 border-r b-hairline flex flex-col items-center py-4 gap-3" aria-label="Servers">
+            <button class="focus-ring rail-icon w-12 h-12 bg-surface-800 t-secondary flex items-center justify-center" aria-label="Home"><i class="ph ph-books text-xl"></i></button>
+            <div class="w-8 h-[2px] bg-surface-700 rounded-full"></div>
+            <!-- no servers -->
+            <div class="group relative w-full flex justify-center">
+              <span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-accent-emerald rounded-r-md animate-pulse" aria-hidden="true"></span>
+              <button class="focus-ring w-12 h-12 rounded-full border-2 border-dashed border-accent-emerald/50 bg-surface-800 text-accent-emerald hover:bg-accent-emerald hover:text-surface-950 flex items-center justify-center transition-colors" aria-label="Create your first server">
+                <i class="ph ph-plus text-xl"></i>
+              </button>
+            </div>
+          </nav>
+          <div class="flex-1 bg-surface-900 flex flex-col items-center justify-center text-center px-6">
+            <i class="ph ph-compass text-3xl t-secondary mb-3" aria-hidden="true"></i>
+            <p class="text-sm font-medium t-primary mb-1">No servers yet</p>
+            <p class="text-xs t-secondary max-w-[200px]">Create a study server with the + button to get your first channel.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- SIDEBAR: no-server-selected -->
+      <section aria-labelledby="sn" class="flex flex-col gap-3">
+        <h2 id="sn" class="text-xs font-semibold uppercase tracking-wider t-secondary">Sidebar · no server selected</h2>
+        <div class="h-[320px] w-[260px] bg-surface-900 rounded-lg border b-hairline flex flex-col items-center justify-center text-center px-6">
+          <i class="ph ph-hand-pointing text-3xl t-secondary mb-3" aria-hidden="true"></i>
+          <p class="text-sm font-medium t-primary mb-1">Pick a server</p>
+          <p class="text-xs t-secondary">Select a server on the left to see its channels.</p>
+        </div>
+      </section>
+
+      <!-- SIDEBAR: loading -->
+      <section aria-labelledby="sl" class="flex flex-col gap-3">
+        <h2 id="sl" class="text-xs font-semibold uppercase tracking-wider t-secondary">Sidebar · loading</h2>
+        <div class="h-[320px] w-[260px] bg-surface-900 rounded-lg border b-hairline flex flex-col" aria-busy="true">
+          <div class="h-14 flex items-center px-4 border-b b-hairline"><div class="skel h-4 w-32 rounded"></div></div>
+          <div class="px-3 py-4 space-y-4">
+            <div class="skel h-3 w-20 rounded"></div>
+            <div class="space-y-2 pl-1">
+              <div class="skel h-4 w-40 rounded"></div>
+              <div class="skel h-4 w-32 rounded"></div>
+            </div>
+            <div class="skel h-3 w-24 rounded mt-4"></div>
+            <div class="space-y-2 pl-1">
+              <div class="skel h-4 w-36 rounded"></div>
+              <div class="skel h-4 w-28 rounded"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SIDEBAR: error -->
+      <section aria-labelledby="se" class="flex flex-col gap-3">
+        <h2 id="se" class="text-xs font-semibold uppercase tracking-wider t-secondary">Sidebar · error</h2>
+        <div class="h-[320px] w-[260px] bg-surface-900 rounded-lg border b-hairline flex flex-col">
+          <div class="h-14 flex items-center px-4 border-b b-hairline"><span class="text-sm font-semibold t-primary truncate">CS-201 Data Structures</span></div>
+          <div class="flex-1 flex flex-col items-center justify-center text-center px-6">
+            <i class="ph ph-warning-circle text-3xl text-danger mb-3" aria-hidden="true"></i>
+            <p class="text-sm font-medium t-primary mb-1">Couldn’t load channels</p>
+            <p class="text-xs t-secondary mb-4">Check your connection and try again.</p>
+            <button class="focus-ring rounded-md px-3 py-1.5 text-sm font-medium bg-surface-700 t-primary hover:bg-surface-600 transition-colors inline-flex items-center gap-1.5">
+              <i class="ph ph-arrow-clockwise" aria-hidden="true"></i> Retry
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- SIDEBAR: loaded (compact, #general visible) -->
+      <section aria-labelledby="sd" class="flex flex-col gap-3">
+        <h2 id="sd" class="text-xs font-semibold uppercase tracking-wider t-secondary">Sidebar · loaded (#general)</h2>
+        <div class="h-[320px] w-[260px] bg-surface-900 rounded-lg border b-hairline flex flex-col">
+          <header class="h-14 flex items-center justify-between px-4 border-b b-hairline shadow-sm shrink-0">
+            <span class="text-sm font-semibold t-primary truncate pr-2 tracking-tight">CS-201 Data Structures</span>
+            <i class="ph ph-caret-down text-xs t-secondary" aria-hidden="true"></i>
+          </header>
+          <div class="flex-1 overflow-y-auto px-2 py-4 space-y-6">
+            <div>
+              <div class="flex items-center gap-1 px-2 mb-1">
+                <i class="ph ph-caret-down text-[10px] t-secondary" aria-hidden="true"></i>
+                <span class="text-xs font-semibold uppercase tracking-wider t-secondary">General</span>
+              </div>
+              <div class="space-y-0.5" role="list">
+                <a href="#" role="listitem" aria-current="page" class="focus-ring flex items-center gap-2 px-2 py-1.5 rounded-md bg-surface-700 text-accent-emerald">
+                  <i class="ph ph-hash text-base" aria-hidden="true"></i><span class="text-sm font-medium">general</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</body>
+</html>

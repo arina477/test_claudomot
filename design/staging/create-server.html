@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyHall — Create a server</title>
+
+  <!-- Fonts: Geist (canonical) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Icons: Phosphor -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Geist', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
+          colors: {
+            surface: {
+              950: '#0a0a0b', 900: '#121214', 800: '#1c1c1f',
+              700: '#27272a', 600: '#3f3f46', 500: '#52525b',
+            },
+            accent: { emerald: '#10b981', amber: '#f59e0b' },
+            danger: '#ef4444',
+          },
+          boxShadow: {
+            'sm': '0 1px 2px rgba(0,0,0,0.4)',
+            'pop': '0 8px 24px rgba(0,0,0,0.5)',
+            'glow-focus': '0 0 0 2px rgba(16,185,129,0.4)',
+            'glow-danger': '0 0 0 2px rgba(239,68,68,0.4)',
+            'glow-subtle': '0 0 15px rgba(255,255,255,0.05)',
+          },
+          borderRadius: { 'md': '6px', 'lg': '10px' },
+        }
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --text-primary: rgba(255,255,255,0.92);
+      --text-secondary: rgba(255,255,255,0.60);
+      --text-muted: rgba(255,255,255,0.40);
+      --border-hairline: rgba(255,255,255,0.06);
+      --border-hover: rgba(255,255,255,0.10);
+    }
+    body { font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; background: #0a0a0b; color: var(--text-primary); }
+    .t-primary { color: var(--text-primary); }
+    .t-secondary { color: var(--text-secondary); }
+    .t-muted { color: var(--text-muted); }
+    .b-hairline { border-color: var(--border-hairline); }
+    .b-hover { border-color: var(--border-hover); }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+    /* Focus discipline — emerald ring, never bare browser default */
+    .focus-ring:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(16,185,129,0.4); }
+    input.focus-ring:focus-visible { border-color: #10b981; }
+    .spin { animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes shimmer { 100% { transform: translateX(100%); } }
+    .skel { position: relative; overflow: hidden; background: #27272a; }
+    .skel::after { content:''; position:absolute; inset:0; transform:translateX(-100%);
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent); animation: shimmer 1.6s infinite; }
+  </style>
+</head>
+<body class="antialiased">
+
+  <!-- ============================================================
+       STATE SHOWCASE — single-step create-server modal.
+       Mockup renders all six states side-by-side so reviewers see
+       every state. In the running app a single modal transitions
+       through these states.
+  ============================================================= -->
+
+  <!-- Dimmed app shell behind the primary modal (context only) -->
+  <div class="fixed inset-0 -z-10 flex pointer-events-none opacity-40 blur-[2px] saturate-50 select-none" aria-hidden="true">
+    <div class="w-[72px] bg-surface-900 border-r b-hairline border flex flex-col items-center py-4 gap-3">
+      <div class="w-12 h-12 rounded-lg bg-surface-800 flex items-center justify-center t-secondary"><i class="ph ph-books text-xl"></i></div>
+      <div class="w-8 h-[2px] bg-surface-700 rounded-full"></div>
+      <div class="w-12 h-12 rounded-lg bg-surface-800 flex items-center justify-center t-secondary text-xs font-medium">CS</div>
+      <div class="mt-auto w-12 h-12 rounded-full border b-hover border flex items-center justify-center text-accent-emerald"><i class="ph ph-plus"></i></div>
+    </div>
+    <div class="w-[260px] bg-surface-900 border-r b-hairline border"></div>
+    <div class="flex-1 bg-surface-800"></div>
+  </div>
+
+  <main class="min-h-[100dvh] w-full px-8 py-12">
+    <header class="max-w-6xl mx-auto mb-10 text-center">
+      <p class="text-xs uppercase tracking-widest text-accent-emerald font-semibold mb-2">StudyHall · D-block staging</p>
+      <h1 class="text-2xl font-semibold tracking-tight t-primary">Create a server — single-step modal (all states)</h1>
+      <p class="t-secondary text-sm mt-2">One name field → Create. Server seeds owner membership + a default “General” category + #general server-side.</p>
+    </header>
+
+    <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 items-start">
+
+      <!-- ========== Shared modal template, one per state ========== -->
+
+      <!-- STATE 1: default (empty, Create disabled) -->
+      <section aria-labelledby="s1" class="flex flex-col gap-3">
+        <h2 id="s1" class="text-xs font-semibold uppercase tracking-wider t-secondary">1 · Default (empty)</h2>
+        <div class="rounded-lg bg-surface-900 border b-hairline shadow-pop" role="dialog" aria-modal="true" aria-labelledby="s1-title">
+          <div class="flex items-center justify-between px-5 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
+            <h3 id="s1-title" class="text-xl font-semibold tracking-tight t-primary">Create a server</h3>
+            <button class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors" aria-label="Close">
+              <i class="ph ph-x text-lg"></i>
+            </button>
+          </div>
+          <div class="px-5 py-5">
+            <p class="t-secondary text-sm mb-5">Give your study server a name. You can change it later.</p>
+            <label for="n1" class="block text-sm font-medium t-primary mb-2">Server name</label>
+            <div class="relative">
+              <input id="n1" type="text" placeholder="e.g. CS-201 Data Structures"
+                class="focus-ring w-full bg-surface-950 border b-hover rounded-md pl-3 pr-14 py-2.5 text-sm t-primary placeholder:t-muted transition-colors"
+                aria-describedby="n1-help">
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs t-secondary tabular-nums">0/100</span>
+            </div>
+            <p id="n1-help" class="text-xs t-secondary mt-2">1–100 characters.</p>
+          </div>
+          <div class="flex items-center justify-end gap-2 px-5 py-4 border-t b-hairline">
+            <button class="focus-ring rounded-md px-4 py-2 text-sm font-medium t-secondary hover:t-primary hover:bg-surface-700 transition-colors">Cancel</button>
+            <button disabled class="rounded-md px-4 py-2 text-sm font-semibold bg-surface-700 t-muted cursor-not-allowed">Create</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- STATE 2: valid-input (Create enabled) -->
+      <section aria-labelledby="s2" class="flex flex-col gap-3">
+        <h2 id="s2" class="text-xs font-semibold uppercase tracking-wider t-secondary">2 · Valid input</h2>
+        <div class="rounded-lg bg-surface-900 border b-hairline shadow-pop" role="dialog" aria-modal="true" aria-labelledby="s2-title">
+          <div class="flex items-center justify-between px-5 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
+            <h3 id="s2-title" class="text-xl font-semibold tracking-tight t-primary">Create a server</h3>
+            <button class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors" aria-label="Close"><i class="ph ph-x text-lg"></i></button>
+          </div>
+          <div class="px-5 py-5">
+            <p class="t-secondary text-sm mb-5">Give your study server a name. You can change it later.</p>
+            <label for="n2" class="block text-sm font-medium t-primary mb-2">Server name</label>
+            <div class="relative">
+              <input id="n2" type="text" value="CS-201 Data Structures"
+                class="w-full bg-surface-950 border rounded-md pl-3 pr-14 py-2.5 text-sm t-primary transition-colors"
+                style="border-color:#10b981; box-shadow:0 0 0 2px rgba(16,185,129,0.4);" aria-describedby="n2-help">
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs t-secondary tabular-nums">21/100</span>
+            </div>
+            <p id="n2-help" class="text-xs t-secondary mt-2">1–100 characters.</p>
+          </div>
+          <div class="flex items-center justify-end gap-2 px-5 py-4 border-t b-hairline">
+            <button class="focus-ring rounded-md px-4 py-2 text-sm font-medium t-secondary hover:t-primary hover:bg-surface-700 transition-colors">Cancel</button>
+            <button class="focus-ring rounded-md px-4 py-2 text-sm font-semibold bg-accent-emerald text-surface-950 hover:bg-accent-emerald/90 transition-colors shadow-glow-subtle">Create</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- STATE 3: validation-error -->
+      <section aria-labelledby="s3" class="flex flex-col gap-3">
+        <h2 id="s3" class="text-xs font-semibold uppercase tracking-wider t-secondary">3 · Validation error</h2>
+        <div class="rounded-lg bg-surface-900 border b-hairline shadow-pop" role="dialog" aria-modal="true" aria-labelledby="s3-title">
+          <div class="flex items-center justify-between px-5 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
+            <h3 id="s3-title" class="text-xl font-semibold tracking-tight t-primary">Create a server</h3>
+            <button class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors" aria-label="Close"><i class="ph ph-x text-lg"></i></button>
+          </div>
+          <div class="px-5 py-5">
+            <p class="t-secondary text-sm mb-5">Give your study server a name. You can change it later.</p>
+            <label for="n3" class="block text-sm font-medium t-primary mb-2">Server name</label>
+            <div class="relative">
+              <input id="n3" type="text" value="" aria-invalid="true"
+                class="w-full bg-surface-950 border rounded-md pl-3 pr-14 py-2.5 text-sm t-primary placeholder:t-muted transition-colors"
+                style="border-color:#ef4444;" placeholder="e.g. CS-201 Data Structures" aria-describedby="n3-err">
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs t-secondary tabular-nums">0/100</span>
+            </div>
+            <p id="n3-err" class="text-xs text-danger mt-2 flex items-center gap-1.5"><i class="ph ph-warning-circle"></i> Enter a name between 1 and 100 characters.</p>
+          </div>
+          <div class="flex items-center justify-end gap-2 px-5 py-4 border-t b-hairline">
+            <button class="focus-ring rounded-md px-4 py-2 text-sm font-medium t-secondary hover:t-primary hover:bg-surface-700 transition-colors">Cancel</button>
+            <button disabled class="rounded-md px-4 py-2 text-sm font-semibold bg-surface-700 t-muted cursor-not-allowed">Create</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- STATE 4: loading (submitting) -->
+      <section aria-labelledby="s4" class="flex flex-col gap-3">
+        <h2 id="s4" class="text-xs font-semibold uppercase tracking-wider t-secondary">4 · Loading (submitting)</h2>
+        <div class="rounded-lg bg-surface-900 border b-hairline shadow-pop" role="dialog" aria-modal="true" aria-labelledby="s4-title" aria-busy="true">
+          <div class="flex items-center justify-between px-5 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
+            <h3 id="s4-title" class="text-xl font-semibold tracking-tight t-primary">Create a server</h3>
+            <button class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors" aria-label="Close"><i class="ph ph-x text-lg"></i></button>
+          </div>
+          <div class="px-5 py-5">
+            <p class="t-secondary text-sm mb-5">Give your study server a name. You can change it later.</p>
+            <label for="n4" class="block text-sm font-medium t-primary mb-2">Server name</label>
+            <div class="relative">
+              <input id="n4" type="text" value="CS-201 Data Structures" disabled
+                class="w-full bg-surface-950 border b-hairline rounded-md pl-3 pr-14 py-2.5 text-sm t-muted cursor-not-allowed opacity-70">
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs t-muted tabular-nums">21/100</span>
+            </div>
+            <p class="text-xs t-secondary mt-2">1–100 characters.</p>
+          </div>
+          <div class="flex items-center justify-end gap-2 px-5 py-4 border-t b-hairline">
+            <button disabled class="rounded-md px-4 py-2 text-sm font-medium t-muted cursor-not-allowed">Cancel</button>
+            <button disabled aria-busy="true" class="rounded-md px-5 py-2 text-sm font-semibold bg-accent-emerald/80 text-surface-950 inline-flex items-center justify-center min-w-[84px]">
+              <i class="ph ph-spinner-gap spin text-base" aria-hidden="true"></i><span class="sr-only">Creating…</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- STATE 5: server-error -->
+      <section aria-labelledby="s5" class="flex flex-col gap-3">
+        <h2 id="s5" class="text-xs font-semibold uppercase tracking-wider t-secondary">5 · Server error</h2>
+        <div class="rounded-lg bg-surface-900 border b-hairline shadow-pop" role="dialog" aria-modal="true" aria-labelledby="s5-title">
+          <div class="flex items-center justify-between px-5 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
+            <h3 id="s5-title" class="text-xl font-semibold tracking-tight t-primary">Create a server</h3>
+            <button class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors" aria-label="Close"><i class="ph ph-x text-lg"></i></button>
+          </div>
+          <div class="px-5 py-5">
+            <div role="alert" class="mb-4 flex items-start gap-2 rounded-md border px-3 py-2.5 text-sm" style="border-color:rgba(239,68,68,0.4); background:rgba(239,68,68,0.08);">
+              <i class="ph ph-warning-circle text-danger mt-0.5"></i>
+              <span class="t-primary">Couldn’t create the server. Check your connection and try again.</span>
+            </div>
+            <label for="n5" class="block text-sm font-medium t-primary mb-2">Server name</label>
+            <div class="relative">
+              <input id="n5" type="text" value="CS-201 Data Structures"
+                class="focus-ring w-full bg-surface-950 border b-hover rounded-md pl-3 pr-14 py-2.5 text-sm t-primary transition-colors">
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs t-secondary tabular-nums">21/100</span>
+            </div>
+            <p class="text-xs t-secondary mt-2">1–100 characters.</p>
+          </div>
+          <div class="flex items-center justify-end gap-2 px-5 py-4 border-t b-hairline">
+            <button class="focus-ring rounded-md px-4 py-2 text-sm font-medium t-secondary hover:t-primary hover:bg-surface-700 transition-colors">Cancel</button>
+            <button class="focus-ring rounded-md px-4 py-2 text-sm font-semibold bg-accent-emerald text-surface-950 hover:bg-accent-emerald/90 transition-colors inline-flex items-center gap-1.5">
+              <i class="ph ph-arrow-clockwise text-base" aria-hidden="true"></i> Retry
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- STATE 6: success (modal closes → new server selected) -->
+      <section aria-labelledby="s6" class="flex flex-col gap-3">
+        <h2 id="s6" class="text-xs font-semibold uppercase tracking-wider t-secondary">6 · Success (closes → selected)</h2>
+        <div class="rounded-lg bg-surface-900 border b-hairline shadow-pop overflow-hidden">
+          <!-- Result: modal has closed; the new server is now selected in the rail + its #general shown. -->
+          <div class="flex">
+            <!-- rail snippet with new server active -->
+            <div class="w-[64px] bg-surface-950 border-r b-hairline border flex flex-col items-center py-3 gap-2">
+              <div class="w-10 h-10 rounded-lg bg-surface-800 flex items-center justify-center t-secondary"><i class="ph ph-books text-lg"></i></div>
+              <div class="relative">
+                <span class="absolute -left-3 top-1/2 -translate-y-1/2 w-1 h-7 bg-accent-emerald rounded-r-md" aria-hidden="true"></span>
+                <div class="w-10 h-10 rounded-md bg-surface-600 flex items-center justify-center text-sm font-semibold t-primary shadow-glow-subtle">CS</div>
+              </div>
+              <div class="mt-auto w-10 h-10 rounded-full border b-hover border flex items-center justify-center text-accent-emerald"><i class="ph ph-plus"></i></div>
+            </div>
+            <!-- sidebar snippet with #general -->
+            <div class="flex-1 bg-surface-900 py-3">
+              <div class="px-3 pb-2 mb-2 border-b b-hairline flex items-center justify-between">
+                <span class="text-sm font-semibold t-primary truncate">CS-201 Data Structures</span>
+                <i class="ph ph-caret-down text-xs t-secondary"></i>
+              </div>
+              <div class="px-2">
+                <p class="text-xs font-semibold uppercase tracking-wider t-secondary px-2 mb-1">General</p>
+                <div class="flex items-center gap-2 px-2 py-1.5 rounded-md bg-surface-700 text-accent-emerald" aria-current="true">
+                  <i class="ph ph-hash text-base"></i><span class="text-sm font-medium">general</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="px-4 py-2.5 text-xs t-secondary border-t b-hairline bg-surface-800/40"><i class="ph ph-check-circle text-accent-emerald"></i> Server created — modal closed, new server selected with its #general channel.</p>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</body>
+</html>
