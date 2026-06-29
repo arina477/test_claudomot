@@ -7,6 +7,9 @@
 import type {
   AvatarPresignResponse,
   CreateServerInput,
+  InvitePreview,
+  InviteResponse,
+  JoinResult,
   MeResponse,
   ProfileResponse,
   ServerDetail,
@@ -89,4 +92,26 @@ export const api = {
 
   /** GET /servers/:id → {server, categories:[{id,name,position,channels:[...]}]}. */
   getServerDetail: (id: string) => request<ServerDetail>(`/servers/${id}`),
+
+  // ── Invite endpoints (wave-8 M2) ──────────────────────────────────────────
+
+  /**
+   * GET /invites/:code → public; returns {server:{id,name,memberCount}}.
+   * Throws on 404 (invalid/expired/maxed).
+   */
+  getInvitePreview: (code: string) => request<InvitePreview>(`/invites/${code}`),
+
+  /**
+   * POST /invites/:code/join → auth required; returns {serverId}.
+   * Throws: 401 unauthed, 403 unverified, 404 invalid.
+   */
+  joinViaInvite: (code: string) =>
+    request<JoinResult>(`/invites/${code}/join`, { method: 'POST', body: '{}' }),
+
+  /**
+   * POST /servers/:id/invites → creates ad-hoc invite; returns {code, url?}.
+   * Requires auth. Body is optional (defaults to no-expiry, unlimited uses).
+   */
+  createInvite: (serverId: string) =>
+    request<InviteResponse>(`/servers/${serverId}/invites`, { method: 'POST', body: '{}' }),
 };

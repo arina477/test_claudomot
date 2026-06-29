@@ -12,6 +12,8 @@
  * Bottom user panel always visible.
  */
 
+import { useRef, useState } from 'react';
+import { InviteShareModal } from './InviteShareModal';
 import { useProfile } from './ProfileContext';
 import { useServers } from './ServerContext';
 import {
@@ -21,6 +23,7 @@ import {
   MicrophoneIcon,
   SpeakerHighIcon,
   SpinnerIcon,
+  UserAddIcon,
 } from './icons';
 
 /** Derive 2-character initials from a display name or username. */
@@ -108,6 +111,8 @@ function ChannelIcon({ type }: { type: string }) {
 export function ChannelSidebar() {
   const { profile } = useProfile();
   const { selectedId, selectedDetail, detailStatus, servers } = useServers();
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const inviteBtnRef = useRef<HTMLButtonElement>(null);
 
   const accentColor = profile?.accentColor ?? '#10b981';
   const avatarUrl = profile?.avatarUrl ?? null;
@@ -147,12 +152,54 @@ export function ChannelSidebar() {
         >
           {serverName ?? 'StudyHall'}
         </h1>
-        {serverName && (
-          <span style={{ color: 'rgba(255,255,255,0.40)' }} className="shrink-0">
-            <CaretDownIcon size={14} />
-          </span>
-        )}
+        <div className="flex shrink-0 items-center gap-1">
+          {/* Invite people button — only shown when a server is selected */}
+          {selectedId && (
+            <button
+              ref={inviteBtnRef}
+              type="button"
+              aria-label="Invite people"
+              data-testid="invite-people-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                setInviteModalOpen(true);
+              }}
+              className="flex h-7 w-7 items-center justify-center rounded transition-colors duration-150 focus-visible:outline-none"
+              style={{ color: 'rgba(255,255,255,0.40)', backgroundColor: 'transparent' }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#27272a';
+                (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.92)';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+                (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.40)';
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.boxShadow = '0 0 0 2px rgba(16,185,129,0.4)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              <UserAddIcon size={15} />
+            </button>
+          )}
+          {serverName && (
+            <span style={{ color: 'rgba(255,255,255,0.40)' }}>
+              <CaretDownIcon size={14} />
+            </span>
+          )}
+        </div>
       </header>
+
+      {/* Invite share modal */}
+      {inviteModalOpen && selectedId && (
+        <InviteShareModal
+          serverId={selectedId}
+          onClose={() => setInviteModalOpen(false)}
+          triggerRef={inviteBtnRef}
+        />
+      )}
 
       {/* Scrollable channel list */}
       <div className="flex-1 overflow-y-auto px-2 py-4">

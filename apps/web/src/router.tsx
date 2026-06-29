@@ -3,6 +3,7 @@
  *
  * Route map:
  *   /               LandingPage (public)
+ *   /invite/:code   InviteJoinPage (public — preview is public; join requires auth)
  *   /signup         SignupPage  (guest only → redirect /app if session exists)
  *   /login          LoginPage   (guest only)
  *   /forgot-password ForgotPasswordPage (guest only)
@@ -11,6 +12,10 @@
  *   /app             AppHome    (auth-required)
  *   /settings/profile ProfilePage (auth-required)
  *   *               → /  (fallback)
+ *
+ * Login-return flow (/invite/:code):
+ *   Unauthenticated users who click "Log in" are sent to /login?next=/invite/:code.
+ *   LoginPage and SignupPage read the ?next param and redirect there after success.
  */
 
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
@@ -19,6 +24,7 @@ import { GuestGuard } from './auth/GuestGuard';
 import { AppHome } from './pages/AppHome';
 import { EmailVerifyPage } from './pages/EmailVerifyPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
+import { InviteJoinPage } from './pages/InviteJoinPage';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { ProfilePage } from './pages/ProfilePage';
@@ -31,6 +37,7 @@ export function AppRouter() {
       <Routes>
         {/* Public */}
         <Route path="/" element={<LandingPage />} />
+        <Route path="/invite/:code" element={<InviteJoinPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/verify-email" element={<EmailVerifyPage />} />
 

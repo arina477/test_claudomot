@@ -81,6 +81,14 @@ export function ServerProvider({ children }: Props) {
         if (!mounted.current) return;
         setServers(list);
         setStatus('loaded');
+        // Auto-select a server if the invite-join flow stored one
+        const pendingId = sessionStorage.getItem('sh:select-server');
+        if (pendingId) {
+          sessionStorage.removeItem('sh:select-server');
+          if (list.some((s) => s.id === pendingId)) {
+            setSelectedId(pendingId);
+          }
+        }
       })
       .catch(() => {
         if (!mounted.current) return;
