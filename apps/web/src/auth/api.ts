@@ -35,6 +35,20 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+/** Like `request` but for 204 No Content responses — returns void, throws on non-2xx. */
+async function requestNoContent(path: string, init?: RequestInit): Promise<void> {
+  const res = await fetch(`${BASE}${path}`, {
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
+    ...init,
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`${res.status} ${res.statusText}: ${body}`);
+  }
+}
+
 export const api = {
   getMe: () => request<MeResponse>('/me'),
 
@@ -122,4 +136,62 @@ export const api = {
    */
   revokeInvite: (code: string) =>
     request<void>(`/invites/${code}/revoke`, { method: 'POST', body: '{}' }),
+
+  // ── RBAC endpoints (wave-10 M2) ───────────────────────────────────────────
+
+  /** GET /servers/:id/roles → Role[] */
+  listRoles: (serverId: string) =>
+    request<import('@studyhall/shared').Role[]>(`/servers/${serverId}/roles`),
+
+  /** POST /servers/:id/roles → 201 Role */
+  createRole: (serverId: string, data: import('@studyhall/shared').CreateRoleInput) =>
+    request<import('@studyhall/shared').Role>(`/servers/${serverId}/roles`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  /** PATCH /servers/:id/roles/:roleId → Role */
+  updateRole: (
+    serverId: string,
+    roleId: string,
+    data: import('@studyhall/shared').UpdateRoleInput,
+  ) =>
+    request<import('@studyhall/shared').Role>(`/servers/${serverId}/roles/${roleId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  /** DELETE /servers/:id/roles/:roleId → 204 void */
+  deleteRole: (serverId: string, roleId: string) =>
+    requestNoContent(`/servers/${serverId}/roles/${roleId}`, { method: 'DELETE' }),
+
+  /** PATCH /servers/:id/members/:userId/role → 204 void */
+  assignMemberRole: (serverId: string, userId: string, roleId: string | null) =>
+    requestNoContent(`/servers/${serverId}/members/${userId}/role`, {
+      method: 'PATCH',
+      body: JSON.stringify({ roleId }),
+    }),
+
+  /** GET /servers/:id/channels/:channelId/overrides → ChannelOverride[] */
+  listChannelOverrides: (serverId: string, channelId: string) =>
+    request<import('@studyhall/shared').ChannelOverride[]>(
+      `/servers/${serverId}/channels/${channelId}/overrides`,
+    ),
+
+  /** POST /servers/:id/channels/:channelId/overrides → ChannelOverride */
+  upsertChannelOverride: (
+    serverId: string,
+    channelId: string,
+    data: import('@studyhall/shared').UpsertChannelOverrideInput,
+  ) =>
+    request<import('@studyhall/shared').ChannelOverride>(
+      `/servers/${serverId}/channels/${channelId}/overrides`,
+      { method: 'POST', body: JSON.stringify(data) },
+    ),
+
+  /** DELETE /servers/:id/channels/:channelId/overrides/:roleId → 204 void */
+  deleteChannelOverride: (serverId: string, channelId: string, roleId: string) =>
+    requestNoContent(`/servers/${serverId}/channels/${channelId}/overrides/${roleId}`, {
+      method: 'DELETE',
+    }),
 };
