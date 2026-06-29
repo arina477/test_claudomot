@@ -50,8 +50,8 @@ VERIFY:
 - [x] V-3 Fast-fix loop — head-verifier APPROVED; node-20 fast-fixed (PR#15), CI-verified zero annotations
 
 LEARN:
-- [ ] L-1 Docs
-- [ ] L-2 Distill
+- [x] L-1 Docs (CHANGELOG: rate-limit/E2E Added + version Fixed; M1 10 done/2 open — disposition flagged for N-1; README skip)
+- [x] L-2 Distill (5 obs, 2 candidate-grade, PROMOTE ZERO — obs-1 karen-REJECT as dup of BUILD rule 1; obs-3 held for wave-6; followup da242f6b queued)
 
 NEXT:
 - [ ] N-1 Survey & triggers

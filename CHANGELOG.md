@@ -19,3 +19,9 @@ All notable changes to StudyHall are documented here. Format follows
 - A reminder banner that prompts unverified users to confirm their email, with the app staying usable in the meantime. (#5)
 - Profile customization: pick a unique @username and a personal accent color that carries across the app. (#10)
 - Avatar upload on the profile page; image delivery turns on once storage is configured, and the page stays usable until then. (#10)
+- Sign-in attempts are now rate-limited, so repeated rapid login tries are blocked to protect accounts from abuse. (#12, #14)
+- Browser-based end-to-end testing and protected-branch rules now run on every change, so regressions are caught before release. (#12, #15)
+
+### Fixed
+
+- The app now reports its true version on the health check, fixing a startup crash that could take the live API offline. (#13)
