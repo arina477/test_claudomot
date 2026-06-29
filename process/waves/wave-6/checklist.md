@@ -53,8 +53,8 @@ VERIFY:
 - [ ] V-3 Fast-fix loop (or close)
 
 LEARN:
-- [ ] L-1 Docs
-- [ ] L-2 Distill
+- [x] L-1 Docs (CHANGELOG #16; M1 11 done/2 open — engineering complete, founder-ops remain, flagged for N-1; no M1 transition)
+- [x] L-2 Distill (da242f6b done; 4 observations; promote ZERO — boot-probe rule dedup of BUILD rule 1, enforce_admins karen HARD-REJECT)
 
 NEXT:
 - [ ] N-1 Survey & triggers
