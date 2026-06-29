@@ -47,8 +47,8 @@ VERIFY:
 - [ ] V-3 Fast-fix loop (or close)
 
 LEARN:
-- [ ] L-1 Docs
-- [ ] L-2 Distill
+- [x] L-1 Docs (changelog #10 + README + M1 delta flagged for N-1)
+- [x] L-2 Distill (task 2a655960 done; 4 obs, 0 promotions — karen REJECT)
 
 NEXT:
 - [ ] N-1 Survey & triggers
