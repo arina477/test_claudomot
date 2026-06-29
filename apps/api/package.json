@@ -12,7 +12,8 @@
     "clean": "rimraf dist *.tsbuildinfo",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:seed": "tsx src/db/seed.ts"
+    "db:seed": "tsx src/db/seed.ts",
+    "db:backfill": "tsx src/db/backfill-invite-codes.ts"
   },
   "dependencies": {
     "@anatine/zod-nestjs": "^2.0.4",

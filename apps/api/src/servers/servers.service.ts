@@ -21,7 +21,7 @@ import { categories, channels, invites, server_members, servers } from '../db/sc
 // CSPRNG code generator — ~128-bit entropy, URL-safe base64url (no +/=)
 // ---------------------------------------------------------------------------
 
-function generateCode(): string {
+export function generateCode(): string {
   return randomBytes(16).toString('base64url');
 }
 
@@ -151,6 +151,7 @@ export class ServersService {
         id: server.id,
         name: server.name,
         ownerId: server.owner_id,
+        inviteCode: server.invite_code ?? null,
       },
       categories: catRows.map((cat) => ({
         id: cat.id,
@@ -231,6 +232,49 @@ export class ServersService {
 
     // Should never reach here — makes TypeScript happy
     throw new ConflictException('Failed to generate unique invite code');
+  }
+
+  // -------------------------------------------------------------------------
+  // Invite revoke — authenticated + owner/creator-gated (task 863c10ef)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Revoke an ad-hoc invite by code.
+   *
+   * Authorization: caller must be the server owner (servers.owner_id) OR the
+   * invite creator (invites.created_by).  Anyone else → 403.
+   *
+   * Permanent codes (servers.invite_code) are not stored in the invites table
+   * and therefore return 404 — rotation of the permanent code is deferred.
+   *
+   * Idempotent: revoking an already-revoked invite returns 200 (no error).
+   */
+  async revokeInvite(code: string, callerId: string): Promise<void> {
+    // Resolve the ad-hoc invite by code
+    const [invite] = await db.select().from(invites).where(eq(invites.code, code)).limit(1);
+
+    if (!invite) {
+      throw new NotFoundException('Invite not found or invalid');
+    }
+
+    // Load the server to determine ownership
+    const [server] = await db
+      .select()
+      .from(servers)
+      .where(eq(servers.id, invite.server_id))
+      .limit(1);
+
+    if (!server) {
+      throw new NotFoundException('Invite not found or invalid');
+    }
+
+    // Authorization: caller must be owner OR creator
+    if (server.owner_id !== callerId && invite.created_by !== callerId) {
+      throw new ForbiddenException('Not authorized to revoke this invite');
+    }
+
+    // Idempotent: set revoked=true regardless of current state
+    await db.update(invites).set({ revoked: true }).where(eq(invites.id, invite.id));
   }
 
   // -------------------------------------------------------------------------
