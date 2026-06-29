@@ -1,0 +1,1 @@
+2026-06-29T11:04:10Z WAVE-4 storage credential: founder must create Railway Bucket 'studyhall-avatars' + provide AWS_ACCESS_KEY_ID/SECRET/ENDPOINT_URL/STORAGE_BUCKET_NAME (set on api). Avatar upload pending; rest of wave builds without it.
