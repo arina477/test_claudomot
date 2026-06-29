@@ -72,8 +72,13 @@ export class FilesController {
    *
    * Body: { key: string } — the key returned by /presign
    *
+   * Enforces server-side 2MB cap via HeadObject before persisting the avatar URL.
    * Derives the public URL from the key and persists avatar_url on the user.
    * Returns: { avatarUrl: string }
+   *
+   * Error codes:
+   *   413 AVATAR_TOO_LARGE  — uploaded object exceeds 2MB (server-enforced)
+   *   503 STORAGE_NOT_CONFIGURED — storage env vars absent
    */
   @Post('confirm')
   @HttpCode(200)
@@ -88,6 +93,12 @@ export class FilesController {
     if (typeof key !== 'string' || !key.startsWith(`avatars/${userId}/`)) {
       throw new BadRequestException('key must be a valid avatar key scoped to the requesting user');
     }
+
+    // SERVER-SIDE 2MB ENFORCEMENT (task 84e09891):
+    // presigned-PUT cannot carry a ContentLengthRange condition (presigned-POST only).
+    // We issue a HeadObject here, before persisting the URL, to reject oversized uploads.
+    // Throws 413 PayloadTooLargeException if object > 2MB, 503 if storage is unconfigured.
+    await this.filesService.checkAvatarSize(key);
 
     const publicUrl = this.filesService.resolvePublicUrl(key);
     if (!publicUrl) {

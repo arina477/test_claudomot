@@ -1,4 +1,8 @@
-import { BadRequestException } from '@nestjs/common';
+import {
+  BadRequestException,
+  PayloadTooLargeException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FilesController } from './files.controller';
 
@@ -16,6 +20,8 @@ function makeController() {
       uploadUrl: 'https://signed.example.com/put-url',
       key: 'avatars/user-abc/some-uuid.png',
     }),
+    // Default: size check passes (no throw).
+    checkAvatarSize: vi.fn().mockResolvedValue(undefined),
     resolvePublicUrl: vi
       .fn()
       .mockReturnValue('https://cdn.example.com/avatars/user-abc/some-uuid.png'),
@@ -125,6 +131,40 @@ describe('FilesController', () => {
       await expect(
         controller.confirm(makeReq('user-abc'), { key: 'avatars/user-abc/some-uuid.png' }),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('propagates PayloadTooLargeException (413) when checkAvatarSize rejects oversized upload', async () => {
+      // Simulate the service detecting a >2MB object.
+      filesService.checkAvatarSize.mockRejectedValue(
+        new PayloadTooLargeException({ code: 'AVATAR_TOO_LARGE' }),
+      );
+      await expect(
+        controller.confirm(makeReq('user-abc'), { key: 'avatars/user-abc/some-uuid.png' }),
+      ).rejects.toThrow(PayloadTooLargeException);
+    });
+
+    it('calls checkAvatarSize before setAvatarUrl (size check runs before DB write)', async () => {
+      // Ensures size enforcement is not bypassed even when storage is configured.
+      const callOrder: string[] = [];
+      filesService.checkAvatarSize.mockImplementation(async () => {
+        callOrder.push('checkAvatarSize');
+      });
+      usersService.setAvatarUrl.mockImplementation(async () => {
+        callOrder.push('setAvatarUrl');
+      });
+
+      await controller.confirm(makeReq('user-abc'), { key: 'avatars/user-abc/some-uuid.png' });
+
+      expect(callOrder).toEqual(['checkAvatarSize', 'setAvatarUrl']);
+    });
+
+    it('propagates ServiceUnavailableException (503) from checkAvatarSize when storage unconfigured', async () => {
+      filesService.checkAvatarSize.mockRejectedValue(
+        new ServiceUnavailableException({ code: 'STORAGE_NOT_CONFIGURED' }),
+      );
+      await expect(
+        controller.confirm(makeReq('user-abc'), { key: 'avatars/user-abc/some-uuid.png' }),
+      ).rejects.toThrow(ServiceUnavailableException);
     });
   });
 });

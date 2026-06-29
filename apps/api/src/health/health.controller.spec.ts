@@ -8,6 +8,10 @@ import { initSuperTokens } from '../auth/supertokens.config';
 import { EmailService } from '../email/email.service';
 import { UsersService } from '../users/users.service';
 
+// biome-ignore lint/suspicious/noExplicitAny: require() is fine in CommonJS
+const packageJson = require('../../package.json') as Record<string, any>;
+const EXPECTED_VERSION: string = packageJson.version as string;
+
 // Minimal type shim — supertest ships no bundled declarations
 type SuperTestResponse = { status: number; body: Record<string, unknown> };
 type SuperTestAgent = { get(path: string): Promise<SuperTestResponse> };
@@ -55,5 +59,15 @@ describe('GET /health', () => {
       expect(typeof parsed.data.version).toBe('string');
       expect(parsed.data.version.length).toBeGreaterThan(0);
     }
+  });
+
+  it('reports the real package.json version (not a stale literal)', async () => {
+    // Ensures API_VERSION reads from package.json rather than falling back to
+    // a hardcoded string. npm_package_version is NOT set in test runs started
+    // via `pnpm test:ci`, so this validates the require('../package.json') path.
+    const res = await request(app.getHttpServer()).get('/health');
+
+    expect(res.status).toBe(200);
+    expect(res.body.version).toBe(EXPECTED_VERSION);
   });
 });

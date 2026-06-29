@@ -1,0 +1,2 @@
+# Wave 5 — P-2 Spec (pointer)
+Source: tasks 839af17f .description (multi-spec head, 6 blocks). claimed = [839af17f rate-limit, 84e09891 avatar(cred-gated), e38c306e version, a7667fb7 node-20, 478e9d43 branch-protection, c51589cd CI-browser-E2E]. design_gap_flag=false. Security-tightened gate APPLIES (rate-limit) → T-8. Resend domain a1299e88 excluded (founder DNS, standalone). avatar credential-gated (founder bucket).
