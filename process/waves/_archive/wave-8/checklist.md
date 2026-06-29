@@ -56,6 +56,6 @@ LEARN:
 - [x] L-2 Distill
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers — M2 stays in_progress (scope unshipped); decomposition NO-OP (seed_candidates=6); BOARD N-1-seed-priority-wave-9 5-1-1 APPROVE invite-completion bundle
+- [x] N-2 Seed — wave-9 bundle: seed 863c10ef (invite-revoke) + siblings 08ff762f (backfill) + 5331b7d5 (share-modal-default); validation PASS
+- [x] N-3 Handoff — wave-8 closed (status=ok); archived to _archive/wave-8/; wave-9 opened; loop ready
