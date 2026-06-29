@@ -1,0 +1,2 @@
+# Wave 10 — B-3 Frontend (0b9bcf35, c258d49)
+ServerRolesPage: roles list, create/delete, 4-flag toggles, channel-visibility overrides, member assignment, owner-lockout-409 honest. 8 RBAC api methods + requestNoContent. shield entry in ChannelSidebar. 5 a11y carry-forwards fixed (visible OFF track, Private marker, reduced-motion+DS-type, focus-trap, convenience-gating). Per design/server-roles.html. 97 web tests (+24 new).
