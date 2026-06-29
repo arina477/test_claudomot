@@ -1,4 +1,9 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type {
   AssignRoleInput,
   ChannelOverride,
@@ -177,6 +182,19 @@ export class RbacService {
 
     if (!existing) {
       throw new NotFoundException('Role not found');
+    }
+
+    // Guard: cannot delete a role that is still assigned to members
+    const [assignedMember] = await db
+      .select({ id: server_members.id })
+      .from(server_members)
+      .where(and(eq(server_members.server_id, serverId), eq(server_members.role_id, roleId)))
+      .limit(1);
+
+    if (assignedMember) {
+      throw new ConflictException(
+        'Cannot delete a role that is still assigned to members; reassign them first',
+      );
     }
 
     await db.delete(roles).where(and(eq(roles.id, roleId), eq(roles.server_id, serverId)));

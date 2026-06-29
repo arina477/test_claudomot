@@ -15,7 +15,7 @@ import type {
 } from '@studyhall/shared';
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../db/index';
-import { categories, channels, invites, server_members, servers } from '../db/schema/index';
+import { categories, channels, invites, roles, server_members, servers } from '../db/schema/index';
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
 import { RbacService } from '../rbac/rbac.service';
 
@@ -65,6 +65,17 @@ export class ServersService {
         .returning();
       const server = serverRows[0];
       if (!server) throw new Error('Server insert failed unexpectedly');
+
+      await tx.insert(roles).values({
+        server_id: server.id,
+        name: 'Member',
+        position: 0,
+        manage_server: false,
+        manage_roles: false,
+        manage_channels: false,
+        manage_members: false,
+        is_default: true,
+      });
 
       await tx.insert(server_members).values({
         server_id: server.id,

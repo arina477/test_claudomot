@@ -8,7 +8,7 @@
  *   - assignRole: self-promote blocked at service layer (defence-in-depth)
  */
 
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { RbacService } from './rbac.service';
 
@@ -363,8 +363,13 @@ describe('RbacService.deleteRole', () => {
     service = new RbacService();
   });
 
-  it('deletes role successfully', async () => {
-    mockSelect.mockReturnValue(makeSelectChain([{ id: 'role-1' }]));
+  it('deletes role successfully when no member is assigned', async () => {
+    // select 1: role exists; select 2: no member assigned
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      return makeSelectChain(callCount === 1 ? [{ id: 'role-1' }] : []);
+    });
     mockDelete.mockReturnValue(makeDeleteChain());
 
     await expect(service.deleteRole('server-1', 'role-1')).resolves.toBeUndefined();
@@ -375,6 +380,36 @@ describe('RbacService.deleteRole', () => {
     mockSelect.mockReturnValue(makeSelectChain([]));
 
     await expect(service.deleteRole('server-1', 'ghost-role')).rejects.toThrow(NotFoundException);
+  });
+
+  it('throws ConflictException (409) when role is still assigned to a member', async () => {
+    // select 1: role exists; select 2: one member row found (role still assigned)
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      return makeSelectChain(callCount === 1 ? [{ id: 'role-1' }] : [{ id: 'mem-1' }]);
+    });
+
+    await expect(service.deleteRole('server-1', 'role-1')).rejects.toThrow(ConflictException);
+    // delete must NOT be called
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
+
+  it('does not delete when assigned; role still intact (guard prevents deletion)', async () => {
+    // Same as above — explicit check that delete is never reached
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      return makeSelectChain(callCount === 1 ? [{ id: 'role-1' }] : [{ id: 'mem-1' }]);
+    });
+
+    try {
+      await service.deleteRole('server-1', 'role-1');
+    } catch {
+      // expected ConflictException
+    }
+
+    expect(mockDelete).not.toHaveBeenCalled();
   });
 });
 
