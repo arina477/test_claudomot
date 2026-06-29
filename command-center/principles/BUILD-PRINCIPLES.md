@@ -69,3 +69,6 @@ Promoted at L-2 Distill from `process/waves/wave-<N>/blocks/L/observations.md` b
 
 1. Boot the production-built artifact in a prod-like container and exercise its runtime config before merge.
    Why: Config and build-arg defects pass local and CI green but surface only on first prod boot.
+
+2. Push the branch to origin after every B-block and D-block stage before starting the next stage.
+   Why: A worker restart resets the local tree; unpushed commits are permanently lost.
