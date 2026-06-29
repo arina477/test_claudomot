@@ -82,17 +82,17 @@ export class FilesController {
     @Req() req: SessionAugmentedRequest,
     @Body() body: ConfirmAvatarBody,
   ): Promise<{ avatarUrl: string }> {
+    const userId = req.session.getUserId();
+
     const key = body?.key;
-    if (typeof key !== 'string' || !key.startsWith('avatars/')) {
-      throw new BadRequestException('key must be a valid avatar key');
+    if (typeof key !== 'string' || !key.startsWith(`avatars/${userId}/`)) {
+      throw new BadRequestException('key must be a valid avatar key scoped to the requesting user');
     }
 
     const publicUrl = this.filesService.resolvePublicUrl(key);
     if (!publicUrl) {
       throw new BadRequestException('Storage not configured — cannot resolve avatar URL');
     }
-
-    const userId = req.session.getUserId();
     await this.usersService.setAvatarUrl(userId, publicUrl);
 
     return { avatarUrl: publicUrl };
