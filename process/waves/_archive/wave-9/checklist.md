@@ -60,6 +60,6 @@ LEARN:
 - [x] L-2 Distill (3 tasks done; CI-PRINCIPLES bypass adjudicated — 4 reverted, 1 re-promoted; deploy-verification rule)
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
+- [x] N-1 Survey & triggers (head-next APPROVED; decomposition fired, RBAC bundle authored — commit 73791d8)
+- [x] N-2 Seed (head-next APPROVED; RBAC seed + 3 siblings DB-validated; claimed_task_ids=[35f191f4,2c927c44,7a10f13d,0b9bcf35])
 - [ ] N-3 Handoff
