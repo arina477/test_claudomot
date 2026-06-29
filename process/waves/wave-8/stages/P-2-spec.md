@@ -1,0 +1,2 @@
+# Wave 8 — P-2 Spec (pointer)
+Source: task c7443638 .description (4-block multi-spec). M2 invites/join: two-tier invite backend CSPRNG (c7443638); preview[public,minimal]+join[verified,atomic max_uses] API (77e2041a); invite-join page (72fc08ea); invite-create/share UI (54407e1d). design_gap_flag TRUE-delta. SECURITY load-bearing (CSPRNG non-enumerable codes, verified-join, atomic max_uses, minimal preview, idempotent re-join) → T-8 mandatory. Bare paths. NO RBAC/realtime.
