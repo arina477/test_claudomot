@@ -1,4 +1,14 @@
 <!DOCTYPE html>
+<!--
+  ⚠️ SUPERSEDED ROLES TAB (wave-10 D-3). The "Roles & Permissions" tab in this
+  file uses a permission × channel MATRIX, which the M2 RBAC spec EXPLICITLY
+  FORBIDS (no permission-matrix / custom-builder; the model is a SMALL FIXED set
+  of 4 boolean flags: manage_server / manage_roles / manage_channels /
+  manage_members). The CANONICAL, spec-compliant roles-management surface is
+  `design/server-roles.html` (adopted wave-10). Implement the Roles tab of
+  server settings from `design/server-roles.html`, NOT from the matrix below.
+  The Overview / Members / Channels / Invites shell here remains valid prior art.
+-->
 <html lang="en" class="antialiased dark">
 <head>
     <meta charset="UTF-8">

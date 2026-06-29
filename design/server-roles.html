@@ -10,18 +10,10 @@
     palette_choice: surface-950 base, emerald accent, amber alerts
     -->
 
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-
-    <!-- Geist Typography (Primary) & Geist Mono -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-    <!-- Tailwind Config & Custom CSS -->
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -45,6 +37,11 @@
                             amber: '#f59e0b',
                         },
                         danger: '#ef4444',
+                        hairline: 'rgba(255,255,255,0.06)' // Fix 8: Native tailwind class integration
+                    },
+                    borderColor: {
+                        hairline: 'rgba(255,255,255,0.06)',
+                        hover: 'rgba(255,255,255,0.10)'
                     },
                     boxShadow: {
                         'sm': '0 1px 2px rgba(0,0,0,0.4)',
@@ -56,10 +53,10 @@
                     animation: {
                         'shimmer': 'shimmer 2s infinite linear',
                         'fade-in-up': 'fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'fade-in': 'fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards',
                         'slide-in-right': 'slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
                         'slide-out-right': 'slideOutRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-                        'shake': 'shake 0.4s cubic-bezier(.36,.07,.19,.97) both',
-                        'spin': 'spin 1s linear infinite'
+                        'zoom-in': 'zoomIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards'
                     },
                     keyframes: {
                         shimmer: {
@@ -70,6 +67,10 @@
                             '0%': { opacity: '0', transform: 'translateY(8px)' },
                             '100%': { opacity: '1', transform: 'translateY(0)' }
                         },
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' }
+                        },
                         slideInRight: {
                             '0%': { transform: 'translateX(100%)', opacity: '0' },
                             '100%': { transform: 'translateX(0)', opacity: '1' }
@@ -78,15 +79,9 @@
                             '0%': { transform: 'translateX(0)', opacity: '1' },
                             '100%': { transform: 'translateX(100%)', opacity: '0' }
                         },
-                        shake: {
-                            '10%, 90%': { transform: 'translate3d(-1px, 0, 0)' },
-                            '20%, 80%': { transform: 'translate3d(2px, 0, 0)' },
-                            '30%, 50%, 70%': { transform: 'translate3d(-4px, 0, 0)' },
-                            '40%, 60%': { transform: 'translate3d(4px, 0, 0)' }
-                        },
-                        spin: {
-                            '0%': { transform: 'rotate(0deg)' },
-                            '100%': { transform: 'rotate(360deg)' }
+                        zoomIn: {
+                            '0%': { opacity: '0', transform: 'scale(0.95) translateY(10px)' },
+                            '100%': { opacity: '1', transform: 'scale(1) translateY(0)' }
                         }
                     }
                 }
@@ -96,8 +91,6 @@
 
     <style>
         :root {
-            --border-hairline: rgba(255,255,255,0.06);
-            --border-hover: rgba(255,255,255,0.10);
             --text-primary: rgba(255,255,255,0.92);
             --text-secondary: rgba(255,255,255,0.60);
             --text-muted: rgba(255,255,255,0.40);
@@ -109,58 +102,30 @@
             letter-spacing: -0.01em;
         }
 
-        /* Input Focus Discipline */
-        *:focus-visible {
-            outline: none;
-            box-shadow: 0 0 0 2px theme('colors.surface.950'), 0 0 0 4px theme('colors.accent.emerald');
+        /* Fix 1: Universal Accessible Focus Discipline */
+        /* Removed the dangerous !ring-0 suppression and applied explicit glows */
+        a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [tabindex="0"]:focus-visible {
+            outline: none !important;
+            box-shadow: 0 0 0 2px theme('colors.surface.950'), 0 0 0 4px theme('colors.accent.emerald') !important;
             border-radius: inherit;
-        }
-        
-        input:focus-visible, select:focus-visible {
-            border-color: theme('colors.accent.emerald');
         }
 
         input[aria-invalid="true"]:focus-visible, select[aria-invalid="true"]:focus-visible {
-            box-shadow: 0 0 0 2px theme('colors.surface.950'), 0 0 0 4px theme('colors.danger');
+            box-shadow: 0 0 0 2px theme('colors.surface.950'), 0 0 0 4px theme('colors.danger') !important;
             border-color: theme('colors.danger');
         }
 
-        /* Custom Scrollbar for dense lists */
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: theme('colors.surface.600');
-            border-radius: 9999px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: theme('colors.surface.500');
-        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: theme('colors.surface.600'); border-radius: 9999px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: theme('colors.surface.500'); }
 
-        .scroll-container {
-            -webkit-overflow-scrolling: touch;
-            will-change: scroll-position;
-        }
-
-        /* Stagger Cascade */
-        .stagger-1 { animation-delay: 50ms; }
-        .stagger-2 { animation-delay: 150ms; }
-        .stagger-3 { animation-delay: 250ms; }
-
-        /* Liquid Refraction Panel */
         .panel-refraction {
             background: theme('colors.surface.800');
-            box-shadow: 
-                0 4px 24px -1px rgba(0,0,0,0.5),
-                inset 0 1px 0 0 rgba(255,255,255,0.05);
-            border: 1px solid var(--border-hairline);
+            box-shadow: 0 4px 24px -1px rgba(0,0,0,0.5), inset 0 1px 0 0 rgba(255,255,255,0.05);
+            border: 1px solid theme('colors.border.hairline');
         }
 
-        /* Premium iOS-style Toggle Switch for 4-Flags & Visibility */
         .role-switch {
             appearance: none;
             width: 36px;
@@ -170,7 +135,7 @@
             position: relative;
             cursor: pointer;
             transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s;
-            border: 1px solid transparent;
+            border: 1px solid theme('colors.border.hairline');
             margin: 0;
             display: grid;
             place-items: center;
@@ -200,12 +165,8 @@
             background-color: theme('colors.surface.700');
         }
 
-        /* Active Physical Press */
-        .btn-press:active:not(:disabled) {
-            transform: scale(0.98);
-        }
+        .btn-press:active:not(:disabled) { transform: scale(0.98); }
         
-        /* Select Caret Reset */
         .native-select-caret {
             background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='rgba(255,255,255,0.6)' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M4 6l4 4 4-4'/%3e%3c/svg%3e");
             background-position: right 0.75rem center;
@@ -213,12 +174,17 @@
             background-size: 1.25em 1.25em;
         }
 
-        /* Dimmed State for Saving */
         .saving-dimmed {
             pointer-events: none;
             opacity: 0.6;
-            filter: grayscale(10%);
+            filter: grayscale(20%);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* Modal Backdrop */
+        .modal-backdrop {
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
         }
     </style>
 </head>
@@ -227,25 +193,22 @@
     <!-- OVERRIDE: STATE SWITCHER FOR REVIEWERS -->
     <div role="region" aria-label="Reviewer Controls" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] bg-surface-900/95 backdrop-blur-xl border border-white/10 rounded-full shadow-pop p-1.5 flex gap-1 items-center overflow-x-auto max-w-[90vw]">
         <span class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-text-muted border-r border-hairline mr-1">States</span>
-        <button id="btn-state-loaded" onclick="switchState('loaded')" class="state-btn px-3 py-1.5 rounded-full text-xs font-medium text-white bg-surface-700 transition-colors focus-visible:ring-2 focus-visible:ring-accent-emerald focus-visible:outline-none shrink-0" aria-current="true">Loaded</button>
-        <button id="btn-state-loading" onclick="switchState('loading')" class="state-btn px-3 py-1.5 rounded-full text-xs font-medium text-text-secondary hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-accent-emerald focus-visible:outline-none shrink-0">Loading</button>
-        <button id="btn-state-empty" onclick="switchState('empty')" class="state-btn px-3 py-1.5 rounded-full text-xs font-medium text-text-secondary hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-accent-emerald focus-visible:outline-none shrink-0">Empty</button>
-        <button id="btn-state-saving" onclick="switchState('saving')" class="state-btn px-3 py-1.5 rounded-full text-xs font-medium text-text-secondary hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-accent-emerald focus-visible:outline-none shrink-0">Saving</button>
-        <button id="btn-state-error" onclick="switchState('error')" class="state-btn px-3 py-1.5 rounded-full text-xs font-medium text-text-secondary hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-accent-emerald focus-visible:outline-none shrink-0">Error</button>
+        <button id="btn-state-loaded" onclick="switchState('loaded')" class="state-btn px-3 py-1.5 rounded-full text-xs font-medium text-white bg-surface-700 transition-colors shrink-0" aria-current="true">Loaded</button>
+        <button id="btn-state-loading" onclick="switchState('loading')" class="state-btn px-3 py-1.5 rounded-full text-xs font-medium text-text-secondary hover:text-white transition-colors shrink-0">Loading</button>
+        <button id="btn-state-empty" onclick="switchState('empty')" class="state-btn px-3 py-1.5 rounded-full text-xs font-medium text-text-secondary hover:text-white transition-colors shrink-0">Empty</button>
+        <button id="btn-state-saving" onclick="switchState('saving')" class="state-btn px-3 py-1.5 rounded-full text-xs font-medium text-text-secondary hover:text-white transition-colors shrink-0">Saving (Mock)</button>
+        <button id="btn-state-error-load" onclick="switchState('error-load')" class="state-btn px-3 py-1.5 rounded-full text-xs font-medium text-text-secondary hover:text-white transition-colors shrink-0">Load Error</button>
+        <button id="btn-state-error-save" onclick="mockSave(true)" class="state-btn px-3 py-1.5 rounded-full text-xs font-medium text-danger hover:bg-danger/10 transition-colors shrink-0">Save 409 Reject</button>
     </div>
 
     <!-- TOAST REGION -->
-    <!-- Accessibility Note: Container receives elements that themselves are alerts/status -->
     <div id="toast-region" class="fixed top-6 right-6 lg:bottom-24 lg:top-auto z-[60] flex flex-col gap-3 pointer-events-none"></div>
 
     <!-- ========================= MACRO: SETTINGS SHELL ========================= -->
     
-    <!-- LEFT SIDEBAR: Nav & Context -->
-    <aside class="w-full lg:w-60 shrink-0 bg-surface-900 border-b lg:border-b-0 lg:border-r border-[var(--border-hairline)] flex flex-col h-auto lg:h-[100dvh] z-20">
-        
-        <!-- Context Header -->
-        <div class="p-4 flex items-center gap-3 border-b border-[var(--border-hairline)] h-16 shrink-0 relative hover:bg-white/[0.02] transition-colors cursor-pointer group focus-visible:ring-inset">
-            <div class="h-10 w-10 rounded-lg overflow-hidden shrink-0 border border-white/10 shadow-sm relative shadow-black bg-surface-800 flex items-center justify-center">
+    <aside class="w-full lg:w-60 shrink-0 bg-surface-900 border-b lg:border-b-0 lg:border-r border-hairline flex flex-col h-auto lg:h-[100dvh] z-20">
+        <div tabindex="0" role="button" aria-label="Server Context Menu for CS 410" class="p-4 flex items-center gap-3 border-b border-hairline h-16 shrink-0 relative hover:bg-white/[0.02] transition-colors cursor-pointer group">
+            <div class="h-10 w-10 rounded-lg overflow-hidden shrink-0 border border-white/10 shadow-sm relative bg-surface-800 flex items-center justify-center">
                 <i class="ph ph-books text-xl text-text-secondary"></i>
             </div>
             <div class="flex flex-col overflow-hidden">
@@ -254,12 +217,10 @@
             </div>
         </div>
 
-        <!-- Navigation -->
         <nav class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-1">
             <a href="#" class="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-[var(--text-secondary)] hover:text-white hover:bg-surface-800 transition-all rounded-[6px]">
                 <i class="ph ph-info text-lg"></i> Overview
             </a>
-            <!-- Active Nav Item -->
             <a href="#" class="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-accent-emerald bg-accent-emerald/10 relative transition-all shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] rounded-[6px]" aria-current="page">
                 <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-3/5 bg-accent-emerald rounded-r-full"></div>
                 <i class="ph-fill ph-shield-check text-lg"></i> Roles
@@ -272,8 +233,7 @@
             </a>
         </nav>
         
-        <!-- Connection State (The Wedge) -->
-        <div class="p-4 border-t border-[var(--border-hairline)] bg-surface-950 mt-auto shrink-0 flex items-center gap-3">
+        <div class="p-4 border-t border-hairline bg-surface-950 mt-auto shrink-0 flex items-center gap-3">
              <div class="relative w-8 h-8 rounded-full bg-surface-700 border border-white/5 flex items-center justify-center overflow-hidden shrink-0">
                  <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80" alt="Jane Doe Avatar" class="w-full h-full object-cover">
              </div>
@@ -286,29 +246,25 @@
         </div>
     </aside>
 
-    <!-- MAIN CONTENT AREA -->
     <main class="flex-1 flex flex-col h-[100dvh] relative overflow-hidden bg-surface-950">
         
-        <!-- Header Controls -->
-        <header class="h-16 shrink-0 border-b border-[var(--border-hairline)] flex items-center justify-between px-6 z-20 bg-surface-950/90 backdrop-blur-md pb-0">
+        <header class="h-16 shrink-0 border-b border-hairline flex items-center justify-between px-6 z-20 bg-surface-950/90 backdrop-blur-md pb-0">
             <h1 class="text-lg font-semibold tracking-tight text-white">Roles Management</h1>
             <button class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-surface-800 text-[var(--text-secondary)] hover:text-white transition-colors btn-press pointer-events-auto" aria-label="Close Settings">
                 <i class="ph ph-x text-lg"></i>
             </button>
         </header>
 
-        <!-- Scrollable Shell -->
         <div class="flex-1 overflow-y-auto custom-scrollbar scroll-container relative p-4 lg:p-8" id="main-scroll">
             <div class="max-w-[1100px] mx-auto flex flex-col w-full pb-16">
                 
-                <!-- GATED-CONTROLS NOTE (Visible across states mostly) -->
-                <div class="flex items-center gap-2.5 mb-6 text-sm text-text-muted">
+                <!-- GATING NOTE -->
+                <div class="flex items-center gap-2.5 mb-6 text-sm text-text-primary">
                     <i class="ph-fill ph-shield-check text-surface-500"></i>
                     <p>You only see controls you're allowed to use. Permissions are always enforced on the server.</p>
                 </div>
 
-
-                <!-- ========================= STATE 1: LOADING SKELETON ========================= -->
+                <!-- STATE: LOADING SKELETON -->
                 <div id="view-loading" class="hidden flex-col gap-6 w-full animate-pulse">
                     <div class="h-16 w-full bg-surface-900 rounded-lg border border-hairline relative overflow-hidden">
                         <div class="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/5 to-transparent"></div>
@@ -323,8 +279,8 @@
                     </div>
                 </div>
 
-                <!-- ========================= STATE 2: ERROR ========================= -->
-                <div id="view-error" class="hidden flex-col items-center justify-center py-32 px-4 text-center">
+                <!-- STATE: LOAD ERROR -->
+                <div id="view-error-load" class="hidden flex-col items-center justify-center py-32 px-4 text-center">
                     <div class="w-16 h-16 rounded-full bg-danger/10 border border-danger/20 flex items-center justify-center mb-5 shadow-sm">
                         <i class="ph-fill ph-warning-octagon text-3xl text-danger"></i>
                     </div>
@@ -332,12 +288,12 @@
                     <p class="text-sm text-text-muted max-w-sm mx-auto mb-6 leading-relaxed">
                         Check your connection and try again. If the issue persists, the server might be completely unavailable.
                     </p>
-                    <button class="h-9 px-4 rounded-md text-sm font-semibold bg-surface-800 text-white hover:bg-surface-700 transition-colors btn-press flex items-center gap-2 shadow-sm border border-hairline focus-visible:ring-offset-surface-950" onclick="switchState('loading'); setTimeout(() => switchState('loaded'), 1500)">
+                    <button class="h-9 px-4 rounded-md text-sm font-semibold bg-surface-800 text-white hover:bg-surface-700 transition-colors btn-press flex items-center gap-2 shadow-sm border border-hairline" onclick="switchState('loading'); setTimeout(() => switchState('loaded'), 1500)">
                         Retry Connection
                     </button>
                 </div>
 
-                <!-- ========================= STATE 3: EMPTY ========================= -->
+                <!-- STATE: EMPTY -->
                 <div id="view-empty" class="hidden flex-col items-center justify-center py-24 px-4 text-center border-t border-hairline border-dashed mt-8">
                     <div class="w-20 h-20 rounded-2xl bg-surface-900 border border-white/5 flex items-center justify-center mb-6 shadow-sm">
                         <i class="ph-fill ph-shield-check text-4xl text-surface-600"></i>
@@ -346,55 +302,67 @@
                     <p class="text-sm text-text-secondary max-w-md mx-auto mb-8 leading-relaxed">
                         No custom roles yet — only the default Member role. Create a role to get started and delegate access.
                     </p>
-                    <button class="h-10 px-5 rounded-md text-sm font-semibold bg-accent-emerald text-surface-950 hover:bg-accent-emerald/90 transition-colors btn-press flex items-center gap-2 shadow-glow-subtle focus-visible:ring-offset-surface-950">
+                    <button onclick="openModal('modal-create-role')" class="min-h-[44px] px-5 rounded-md text-sm font-semibold bg-accent-emerald text-surface-950 hover:bg-accent-emerald/90 transition-colors btn-press flex items-center gap-2 shadow-glow-subtle mx-auto">
                         <i class="ph ph-plus font-bold"></i> Create First Role
                     </button>
                 </div>
 
 
-                <!-- ========================= STATE 4/5: LOADED DATA (Active by default, wraps interactive layer) ========================= -->
+                <!-- STATE: LOADED DATA -->
                 <div id="view-loaded" class="flex flex-col gap-6 w-full animate-fade-in-up">
                     
-                    <!-- Mandatory Safeguard Note (Always visible) -->
-                    <div class="bg-accent-amber/10 border border-accent-amber/20 rounded-lg p-4 flex gap-3.5 items-start shadow-sm" role="status">
+                    <!-- Fix 2: Safeguard Contrast >=4.5:1 -->
+                    <!-- Background is tinted, title pure amber, body pure white. -->
+                    <div class="bg-surface-900 border border-accent-amber/30 border-l-4 border-l-accent-amber rounded-lg p-4 flex gap-3.5 items-start shadow-sm" role="status">
                         <i class="ph-fill ph-warning-circle text-accent-amber text-lg shrink-0 mt-0.5"></i>
                         <div class="flex-1">
                             <h3 class="text-sm font-semibold text-accent-amber mb-0.5">Last-Owner Safeguard Active</h3>
-                            <p class="text-[13px] text-accent-amber/80 leading-relaxed max-w-3xl">
+                            <p class="text-[13px] text-white leading-relaxed max-w-3xl">
                                 You cannot save changes that would lock you out of this server as the owner. The system will reject actions that demote your master privileges.
                             </p>
                         </div>
                     </div>
 
-                    <!-- Interactive Wrapper (Used for dimming during saves) -->
+                    <!-- Fix 12: Inline 409 Reject target -->
+                    <div id="inline-409-error" class="hidden bg-danger/10 border border-danger/30 rounded-lg p-4 flex gap-3.5 items-start shadow-sm" role="alert" aria-live="assertive">
+                        <i class="ph-fill ph-warning-octagon text-danger text-lg shrink-0 mt-0.5"></i>
+                        <div class="flex-1">
+                            <h3 class="text-sm font-semibold text-danger mb-0.5">Save Rejected by Server</h3>
+                            <p class="text-[13px] text-white leading-relaxed">
+                                Refused due to Last-Owner Protection constraint. You cannot remove necessary flags.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Wrapper -->
                     <div id="interactive-area" class="flex flex-col gap-6 transition-[opacity,filter]">
                         
-                        <!-- Layout: Role Rail (Left) + Editor (Right) -->
                         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[500px]">
                             
-                            <!-- Col 1: Roles List Rail -->
-                            <section class="lg:col-span-4 xl:col-span-3 flex flex-col bg-surface-900 border border-[var(--border-hairline)] rounded-xl panel-refraction h-fit lg:sticky lg:top-8 overflow-hidden shadow-sm">
-                                <div class="p-4 border-b border-[var(--border-hairline)] flex items-center justify-between bg-surface-950/20">
+                            <!-- Col 1: Roles Nav Rail (Fix 4: Native button list without listbox) -->
+                            <section class="lg:col-span-4 xl:col-span-3 flex flex-col bg-surface-900 border border-hairline rounded-xl panel-refraction h-fit lg:sticky lg:top-8 overflow-hidden shadow-sm">
+                                <div class="p-4 border-b border-hairline flex items-center justify-between bg-surface-950/20">
                                     <h2 class="text-sm font-semibold text-white">Roles <span class="text-text-muted font-normal ml-1">3/20</span></h2>
-                                    <button class="w-7 h-7 rounded bg-surface-800 border border-hairline flex items-center justify-center text-text-secondary hover:text-white hover:bg-surface-700 transition-colors btn-press" aria-label="Add Role">
+                                    <button onclick="openModal('modal-create-role')" class="w-8 h-8 rounded bg-surface-800 border border-hairline flex items-center justify-center text-text-secondary hover:text-white hover:bg-surface-700 transition-colors btn-press" aria-label="Add Role">
                                         <i class="ph ph-plus"></i>
                                     </button>
                                 </div>
                                 
-                                <ul class="p-2 space-y-1" role="listbox" aria-label="Server Roles">
-                                    <!-- Owner (Immutable) -->
+                                <ul class="p-2 space-y-1" aria-label="Server Roles Navigation">
+                                    <!-- Fix 3 & 4: Owner (Immutable) aria-disabled="true" -->
                                     <li>
-                                        <button class="w-full flex items-center justify-between px-3 py-2.5 rounded-md hover:bg-surface-800 transition-colors group opacity-60 cursor-not-allowed focus-visible:ring-inset" role="option" aria-selected="false">
+                                        <button aria-disabled="true" class="w-full flex items-center justify-between px-3 py-2.5 min-h-[44px] rounded-md hover:bg-surface-800 transition-colors group opacity-60 cursor-not-allowed">
                                             <div class="flex items-center gap-3">
                                                 <div class="w-2.5 h-2.5 rounded-full bg-accent-amber"></div>
                                                 <span class="text-sm text-text-primary font-medium truncate">@Owner</span>
                                             </div>
-                                            <i class="ph-fill ph-crown text-text-muted text-[13px]" title="Superuser (Immutable)"></i>
+                                            <i class="ph-fill ph-crown text-text-muted text-[13px]"></i>
+                                            <span class="sr-only">Read-only superuser role</span>
                                         </button>
                                     </li>
                                     <!-- Selected Custom Role -->
                                     <li>
-                                        <button class="w-full flex items-center justify-between px-3 py-2.5 rounded-md bg-surface-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] border border-[var(--border-hairline)] relative group focus-visible:ring-inset" role="option" aria-selected="true" id="role-ta">
+                                        <button class="w-full flex items-center justify-between px-3 py-2.5 min-h-[44px] rounded-md bg-surface-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] border border-hairline relative group" aria-current="true">
                                             <div class="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-accent-emerald rounded-r-full"></div>
                                             <div class="flex items-center gap-3 pl-1">
                                                 <div class="w-2.5 h-2.5 rounded-full bg-accent-emerald"></div>
@@ -405,7 +373,7 @@
                                     </li>
                                     <!-- Base Member -->
                                     <li>
-                                        <button class="w-full flex items-center justify-between px-3 py-2.5 rounded-md hover:bg-surface-800 transition-colors group focus-visible:ring-inset" role="option" aria-selected="false">
+                                        <button class="w-full flex items-center justify-between px-3 py-2.5 min-h-[44px] rounded-md hover:bg-surface-800 transition-colors group">
                                             <div class="flex items-center gap-3">
                                                 <div class="w-2.5 h-2.5 rounded-full bg-surface-500 border border-white/20"></div>
                                                 <span class="text-sm text-text-secondary group-hover:text-text-primary transition-colors font-medium truncate">@member</span>
@@ -414,79 +382,79 @@
                                     </li>
                                 </ul>
                                 <div class="p-4 bg-surface-950/30 border-t border-hairline mt-auto">
-                                    <p class="text-xs text-text-muted text-center leading-relaxed">Roles lower in the list inherit hierarchy priorities naturally.</p>
+                                    <p class="text-xs text-text-muted text-center leading-relaxed">Roles lower in the list inherit priorities naturally.</p>
                                 </div>
                             </section>
 
                             <!-- Col 2: Role Editor Plane -->
-                            <section id="editor-plane" class="lg:col-span-8 xl:col-span-9 flex flex-col bg-surface-800 border border-[var(--border-hairline)] rounded-xl relative shadow-sm h-full max-h-[700px] overflow-hidden flex-shrink-0">
+                            <section id="editor-plane" class="lg:col-span-8 xl:col-span-9 flex flex-col bg-surface-800 border border-hairline rounded-xl relative shadow-sm h-full max-h-[700px] overflow-hidden flex-shrink-0">
                                 
-                                <!-- Header: Name & Delete -->
-                                <div class="p-6 border-b border-[var(--border-hairline)] flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-900/50 rounded-t-xl shrink-0">
+                                <div class="p-6 border-b border-hairline flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-900/50 rounded-t-xl shrink-0">
                                     <div class="flex items-center gap-4 w-full sm:w-auto">
-                                        <button class="w-10 h-10 shrink-0 rounded-lg border border-[var(--border-hairline)] bg-surface-950 flex items-center justify-center hover:bg-surface-800 transition-colors btn-press shadow-sm group focus-visible:ring-2 focus-visible:ring-accent-emerald" aria-label="Change role color">
+                                        <button class="w-10 h-10 shrink-0 rounded-lg border border-hairline bg-surface-950 flex items-center justify-center hover:bg-surface-800 transition-colors btn-press shadow-sm group" title="Color customization optional">
                                             <div class="w-4 h-4 rounded-full bg-accent-emerald shadow-sm group-hover:scale-110 transition-transform"></div>
                                         </button>
                                         <div class="flex-1">
-                                            <input type="text" value="TA (Admin)" class="w-full bg-transparent border border-transparent hover:border-hairline hover:bg-surface-950 rounded px-2 py-1 -ml-2 text-lg font-semibold text-white transition-all focus:bg-surface-950 focus:border-accent-emerald focus:ring-1 focus:ring-accent-emerald" aria-label="Role Name">
+                                            <input type="text" value="TA (Admin)" class="w-full min-h-[44px] bg-transparent border border-transparent hover:border-hairline hover:bg-surface-950 rounded px-2 py-1 -ml-2 text-lg font-semibold text-white transition-all focus:bg-surface-950 focus:border-accent-emerald" aria-label="Role Name">
                                         </div>
                                     </div>
-                                    <button class="shrink-0 h-9 px-3 bg-danger/10 text-danger hover:bg-danger/20 border border-danger/20 rounded-md text-[13px] font-medium transition-colors flex items-center justify-center gap-1.5 btn-press whitespace-nowrap">
+                                    <!-- Fix 2: Accessible Destructive Button Contrast -->
+                                    <button onclick="openModal('modal-delete-role')" class="shrink-0 h-10 px-4 bg-surface-900 text-danger hover:bg-danger/20 border border-danger/50 rounded-md text-[13px] font-medium transition-colors flex items-center justify-center gap-1.5 btn-press whitespace-nowrap">
                                         <i class="ph ph-trash"></i> Delete Role
                                     </button>
                                 </div>
 
                                 <div class="flex-1 flex flex-col xl:flex-row overflow-y-auto custom-scrollbar">
-                                    <!-- LEFT PANE: 4 Fixed Flags (Strict brief requirement) -->
-                                    <div class="flex-1 p-6 border-b xl:border-b-0 xl:border-r border-[var(--border-hairline)]">
+                                    <!-- LEFT PANE: 4 Fixed Flags -->
+                                    <div class="flex-1 p-6 border-b xl:border-b-0 xl:border-r border-hairline">
                                         <div class="mb-4">
                                             <h3 class="text-[11px] font-semibold tracking-wider text-text-muted uppercase mb-1">Server Architecture</h3>
-                                            <p class="text-xs text-text-secondary leading-relaxed">Core permissions granted universally across the server space. No custom builder allowed.</p>
+                                            <p class="text-xs text-text-secondary leading-relaxed">Core permissions granted universally across the server space.</p>
                                         </div>
                                         
                                         <div class="space-y-2 mt-6">
                                             
-                                            <!-- Flag 1 (Example of Gated Control) -->
-                                            <label class="flex items-start justify-between p-4 rounded-lg border border-hairline bg-surface-900/50 hover:bg-surface-900 transition-colors group cursor-not-allowed opacity-50 focus-within:ring-2 focus-within:ring-accent-emerald focus-within:ring-inset" title="Requires Manage Roles">
+                                            <!-- Fix 6 & 11: Accessible Gated Description + min-h -->
+                                            <div id="desc-gated-manage" class="sr-only">Requires Manage Roles permission to modify.</div>
+                                            <label class="flex items-start justify-between p-4 min-h-[44px] rounded-lg border border-hairline bg-surface-900/50 hover:bg-surface-900 transition-colors group cursor-not-allowed opacity-50 relative">
                                                 <div class="flex flex-col pr-4">
                                                     <span class="text-sm font-medium text-white mb-1 flex items-center gap-1.5">
                                                         Manage Server
                                                         <i class="ph-fill ph-lock-key text-[10px] text-text-muted" aria-hidden="true"></i>
                                                     </span>
-                                                    <span class="text-[13px] text-text-secondary leading-snug">Edit server name, region, and top-level settings structural settings.</span>
+                                                    <span class="text-[13px] text-text-secondary leading-snug">Edit server name, region, and top-level settings.</span>
                                                 </div>
-                                                <input type="checkbox" disabled class="role-switch shrink-0 mt-1 focus-visible:!ring-0 cursor-not-allowed disabled:bg-surface-700" aria-label="Manage Server Toggle (Disabled)">
+                                                <input type="checkbox" disabled class="role-switch shrink-0 mt-1 cursor-not-allowed disabled:bg-surface-700 disabled:border-hairline" aria-label="Manage Server" aria-describedby="desc-gated-manage">
                                             </label>
 
-                                            <!-- Flag 2 (DANGER - Linked to safeguard alert via JS later if we keep it, otherwise static) -->
-                                            <label id="manage-roles-wrapper" class="flex items-start justify-between p-4 rounded-lg border border-hairline bg-surface-900/50 hover:bg-surface-900 transition-colors group cursor-pointer relative overflow-hidden focus-within:ring-2 focus-within:ring-accent-emerald focus-within:ring-inset">
+                                            <!-- Fix 10: Reactive Safeguard Simulation on Toggle -->
+                                            <label class="flex items-start justify-between p-4 min-h-[44px] rounded-lg border border-hairline bg-surface-900/50 hover:bg-surface-900 transition-colors group cursor-pointer relative overflow-hidden">
                                                 <div class="absolute left-0 top-0 bottom-0 w-[2px] bg-accent-amber/50"></div>
                                                 <div class="flex flex-col pr-4 pl-1">
                                                     <span class="text-sm font-medium text-white mb-1 flex items-center gap-2">
                                                         Manage Roles
-                                                        <i class="ph-fill ph-warning text-accent-amber text-sm" title="Modifying this affects the Owner Safeguard" aria-hidden="true"></i>
+                                                        <i class="ph-fill ph-warning text-accent-amber text-sm" aria-hidden="true"></i>
+                                                        <span class="sr-only">Caution: removing this alters owner protections</span>
                                                     </span>
                                                     <span class="text-[13px] text-text-secondary leading-snug">Create, edit, and assign roles. Removing this may trigger the owner safeguard.</span>
                                                 </div>
-                                                <input type="checkbox" id="manage-roles-toggle" checked class="role-switch shrink-0 mt-1 focus-visible:!ring-0" aria-label="Manage Roles Toggle">
+                                                <input type="checkbox" id="reactive-safeguard-toggle" checked onclick="handleSafeguardToggle(event)" class="role-switch shrink-0 mt-1" aria-label="Manage Roles">
                                             </label>
 
-                                            <!-- Flag 3 -->
-                                            <label class="flex items-start justify-between p-4 rounded-lg border border-hairline bg-surface-900/50 hover:bg-surface-900 transition-colors group cursor-pointer focus-within:ring-2 focus-within:ring-accent-emerald focus-within:ring-inset">
+                                            <label class="flex items-start justify-between p-4 min-h-[44px] rounded-lg border border-hairline bg-surface-900/50 hover:bg-surface-900 transition-colors group cursor-pointer">
                                                 <div class="flex flex-col pr-4">
                                                     <span class="text-sm font-medium text-white mb-1">Manage Channels</span>
                                                     <span class="text-[13px] text-text-secondary leading-snug">Create new channels, rename existing ones, or delete categories.</span>
                                                 </div>
-                                                <input type="checkbox" checked class="role-switch shrink-0 mt-1 focus-visible:!ring-0" aria-label="Manage Channels Toggle">
+                                                <input type="checkbox" checked class="role-switch shrink-0 mt-1" aria-label="Manage Channels">
                                             </label>
 
-                                            <!-- Flag 4 -->
-                                            <label class="flex items-start justify-between p-4 rounded-lg border border-hairline bg-surface-900/50 hover:bg-surface-900 transition-colors group cursor-pointer focus-within:ring-2 focus-within:ring-accent-emerald focus-within:ring-inset">
+                                            <label class="flex items-start justify-between p-4 min-h-[44px] rounded-lg border border-hairline bg-surface-900/50 hover:bg-surface-900 transition-colors group cursor-pointer">
                                                 <div class="flex flex-col pr-4">
                                                     <span class="text-sm font-medium text-white mb-1">Manage Members</span>
-                                                    <span class="text-[13px] text-text-secondary leading-snug">Kick, ban, or assign roles to other members in the server space.</span>
+                                                    <span class="text-[13px] text-text-secondary leading-snug">Kick, ban, or assign roles to other members.</span>
                                                 </div>
-                                                <input type="checkbox" class="role-switch shrink-0 mt-1 focus-visible:!ring-0" aria-label="Manage Members Toggle">
+                                                <input type="checkbox" class="role-switch shrink-0 mt-1" aria-label="Manage Members">
                                             </label>
 
                                         </div>
@@ -496,29 +464,30 @@
                                     <div class="flex-1 p-6 bg-surface-900/20">
                                          <div class="mb-4">
                                             <h3 class="text-[11px] font-semibold tracking-wider text-text-muted uppercase mb-1">Channel Visibility</h3>
-                                            <p class="text-xs text-text-secondary leading-relaxed">Explicitly define if this role can view and access specific channels.</p>
+                                            <p class="text-xs text-text-secondary leading-relaxed">Explicitly define if this role can view specific channels.</p>
                                         </div>
                                         
-                                        <!-- Visibility Surface (Clean List, NO MATRIX) -->
                                         <div class="mt-6 border border-hairline rounded-lg bg-surface-900 overflow-hidden divide-y divide-hairline">
                                             
-                                            <!-- Header row -->
-                                            <div class="flex items-center justify-between p-3 bg-surface-950/50">
+                                            <div class="flex items-center justify-between p-3 bg-surface-950/50 min-h-[44px]">
                                                 <span class="text-[11px] font-semibold uppercase text-text-muted">Channel</span>
                                                 <span class="text-[11px] font-semibold uppercase text-text-muted mr-1">Can View</span>
                                             </div>
 
-                                            <!-- Item: general -->
-                                            <label class="flex items-center justify-between p-3 hover:bg-surface-800 transition-colors cursor-pointer group focus-within:bg-surface-800">
+                                            <!-- Fix 5 & 11: Visibility state not by color alone. Label/Screen reader explicitly handles it. -->
+                                            <label class="flex items-center justify-between p-3 min-h-[44px] hover:bg-surface-800 transition-colors cursor-pointer group">
                                                 <div class="flex items-center gap-3">
                                                     <i class="ph ph-hash text-lg text-text-secondary group-hover:text-white transition-colors" aria-hidden="true"></i>
                                                     <span class="text-[13px] font-medium text-white font-mono tracking-tight">general</span>
                                                 </div>
-                                                <input type="checkbox" checked class="role-switch w-8 h-4 before:w-3 before:h-3 before:top-[1px] before:left-[1px] checked:before:translate-x-[15px]" aria-label="Can view general channel">
+                                                <div class="flex items-center gap-3">
+                                                    <span class="text-xs text-accent-emerald font-medium visible-label" aria-hidden="true">Visible</span>
+                                                    <input type="checkbox" checked onchange="updateVisibilityText(this)" class="role-switch w-8 h-4 before:w-3 before:h-3 before:top-[1px] before:left-[1px] checked:before:translate-x-[15px]" aria-label="Can view general channel (Visible)">
+                                                </div>
                                             </label>
 
                                             <!-- Item: assignments (Private/Denied state) -->
-                                            <label class="flex items-center justify-between p-3 hover:bg-surface-800 transition-colors cursor-pointer group focus-within:bg-surface-800 bg-surface-950/30">
+                                            <label class="flex items-center justify-between p-3 min-h-[44px] hover:bg-surface-800 transition-colors cursor-pointer group bg-surface-950/30">
                                                 <div class="flex items-center gap-3">
                                                     <div class="relative">
                                                         <i class="ph ph-clipboard-text text-lg text-text-muted" aria-hidden="true"></i>
@@ -526,47 +495,38 @@
                                                     </div>
                                                     <span class="text-[13px] font-medium text-text-muted font-mono tracking-tight">assignments</span>
                                                 </div>
-                                                <input type="checkbox" class="role-switch w-8 h-4 before:w-3 before:h-3 before:top-[1px] before:left-[1px] checked:before:translate-x-[15px] border-hairline bg-transparent hover:border-text-muted before:bg-text-secondary checked:before:bg-white" aria-label="Can view assignments channel">
+                                                <div class="flex items-center gap-3">
+                                                    <span class="text-xs text-text-muted font-medium visible-label" aria-hidden="true">Hidden</span>
+                                                    <input type="checkbox" onchange="updateVisibilityText(this)" class="role-switch w-8 h-4 before:w-3 before:h-3 before:top-[1px] before:left-[1px] checked:before:translate-x-[15px] border-hairline bg-transparent hover:border-text-muted before:bg-text-secondary checked:before:bg-white" aria-label="Can view assignments channel (Hidden)">
+                                                </div>
                                             </label>
 
-                                            <!-- Item: voice -->
-                                            <label class="flex items-center justify-between p-3 hover:bg-surface-800 transition-colors cursor-pointer group focus-within:bg-surface-800">
+                                            <label class="flex items-center justify-between p-3 min-h-[44px] hover:bg-surface-800 transition-colors cursor-pointer group">
                                                 <div class="flex items-center gap-3">
                                                     <i class="ph-fill ph-speaker-high text-lg text-text-secondary group-hover:text-white transition-colors" aria-hidden="true"></i>
                                                     <span class="text-[13px] font-medium text-white font-mono tracking-tight">Study Room</span>
                                                 </div>
-                                                <input type="checkbox" checked class="role-switch w-8 h-4 before:w-3 before:h-3 before:top-[1px] before:left-[1px] checked:before:translate-x-[15px]" aria-label="Can view Study Room voice channel">
-                                            </label>
-
-                                            <!-- Item: admin-only -->
-                                            <label class="flex items-center justify-between p-3 hover:bg-surface-800 transition-colors cursor-pointer group focus-within:bg-surface-800">
                                                 <div class="flex items-center gap-3">
-                                                    <div class="relative">
-                                                        <i class="ph ph-hash text-lg text-text-secondary group-hover:text-white transition-colors" aria-hidden="true"></i>
-                                                        <i class="ph-fill ph-lock-key text-[10px] text-accent-emerald absolute -bottom-1 -right-1 bg-surface-800 rounded-full"></i>
-                                                    </div>
-                                                    <span class="text-[13px] font-medium text-white font-mono tracking-tight">ta-backroom</span>
+                                                    <span class="text-xs text-accent-emerald font-medium visible-label" aria-hidden="true">Visible</span>
+                                                    <input type="checkbox" checked onchange="updateVisibilityText(this)" class="role-switch w-8 h-4 before:w-3 before:h-3 before:top-[1px] before:left-[1px] checked:before:translate-x-[15px]" aria-label="Can view Study Room voice channel (Visible)">
                                                 </div>
-                                                <input type="checkbox" checked class="role-switch w-8 h-4 before:w-3 before:h-3 before:top-[1px] before:left-[1px] checked:before:translate-x-[15px]" aria-label="Can view ta-backroom channel">
                                             </label>
+                                            
                                         </div>
                                         <div class="mt-4 flex gap-2 p-3 bg-surface-950 rounded border border-hairline">
                                              <i class="ph ph-eye-slash text-text-muted mt-0.5"></i>
-                                             <p class="text-[11px] text-text-muted leading-relaxed">Channels toggled OFF are completely hidden from users with this role, overriding standard read permissions.</p>
+                                             <p class="text-[11px] text-text-muted leading-relaxed">Channels toggled OFF are completely hidden from users, overriding standard read permissions.</p>
                                         </div>
                                     </div>
                                 </div>
                                 
-                                <!-- Static Footer for Save/Discard -->
-                                <div id="footer-actions" class="p-4 border-t border-[var(--border-hairline)] bg-surface-800/95 backdrop-blur-md flex items-center justify-between mt-auto rounded-b-xl z-20 shrink-0">
-                                    <div class="text-[13px] font-medium" id="save-status-text" aria-live="polite" role="status">
-                                        <!-- Dynamic text updated by JS internally if needed -->
-                                    </div>
+                                <div class="p-4 border-t border-hairline bg-surface-800/95 backdrop-blur-md flex items-center justify-between mt-auto rounded-b-xl z-20 shrink-0 min-h-[72px]">
+                                    <div class="text-[13px] font-medium" aria-live="polite" role="status"></div>
                                     <div class="flex gap-3">
-                                        <button class="h-9 px-4 rounded-md text-[13px] font-medium text-text-secondary hover:text-white hover:bg-surface-700 transition-colors btn-press pointer-events-auto">
+                                        <button class="h-10 px-4 rounded-md text-[13px] font-medium text-white bg-surface-700 border border-hairline shadow-sm hover:bg-surface-600 transition-colors btn-press pointer-events-auto">
                                             Discard
                                         </button>
-                                        <button id="save-role-btn" class="h-9 px-5 rounded-md text-[13px] font-semibold bg-accent-emerald text-surface-950 shadow-sm hover:bg-accent-emerald/90 transition-all btn-press focus-visible:ring-offset-surface-800 flex items-center justify-center min-w-[120px] pointer-events-auto" aria-busy="false">
+                                        <button id="save-role-btn" onclick="mockSave()" class="h-10 px-6 rounded-md text-[13px] font-semibold bg-accent-emerald text-surface-950 shadow-sm hover:bg-accent-emerald/90 transition-all btn-press focus-visible:ring-offset-surface-800 flex items-center justify-center min-w-[120px] pointer-events-auto" aria-busy="false">
                                             Save Changes
                                         </button>
                                     </div>
@@ -574,16 +534,16 @@
                             </section>
                         </div>
 
-                        <!-- ========================= SINGLE-ROLE ASSIGNMENT SECTION ========================= -->
-                        <section class="bg-surface-900 border border-[var(--border-hairline)] rounded-xl panel-refraction shadow-sm">
-                             <div class="p-5 border-b border-[var(--border-hairline)] flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <!-- MEMBER ASSIGNMENT SECTION (Single-role <select>) -->
+                        <section class="bg-surface-900 border border-hairline rounded-xl panel-refraction shadow-sm mb-[120px] lg:mb-12">
+                             <div class="p-5 border-b border-hairline flex flex-col md:flex-row md:items-center justify-between gap-4">
                                  <div>
                                      <h2 class="text-[15px] font-semibold text-white tracking-tight">Member Assignment</h2>
                                      <p class="text-[13px] text-[var(--text-muted)] mt-1">Assign exactly one primary role per member below.</p>
                                  </div>
                                  <div class="relative w-full md:w-64">
-                                     <input type="text" placeholder="Search by name..." class="w-full h-9 pl-9 pr-3 bg-surface-950 border border-[var(--border-hairline)] rounded-md text-[13px] text-white transition-all placeholder-[var(--text-muted)] group hover:border-border-hover focus:border-accent-emerald" aria-label="Search members">
-                                     <i class="ph ph-magnifying-glass absolute left-3 top-2.5 text-[var(--text-muted)] text-[15px]"></i>
+                                     <input type="text" placeholder="Search by name..." class="w-full h-10 pl-9 pr-3 bg-surface-950 border border-hairline rounded-md text-[13px] text-white transition-all placeholder-[var(--text-muted)] group hover:border-border-hover focus:border-accent-emerald" aria-label="Search members">
+                                     <i class="ph ph-magnifying-glass absolute left-3 top-3 text-[var(--text-muted)] text-[15px]"></i>
                                  </div>
                              </div>
                              
@@ -598,11 +558,10 @@
                                     </thead>
                                     <tbody class="divide-y divide-[var(--border-hairline)] bg-surface-900/50">
                                         
-                                        <!-- Member 1 -->
                                         <tr class="hover:bg-surface-800 transition-colors">
                                             <td class="px-5 py-3">
                                                 <div class="flex items-center gap-3">
-                                                    <img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=64&q=80" alt="Alex Rivera" class="w-8 h-8 rounded-full border border-white/5 object-cover shrink-0">
+                                                    <img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=64&q=80" alt="" class="w-8 h-8 rounded-full border border-white/5 object-cover shrink-0">
                                                     <div class="flex flex-col">
                                                         <span class="font-medium text-white text-[13px]">Alex Rivera</span>
                                                         <span class="text-[11px] text-text-muted">alex.r@uni.edu</span>
@@ -610,21 +569,19 @@
                                                 </div>
                                             </td>
                                             <td class="px-5 py-3">
-                                                <div class="relative">
-                                                    <select class="w-full max-w-[200px] h-8 pl-3 pr-8 bg-surface-950 border border-hairline hover:border-border-hover rounded text-[13px] font-medium text-white appearance-none cursor-pointer native-select-caret focus-visible:ring-inset" aria-label="Set role for Alex Rivera">
-                                                        <option value="member" selected>@member</option>
-                                                        <option value="ta">@TA (Admin)</option>
-                                                    </select>
-                                                </div>
+                                                <!-- Fix 1 & 11: Select sizes min-h/w & focus rings -->
+                                                <select class="w-full max-w-[200px] h-10 pl-3 pr-8 bg-surface-950 border border-hairline hover:border-border-hover rounded text-[13px] font-medium text-white appearance-none cursor-pointer native-select-caret" aria-label="Set role for Alex Rivera">
+                                                    <option value="member" selected>@member</option>
+                                                    <option value="ta">@TA (Admin)</option>
+                                                </select>
                                             </td>
                                             <td class="px-5 py-3 text-right">
-                                                <button class="text-text-muted hover:text-white p-1.5 rounded transition-colors focus-visible:ring-inset" title="More options" aria-label="Member options">
+                                                <button class="text-text-muted hover:text-white p-2 rounded transition-colors min-h-[44px] min-w-[44px]" aria-label="More options for Alex Rivera">
                                                     <i class="ph ph-dots-three text-lg"></i>
                                                 </button>
                                             </td>
                                         </tr>
 
-                                        <!-- Member 2 -->
                                         <tr class="hover:bg-surface-800 transition-colors">
                                             <td class="px-5 py-3">
                                                 <div class="flex items-center gap-3">
@@ -638,25 +595,22 @@
                                                 </div>
                                             </td>
                                             <td class="px-5 py-3">
-                                                <div class="relative">
-                                                    <select class="w-full max-w-[200px] h-8 pl-3 pr-8 bg-surface-950 border border-accent-emerald/50 rounded text-[13px] font-medium text-accent-emerald appearance-none cursor-pointer native-select-caret focus-visible:ring-inset" aria-label="Set role for Sam K.">
-                                                        <option value="member">@member</option>
-                                                        <option value="ta" selected>@TA (Admin)</option>
-                                                    </select>
-                                                </div>
+                                                <select class="w-full max-w-[200px] h-10 pl-3 pr-8 bg-surface-950 border border-accent-emerald/50 rounded text-[13px] font-medium text-accent-emerald appearance-none cursor-pointer native-select-caret" aria-label="Set role for Sam K.">
+                                                    <option value="member">@member</option>
+                                                    <option value="ta" selected>@TA (Admin)</option>
+                                                </select>
                                             </td>
                                             <td class="px-5 py-3 text-right">
-                                                <button class="text-text-muted hover:text-white p-1.5 rounded transition-colors focus-visible:ring-inset" aria-label="Member options">
+                                                <button class="text-text-muted hover:text-white p-2 rounded transition-colors min-h-[44px] min-w-[44px]" aria-label="More options for Sam K.">
                                                     <i class="ph ph-dots-three text-lg"></i>
                                                 </button>
                                             </td>
                                         </tr>
 
-                                        <!-- Member 3 (Owner) -->
                                         <tr class="hover:bg-surface-800 transition-colors opacity-80">
                                             <td class="px-5 py-3">
                                                 <div class="flex items-center gap-3">
-                                                    <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=64&q=80" alt="Jane" class="w-8 h-8 rounded-full border border-white/5 object-cover shrink-0">
+                                                    <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=64&q=80" alt="" class="w-8 h-8 rounded-full border border-white/5 object-cover shrink-0">
                                                     <div class="flex flex-col">
                                                         <span class="font-medium text-white text-[13px] flex items-center gap-1.5">
                                                             Jane 
@@ -667,14 +621,13 @@
                                                 </div>
                                             </td>
                                             <td class="px-5 py-3">
-                                                <div class="relative">
-                                                    <select disabled class="w-full max-w-[200px] h-8 pl-3 pr-8 bg-surface-900 border border-hairline rounded text-[13px] font-medium text-text-muted appearance-none cursor-not-allowed hidden-caret opacity-50" aria-label="Set role for Jane (Disabled)">
-                                                        <option value="owner" selected>@Owner</option>
-                                                    </select>
-                                                </div>
+                                                <div id="desc-gated-owner" class="sr-only">Owner role cannot be changed</div>
+                                                <select disabled class="w-full max-w-[200px] h-10 pl-3 pr-8 bg-surface-900 border border-hairline rounded text-[13px] font-medium text-text-muted appearance-none cursor-not-allowed opacity-50" aria-label="Set role for Jane (Disabled)" aria-describedby="desc-gated-owner">
+                                                    <option value="owner" selected>@Owner</option>
+                                                </select>
                                             </td>
                                             <td class="px-5 py-3 text-right">
-                                                <i class="ph-fill ph-lock-key text-text-muted text-sm mr-2" title="Owner cannot be modified"></i>
+                                                <i class="ph-fill ph-lock-key text-text-muted text-sm mr-4" aria-label="No actions available"></i>
                                             </td>
                                         </tr>
 
@@ -685,30 +638,76 @@
                                  <span class="text-xs text-text-muted">End of matching members</span>
                              </div>
                         </section>
-                    </div> <!-- End Interactive Wrapper -->
+                    </div> 
                 </div>
-                <!-- End Loaded View -->
 
             </div>
         </div>
     </main>
 
+    <!-- Fix 7: Modals (Create Role / Delete Role) -->
+    
+    <!-- CREATE ROLE MODAL -->
+    <div id="modal-create-role" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="modal-create-title">
+        <div class="fixed inset-0 modal-backdrop transition-opacity" onclick="closeModal('modal-create-role')"></div>
+        <div class="bg-surface-900 border border-hairline rounded-xl shadow-pop w-full max-w-md relative z-10 animate-zoom-in flex flex-col">
+            <div class="px-6 py-5 border-b border-hairline flex items-center justify-between">
+                <h2 id="modal-create-title" class="text-base font-semibold text-white">Create New Role</h2>
+                <button onclick="closeModal('modal-create-role')" class="w-8 h-8 rounded shrink-0 flex items-center justify-center text-text-muted hover:bg-surface-800 hover:text-white transition-colors" aria-label="Close modal">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="space-y-1.5">
+                    <label for="new-role-name" class="block text-[13px] font-medium text-text-primary">Role Name <span class="text-danger">*</span></label>
+                    <input type="text" id="new-role-name" placeholder="E.g., Moderators" class="w-full h-10 px-3 bg-surface-950 border border-hairline rounded-md text-[13px] text-white hover:border-border-hover focus:border-accent-emerald transition-colors" required>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-surface-950/50 border-t border-hairline rounded-b-xl flex items-center justify-end gap-3">
+                <button onclick="closeModal('modal-create-role')" class="h-10 px-4 rounded-md text-[13px] font-medium text-white hover:bg-surface-800 transition-colors btn-press">Cancel</button>
+                <button onclick="mockSaveModal('modal-create-role')" class="h-10 px-5 rounded-md text-[13px] font-semibold bg-accent-emerald text-surface-950 hover:bg-accent-emerald/90 transition-colors btn-press flex items-center justify-center min-w-[100px]">Create Role</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DELETE CONFIRMATION MODAL -->
+    <div id="modal-delete-role" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="modal-delete-title">
+        <div class="fixed inset-0 modal-backdrop transition-opacity" onclick="closeModal('modal-delete-role')"></div>
+        <div class="bg-surface-900 border border-hairline rounded-xl shadow-pop w-full max-w-sm relative z-10 animate-zoom-in flex flex-col">
+            <div class="px-6 py-5 border-b border-hairline relative text-center">
+                <div class="w-12 h-12 mx-auto bg-danger/10 border border-danger/20 rounded-full flex items-center justify-center mb-3">
+                    <i class="ph-fill ph-warning text-xl text-danger"></i>
+                </div>
+                <h2 id="modal-delete-title" class="text-base font-semibold text-white">Delete Role?</h2>
+                <button onclick="closeModal('modal-delete-role')" class="absolute right-4 top-4 w-8 h-8 rounded shrink-0 flex items-center justify-center text-text-muted hover:bg-surface-800 hover:text-white transition-colors" aria-label="Close modal">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+            <div class="p-6 text-center text-[13px] text-text-secondary leading-relaxed pt-2">
+                Are you sure you want to delete the <span class="font-bold text-white">@TA (Admin)</span> role? This action cannot be undone, and members will lose these permissions immediately.
+            </div>
+            <div class="px-6 py-4 bg-surface-950/50 border-t border-hairline rounded-b-xl flex gap-3">
+                <button onclick="closeModal('modal-delete-role')" class="h-10 flex-1 rounded-md text-[13px] font-medium text-white bg-surface-800 hover:bg-surface-700 border border-hairline transition-colors btn-press">Cancel</button>
+                <button onclick="mockSaveModal('modal-delete-role', true)" class="h-10 flex-1 rounded-md text-[13px] font-semibold bg-danger text-white hover:bg-danger/90 border border-danger/50 transition-colors btn-press min-w-[100px]">Delete</button>
+            </div>
+        </div>
+    </div>
+
     <!-- VANILLA JS ENGINE -->
     <script>
-        // DOM Elements definition
         const views = {
             loaded: document.getElementById('view-loaded'),
             loading: document.getElementById('view-loading'),
             empty: document.getElementById('view-empty'),
-            error: document.getElementById('view-error')
+            errorLoad: document.getElementById('view-error-load')
         };
         const interactiveArea = document.getElementById('interactive-area');
         const saveBtn = document.getElementById('save-role-btn');
         const saveBtnTextNodeOriginal = "Save Changes";
+        const inline409 = document.getElementById('inline-409-error');
 
-        // Main Switcher logic requested by Delta 2
+        // State Machine
         window.switchState = function(targetState) {
-            // Reset all structural views
             Object.values(views).forEach(v => {
                 if(v) {
                     v.classList.add('hidden');
@@ -716,55 +715,46 @@
                 }
             });
 
-            // Reset Saving Dim/ARIA
+            // Resets
             interactiveArea.classList.remove('saving-dimmed');
             saveBtn.disabled = false;
             saveBtn.setAttribute('aria-busy', 'false');
             saveBtn.innerHTML = saveBtnTextNodeOriginal;
-            saveBtn.classList.replace('bg-surface-700', 'bg-accent-emerald');
-            saveBtn.classList.replace('text-text-secondary', 'text-surface-950');
+            inline409.classList.add('hidden');
 
-            // Reset Switcher UI highlights
             document.querySelectorAll('.state-btn').forEach(btn => {
                 btn.classList.remove('bg-surface-700', 'text-white');
                 btn.classList.add('text-text-secondary');
                 btn.removeAttribute('aria-current');
             });
             const activeBtn = document.getElementById('btn-state-' + targetState);
-            if(activeBtn) {
+            if(activeBtn && targetState !== 'saving') { // Don't highlight saving as persistent
                 activeBtn.classList.remove('text-text-secondary');
                 activeBtn.classList.add('bg-surface-700', 'text-white');
                 activeBtn.setAttribute('aria-current', 'true');
             }
 
-            // Apply specific target state
             if (targetState === 'loading') {
-                views.loading.classList.remove('hidden');
-                views.loading.classList.add('flex');
+                views.loading.classList.remove('hidden', 'animate-fade-in-up');
+                views.loading.classList.add('flex', 'animate-fade-in');
             } 
-            else if (targetState === 'error') {
-                views.error.classList.remove('hidden');
-                views.error.classList.add('flex');
-                showToast("Couldn't sync with server. Limit 409.", 'error');
+            else if (targetState === 'error-load') {
+                views.errorLoad.classList.remove('hidden');
+                views.errorLoad.classList.add('flex', 'animate-fade-in');
             }
             else if (targetState === 'empty') {
                 views.empty.classList.remove('hidden');
-                views.empty.classList.add('flex');
+                views.empty.classList.add('flex', 'animate-fade-in');
             }
             else if (targetState === 'saving') {
-                // Saving is theoretically just 'Loaded' + dimmed overlay + spinner
                 views.loaded.classList.remove('hidden');
                 views.loaded.classList.add('flex');
-                
-                // Add dimming
                 interactiveArea.classList.add('saving-dimmed');
                 
-                // Spinner transformation
+                // Spin btn
                 saveBtn.disabled = true;
                 saveBtn.setAttribute('aria-busy', 'true');
-                saveBtn.innerHTML = `<i class="ph-bold ph-spinner-gap animate-spin"></i>`;
-                saveBtn.classList.remove('bg-accent-emerald', 'text-surface-950', 'hover:bg-accent-emerald/90');
-                saveBtn.classList.add('bg-surface-700', 'text-text-secondary');
+                saveBtn.innerHTML = `<i class="ph-bold ph-spinner-gap animate-spin text-lg"></i> <span class="sr-only">Saving...</span>`;
             }
             else if (targetState === 'loaded') {
                 views.loaded.classList.remove('hidden');
@@ -772,16 +762,46 @@
             }
         };
 
-        // Utility: Toast Simulation
-        function showToast(message, type = 'success') {
+        // Fix 9 & 12: Toast & Mock Save Functionality
+        let isSaving = false;
+        window.mockSave = function(force409 = false) {
+            if(isSaving) return;
+            isSaving = true;
+            switchState('saving');
+            
+            setTimeout(() => {
+                isSaving = false;
+                switchState('loaded');
+                if(force409) {
+                    inline409.classList.remove('hidden');
+                    showToast("Save Refused. Last-owner flag cannot be removed.", "error");
+                } else {
+                    showToast("Roles configuration saved.", "success");
+                }
+            }, 1200);
+        };
+
+        window.mockSaveModal = function(modalId, isDanger = false) {
+            const btn = event.currentTarget;
+            const orig = btn.innerHTML;
+            btn.innerHTML = `<i class="ph-bold ph-spinner-gap animate-spin"></i>`;
+            btn.disabled = true;
+            setTimeout(() => {
+                closeModal(modalId);
+                btn.innerHTML = orig;
+                btn.disabled = false;
+                showToast(isDanger ? "Role deleted." : "Role created successfully.", "success");
+                if(!isDanger) switchState('loaded');
+            }, 800);
+        }
+
+        // Generic Toast System
+        window.showToast = function(message, type = 'success') {
             const region = document.getElementById('toast-region');
             const toast = document.createElement('div');
             toast.className = 'w-80 p-4 rounded-md shadow-pop flex items-start gap-3 animate-slide-in-right bg-surface-800 border border-hairline pointer-events-auto';
-            
             toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
-            if (type === 'error') {
-                toast.setAttribute('aria-live', 'assertive');
-            }
+            if (type === 'error') toast.setAttribute('aria-live', 'assertive');
             
             let iconStr = `<i class="ph-fill ph-check-circle text-accent-emerald text-lg mt-0.5"></i>`;
             if(type === 'error') {
@@ -792,11 +812,11 @@
 
             toast.innerHTML += `
                 ${iconStr}
-                <div class="flex flex-col flex-1 z-10 relative">
-                    <span class="text-[13px] font-semibold text-white leading-tight mb-0.5">${type === 'error' ? 'Action Blocks' : 'Success'}</span>
+                <div class="flex flex-col flex-1 z-10 relative mt-0.5">
+                    <span class="text-[13px] font-semibold text-white leading-tight mb-0.5">${type === 'error' ? 'Action Blocked' : 'Success'}</span>
                     <span class="text-[12px] text-text-secondary leading-snug">${message}</span>
                 </div>
-                <button class="text-text-muted hover:text-white z-10 relative" onclick="this.parentElement.remove()" aria-label="Close message">
+                <button class="text-text-muted hover:text-white z-10 relative mt-0.5" onclick="this.parentElement.remove()" aria-label="Close message">
                     <i class="ph ph-x"></i>
                 </button>
             `;
@@ -807,10 +827,100 @@
                     toast.classList.replace('animate-slide-in-right', 'animate-slide-out-right');
                     setTimeout(() => toast.remove(), 300);
                 }
-            }, 6000);
+            }, 5000);
+        };
+
+        // Fix 10: Reactive Safeguard Toggle
+        window.handleSafeguardToggle = function(e) {
+            if (!e.target.checked) {
+                e.preventDefault(); // Block immediate check
+                e.target.checked = true; // Force back visually instantly
+                inline409.classList.remove('hidden');
+                showToast("Can't remove the last owner's manage permission.", "error");
+            } else {
+                inline409.classList.add('hidden');
+            }
+        };
+
+        // Fix 5: Semantic hidden/visible label updates
+        window.updateVisibilityText = function(target) {
+            const labelNode = target.parentElement.querySelector('.visible-label');
+            if (!labelNode) return;
+            
+            if (target.checked) {
+                labelNode.textContent = "Visible";
+                labelNode.className = "text-xs text-accent-emerald font-medium visible-label";
+                target.setAttribute('aria-label', target.getAttribute('aria-label').replace('Hidden', 'Visible'));
+            } else {
+                labelNode.textContent = "Hidden";
+                labelNode.className = "text-xs text-text-muted font-medium visible-label";
+                target.setAttribute('aria-label', target.getAttribute('aria-label').replace('Visible', 'Hidden'));
+            }
+        };
+
+        // Fix 7 & A11y: Modals logic
+        let preModalFocus = null;
+        let activeTrapHandler = null;
+
+        const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+        function getFocusable(modal) {
+            return Array.from(modal.querySelectorAll(FOCUSABLE))
+                .filter(el => el.offsetParent !== null);
         }
 
-        // Initialize state to 'loaded' to ensure switcher styling matches DOM state initially
+        window.openModal = function(id) {
+            preModalFocus = document.activeElement;
+            const modal = document.getElementById(id);
+            modal.classList.remove('hidden');
+
+            // Initial focus: first input, else first focusable.
+            const focusables = getFocusable(modal);
+            const input = modal.querySelector('input:not([disabled])');
+            (input || focusables[0])?.focus();
+
+            // Full focus trap: Tab from last → first, Shift+Tab from first → last.
+            activeTrapHandler = function (e) {
+                if (e.key !== 'Tab') return;
+                const items = getFocusable(modal);
+                if (items.length === 0) return;
+                const first = items[0];
+                const last = items[items.length - 1];
+                if (e.shiftKey && document.activeElement === first) {
+                    e.preventDefault();
+                    last.focus();
+                } else if (!e.shiftKey && document.activeElement === last) {
+                    e.preventDefault();
+                    first.focus();
+                } else if (!modal.contains(document.activeElement)) {
+                    // Focus escaped (e.g. programmatic) → pull it back in.
+                    e.preventDefault();
+                    first.focus();
+                }
+            };
+            modal.addEventListener('keydown', activeTrapHandler);
+        };
+
+        window.closeModal = function(id) {
+            const modal = document.getElementById(id);
+            modal.classList.add('hidden');
+            if (activeTrapHandler) {
+                modal.removeEventListener('keydown', activeTrapHandler);
+                activeTrapHandler = null;
+            }
+            if (preModalFocus) preModalFocus.focus();
+        };
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                ['modal-create-role', 'modal-delete-role'].forEach(id => {
+                    const m = document.getElementById(id);
+                    if(m && !m.classList.contains('hidden')) closeModal(id);
+                });
+            }
+        });
+
+        // Initialize state
         document.addEventListener('DOMContentLoaded', () => {
             switchState('loaded');
         });
