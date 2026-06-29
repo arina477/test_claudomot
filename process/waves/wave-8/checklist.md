@@ -18,9 +18,9 @@ PRODUCT:
 - [ ] P-4 Gate
 
 DESIGN (skip block if non-UI wave):
-- [ ] D-1 Brief
-- [ ] D-2 Variants (with bounded iteration)
-- [ ] D-3 Review & adopt
+- [x] D-1 Brief
+- [x] D-2 Variants (with bounded iteration)
+- [x] D-3 Review & adopt
 
 BUILD:
 - [ ] B-0 Branch & schema

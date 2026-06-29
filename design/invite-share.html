@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyHall — Invite share modal (all states)</title>
+
+  <!-- Fonts: Geist (canonical — NOT Inter) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Icons: Phosphor -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Geist', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            mono: ['Geist Mono', 'ui-monospace', 'monospace'],
+          },
+          colors: {
+            surface: {
+              950: '#0a0a0b', 900: '#121214', 800: '#1c1c1f',
+              700: '#27272a', 600: '#3f3f46', 500: '#52525b',
+            },
+            accent: { emerald: '#10b981', amber: '#f59e0b' },
+            danger: '#ef4444',
+          },
+          boxShadow: {
+            'sm':          '0 1px 2px rgba(0,0,0,0.4)',
+            'pop':         '0 8px 24px rgba(0,0,0,0.5)',
+            'glow-focus':  '0 0 0 2px rgba(16,185,129,0.4)',
+            'glow-danger': '0 0 0 2px rgba(239,68,68,0.4)',
+            'glow-subtle': '0 0 15px rgba(255,255,255,0.05)',
+          },
+          borderRadius: { 'md': '6px', 'lg': '10px' },
+        }
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --text-primary:    rgba(255,255,255,0.92);
+      --text-secondary:  rgba(255,255,255,0.60);
+      --text-muted:      rgba(255,255,255,0.40);
+      --border-hairline: rgba(255,255,255,0.06);
+      --border-hover:    rgba(255,255,255,0.10);
+    }
+    body {
+      font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+      background: #0a0a0b;
+      color: var(--text-primary);
+    }
+    .t-primary   { color: var(--text-primary); }
+    .t-secondary { color: var(--text-secondary); }
+    .t-muted     { color: var(--text-muted); }
+    .b-hairline  { border-color: var(--border-hairline); }
+    .b-hover     { border-color: var(--border-hover); }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+
+    /* Focus discipline — emerald ring, never bare browser default */
+    .focus-ring:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(16,185,129,0.4); }
+    input.focus-ring:focus-visible { border-color: #10b981; box-shadow: 0 0 0 2px rgba(16,185,129,0.4); }
+
+    /* Calm spinner — no bouncy easing */
+    .spin { animation: spin 0.9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Skeleton shimmer */
+    @keyframes shimmer { 100% { transform: translateX(100%); } }
+    .skel {
+      position: relative; overflow: hidden; background: #27272a;
+    }
+    .skel::after {
+      content: ''; position: absolute; inset: 0; transform: translateX(-100%);
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+      animation: shimmer 1.6s infinite;
+    }
+
+    /* Reduced motion — disable non-essential transitions */
+    @media (prefers-reduced-motion: reduce) {
+      .spin, .skel::after { animation: none; }
+      * { transition-duration: 0ms !important; }
+    }
+  </style>
+</head>
+<body class="antialiased">
+
+  <!-- ============================================================
+       STATE SHOWCASE — "Invite people" modal (invite-share).
+       Renders all 4 states side-by-side so a reviewer sees every
+       state at once. In the running app a single modal transitions
+       through these states.
+
+       Modal pattern mirrors create-server.html exactly:
+       - header (title + ph-x close) / body / footer
+       - rounded-lg bg-surface-900 border b-hairline shadow-pop
+       - role="dialog" aria-modal="true" aria-labelledby
+       - dimmed blurred app-shell behind via -z-10 pattern
+       - max-w-[460px]
+
+       Focus-trap intent: Tab order → close → link field → Copy → Done
+       Esc / scrim-click / close button → dismiss, restore focus to trigger.
+       No role/permission/max-uses/expiry/revoke/kick/ban UI (out of scope).
+  ============================================================= -->
+
+  <!-- Dimmed app shell behind all modals (shared context layer) -->
+  <div class="fixed inset-0 -z-10 flex pointer-events-none opacity-40 blur-[2px] saturate-50 select-none" aria-hidden="true">
+    <!-- Server rail -->
+    <div class="w-[72px] bg-surface-900 border-r b-hairline border flex flex-col items-center py-4 gap-3">
+      <div class="w-12 h-12 rounded-lg bg-surface-800 flex items-center justify-center t-secondary">
+        <i class="ph ph-books text-xl"></i>
+      </div>
+      <div class="w-8 h-[2px] bg-surface-700 rounded-full"></div>
+      <!-- Active server with emerald indicator -->
+      <div class="relative">
+        <span class="absolute -left-3 top-1/2 -translate-y-1/2 w-1 h-7 bg-accent-emerald rounded-r-md"></span>
+        <div class="w-12 h-12 rounded-md bg-surface-600 flex items-center justify-center text-sm font-semibold t-primary">OC</div>
+      </div>
+      <div class="mt-auto w-12 h-12 rounded-full border b-hover border flex items-center justify-center text-accent-emerald">
+        <i class="ph ph-plus"></i>
+      </div>
+    </div>
+    <!-- Channel sidebar -->
+    <div class="w-[240px] bg-surface-900 border-r b-hairline border py-3 flex flex-col gap-1">
+      <div class="px-3 pb-2 mb-2 border-b b-hairline flex items-center justify-between">
+        <span class="text-sm font-semibold t-primary truncate">Organic Chemistry</span>
+        <i class="ph ph-caret-down text-xs t-secondary"></i>
+      </div>
+      <div class="px-2 flex flex-col gap-0.5">
+        <div class="flex items-center gap-2 px-2 py-1.5 rounded-md bg-surface-700 text-accent-emerald">
+          <i class="ph ph-hash text-base"></i><span class="text-sm font-medium">general</span>
+        </div>
+        <div class="flex items-center gap-2 px-2 py-1.5 rounded-md t-secondary">
+          <i class="ph ph-hash text-base"></i><span class="text-sm">assignments-q-and-a</span>
+        </div>
+        <div class="flex items-center gap-2 px-2 py-1.5 rounded-md t-secondary">
+          <i class="ph ph-speaker-high text-base"></i><span class="text-sm">Study Room A</span>
+        </div>
+      </div>
+    </div>
+    <!-- Canvas -->
+    <div class="flex-1 bg-surface-800"></div>
+  </div>
+
+  <main class="min-h-[100dvh] w-full px-8 py-12">
+    <header class="max-w-7xl mx-auto mb-10 text-center">
+      <p class="text-xs uppercase tracking-widest text-accent-emerald font-semibold mb-2">StudyHall · D-block staging · wave-8</p>
+      <h1 class="text-2xl font-semibold tracking-tight t-primary">Invite share — "Invite people" modal (all 4 states)</h1>
+      <p class="t-secondary text-sm mt-2">Modal opened from within a server. Compose from Modal + Button + Toast + Input primitives only.</p>
+    </header>
+
+    <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8 items-start">
+
+      <!-- ============================================================
+           Shared scrim wrapper for each state — mimics the overlay
+           the modal sits on top of inside the running app.
+      ============================================================= -->
+
+      <!-- ===== STATE 1: default ===== -->
+      <section aria-labelledby="s1-lbl" class="flex flex-col gap-3">
+        <h2 id="s1-lbl" class="text-xs font-semibold uppercase tracking-wider t-secondary">1 · Default (link displayed)</h2>
+
+        <!-- Scrim -->
+        <div class="relative rounded-lg overflow-hidden bg-surface-950/60 border b-hairline" style="min-height:360px;">
+          <div class="absolute inset-0 bg-black/60 rounded-lg" aria-hidden="true"></div>
+
+          <!-- Modal -->
+          <div class="relative z-10 mx-auto mt-8 w-full max-w-[460px] px-4">
+            <div
+              class="rounded-lg bg-surface-900 border b-hairline shadow-pop"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="s1-dialog-title"
+            >
+              <!-- Header -->
+              <div class="flex items-center justify-between px-4 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
+                <h3 id="s1-dialog-title" class="text-xl font-semibold tracking-tight t-primary">Invite people</h3>
+                <!-- Tab order: close is first focusable element per focus-trap spec -->
+                <button
+                  class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors"
+                  aria-label="Close invite dialog"
+                >
+                  <i class="ph ph-x text-lg" aria-hidden="true"></i>
+                </button>
+              </div>
+
+              <!-- Body -->
+              <div class="px-4 py-4 flex flex-col gap-3">
+                <p class="text-sm t-secondary">Anyone with this link can join this server.</p>
+
+                <!-- Read-only link field — Geist Mono for the URL string -->
+                <div class="flex gap-2">
+                  <div class="flex-1 min-w-0">
+                    <label for="s1-link" class="sr-only">Invite link</label>
+                    <input
+                      id="s1-link"
+                      type="text"
+                      readonly
+                      value="https://studyhall.app/invite/Xy7Kq2mB9vRtZ4nLpA8wQs"
+                      class="focus-ring w-full bg-surface-950 border b-hover rounded-md px-3 py-2.5 text-sm font-mono t-primary truncate transition-colors select-all cursor-text"
+                      style="font-family: 'Geist Mono', ui-monospace, monospace;"
+                      aria-label="Invite link — read only, click to select all"
+                    >
+                  </div>
+                  <!-- Primary Copy button — Tab order: link field → Copy -->
+                  <button
+                    class="focus-ring shrink-0 rounded-md px-4 py-2.5 text-sm font-semibold bg-accent-emerald text-surface-950 hover:bg-accent-emerald/90 transition-colors flex items-center gap-1.5"
+                    aria-label="Copy invite link to clipboard"
+                  >
+                    <i class="ph ph-copy text-base" aria-hidden="true"></i>
+                    Copy link
+                  </button>
+                </div>
+              </div>
+
+              <!-- Footer -->
+              <div class="flex items-center justify-end gap-2 px-4 py-4 border-t b-hairline">
+                <!-- Tab order: Done is last focusable element before loop -->
+                <button class="focus-ring rounded-md px-4 py-2 text-sm font-medium t-secondary hover:t-primary hover:bg-surface-700 transition-colors">
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== STATE 2: copied ===== -->
+      <section aria-labelledby="s2-lbl" class="flex flex-col gap-3">
+        <h2 id="s2-lbl" class="text-xs font-semibold uppercase tracking-wider t-secondary">2 · Copied (success feedback)</h2>
+
+        <!-- Scrim -->
+        <div class="relative rounded-lg overflow-hidden bg-surface-950/60 border b-hairline" style="min-height:360px;">
+          <div class="absolute inset-0 bg-black/60 rounded-lg" aria-hidden="true"></div>
+
+          <!-- Modal -->
+          <div class="relative z-10 mx-auto mt-8 w-full max-w-[460px] px-4">
+            <div
+              class="rounded-lg bg-surface-900 border b-hairline shadow-pop"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="s2-dialog-title"
+            >
+              <!-- Header -->
+              <div class="flex items-center justify-between px-4 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
+                <h3 id="s2-dialog-title" class="text-xl font-semibold tracking-tight t-primary">Invite people</h3>
+                <button
+                  class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors"
+                  aria-label="Close invite dialog"
+                >
+                  <i class="ph ph-x text-lg" aria-hidden="true"></i>
+                </button>
+              </div>
+
+              <!-- Body -->
+              <div class="px-4 py-4 flex flex-col gap-3">
+                <p class="text-sm t-secondary">Anyone with this link can join this server.</p>
+
+                <!-- Link field — still displayed, same read-only field -->
+                <div class="flex gap-2">
+                  <div class="flex-1 min-w-0">
+                    <label for="s2-link" class="sr-only">Invite link</label>
+                    <input
+                      id="s2-link"
+                      type="text"
+                      readonly
+                      value="https://studyhall.app/invite/Xy7Kq2mB9vRtZ4nLpA8wQs"
+                      class="focus-ring w-full bg-surface-950 border b-hover rounded-md px-3 py-2.5 text-sm font-mono t-primary truncate transition-colors select-all cursor-text"
+                      style="font-family: 'Geist Mono', ui-monospace, monospace;"
+                      aria-label="Invite link — read only, click to select all"
+                    >
+                  </div>
+                  <!-- Copy button morphed to transient check state — reverts after ~2s in running app -->
+                  <button
+                    class="focus-ring shrink-0 rounded-md px-4 py-2.5 text-sm font-semibold bg-accent-emerald/80 text-surface-950 transition-colors flex items-center gap-1.5"
+                    aria-label="Invite link copied"
+                    aria-live="polite"
+                  >
+                    <i class="ph ph-check text-base" aria-hidden="true"></i>
+                    Copied
+                  </button>
+                </div>
+              </div>
+
+              <!-- Footer -->
+              <div class="flex items-center justify-end gap-2 px-4 py-4 border-t b-hairline">
+                <button class="focus-ring rounded-md px-4 py-2 text-sm font-medium t-secondary hover:t-primary hover:bg-surface-700 transition-colors">
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Toast — role="status" (polite), emerald left accent bar, ph-check-circle -->
+          <!-- Positioned top-right of the scrim wrapper to stay within the showcase card -->
+          <div
+            role="status"
+            aria-live="polite"
+            class="absolute top-3 right-3 z-20 flex items-center gap-2 bg-surface-700 border b-hover rounded-md shadow-pop overflow-hidden max-w-[240px]"
+          >
+            <!-- Emerald left accent bar -->
+            <div class="w-1 self-stretch bg-accent-emerald shrink-0 rounded-l-md" aria-hidden="true"></div>
+            <div class="flex items-center gap-2 py-2.5 pr-3 pl-1">
+              <i class="ph ph-check-circle text-accent-emerald text-base shrink-0" aria-hidden="true"></i>
+              <span class="text-sm t-primary font-medium">Invite link copied</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== STATE 3: loading ===== -->
+      <section aria-labelledby="s3-lbl" class="flex flex-col gap-3">
+        <h2 id="s3-lbl" class="text-xs font-semibold uppercase tracking-wider t-secondary">3 · Loading (link generating)</h2>
+
+        <!-- Scrim -->
+        <div class="relative rounded-lg overflow-hidden bg-surface-950/60 border b-hairline" style="min-height:360px;">
+          <div class="absolute inset-0 bg-black/60 rounded-lg" aria-hidden="true"></div>
+
+          <!-- Modal -->
+          <div class="relative z-10 mx-auto mt-8 w-full max-w-[460px] px-4">
+            <div
+              class="rounded-lg bg-surface-900 border b-hairline shadow-pop"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="s3-dialog-title"
+              aria-busy="true"
+            >
+              <!-- Header -->
+              <div class="flex items-center justify-between px-4 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
+                <h3 id="s3-dialog-title" class="text-xl font-semibold tracking-tight t-primary">Invite people</h3>
+                <button
+                  class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors"
+                  aria-label="Close invite dialog"
+                >
+                  <i class="ph ph-x text-lg" aria-hidden="true"></i>
+                </button>
+              </div>
+
+              <!-- Body -->
+              <div class="px-4 py-4 flex flex-col gap-3">
+                <p class="text-sm t-secondary">Anyone with this link can join this server.</p>
+
+                <!-- Skeleton in the link field while link generates -->
+                <div class="flex gap-2">
+                  <div class="flex-1 min-w-0">
+                    <!-- Skeleton bar replacing the link input -->
+                    <div class="skel h-10 w-full rounded-md" aria-label="Loading invite link" role="status"></div>
+                  </div>
+                  <!-- Copy button disabled while loading -->
+                  <button
+                    disabled
+                    aria-busy="true"
+                    class="focus-ring shrink-0 rounded-md px-4 py-2.5 text-sm font-semibold bg-surface-700 t-muted cursor-not-allowed flex items-center gap-1.5"
+                  >
+                    <i class="ph ph-copy text-base" aria-hidden="true"></i>
+                    Copy link
+                  </button>
+                </div>
+              </div>
+
+              <!-- Footer -->
+              <div class="flex items-center justify-end gap-2 px-4 py-4 border-t b-hairline">
+                <button disabled class="rounded-md px-4 py-2 text-sm font-medium t-muted cursor-not-allowed">
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== STATE 4: error ===== -->
+      <section aria-labelledby="s4-lbl" class="flex flex-col gap-3">
+        <h2 id="s4-lbl" class="text-xs font-semibold uppercase tracking-wider t-secondary">4 · Error (link failed to load)</h2>
+
+        <!-- Scrim -->
+        <div class="relative rounded-lg overflow-hidden bg-surface-950/60 border b-hairline" style="min-height:360px;">
+          <div class="absolute inset-0 bg-black/60 rounded-lg" aria-hidden="true"></div>
+
+          <!-- Modal -->
+          <div class="relative z-10 mx-auto mt-8 w-full max-w-[460px] px-4">
+            <div
+              class="rounded-lg bg-surface-900 border b-hairline shadow-pop"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="s4-dialog-title"
+            >
+              <!-- Header -->
+              <div class="flex items-center justify-between px-4 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
+                <h3 id="s4-dialog-title" class="text-xl font-semibold tracking-tight t-primary">Invite people</h3>
+                <button
+                  class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors"
+                  aria-label="Close invite dialog"
+                >
+                  <i class="ph ph-x text-lg" aria-hidden="true"></i>
+                </button>
+              </div>
+
+              <!-- Body -->
+              <div class="px-4 py-4 flex flex-col gap-3">
+                <!-- Inline danger alert — role="alert", danger border + bg -->
+                <div
+                  role="alert"
+                  class="flex items-start gap-2 rounded-md border border-danger/40 bg-danger/10 px-3 py-2.5 text-sm"
+                >
+                  <i class="ph ph-warning-circle text-danger mt-0.5 shrink-0" aria-hidden="true"></i>
+                  <span class="t-primary">Couldn't load the invite link. Check your connection and try again.</span>
+                </div>
+
+                <!-- Link field showing error state — empty, not copyable -->
+                <div class="flex gap-2">
+                  <div class="flex-1 min-w-0">
+                    <label for="s4-link" class="sr-only">Invite link</label>
+                    <input
+                      id="s4-link"
+                      type="text"
+                      readonly
+                      disabled
+                      placeholder="Invite link unavailable"
+                      class="w-full bg-surface-950 border rounded-md px-3 py-2.5 text-sm font-mono t-muted cursor-not-allowed"
+                      style="border-color: rgba(239,68,68,0.8); font-family: 'Geist Mono', ui-monospace, monospace;"
+                      aria-invalid="true"
+                    >
+                  </div>
+                  <!-- Copy button disabled in error state -->
+                  <button
+                    disabled
+                    class="shrink-0 rounded-md px-4 py-2.5 text-sm font-semibold bg-surface-700 t-muted cursor-not-allowed flex items-center gap-1.5 opacity-60"
+                  >
+                    <i class="ph ph-copy text-base" aria-hidden="true"></i>
+                    Copy link
+                  </button>
+                </div>
+              </div>
+
+              <!-- Footer — Retry as primary action in error state -->
+              <div class="flex items-center justify-end gap-2 px-4 py-4 border-t b-hairline">
+                <button class="focus-ring rounded-md px-4 py-2 text-sm font-medium t-secondary hover:t-primary hover:bg-surface-700 transition-colors">
+                  Cancel
+                </button>
+                <button
+                  class="focus-ring rounded-md px-4 py-2 text-sm font-semibold bg-accent-emerald text-surface-950 hover:bg-accent-emerald/90 transition-colors flex items-center gap-1.5"
+                >
+                  <i class="ph ph-arrow-clockwise text-base" aria-hidden="true"></i>
+                  Retry
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Showcase footer note -->
+    <footer class="max-w-7xl mx-auto mt-12 pt-8 border-t b-hairline text-center">
+      <p class="text-xs t-muted">D-2 staging mockup — all 4 states rendered. Composed strictly from Modal + Button + Toast + Input primitives (no new component class). Geist Mono for link string. Geist sans elsewhere. Emerald focus-visible ring on all controls. WCAG AA contrast: text-surface-950 on bg-accent-emerald primary buttons.</p>
+      <p class="text-xs t-muted mt-2">A11y notes: focus-trap intent (close → link field → Copy → Done); Esc/scrim/close dismiss + focus restore; link field read-only with select-all affordance; Toast role="status" (polite); error alert role="alert"; aria-busy on loading state.</p>
+    </footer>
+  </main>
+
+</body>
+</html>
