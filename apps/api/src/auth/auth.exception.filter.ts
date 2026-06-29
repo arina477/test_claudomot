@@ -1,6 +1,5 @@
-import { Catch, HttpStatus } from '@nestjs/common';
-import type { ArgumentsHost } from '@nestjs/common';
-import { BaseExceptionFilter } from '@nestjs/core';
+import { Catch, HttpException, HttpStatus } from '@nestjs/common';
+import type { ArgumentsHost, ExceptionFilter } from '@nestjs/common';
 import Session from 'supertokens-node/recipe/session';
 
 // Minimal response interface — avoids @types/express dependency.
@@ -9,8 +8,8 @@ interface HttpResponse {
 }
 
 @Catch()
-export class SupertokensExceptionFilter extends BaseExceptionFilter {
-  override catch(err: unknown, host: ArgumentsHost): void {
+export class SupertokensExceptionFilter implements ExceptionFilter {
+  catch(err: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const res = ctx.getResponse<HttpResponse>();
 
@@ -29,13 +28,26 @@ export class SupertokensExceptionFilter extends BaseExceptionFilter {
           res.status(HttpStatus.FORBIDDEN).json({ code: 'EMAIL_NOT_VERIFIED' });
           return;
         default:
-          // Fall through to base handler for unrecognised Session errors
+          // Fall through to generic error for unrecognised Session errors
           break;
       }
     }
 
-    // Delegate to NestJS BaseExceptionFilter so HttpExceptions (e.g. BadRequestException,
-    // NotFoundException) are serialised correctly instead of crashing the process.
-    super.catch(err, host);
+    // Forward HttpExceptions (BadRequestException, NotFoundException, etc.) as-is so
+    // NestJS-style validation errors return the correct 4xx status instead of crashing.
+    // Registering this filter via app.useGlobalFilters(new ...) means BaseExceptionFilter
+    // cannot be used (no HttpAdapterHost injected), so we handle HttpException directly.
+    if (err instanceof HttpException) {
+      const status = err.getStatus();
+      const body = err.getResponse();
+      res.status(status).json(body);
+      return;
+    }
+
+    // Unknown non-HTTP error — return 500.
+    res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+      message: 'Internal server error',
+    });
   }
 }
