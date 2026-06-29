@@ -19,4 +19,4 @@
 const pkg = require('../package.json') as Record<string, any>;
 
 export const API_VERSION: string =
-  (process.env.npm_package_version ?? (pkg.version as string | undefined) ?? '0.0.1');
+  process.env.npm_package_version ?? (pkg.version as string | undefined) ?? '0.0.1';
