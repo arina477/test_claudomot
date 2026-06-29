@@ -1,727 +1,304 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>StudyHall - Create Server</title>
-    <!-- 
-      aesthetic_dna: Deep layer zinc dark mode, academic calm, low-noise.
-      ui_paradigm: Dimmed Shell Application + State-Driven Orchestration Modal.
-      palette: Zinc-950/900/800 base, Emerald #10b981 primary accent, Amber #f59e0b alerts.
-    -->
-    
-    <!-- Typography -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyHall — Create a server</title>
 
-    <!-- Icons -->
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <!-- Fonts: Geist (canonical) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-    <!-- Tailwind -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Outfit', '-apple-system', 'sans-serif'],
-                        mono: ['"JetBrains Mono"', 'monospace'],
-                    },
-                    colors: {
-                        surface: {
-                            950: '#0a0a0b',
-                            900: '#121214',
-                            800: '#1c1c1f',
-                            700: '#27272a',
-                            600: '#3f3f46',
-                            500: '#52525b',
-                        },
-                        emerald: { DEFAULT: '#10b981', hover: '#059669', muted: 'rgba(16, 185, 129, 0.15)' },
-                        amber: { DEFAULT: '#f59e0b', muted: 'rgba(245, 158, 11, 0.15)' },
-                        danger: { DEFAULT: '#ef4444', muted: 'rgba(239, 68, 68, 0.15)' },
-                    },
-                    boxShadow: {
-                        'sm': '0 1px 2px rgba(0,0,0,0.4)',
-                        'pop': '0 8px 24px rgba(0,0,0,0.5)',
-                        'glow': '0 0 0 2px rgba(16,185,129,0.4)',
-                        'glow-danger': '0 0 0 2px rgba(239,68,68,0.4)',
-                    },
-                    transitionTimingFunction: {
-                        'spring': 'cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                    }
-                }
-            }
-        }
-    </script>
+  <!-- Icons: Phosphor -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
-    <style>
-        /* Base Design System Tokens & Resets */
-        :root {
-            --border-hairline: rgba(255, 255, 255, 0.06);
-            --border-hover: rgba(255, 255, 255, 0.10);
-            --text-primary: rgba(255, 255, 255, 0.92);
-            --text-secondary: rgba(255, 255, 255, 0.60);
-            --text-muted: rgba(255, 255, 255, 0.40);
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Geist', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
+          colors: {
+            surface: {
+              950: '#0a0a0b', 900: '#121214', 800: '#1c1c1f',
+              700: '#27272a', 600: '#3f3f46', 500: '#52525b',
+            },
+            accent: { emerald: '#10b981', amber: '#f59e0b' },
+            danger: '#ef4444',
+          },
+          boxShadow: {
+            'sm': '0 1px 2px rgba(0,0,0,0.4)',
+            'pop': '0 8px 24px rgba(0,0,0,0.5)',
+            'glow-focus': '0 0 0 2px rgba(16,185,129,0.4)',
+            'glow-danger': '0 0 0 2px rgba(239,68,68,0.4)',
+            'glow-subtle': '0 0 15px rgba(255,255,255,0.05)',
+          },
+          borderRadius: { 'md': '6px', 'lg': '10px' },
         }
-
-        body {
-            background-color: theme('colors.surface.950');
-            color: var(--text-primary);
-            overscroll-behavior-y: none;
-        }
-
-        /* Custom Scrollbars */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { 
-            background: theme('colors.surface.600'); 
-            border-radius: 9999px; 
-        }
-        ::-webkit-scrollbar-thumb:hover { background: theme('colors.surface.500'); }
-
-        /* Liquid Edge Refraction & Materiality */
-        .glass-panel {
-            background: theme('colors.surface.800');
-            border-top: 1px solid var(--border-hover);
-            border-left: 1px solid var(--border-hairline);
-            border-right: 1px solid var(--border-hairline);
-            border-bottom: 1px solid rgba(0,0,0,0.8);
-            box-shadow: 
-                inset 0 1px 0 rgba(255,255,255,0.05),
-                theme('boxShadow.pop');
-        }
-
-        /* Forms & Inputs */
-        input:focus-visible, textarea:focus-visible {
-            outline: none;
-            border-color: theme('colors.emerald.DEFAULT');
-            box-shadow: theme('boxShadow.glow');
-        }
-        input.error:focus-visible {
-            border-color: theme('colors.danger.DEFAULT');
-            box-shadow: theme('boxShadow.glow-danger');
-        }
-
-        /* Component Morphs & Physics */
-        .squircle { border-radius: 12px; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .squircle:hover { border-radius: 8px; }
-        .squircle.active { border-radius: 8px; background: theme('colors.emerald.DEFAULT'); color: white; }
-
-        .btn-push:active:not(:disabled) { transform: scale(0.97) translateY(1px); }
-        
-        /* Modal Animation Engine */
-        .step-panel {
-            display: none;
-            opacity: 0;
-            transform: translateY(10px);
-            transition: opacity 0.3s ease, transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        .step-panel.active {
-            display: flex; /* Tailwind classes handle internal layout */
-        }
-        .step-panel.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        /* Continuous Loading State */
-        @keyframes shimmer {
-            0% { background-position: -1000px 0; }
-            100% { background-position: 1000px 0; }
-        }
-        .skeleton {
-            background: linear-gradient(90deg, theme('colors.surface.700') 25%, theme('colors.surface.600') 50%, theme('colors.surface.700') 75%);
-            background-size: 1000px 100%;
-            animation: shimmer 2s infinite linear;
-        }
-
-        /* Drag & Drop Visuals Context for Step 3 */
-        .drag-item { position: relative; }
-        .drag-item::before {
-            content: '';
-            position: absolute;
-            left: -8px; top: 0; bottom: 0; width: 4px;
-            background: transparent;
-            border-radius: 2px;
-            transition: background 0.2s ease;
-        }
-        .drag-item:hover::before { background: theme('colors.surface.600'); }
-        .drag-ghost {
-            opacity: 0.5;
-            background: theme('colors.surface.700');
-            border: 1px dashed var(--border-hover);
-        }
-
-        /* Connection Status Dot Animation */
-        @keyframes pulse-amber {
-            0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
-            70% { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
-        }
-        .status-reconnecting { animation: pulse-amber 1.5s infinite; }
-    </style>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style id="studyhall-geist-fix">
-  :root { --sh-font: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-          --sh-mono: 'Geist Mono', ui-monospace, monospace; }
-  html, body, button, input, textarea, select, h1,h2,h3,h4,h5,h6, p, span, div, a, label {
-    font-family: var(--sh-font) !important; }
-  code, pre, .font-mono { font-family: var(--sh-mono) !important; }
-</style>
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --text-primary: rgba(255,255,255,0.92);
+      --text-secondary: rgba(255,255,255,0.60);
+      --text-muted: rgba(255,255,255,0.40);
+      --border-hairline: rgba(255,255,255,0.06);
+      --border-hover: rgba(255,255,255,0.10);
+    }
+    body { font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; background: #0a0a0b; color: var(--text-primary); }
+    .t-primary { color: var(--text-primary); }
+    .t-secondary { color: var(--text-secondary); }
+    .t-muted { color: var(--text-muted); }
+    .b-hairline { border-color: var(--border-hairline); }
+    .b-hover { border-color: var(--border-hover); }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+    /* Focus discipline — emerald ring, never bare browser default */
+    .focus-ring:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(16,185,129,0.4); }
+    input.focus-ring:focus-visible { border-color: #10b981; }
+    .spin { animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes shimmer { 100% { transform: translateX(100%); } }
+    .skel { position: relative; overflow: hidden; background: #27272a; }
+    .skel::after { content:''; position:absolute; inset:0; transform:translateX(-100%);
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent); animation: shimmer 1.6s infinite; }
+  </style>
 </head>
-<body class="min-h-[100dvh] w-full overflow-hidden flex flex-col font-sans antialiased text-[14px] leading-relaxed selection:bg-emerald-muted selection:text-emerald-DEFAULT">
+<body class="antialiased">
 
-    <!--========================================================================
-        MACRO ARCHITECTURE: The App Shell (Background Context)
-        We build the ecosystem to contextualize the modal.
-    =========================================================================-->
-    
-    <!-- Top Utility Bar (Offline wedge simulation controls - purely for structural framing here) -->
-    <div id="dev-toolbar" class="absolute top-0 left-0 right-0 h-8 bg-surface-950 flex items-center justify-between px-3 border-b border-[var(--border-hairline)] z-10 text-xs text-[var(--text-muted)] font-mono">
-        <div class="flex items-center gap-2">
-            <i class="ph ph-terminal-window"></i>
-            <span>StudyHall :: Workspace Envir</span>
-        </div>
-        <div class="flex items-center gap-4">
-            <button onclick="toggleOfflineMode()" class="hover:text-amber-DEFAULT transition-colors flex items-center gap-1 group">
-                <span id="nav-network-status" class="w-2 h-2 rounded-full bg-emerald-DEFAULT group-hover:bg-amber-DEFAULT transition-colors"></span>
-                <span id="nav-network-text">Eth0: Configured</span>
+  <!-- ============================================================
+       STATE SHOWCASE — single-step create-server modal.
+       Mockup renders all six states side-by-side so reviewers see
+       every state. In the running app a single modal transitions
+       through these states.
+  ============================================================= -->
+
+  <!-- Dimmed app shell behind the primary modal (context only) -->
+  <div class="fixed inset-0 -z-10 flex pointer-events-none opacity-40 blur-[2px] saturate-50 select-none" aria-hidden="true">
+    <div class="w-[72px] bg-surface-900 border-r b-hairline border flex flex-col items-center py-4 gap-3">
+      <div class="w-12 h-12 rounded-lg bg-surface-800 flex items-center justify-center t-secondary"><i class="ph ph-books text-xl"></i></div>
+      <div class="w-8 h-[2px] bg-surface-700 rounded-full"></div>
+      <div class="w-12 h-12 rounded-lg bg-surface-800 flex items-center justify-center t-secondary text-xs font-medium">CS</div>
+      <div class="mt-auto w-12 h-12 rounded-full border b-hover border flex items-center justify-center text-accent-emerald"><i class="ph ph-plus"></i></div>
+    </div>
+    <div class="w-[260px] bg-surface-900 border-r b-hairline border"></div>
+    <div class="flex-1 bg-surface-800"></div>
+  </div>
+
+  <main class="min-h-[100dvh] w-full px-8 py-12">
+    <header class="max-w-6xl mx-auto mb-10 text-center">
+      <p class="text-xs uppercase tracking-widest text-accent-emerald font-semibold mb-2">StudyHall · D-block staging</p>
+      <h1 class="text-2xl font-semibold tracking-tight t-primary">Create a server — single-step modal (all states)</h1>
+      <p class="t-secondary text-sm mt-2">One name field → Create. Server seeds owner membership + a default “General” category + #general server-side.</p>
+    </header>
+
+    <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 items-start">
+
+      <!-- ========== Shared modal template, one per state ========== -->
+
+      <!-- STATE 1: default (empty, Create disabled) -->
+      <section aria-labelledby="s1" class="flex flex-col gap-3">
+        <h2 id="s1" class="text-xs font-semibold uppercase tracking-wider t-secondary">1 · Default (empty)</h2>
+        <div class="rounded-lg bg-surface-900 border b-hairline shadow-pop" role="dialog" aria-modal="true" aria-labelledby="s1-title">
+          <div class="flex items-center justify-between px-4 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
+            <h3 id="s1-title" class="text-xl font-semibold tracking-tight t-primary">Create a server</h3>
+            <button class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors" aria-label="Close">
+              <i class="ph ph-x text-lg" aria-hidden="true"></i>
             </button>
+          </div>
+          <div class="px-4 py-4">
+            <p class="t-secondary text-sm mb-5">Give your study server a name. You can change it later.</p>
+            <label for="n1" class="block text-sm font-medium t-primary mb-2">Server name</label>
+            <div class="relative">
+              <input id="n1" type="text" placeholder="e.g. CS-201 Data Structures"
+                class="focus-ring w-full bg-surface-950 border b-hover rounded-md pl-3 pr-14 py-2.5 text-sm t-primary placeholder:t-muted transition-colors"
+                aria-describedby="n1-help">
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs t-secondary tabular-nums">0/100</span>
+            </div>
+            <p id="n1-help" class="text-xs t-secondary mt-2">1–100 characters.</p>
+          </div>
+          <div class="flex items-center justify-end gap-2 px-4 py-4 border-t b-hairline">
+            <button class="focus-ring rounded-md px-4 py-2 text-sm font-medium t-secondary hover:t-primary hover:bg-surface-700 transition-colors">Cancel</button>
+            <button disabled class="rounded-md px-4 py-2 text-sm font-semibold bg-surface-700 t-muted cursor-not-allowed">Create</button>
+          </div>
         </div>
+      </section>
+
+      <!-- STATE 2: valid-input (Create enabled) -->
+      <section aria-labelledby="s2" class="flex flex-col gap-3">
+        <h2 id="s2" class="text-xs font-semibold uppercase tracking-wider t-secondary">2 · Valid input</h2>
+        <div class="rounded-lg bg-surface-900 border b-hairline shadow-pop" role="dialog" aria-modal="true" aria-labelledby="s2-title">
+          <div class="flex items-center justify-between px-4 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
+            <h3 id="s2-title" class="text-xl font-semibold tracking-tight t-primary">Create a server</h3>
+            <button class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors" aria-label="Close"><i class="ph ph-x text-lg" aria-hidden="true"></i></button>
+          </div>
+          <div class="px-4 py-4">
+            <p class="t-secondary text-sm mb-5">Give your study server a name. You can change it later.</p>
+            <label for="n2" class="block text-sm font-medium t-primary mb-2">Server name</label>
+            <div class="relative">
+              <input id="n2" type="text" value="CS-201 Data Structures"
+                class="w-full bg-surface-950 border rounded-md pl-3 pr-14 py-2.5 text-sm t-primary transition-colors"
+                style="border-color:#10b981; box-shadow:0 0 0 2px rgba(16,185,129,0.4);" aria-describedby="n2-help">
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs t-secondary tabular-nums">21/100</span>
+            </div>
+            <p id="n2-help" class="text-xs t-secondary mt-2">1–100 characters.</p>
+          </div>
+          <div class="flex items-center justify-end gap-2 px-4 py-4 border-t b-hairline">
+            <button class="focus-ring rounded-md px-4 py-2 text-sm font-medium t-secondary hover:t-primary hover:bg-surface-700 transition-colors">Cancel</button>
+            <button class="focus-ring rounded-md px-4 py-2 text-sm font-semibold bg-accent-emerald text-surface-950 hover:bg-accent-emerald/90 transition-colors shadow-glow-subtle">Create</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- STATE 3: validation-error -->
+      <section aria-labelledby="s3" class="flex flex-col gap-3">
+        <h2 id="s3" class="text-xs font-semibold uppercase tracking-wider t-secondary">3 · Validation error</h2>
+        <div class="rounded-lg bg-surface-900 border b-hairline shadow-pop" role="dialog" aria-modal="true" aria-labelledby="s3-title">
+          <div class="flex items-center justify-between px-4 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
+            <h3 id="s3-title" class="text-xl font-semibold tracking-tight t-primary">Create a server</h3>
+            <button class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors" aria-label="Close"><i class="ph ph-x text-lg" aria-hidden="true"></i></button>
+          </div>
+          <div class="px-4 py-4">
+            <p class="t-secondary text-sm mb-5">Give your study server a name. You can change it later.</p>
+            <label for="n3" class="block text-sm font-medium t-primary mb-2">Server name</label>
+            <div class="relative">
+              <input id="n3" type="text" value="" aria-invalid="true"
+                class="focus-ring w-full bg-surface-950 border rounded-md pl-3 pr-14 py-2.5 text-sm t-primary placeholder:t-muted transition-colors"
+                style="border-color:#ef4444; box-shadow:0 0 0 2px rgba(239,68,68,0.4);" placeholder="e.g. CS-201 Data Structures" aria-describedby="n3-err">
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs t-secondary tabular-nums">0/100</span>
+            </div>
+            <p id="n3-err" class="text-xs text-danger mt-2 flex items-center gap-1.5"><i class="ph ph-warning-circle"></i> Enter a name between 1 and 100 characters.</p>
+          </div>
+          <div class="flex items-center justify-end gap-2 px-4 py-4 border-t b-hairline">
+            <button class="focus-ring rounded-md px-4 py-2 text-sm font-medium t-secondary hover:t-primary hover:bg-surface-700 transition-colors">Cancel</button>
+            <button disabled class="rounded-md px-4 py-2 text-sm font-semibold bg-surface-700 t-muted cursor-not-allowed">Create</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- STATE 3b: validation-error (too long, > 100 chars) -->
+      <section aria-labelledby="s3b" class="flex flex-col gap-3">
+        <h2 id="s3b" class="text-xs font-semibold uppercase tracking-wider t-secondary">3b · Validation error (too long)</h2>
+        <div class="rounded-lg bg-surface-900 border b-hairline shadow-pop" role="dialog" aria-modal="true" aria-labelledby="s3b-title">
+          <div class="flex items-center justify-between px-4 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
+            <h3 id="s3b-title" class="text-xl font-semibold tracking-tight t-primary">Create a server</h3>
+            <button class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors" aria-label="Close"><i class="ph ph-x text-lg" aria-hidden="true"></i></button>
+          </div>
+          <div class="px-4 py-4">
+            <p class="t-secondary text-sm mb-5">Give your study server a name. You can change it later.</p>
+            <label for="n3b" class="block text-sm font-medium t-primary mb-2">Server name</label>
+            <div class="relative">
+              <input id="n3b" type="text" value="Advanced Topics in Distributed Systems, Consensus, Replication & Fault Tolerance — Fall" aria-invalid="true"
+                class="focus-ring w-full bg-surface-950 border rounded-md pl-3 pr-16 py-2.5 text-sm t-primary transition-colors truncate"
+                style="border-color:#ef4444; box-shadow:0 0 0 2px rgba(239,68,68,0.4);" aria-describedby="n3b-err">
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-danger tabular-nums">101/100</span>
+            </div>
+            <p id="n3b-err" class="text-xs text-danger mt-2 flex items-center gap-1.5"><i class="ph ph-warning-circle" aria-hidden="true"></i> Server name must be 100 characters or fewer.</p>
+          </div>
+          <div class="flex items-center justify-end gap-2 px-4 py-4 border-t b-hairline">
+            <button class="focus-ring rounded-md px-4 py-2 text-sm font-medium t-secondary hover:t-primary hover:bg-surface-700 transition-colors">Cancel</button>
+            <button disabled class="rounded-md px-4 py-2 text-sm font-semibold bg-surface-700 t-muted cursor-not-allowed">Create</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- STATE 4: loading (submitting) -->
+      <section aria-labelledby="s4" class="flex flex-col gap-3">
+        <h2 id="s4" class="text-xs font-semibold uppercase tracking-wider t-secondary">4 · Loading (submitting)</h2>
+        <div class="rounded-lg bg-surface-900 border b-hairline shadow-pop" role="dialog" aria-modal="true" aria-labelledby="s4-title" aria-busy="true">
+          <div class="flex items-center justify-between px-4 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
+            <h3 id="s4-title" class="text-xl font-semibold tracking-tight t-primary">Create a server</h3>
+            <button class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors" aria-label="Close"><i class="ph ph-x text-lg" aria-hidden="true"></i></button>
+          </div>
+          <div class="px-4 py-4">
+            <p class="t-secondary text-sm mb-5">Give your study server a name. You can change it later.</p>
+            <label for="n4" class="block text-sm font-medium t-primary mb-2">Server name</label>
+            <div class="relative">
+              <input id="n4" type="text" value="CS-201 Data Structures" disabled
+                class="w-full bg-surface-950 border b-hairline rounded-md pl-3 pr-14 py-2.5 text-sm t-muted cursor-not-allowed opacity-70">
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs t-muted tabular-nums">21/100</span>
+            </div>
+            <p class="text-xs t-secondary mt-2">1–100 characters.</p>
+          </div>
+          <div class="flex items-center justify-end gap-2 px-4 py-4 border-t b-hairline">
+            <button disabled class="rounded-md px-4 py-2 text-sm font-medium t-muted cursor-not-allowed">Cancel</button>
+            <button disabled aria-busy="true" class="rounded-md px-4 py-2 text-sm font-semibold bg-accent-emerald/80 text-surface-950 inline-flex items-center justify-center min-w-[84px]">
+              <i class="ph ph-spinner-gap spin text-base" aria-hidden="true"></i><span class="sr-only">Creating…</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- STATE 5: server-error -->
+      <section aria-labelledby="s5" class="flex flex-col gap-3">
+        <h2 id="s5" class="text-xs font-semibold uppercase tracking-wider t-secondary">5 · Server error</h2>
+        <div class="rounded-lg bg-surface-900 border b-hairline shadow-pop" role="dialog" aria-modal="true" aria-labelledby="s5-title">
+          <div class="flex items-center justify-between px-4 py-4 border-b b-hairline bg-surface-800/60 rounded-t-lg">
+            <h3 id="s5-title" class="text-xl font-semibold tracking-tight t-primary">Create a server</h3>
+            <button class="focus-ring rounded-md p-1 t-muted hover:t-primary hover:bg-surface-700 transition-colors" aria-label="Close"><i class="ph ph-x text-lg" aria-hidden="true"></i></button>
+          </div>
+          <div class="px-4 py-4">
+            <div role="alert" class="mb-4 flex items-start gap-2 rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-sm">
+              <i class="ph ph-warning-circle text-danger mt-0.5"></i>
+              <span class="t-primary">Couldn’t create the server. Check your connection and try again.</span>
+            </div>
+            <label for="n5" class="block text-sm font-medium t-primary mb-2">Server name</label>
+            <div class="relative">
+              <input id="n5" type="text" value="CS-201 Data Structures"
+                class="focus-ring w-full bg-surface-950 border b-hover rounded-md pl-3 pr-14 py-2.5 text-sm t-primary transition-colors">
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs t-secondary tabular-nums">21/100</span>
+            </div>
+            <p class="text-xs t-secondary mt-2">1–100 characters.</p>
+          </div>
+          <div class="flex items-center justify-end gap-2 px-4 py-4 border-t b-hairline">
+            <button class="focus-ring rounded-md px-4 py-2 text-sm font-medium t-secondary hover:t-primary hover:bg-surface-700 transition-colors">Cancel</button>
+            <button class="focus-ring rounded-md px-4 py-2 text-sm font-semibold bg-accent-emerald text-surface-950 hover:bg-accent-emerald/90 transition-colors inline-flex items-center gap-1.5">
+              <i class="ph ph-arrow-clockwise text-base" aria-hidden="true"></i> Retry
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- STATE 6: success (modal closes → new server selected) -->
+      <section aria-labelledby="s6" class="flex flex-col gap-3">
+        <h2 id="s6" class="text-xs font-semibold uppercase tracking-wider t-secondary">6 · Success (closes → selected)</h2>
+        <div class="rounded-lg bg-surface-900 border b-hairline shadow-pop overflow-hidden">
+          <!-- Result: modal has closed; the new server is now selected in the rail + its #general shown. -->
+          <div class="flex">
+            <!-- rail snippet with new server active -->
+            <div class="w-[64px] bg-surface-950 border-r b-hairline border flex flex-col items-center py-3 gap-2">
+              <div class="w-10 h-10 rounded-lg bg-surface-800 flex items-center justify-center t-secondary"><i class="ph ph-books text-lg"></i></div>
+              <div class="relative">
+                <span class="absolute -left-3 top-1/2 -translate-y-1/2 w-1 h-7 bg-accent-emerald rounded-r-md" aria-hidden="true"></span>
+                <div class="w-10 h-10 rounded-md bg-surface-600 flex items-center justify-center text-sm font-semibold t-primary shadow-glow-subtle">CS</div>
+              </div>
+              <div class="mt-auto w-10 h-10 rounded-full border b-hover border flex items-center justify-center text-accent-emerald"><i class="ph ph-plus"></i></div>
+            </div>
+            <!-- sidebar snippet with #general -->
+            <div class="flex-1 bg-surface-900 py-3">
+              <div class="px-3 pb-2 mb-2 border-b b-hairline flex items-center justify-between">
+                <span class="text-sm font-semibold t-primary truncate">CS-201 Data Structures</span>
+                <i class="ph ph-caret-down text-xs t-secondary"></i>
+              </div>
+              <div class="px-2">
+                <p class="text-xs font-semibold uppercase tracking-wider t-secondary px-2 mb-1">General</p>
+                <div class="flex items-center gap-2 px-2 py-1.5 rounded-md bg-surface-700 text-accent-emerald" aria-current="true">
+                  <i class="ph ph-hash text-base"></i><span class="text-sm font-medium">general</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="px-4 py-3 text-xs t-secondary border-t b-hairline bg-surface-800/40"><i class="ph ph-check-circle text-accent-emerald"></i> Server created — modal closed, new server selected with its #general channel.</p>
+        </div>
+      </section>
+
     </div>
-
-    <!-- Main 3-Pane Layout -->
-    <div class="flex-1 flex pt-8 h-full w-full opacity-40 grayscale-[20%] blur-[2px] transition-all duration-1000 scale-[0.99] origin-center saturate-50 pointer-events-none select-none">
-        <!-- Rail -->
-        <div class="w-[72px] bg-surface-900 border-r border-[var(--border-hairline)] flex flex-col items-center py-4 gap-3 shrink-0 relative">
-            <div class="w-12 h-12 bg-surface-800 squircle flex items-center justify-center text-[var(--text-secondary)]"><i class="ph ph-house text-2xl"></i></div>
-            <div class="w-8 h-[2px] bg-surface-700 rounded-full my-1"></div>
-            <div class="w-12 h-12 bg-surface-800 squircle flex items-center justify-center relative">
-                <span class="absolute -left-3 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-emerald-DEFAULT rounded-r-md"></span>
-                 <i class="ph ph-atom text-2xl text-[var(--text-primary)]"></i>
-            </div>
-            <!-- The button that hypothetically triggered this modal -->
-            <div class="w-12 h-12 bg-surface-800 squircle border border-dashed border-[var(--border-hover)] flex items-center justify-center text-emerald-DEFAULT ring-2 ring-emerald-DEFAULT ring-opacity-20 mt-2">
-                <i class="ph ph-plus text-xl"></i>
-            </div>
-        </div>
-
-        <!-- Sidebar -->
-        <div class="w-[260px] bg-surface-900 border-r border-[var(--border-hairline)] shrink-0 flex flex-col hidden md:flex">
-            <div class="h-14 border-b border-[var(--border-hairline)] flex items-center px-4 font-medium text-[15px] shadow-sm tracking-tight text-[var(--text-primary)]">
-                General Chem 101 <i class="ph ph-caret-down ml-auto text-[var(--text-muted)]"></i>
-            </div>
-            <div class="p-3 flex flex-col gap-1">
-                <div class="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mt-4 mb-1 px-1">Study Material</div>
-                <div class="flex items-center gap-2 px-2 py-1.5 text-[var(--text-secondary)] rounded-md"><i class="ph ph-hash"></i> resources</div>
-                <div class="flex items-center gap-2 px-2 py-1.5 bg-surface-700 text-emerald-DEFAULT rounded-md"><i class="ph ph-hash"></i> lecture-notes</div>
-            </div>
-        </div>
-
-        <!-- Canvas -->
-        <div class="flex-1 bg-surface-800 flex flex-col relative hidden sm:flex">
-            <div class="h-14 border-b border-[var(--border-hairline)] flex items-center px-4 shadow-sm gap-2">
-                <i class="ph ph-hash text-[var(--text-muted)] text-lg"></i>
-                <span class="font-medium text-[var(--text-primary)]">lecture-notes</span>
-                <span class="text-[var(--text-muted)] text-sm ml-2 border-l border-[var(--border-hairline)] pl-3">Week 4 molecular geometry</span>
-            </div>
-            <div class="flex-1 p-6 space-y-6">
-                <!-- Skeletons -->
-                <div class="flex gap-4"><div class="w-10 h-10 rounded-full bg-surface-700 shrink-0"></div><div class="space-y-2 flex-1"><div class="h-4 w-32 bg-surface-700 rounded w-1/4"></div><div class="h-16 bg-surface-700 rounded w-3/4"></div></div></div>
-                <div class="flex gap-4"><div class="w-10 h-10 rounded-full bg-surface-700 shrink-0"></div><div class="space-y-2 flex-1"><div class="h-4 w-24 bg-surface-700 rounded w-1/5"></div><div class="h-8 bg-surface-700 rounded w-1/2"></div></div></div>
-            </div>
-        </div>
-    </div>
-
-
-    <!--========================================================================
-        MACRO ARCHITECTURE: The Overlay & Orchestration Shell
-    =========================================================================-->
-    <div class="fixed inset-0 z-40 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
-        
-        <!-- Toast Notification Area (Fixed to bottom center) -->
-        <div id="toast-container" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 transition-all"></div>
-
-        <!-- Connection State Wedge (Visible Offline Warning) -->
-        <div id="offline-wedge" class="absolute top-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-surface-900 border border-amber-DEFAULT/30 text-amber-DEFAULT px-4 py-2 rounded-full shadow-pop text-sm font-medium opacity-0 translate-y-[-20px] transition-all duration-300 pointer-events-none z-50">
-            <span class="w-2 h-2 rounded-full bg-amber-DEFAULT status-reconnecting"></span>
-            Offline — Modifying local cache. Will sync when connected.
-        </div>
-
-        <!-- The Modal Container -->
-        <div id="modal-container" class="glass-panel w-full max-w-[600px] rounded-2xl flex flex-col relative overflow-hidden transition-all duration-500 will-change-[width,height] min-h-[440px]">
-            
-            <!-- Window Drag Frame / Header -->
-            <div class="flex items-center justify-between px-6 py-4 border-b border-[var(--border-hairline)] shrink-0 bg-surface-900/50">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-lg bg-surface-700 flex items-center justify-center text-[var(--text-secondary)] shadow-sm">
-                        <i class="ph ph-cube text-lg"></i>
-                    </div>
-                    <h1 class="text-lg font-semibold tracking-tight text-[var(--text-primary)]">Create a server</h1>
-                </div>
-                <!-- Progress Indicators -->
-                <div class="flex gap-1.5" id="step-indicators">
-                    <div class="w-6 h-1.5 rounded-full bg-emerald-DEFAULT"></div>
-                    <div class="w-6 h-1.5 rounded-full bg-surface-600 transition-colors"></div>
-                    <div class="w-6 h-1.5 rounded-full bg-surface-600 transition-colors"></div>
-                </div>
-                <button class="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors p-1 rounded-md hover:bg-surface-700 absolute right-4 top-4 focus-visible:ring-2 focus-visible:ring-emerald-DEFAULT">
-                    <i class="ph ph-x"></i>
-                </button>
-            </div>
-
-            <!-- Content Area (Scrollable if needed, relative for steps) -->
-            <div class="relative flex-1 overflow-y-auto overflow-x-hidden p-6" id="wizard-flow">
-                
-                <!--=========================================================
-                    STEP 1: Profile (Name & Icon)
-                ==========================================================-->
-                <div class="step-panel flex flex-col h-full active visible absolute inset-0 p-6" id="step-1">
-                    <div class="space-y-1 mb-8">
-                        <h2 class="text-2xl font-semibold tracking-tight leading-none text-[var(--text-primary)]">Define your space</h2>
-                        <p class="text-[var(--text-secondary)] text-[14px]">Pick a name and icon to make it recognizable.</p>
-                    </div>
-
-                    <div class="flex-1 flex flex-col gap-6">
-                        <!-- Icon Picker -->
-                        <div>
-                            <label class="block text-sm font-medium text-[var(--text-primary)] mb-3">Server Icon <span class="text-[var(--text-muted)] font-normal">(optional)</span></label>
-                            <div class="flex items-center gap-4">
-                                <!-- Selected Preview -->
-                                <div id="icon-preview" class="w-16 h-16 rounded-xl bg-surface-700 border border-[var(--border-hover)] flex items-center justify-center text-3xl shadow-sm shrink-0 transition-all cursor-pointer hover:border-emerald-DEFAULT group relative">
-                                    <i class="ph ph-flask text-[var(--text-secondary)] group-hover:text-emerald-DEFAULT transition-colors"></i>
-                                    <div class="absolute inset-0 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                        <i class="ph ph-camera text-white"></i>
-                                    </div>
-                                </div>
-                                
-                                <!-- Preset Grid -->
-                                <div class="flex-1 flex flex-wrap gap-2">
-                                    <button class="w-10 h-10 rounded-lg bg-surface-700 hover:bg-surface-600 border border-[var(--border-hairline)] flex items-center justify-center text-lg btn-push focus-visible:ring-2 focus-visible:ring-emerald-DEFAULT transition-colors ring-1 ring-emerald-DEFAULT ring-offset-1 ring-offset-surface-800"><i class="ph ph-flask text-emerald-DEFAULT"></i></button>
-                                    <button class="w-10 h-10 rounded-lg bg-surface-700 hover:bg-surface-600 border border-[var(--border-hairline)] flex items-center justify-center text-lg text-[var(--text-secondary)] hover:text-white btn-push focus-visible:ring-2 focus-visible:ring-emerald-DEFAULT transition-colors"><i class="ph ph-books"></i></button>
-                                    <button class="w-10 h-10 rounded-lg bg-surface-700 hover:bg-surface-600 border border-[var(--border-hairline)] flex items-center justify-center text-lg text-[var(--text-secondary)] hover:text-white btn-push focus-visible:ring-2 focus-visible:ring-emerald-DEFAULT transition-colors"><i class="ph ph-graduation-cap"></i></button>
-                                    <button class="w-10 h-10 rounded-lg bg-surface-700 hover:bg-surface-600 border border-[var(--border-hairline)] flex items-center justify-center text-lg text-[var(--text-secondary)] hover:text-white btn-push focus-visible:ring-2 focus-visible:ring-emerald-DEFAULT transition-colors"><i class="ph ph-microscope"></i></button>
-                                    <button class="w-10 h-10 rounded-lg border border-dashed border-[var(--border-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--text-muted)] flex items-center justify-center text-sm font-medium btn-push focus-visible:ring-2 focus-visible:ring-emerald-DEFAULT transition-colors tooltip relative group">
-                                        <i class="ph ph-upload-simple"></i>
-                                        <!-- Tooltip primitive -->
-                                        <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-surface-700 text-[12px] px-2 py-1 rounded shadow-pop opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-10">Upload (Max 2MB)</div>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Name Input -->
-                        <div>
-                            <label for="server-name" class="block text-sm font-medium text-[var(--text-primary)] mb-2">Server Name</label>
-                            <div class="relative">
-                                <input type="text" id="server-name" 
-                                    class="w-full bg-surface-900 border border-[var(--border-hover)] rounded-md px-4 py-2.5 text-base focus-visible:ring-0 focus-visible:border-emerald-DEFAULT focus-visible:shadow-[0_0_0_2px_rgba(16,185,129,0.2)] transition-all placeholder-[var(--text-muted)]"
-                                    placeholder="e.g., Organic Chemistry Fall 2025"
-                                    maxlength="80"
-                                    oninput="validateStep1()"
-                                    autocomplete="off">
-                                <div class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--text-muted)] font-mono">
-                                    <span id="char-count">0</span>/80
-                                </div>
-                            </div>
-                            <!-- Inline Error Container -->
-                            <p id="name-error" class="hidden text-danger-DEFAULT text-xs mt-2 flex items-center gap-1"><i class="ph ph-warning-circle"></i> Server name required.</p>
-                        </div>
-                    </div>
-
-                    <!-- Footer Alignment -->
-                    <div class="mt-auto pt-6 flex justify-end">
-                        <button id="btn-next-1" disabled onclick="navStep(2)" class="px-5 py-2.5 bg-emerald-DEFAULT text-white rounded-md font-semibold text-[14px] disabled:bg-surface-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_1px_2px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.2)] hover:bg-emerald-hover btn-push">
-                            Next
-                        </button>
-                    </div>
-                </div>
-
-
-                <!--=========================================================
-                    STEP 2: Architecture Paradigm (Templates)
-                    Anti-Boredom: Custom Assymetric / Focus Grid
-                ==========================================================-->
-                <div class="step-panel flex flex-col h-full absolute inset-0 p-6 will-change-transform" id="step-2">
-                    <div class="space-y-1 mb-6 shrink-0">
-                        <h2 class="text-2xl font-semibold tracking-tight leading-none text-[var(--text-primary)]">Operational Blueprint</h2>
-                        <p class="text-[var(--text-secondary)] text-[14px]">Select a starting structure tailored to your study type.</p>
-                    </div>
-
-                    <!-- Adaptive Multi-column constraint -->
-                    <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 pb-4 items-stretch content-start">
-                        
-                        <!-- Primary Template (Class Cohort) -->
-                        <div class="template-card relative flex flex-col p-4 bg-surface-900 border border-emerald-DEFAULT/40 rounded-xl cursor-pointer hover:bg-surface-800 transition-all shadow-[inset_0_0_20px_rgba(16,185,129,0.05),0_4px_12px_rgba(0,0,0,0.2)]" onclick="selectTemplate('cohort', this)">
-                            <div class="absolute -top-2.5 right-4 bg-emerald-DEFAULT text-surface-950 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shadow-sm">Recommended</div>
-                            <div class="flex items-center gap-3 mb-2">
-                                <div class="w-8 h-8 rounded bg-emerald-muted text-emerald-DEFAULT flex items-center justify-center border border-emerald-DEFAULT/20"><i class="ph ph-users-three text-lg"></i></div>
-                                <h3 class="font-semibold text-emerald-DEFAULT">Class Cohort</h3>
-                            </div>
-                            <p class="text-xs text-[var(--text-secondary)] leading-relaxed mb-4 flex-1">Perfect for semester-long study groups. Includes standard text channels and a drop-in voice room.</p>
-                            <div class="flex flex-col gap-1 border-t border-[var(--border-hairline)] pt-3 text-[11px] font-mono text-[var(--text-muted)]">
-                                <span class="flex items-center gap-1"><i class="ph ph-hash"></i>general</span>
-                                <span class="flex items-center gap-1"><i class="ph ph-hash"></i>questions</span>
-                                <span class="flex items-center gap-1"><i class="ph ph-speaker-high"></i>Study Room</span>
-                            </div>
-                            <!-- Selection Ring Frame -->
-                            <div class="absolute inset-0 border-2 border-emerald-DEFAULT rounded-xl opacity-100 pointer-events-none transition-opacity"></div>
-                        </div>
-
-                        <!-- Template 2 (Subject/Topics) -->
-                        <div class="template-card relative flex flex-col p-4 bg-surface-900 border border-[var(--border-hairline)] rounded-xl cursor-pointer hover:border-[var(--border-hover)] hover:bg-surface-800 transition-all" onclick="selectTemplate('subject', this)">
-                            <div class="flex items-center gap-3 mb-2">
-                                <div class="w-8 h-8 rounded bg-surface-700 text-[var(--text-primary)] flex items-center justify-center border border-[var(--border-hairline)]"><i class="ph ph-folders text-lg"></i></div>
-                                <h3 class="font-semibold text-[var(--text-primary)]">Subject Deep-Dive</h3>
-                            </div>
-                            <p class="text-xs text-[var(--text-secondary)] leading-relaxed mb-4 flex-1">Organize by distinct topics or syllabus units. Pre-configured with distinct operational categories.</p>
-                            <div class="flex flex-col gap-1 border-t border-[var(--border-hairline)] pt-3 text-[11px] font-mono text-[var(--text-muted)]">
-                                <span>[Units Category]</span>
-                                <span>[Resources Category]</span>
-                                <span class="text-emerald-DEFAULT/60 italic">+ Heavy structure</span>
-                            </div>
-                            <div class="absolute inset-0 border-2 border-emerald-DEFAULT rounded-xl opacity-0 pointer-events-none transition-opacity selection-ring"></div>
-                        </div>
-
-                        <!-- Template 3 (Blank Slate) - Spans full width on md to break grid monotony (Visual Tension) -->
-                        <div class="template-card relative flex flex-row items-center p-4 bg-surface-900 border border-[var(--border-hairline)] rounded-xl cursor-pointer hover:border-[var(--border-hover)] hover:bg-surface-800 transition-all md:col-span-2" onclick="selectTemplate('blank', this)">
-                            <div class="w-8 h-8 rounded bg-surface-700 text-[var(--text-primary)] flex items-center justify-center border border-dashed border-[var(--border-hover)] shrink-0"><i class="ph ph-file-dashed text-lg"></i></div>
-                            <div class="ml-4 flex-1">
-                                <h3 class="font-semibold text-[var(--text-primary)] text-[14px]">Blank Slate</h3>
-                                <p class="text-xs text-[var(--text-secondary)]">Start from scratch. You build the entire hierarchy.</p>
-                            </div>
-                            <i class="ph ph-arrow-right text-[var(--text-muted)]"></i>
-                            <div class="absolute inset-0 border-2 border-emerald-DEFAULT rounded-xl opacity-0 pointer-events-none transition-opacity selection-ring"></div>
-                        </div>
-                    </div>
-
-                    <div class="mt-auto pt-6 flex justify-between border-t border-[var(--border-hairline)]">
-                        <button onclick="navStep(1)" class="px-4 py-2 text-[var(--text-secondary)] hover:text-white font-medium text-[14px] transition-colors btn-push focus-visible:ring-2 focus-visible:ring-emerald-DEFAULT rounded-md">
-                            Back
-                        </button>
-                        <button id="btn-next-2" onclick="navStep(3)" class="px-5 py-2.5 bg-emerald-DEFAULT text-white rounded-md font-semibold text-[14px] transition-all shadow-[0_1px_2px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.2)] hover:bg-emerald-hover btn-push">
-                            Next
-                        </button>
-                    </div>
-                </div>
-
-
-                <!--=========================================================
-                    STEP 3: The Meso-Architecture (Configuration & Density)
-                    A Master/Detail view compressed into a modal.
-                ==========================================================-->
-                <div class="step-panel flex flex-col h-full absolute inset-0 p-0 will-change-transform bg-surface-800" id="step-3">
-                    
-                    <!-- Header -->
-                    <div class="px-6 pt-6 pb-4 shrink-0 bg-surface-900/50 border-b border-[var(--border-hairline)]">
-                        <h2 class="text-xl font-semibold tracking-tight text-[var(--text-primary)] leading-none">Customize Channels</h2>
-                        <p class="text-[var(--text-secondary)] text-[13px] mt-1">Review the topology. You can edit, reorder, or delete these later.</p>
-                    </div>
-
-                    <!-- Split View -->
-                    <div class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
-                        
-                        <!-- Left Pane: Channel Tree -->
-                        <div class="w-full md:w-[240px] flex flex-col border-r border-[var(--border-hairline)] bg-surface-900 shrink-0 h-[200px] md:h-auto overflow-y-auto" id="channel-tree">
-                            
-                            <!-- Static representation of populated template based on "Class Cohort" -->
-                            <div class="p-2 space-y-[2px]">
-                                
-                                <!-- Top Level Channels -->
-                                <div class="group flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-surface-700 cursor-pointer drag-item text-[13px] transition-colors bg-surface-800 border border-[var(--border-hover)]">
-                                    <div class="flex items-center gap-2 overflow-hidden">
-                                        <i class="ph ph-hash text-[var(--text-muted)] text-[14px]"></i>
-                                        <span class="text-[var(--text-primary)] font-medium truncate">general</span>
-                                    </div>
-                                    <button class="opacity-0 group-hover:opacity-100 text-[var(--text-muted)] hover:text-danger-DEFAULT transition-all"><i class="ph ph-x"></i></button>
-                                </div>
-                                <div class="group flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-surface-700 cursor-pointer drag-item text-[13px] transition-colors">
-                                    <div class="flex items-center gap-2 overflow-hidden">
-                                        <i class="ph ph-hash text-[var(--text-muted)] text-[14px]"></i>
-                                        <span class="text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] truncate">questions</span>
-                                    </div>
-                                    <button class="opacity-0 group-hover:opacity-100 text-[var(--text-muted)] hover:text-danger-DEFAULT transition-all"><i class="ph ph-x"></i></button>
-                                </div>
-
-                                <!-- Category Block -->
-                                <div class="mt-4 mb-1 px-1 flex items-center justify-between group cursor-pointer drag-item">
-                                    <div class="flex items-center gap-1 text-[11px] font-semibold text-[var(--text-muted)] group-hover:text-[var(--text-primary)] uppercase tracking-wider transition-colors">
-                                        <i class="ph ph-caret-down text-[10px]"></i>
-                                        Study Rooms
-                                    </div>
-                                    <button class="opacity-0 group-hover:opacity-100 text-[var(--text-muted)] hover:text-danger-DEFAULT text-xs"><i class="ph ph-x"></i></button>
-                                </div>
-                                <div class="pl-3 space-y-[2px]">
-                                    <div class="group flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-surface-700 cursor-pointer drag-item text-[13px] transition-colors">
-                                        <div class="flex items-center gap-2 overflow-hidden">
-                                            <i class="ph ph-speaker-high text-[var(--text-muted)] text-[14px]"></i>
-                                            <span class="text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] truncate">Lounge</span>
-                                        </div>
-                                        <button class="opacity-0 group-hover:opacity-100 text-[var(--text-muted)] hover:text-danger-DEFAULT transition-all"><i class="ph ph-x"></i></button>
-                                    </div>
-                                    <div class="group flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-surface-700 cursor-pointer drag-item text-[13px] transition-colors">
-                                        <div class="flex items-center gap-2 overflow-hidden">
-                                            <i class="ph ph-speaker-high text-[var(--text-muted)] text-[14px]"></i>
-                                            <span class="text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] truncate">Quiet Study</span>
-                                        </div>
-                                        <button class="opacity-0 group-hover:opacity-100 text-[var(--text-muted)] hover:text-danger-DEFAULT transition-all"><i class="ph ph-x"></i></button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <button class="mt-auto m-2 py-1.5 flex justify-center items-center gap-2 text-xs font-medium text-[var(--text-secondary)] border border-dashed border-[var(--border-hover)] rounded hover:bg-surface-700 hover:text-[var(--text-primary)] hover:border-[var(--text-primary)] transition-all">
-                                <i class="ph ph-plus"></i> Add Channel
-                            </button>
-                        </div>
-
-                        <!-- Right Pane: Detail Editor -->
-                        <div class="flex-1 flex flex-col p-5 bg-surface-800 overflow-y-auto">
-                            <!-- Visual indication that #general is selected -->
-                            <div class="flex items-center gap-2 mb-4">
-                                <div class="w-6 h-6 rounded bg-surface-700 flex items-center justify-center text-[var(--text-secondary)] border border-[var(--border-hairline)]"><i class="ph ph-hash text-sm"></i></div>
-                                <h3 class="font-medium text-[var(--text-primary)]">Edit Channel</h3>
-                            </div>
-
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="block text-xs font-medium text-[var(--text-muted)] mb-1 uppercase tracking-wider">Channel Name</label>
-                                    <input type="text" value="general" class="w-full bg-surface-900 border border-[var(--border-hover)] rounded-md px-3 py-2 text-sm focus-visible:ring-0 focus-visible:border-emerald-DEFAULT focus-visible:shadow-[0_0_0_2px_rgba(16,185,129,0.2)] transition-all">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-[var(--text-muted)] mb-1 uppercase tracking-wider">Channel Type</label>
-                                    <div class="flex bg-surface-900 rounded-md p-1 border border-[var(--border-hairline)]">
-                                        <button class="flex-1 py-1.5 text-xs font-medium bg-surface-700 text-[var(--text-primary)] rounded shadow-sm flex items-center justify-center gap-2">
-                                            <i class="ph ph-text-aa"></i> Text
-                                        </button>
-                                        <button class="flex-1 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded flex items-center justify-center gap-2 transition-colors">
-                                            <i class="ph ph-speaker-high"></i> Voice
-                                        </button>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-[var(--text-muted)] mb-1 uppercase tracking-wider">Description <span class="text-opacity-50 lowercase font-normal">(optional)</span></label>
-                                    <textarea rows="2" class="w-full bg-surface-900 border border-[var(--border-hover)] rounded-md px-3 py-2 text-sm focus-visible:ring-0 focus-visible:border-emerald-DEFAULT focus-visible:shadow-[0_0_0_2px_rgba(16,185,129,0.2)] transition-all resize-none placeholder-[var(--text-muted)]" placeholder="What's this channel about?"></textarea>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-
-                    <!-- Footer Alignment -->
-                    <div class="px-6 py-4 border-t border-[var(--border-hairline)] bg-surface-900/80 flex justify-between items-center shrink-0">
-                        <button onclick="navStep(2)" class="px-4 py-2 text-[var(--text-secondary)] hover:text-white font-medium text-[14px] transition-colors btn-push focus-visible:ring-2 focus-visible:ring-emerald-DEFAULT rounded-md">
-                            Back
-                        </button>
-                        <div class="flex items-center gap-3">
-                            <span id="offline-queue-text" class="text-xs text-amber-DEFAULT font-medium hidden flex items-center gap-1"><i class="ph ph-cloud-slash"></i> Will queue locally</span>
-                            <button id="btn-create" onclick="submitCreate()" class="px-5 py-2.5 bg-emerald-DEFAULT text-white rounded-md font-semibold text-[14px] transition-all shadow-[0_1px_2px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.2)] hover:bg-emerald-hover btn-push flex items-center gap-2 relative overflow-hidden">
-                                <span id="create-btn-text">Create Server</span>
-                                <i id="create-spinner" class="ph ph-spinner animate-spin hidden"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-    </div>
-
-
-    <!--========================================================================
-        BEHAVIOR ENGINE: Managing the Modal State
-        No React, simulated complex states using Vanilla JS.
-    =========================================================================-->
-    <script>
-        let currentStep = 1;
-        const totalSteps = 3;
-        let isOffline = false;
-
-        // Modal structural orchestration
-        const container = document.getElementById('modal-container');
-        const panels = [
-            document.getElementById('step-1'),
-            document.getElementById('step-2'),
-            document.getElementById('step-3')
-        ];
-        const indicators = document.getElementById('step-indicators').children;
-
-        // Input References
-        const serverNameInput = document.getElementById('server-name');
-        const charCount = document.getElementById('char-count');
-        const btnNext1 = document.getElementById('btn-next-1');
-        const nameError = document.getElementById('name-error');
-
-        function validateStep1() {
-            const len = serverNameInput.value.length;
-            charCount.textContent = len;
-            
-            if (len === 0) {
-                btnNext1.disabled = true;
-                serverNameInput.classList.remove('error');
-                nameError.classList.add('hidden');
-            } else if (len > 80) {
-                btnNext1.disabled = true;
-                serverNameInput.classList.add('error');
-                nameError.classList.remove('hidden');
-                nameError.innerHTML = '<i class="ph ph-warning-circle"></i> 80 characters max.';
-            } else {
-                btnNext1.disabled = false;
-                serverNameInput.classList.remove('error');
-                nameError.classList.add('hidden');
-            }
-        }
-
-        function navStep(step) {
-            // Physical Modal Sizing logic to break Generic Box constraints
-            if (step === 1) container.style.maxWidth = '500px';
-            if (step === 2) container.style.maxWidth = '640px';
-            if (step === 3) container.style.maxWidth = '760px';
-
-            // Transition out current
-            panels[currentStep - 1].classList.remove('visible');
-            
-            // Wait for fade text, then swap display and fade in
-            setTimeout(() => {
-                panels.forEach((p, idx) => {
-                    if (idx + 1 === step) {
-                        p.classList.add('active');
-                        // Small generic layout reflow delay
-                        setTimeout(() => p.classList.add('visible'), 50);
-                    } else {
-                        p.classList.remove('active');
-                    }
-                });
-
-                // Update indicators
-                Array.from(indicators).forEach((ind, idx) => {
-                    if (idx + 1 === step) {
-                        ind.className = 'w-6 h-1.5 rounded-full bg-emerald-DEFAULT transition-colors';
-                    } else if (idx + 1 < step) {
-                        ind.className = 'w-6 h-1.5 rounded-full bg-surface-500 transition-colors';
-                    } else {
-                        ind.className = 'w-6 h-1.5 rounded-full bg-surface-700 transition-colors cursor-not-allowed';
-                    }
-                });
-
-                currentStep = step;
-            }, 250); // Matches CSS transition duration roughly minus leeway
-        }
-
-        function selectTemplate(type, element) {
-            // Reset all selection rings
-            document.querySelectorAll('.template-card').forEach(c => {
-                c.style.borderColor = 'var(--border-hairline)';
-                const ring = c.querySelector('div.absolute.inset-0');
-                if(ring) ring.style.opacity = '0';
-            });
-            
-            // Highlight selected
-            element.style.borderColor = 'var(--emerald-DEFAULT)';
-            const ring = element.querySelector('div.absolute.inset-0.border-2');
-            if(ring) ring.style.opacity = '1';
-        }
-
-        // Feature: Simulate the distinct Offline Wedge
-        function toggleOfflineMode() {
-            isOffline = !isOffline;
-            
-            const wedge = document.getElementById('offline-wedge');
-            const navText = document.getElementById('nav-network-text');
-            const navDot = document.getElementById('nav-network-status');
-            const queueText = document.getElementById('offline-queue-text');
-            const createBtn = document.getElementById('btn-create');
-            
-            if (isOffline) {
-                wedge.classList.remove('opacity-0', 'translate-y-[-20px]');
-                wedge.classList.add('opacity-100', 'translate-y-0');
-                navText.textContent = 'Eth0: Disconnected';
-                navDot.className = 'w-2 h-2 rounded-full bg-danger-DEFAULT';
-                queueText.classList.remove('hidden');
-                
-                // Keep inputs editable but flag button
-                createBtn.classList.remove('bg-emerald-DEFAULT', 'hover:bg-emerald-hover');
-                createBtn.classList.add('bg-surface-700', 'hover:bg-surface-600', 'text-amber-DEFAULT', 'border', 'border-amber-DEFAULT/30');
-                document.getElementById('create-btn-text').textContent = 'Queue Creation';
-            } else {
-                wedge.classList.add('opacity-0', 'translate-y-[-20px]');
-                wedge.classList.remove('opacity-100', 'translate-y-0');
-                navText.textContent = 'Eth0: Configured';
-                navDot.className = 'w-2 h-2 rounded-full bg-emerald-DEFAULT';
-                queueText.classList.add('hidden');
-                
-                createBtn.classList.add('bg-emerald-DEFAULT', 'hover:bg-emerald-hover');
-                createBtn.classList.remove('bg-surface-700', 'hover:bg-surface-600', 'text-amber-DEFAULT', 'border', 'border-amber-DEFAULT/30');
-                document.getElementById('create-btn-text').textContent = 'Create Server';
-            }
-        }
-
-        // Interaction Execution
-        function submitCreate() {
-            const btn = document.getElementById('btn-create');
-            const text = document.getElementById('create-btn-text');
-            const spin = document.getElementById('create-spinner');
-
-            // Loading state
-            btn.disabled = true;
-            text.textContent = isOffline ? 'Queuing...' : 'Provisioning...';
-            spin.classList.remove('hidden');
-            btn.classList.add('opacity-80', 'cursor-not-allowed');
-
-            setTimeout(() => {
-                if (isOffline) {
-                    showToast('Server queued. Will sync when back online.', 'amber');
-                    // Reset UI (Simulating modal close in real app)
-                } else {
-                    showToast('Server verified and created.', 'emerald');
-                }
-                
-                // Cleanup mock state
-                setTimeout(() => {
-                    btn.disabled = false;
-                    text.textContent = isOffline ? 'Queue Creation' : 'Create Server';
-                    spin.classList.add('hidden');
-                    btn.classList.remove('opacity-80', 'cursor-not-allowed');
-                }, 2000);
-            }, 1200);
-        }
-
-        // Toast System
-        function showToast(message, variant = 'emerald') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            
-            const colorClass = variant === 'emerald' ? 'bg-emerald-DEFAULT' : (variant === 'amber' ? 'bg-amber-DEFAULT' : 'bg-danger-DEFAULT');
-            
-            toast.className = `bg-surface-800 border border-[var(--border-hairline)] rounded-lg shadow-pop flex items-center pr-4 pl-0 overflow-hidden transform translate-y-8 opacity-0 transition-all duration-300 pointer-events-auto`;
-            
-            toast.innerHTML = `
-                <div class="w-1.5 self-stretch ${colorClass}"></div>
-                <div class="px-4 py-3 text-sm font-medium text-[var(--text-primary)]">
-                    ${message}
-                </div>
-            `;
-            
-            container.appendChild(toast);
-            
-            // Animate in
-            requestAnimationFrame(() => {
-                toast.classList.remove('translate-y-8', 'opacity-0');
-            });
-            
-            // Auto dismiss
-            setTimeout(() => {
-                toast.classList.add('translate-y-8', 'opacity-0');
-                setTimeout(() => toast.remove(), 300);
-            }, 4000);
-        }
-
-        // Init Setup Layout Constraint
-        container.style.maxWidth = '500px';
-    </script>
+  </main>
 </body>
 </html>
