@@ -1,6 +1,6 @@
 import type { InferInsertModel, InferSelectModel } from 'drizzle-orm';
-import { pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
+import { pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
 export const users = pgTable(
   'users',
@@ -14,9 +14,7 @@ export const users = pgTable(
     created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
-  (table) => [
-    uniqueIndex('users_username_lower_idx').on(sql`lower(${table.username})`),
-  ],
+  (table) => [uniqueIndex('users_username_lower_idx').on(sql`lower(${table.username})`)],
 );
 
 export type User = InferSelectModel<typeof users>;
