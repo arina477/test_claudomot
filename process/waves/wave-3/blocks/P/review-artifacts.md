@@ -6,7 +6,7 @@
 | P-1 | stages/P-1-decompose.md | done | RESCOPE-AUTO-SPLIT; single-spec; design_gap_flag=false |
 | P-2 | stages/P-2-spec.md | done | 9 ACs; claims 9aae8255+a3328023; /me verify-banner UX |
 | P-3 | stages/P-3-plan.md | done | full-stack-light: web auth SDK+6 pages + /profile + /me relax |
-| P-4 | blocks/P/gate-verdict.md | pending | security-scope gate applies |
+| P-4 | blocks/P/gate-verdict.md | done | PASS (head-product APPROVED attempt-2; Karen+jenny APPROVE; Gemini non-material) |
 ## Context
 - wave_db_id 2fba4559 (wave 3); M1; claimed [9aae8255, a3328023]; design_gap_flag=false (6 mockups exist → D skips).
 - Split sibling 2a655960 (profile customization+avatar) → future wave.

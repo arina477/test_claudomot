@@ -3,7 +3,7 @@
 ## Approach
 ### Architecture deltas
 - **apps/web (frontend):** add `supertokens-auth-react` — `SuperTokens.init({ appInfo:{apiDomain:VITE_API_ORIGIN, websiteDomain, apiBasePath:'/auth'}, recipeList:[EmailPassword.init(), EmailVerification.init({mode:'REQUIRED'}? no → see decision), Session.init()] })` + `<SuperTokensWrapper>`. Add React Router (the wave-1 shell was a single view → add `react-router-dom`) with routes for the 6 pages + the app shell, guarded by `<SessionAuth requireAuth>`. Alt: SuperTokens pre-built UI (faster, but mockups are custom-designed) → use CUSTOM forms wired to the recipe functions (signIn/signUp/verifyEmail/sendPasswordResetEmail/submitNewPassword) so they match design/*.html exactly. Failure domain: client-only; the live backend is unchanged except the two additions below.
-- **apps/api (backend, small):** ProfileController `GET /profile` + `PATCH /profile` (verifySession; display_name via UsersService.updateDisplayName — new method). **/me + app-shell EmailVerification claim relax (a3328023):** remove the global EmailVerification claim requirement so verifySession-guarded /me + /profile return 200 for unverified users (emailVerified:false); EmailVerification recipe stays (verify emails still send); per the verify-banner UX decision.
+- **apps/api (backend, small):** ProfileController `GET /profile` + `PATCH /profile` (verifySession; display_name via UsersService.updateDisplayName — new method). **/me + /profile per-route verification exemption (a3328023):** keep global EmailVerification REQUIRED (fail-closed); add overrideGlobalClaimValidators:()=>[] on /me + /profile guards ONLY, so they return 200 for unverified (emailVerified:false); EmailVerification recipe stays (verify emails still send); per the verify-banner UX decision.
 - **packages/shared:** ProfileResponse {displayName} + UpdateProfileRequest {displayName} Zod.
 
 ### Data model
@@ -26,7 +26,7 @@ branch wave-3-auth-frontend; `pnpm --filter @studyhall/web add supertokens-auth-
 ### B-1 contracts — typescript-pro
 packages/shared/src/profile.ts: ProfileResponse + UpdateProfileRequest Zod + exports.
 ### B-2 backend — supertokens-integration (claim relax) ∥ backend-developer (profile)
-- apps/api/src/auth/supertokens.config.ts: relax EmailVerification global claim (so /me + /profile don't 403 unverified) — supertokens-integration.
+- apps/api/src/auth/supertokens.config.ts: KEEP EmailVerification mode:'REQUIRED' (global fail-closed default for future routes); add per-route `overrideGlobalClaimValidators:()=>[]` on the /me + /profile verifySession guards ONLY (do NOT flip to OPTIONAL) — supertokens-integration.
 - apps/api/src/profile/{profile.controller.ts (GET/PATCH, verifySession),profile.module.ts} + UsersService.updateDisplayName — backend-developer.
 ### B-3 frontend — react-specialist (pages/routing) + supertokens-integration (auth SDK wiring)
 - apps/web: supertokens config + SuperTokensWrapper + recipe init; router (routes + SessionAuth guards); 6 pages from mockups (landing, signup, login, forgot-password, email-verify, settings-profile[display_name + disabled username/avatar/accent 'coming soon']); verify-email banner component; profile form → /profile.

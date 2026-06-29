@@ -6,7 +6,7 @@ PRODUCT:
 - [x] P-1 Decompose (RESCOPE-AUTO-SPLIT; wave=auth frontend + display_name profile; design_gap_flag=false)
 - [x] P-2 Spec
 - [x] P-3 Plan
-- [ ] P-4 Gate
+- [x] P-4 Gate
 
 DESIGN (skip — all 6 mockups exist, design_gap_flag=false):
 - [ ] D-1 Brief
