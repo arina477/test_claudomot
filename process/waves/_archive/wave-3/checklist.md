@@ -47,6 +47,6 @@ LEARN:
 - [x] L-2 Distill
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers (M1 stays in_progress; no decomposition; no checkpoint)
+- [x] N-2 Seed (seed=2a655960 profile-customization; 0 siblings; validation pass)
+- [x] N-3 Handoff (wave-3 closed ok; archived; wave-4 opened, loop_state ready)
