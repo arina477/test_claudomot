@@ -436,36 +436,16 @@
       <div class="px-5 pb-5 pt-2 shrink-0 relative flex flex-col justify-end">
         
         <!-- TYPING INDICATOR (Transient line, preserves zero layout height when empty or active) -->
-        <div class="relative w-full h-0 z-10 pointer-events-none">
+        <div class="relative w-full h-0 z-10 pointer-events-none" role="status" aria-live="polite">
           <div class="absolute bottom-1 left-1 flex items-center gap-1.5 transition-opacity duration-150">
             
             <!-- ACTIVE DEMO STATE: 1 Typer -->
-            <span class="text-[12px] text-zinc-400 font-medium truncate drop-shadow-md">Mia Wong is typing</span>
+            <span class="text-[12px] text-zinc-400 font-medium truncate">Mia Wong is typing</span>
             <span class="flex items-center gap-[3px] mb-[1px]">
               <span class="w-[3px] h-[3px] rounded-full bg-zinc-500 typing-dot" style="animation-delay: 0ms"></span>
               <span class="w-[3px] h-[3px] rounded-full bg-zinc-500 typing-dot" style="animation-delay: 150ms"></span>
               <span class="w-[3px] h-[3px] rounded-full bg-zinc-500 typing-dot" style="animation-delay: 300ms"></span>
             </span>
-
-            <!-- DEMO: 2-3 typers (Commented) -->
-            <!--
-            <span class="text-[12px] text-zinc-400 font-medium truncate drop-shadow-md">Mia Wong, David C. and Sarah J. are typing</span>
-            <span class="flex items-center gap-[3px] mb-[1px]">
-              <span class="w-[3px] h-[3px] rounded-full bg-zinc-500 typing-dot" style="animation-delay: 0ms"></span>
-              <span class="w-[3px] h-[3px] rounded-full bg-zinc-500 typing-dot" style="animation-delay: 150ms"></span>
-              <span class="w-[3px] h-[3px] rounded-full bg-zinc-500 typing-dot" style="animation-delay: 300ms"></span>
-            </span>
-            -->
-
-            <!-- DEMO: Many typers (Commented) -->
-            <!--
-            <span class="text-[12px] text-zinc-400 font-medium truncate drop-shadow-md">Several people are typing</span>
-            <span class="flex items-center gap-[3px] mb-[1px]">
-              <span class="w-[3px] h-[3px] rounded-full bg-zinc-500 typing-dot" style="animation-delay: 0ms"></span>
-              <span class="w-[3px] h-[3px] rounded-full bg-zinc-500 typing-dot" style="animation-delay: 150ms"></span>
-              <span class="w-[3px] h-[3px] rounded-full bg-zinc-500 typing-dot" style="animation-delay: 300ms"></span>
-            </span>
-            -->
 
           </div>
         </div>
@@ -489,125 +469,88 @@
         </div>
       </div>
 
-      <!-- ============ LIST STATE: EMPTY CHANNEL ============ -->
-      <!-- Implementation truth: render this fragment IN PLACE OF #messageList when messages: [].
-           A rendered copy is shown below the composer (state-gallery) so reviewers can evaluate it statically. -->
-      <template id="emptyChannelState">
-        <div class="flex-1 flex flex-col items-center justify-center text-center px-6 select-none">
-          <div class="w-16 h-16 rounded-full bg-study-700/60 flex items-center justify-center mb-4">
-            <i class="ph ph-chats-circle text-3xl text-zinc-400"></i>
-          </div>
-          <h3 class="text-2xl font-semibold text-zinc-100 tracking-tight">No messages yet</h3>
-          <p class="text-sm text-zinc-400 mt-1.5 max-w-xs">Start the conversation — your first message kicks off <span class="text-zinc-200 font-medium">#questions</span>.</p>
-        </div>
-      </template>
-
     </main>
 
     <!-- PANE 4: RIGHT SIDEBAR (Member List Roster) -->
-    <aside class="right-sidebar bg-study-900 border-l border-study-border flex flex-col z-20 overflow-hidden">
+    <aside aria-label="Members" class="right-sidebar bg-study-900 border-l border-study-border flex flex-col z-20 overflow-hidden">
       <!-- Member Roster Scroll Area -->
       <div class="flex-1 overflow-y-auto p-4 space-y-6 select-none">
 
         <!-- ONLINE GROUP -->
         <div>
-          <h3 class="text-[11px] font-bold text-zinc-500 uppercase tracking-widest mb-3">Online — 2</h3>
-          <div class="space-y-0.5">
+          <h3 class="text-[11px] font-bold text-zinc-500 uppercase tracking-widest mb-3" id="online-group">Online — 2</h3>
+          <ul class="space-y-0.5" aria-labelledby="online-group">
             <!-- Content Row 1 -->
-            <div class="group flex items-center gap-3 p-1.5 rounded-md hover:bg-study-700 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70" tabindex="0">
+            <li class="group flex items-center gap-3 p-1.5 rounded-md hover:bg-study-700 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70" tabindex="0">
               <div class="relative shrink-0">
                 <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=64&q=80" alt="Mia Wong" class="w-8 h-8 rounded-full object-cover">
                 <!-- Presence dot (Online: Emerald) -->
                 <div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-study-900 rounded-full flex items-center justify-center pointer-events-none">
+                  <span class="sr-only">Online</span>
                   <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
                 </div>
               </div>
               <span class="text-[14px] font-medium text-zinc-200 truncate group-hover:text-zinc-100 transition-colors">Mia Wong</span>
-            </div>
+            </li>
 
             <!-- Content Row 2 (You) -->
-            <div class="group flex items-center gap-3 p-1.5 rounded-md hover:bg-study-700 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70" tabindex="0">
+            <li class="group flex items-center gap-3 p-1.5 rounded-md hover:bg-study-700 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70" tabindex="0">
               <div class="relative shrink-0">
                 <div class="w-8 h-8 rounded-full bg-study-600 flex items-center justify-center text-xs font-semibold text-zinc-100 shrink-0">EL</div>
                 <!-- Presence dot (Online: Emerald) -->
                 <div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-study-900 rounded-full flex items-center justify-center pointer-events-none">
+                  <span class="sr-only">Online</span>
                   <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
                 </div>
               </div>
               <span class="text-[14px] font-medium text-zinc-200 truncate group-hover:text-zinc-100 transition-colors">Elias (You)</span>
-            </div>
-          </div>
+            </li>
+          </ul>
         </div>
 
         <!-- OFFLINE GROUP -->
         <div>
-          <h3 class="text-[11px] font-bold text-zinc-500 uppercase tracking-widest mb-3">Offline — 3</h3>
-          <div class="space-y-0.5">
+          <h3 class="text-[11px] font-bold text-zinc-500 uppercase tracking-widest mb-3" id="offline-group">Offline — 3</h3>
+          <ul class="space-y-0.5" aria-labelledby="offline-group">
             <!-- Offline Row 1 -->
-            <div class="group flex items-center gap-3 p-1.5 rounded-md hover:bg-study-700 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70" tabindex="0">
+            <li class="group flex items-center gap-3 p-1.5 rounded-md hover:bg-study-700 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70" tabindex="0">
               <div class="relative shrink-0">
                 <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=64&q=80" alt="David C." class="w-8 h-8 rounded-full object-cover opacity-70 group-hover:opacity-100 transition-opacity">
                 <!-- Presence dot (Offline: Surface-500) -->
                 <div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-study-900 rounded-full flex items-center justify-center pointer-events-none">
+                  <span class="sr-only">Offline</span>
                   <div class="w-1.5 h-1.5 bg-study-500 rounded-full"></div>
                 </div>
               </div>
-              <!-- Offline muted text-zinc-400 (contrast highly exceeds 4.5:1 requirement) -->
-              <span class="text-[14px] font-medium text-zinc-400 truncate opacity-90 group-hover:opacity-100 group-hover:text-zinc-200 transition-all">David C.</span>
-            </div>
+              <!-- Offline muted text-zinc-500 (Clean 4.52:1 contrast against surface-900) -->
+              <span class="text-[14px] font-medium text-zinc-500 truncate group-hover:text-zinc-300 transition-colors">David C.</span>
+            </li>
 
             <!-- Offline Row 2 -->
-            <div class="group flex items-center gap-3 p-1.5 rounded-md hover:bg-study-700 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70" tabindex="0">
+            <li class="group flex items-center gap-3 p-1.5 rounded-md hover:bg-study-700 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70" tabindex="0">
               <div class="relative shrink-0">
                 <img src="https://images.unsplash.com/photo-1502685104226-ee32379fefbe?auto=format&fit=crop&w=64&q=80" alt="Sarah J." class="w-8 h-8 rounded-full object-cover opacity-70 group-hover:opacity-100 transition-opacity">
                 <div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-study-900 rounded-full flex items-center justify-center pointer-events-none">
+                  <span class="sr-only">Offline</span>
                   <div class="w-1.5 h-1.5 bg-study-500 rounded-full"></div>
                 </div>
               </div>
-              <span class="text-[14px] font-medium text-zinc-400 truncate opacity-90 group-hover:opacity-100 group-hover:text-zinc-200 transition-all">Sarah J.</span>
-            </div>
+              <span class="text-[14px] font-medium text-zinc-500 truncate group-hover:text-zinc-300 transition-colors">Sarah J.</span>
+            </li>
 
             <!-- Offline Row 3 -->
-            <div class="group flex items-center gap-3 p-1.5 rounded-md hover:bg-study-700 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70" tabindex="0">
+            <li class="group flex items-center gap-3 p-1.5 rounded-md hover:bg-study-700 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70" tabindex="0">
               <div class="relative shrink-0">
                 <div class="w-8 h-8 rounded-full bg-study-700/60 flex items-center justify-center text-xs font-semibold text-zinc-400 shrink-0 group-hover:text-zinc-300 transition-colors">MK</div>
                 <div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-study-900 rounded-full flex items-center justify-center pointer-events-none">
+                  <span class="sr-only">Offline</span>
                   <div class="w-1.5 h-1.5 bg-study-500 rounded-full"></div>
                 </div>
               </div>
-              <span class="text-[14px] font-medium text-zinc-400 truncate opacity-90 group-hover:opacity-100 group-hover:text-zinc-200 transition-all">Michael K.</span>
-            </div>
-          </div>
+              <span class="text-[14px] font-medium text-zinc-500 truncate group-hover:text-zinc-300 transition-colors">Michael K.</span>
+            </li>
+          </ul>
         </div>
-
-        <!-- DEMO: EMPTY STATE (Commented standard fragment) -->
-        <!--
-        <div class="flex flex-col items-center justify-center text-center mt-8 opacity-70">
-          <div class="w-12 h-12 rounded-full bg-study-800 flex items-center justify-center mb-3">
-            <i class="ph ph-users text-xl text-zinc-500"></i>
-          </div>
-          <p class="text-sm text-zinc-400 font-medium">No one else here yet</p>
-        </div>
-        -->
-
-        <!-- DEMO: SKELETON LOADING (Commented standard fragment) -->
-        <!--
-        <div class="space-y-6 animate-pulse">
-          <div>
-            <div class="h-[14px] w-20 bg-study-700 rounded-md mb-3"></div>
-            <div class="space-y-2">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full bg-study-700 shrink-0"></div>
-                <div class="h-4 w-24 bg-study-700 rounded-md"></div>
-              </div>
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full bg-study-700 shrink-0"></div>
-                <div class="h-4 w-32 bg-study-700 rounded-md"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        -->
 
       </div>
     </aside>
@@ -615,30 +558,98 @@
   </div>
 
   <!-- ============ STATE GALLERY — reviewer-visible copies of the JS-driven states (NOT shipped chrome) ============ -->
-  <!-- These render statically so D-3 reviewers + the founder can evaluate the empty-channel + empty-composer states without executing JS. -->
-  <section aria-label="State gallery (review only)" class="fixed bottom-3 right-3 w-[360px] bg-study-900 border border-study-border rounded-lg shadow-[0_8px_24px_rgba(0,0,0,0.5)] overflow-hidden z-50 block">
-    <div class="px-3 py-2 border-b border-study-border text-[11px] uppercase tracking-widest font-semibold text-zinc-500">State gallery · empty channel + empty composer</div>
-
-    <!-- Empty-channel state (rendered) -->
-    <div class="h-[180px] bg-study-800 flex flex-col items-center justify-center text-center px-6 select-none border-b border-study-border">
-      <div class="w-14 h-14 rounded-full bg-study-700/60 flex items-center justify-center mb-3">
-        <i class="ph ph-chats-circle text-2xl text-zinc-400"></i>
-      </div>
-      <h3 class="text-2xl font-semibold text-zinc-100 tracking-tight">No messages yet</h3>
-      <p class="text-sm text-zinc-400 mt-1 max-w-[260px]">Start the conversation — your first message kicks off <span class="text-zinc-200 font-medium">#questions</span>.</p>
+  <!-- These render statically so D-3 reviewers + the founder can evaluate the various sub-states without executing JS. -->
+  <section aria-label="State gallery (review only)" class="fixed bottom-3 right-3 w-[360px] max-h-[85vh] flex flex-col bg-study-900 border border-study-border rounded-lg shadow-[0_8px_24px_rgba(0,0,0,0.5)] overflow-hidden z-50">
+    <div class="px-3 py-2 border-b border-study-border text-[11px] uppercase tracking-widest font-semibold text-zinc-500 bg-study-900 shrink-0 sticky top-0 z-10">
+      State gallery · Component Variants
     </div>
+    
+    <div class="overflow-y-auto w-full flex-1 flex flex-col text-left">
+      <!-- Empty-channel state -->
+      <div class="px-3 py-2 border-b border-study-border text-[11px] uppercase tracking-widest font-semibold text-zinc-500 bg-study-800">
+        Empty Channel
+      </div>
+      <div class="h-[180px] bg-study-800 flex flex-col items-center justify-center text-center px-6 select-none border-b border-study-border">
+        <div class="w-14 h-14 rounded-full bg-study-700/60 flex items-center justify-center mb-3">
+          <i class="ph ph-chats-circle text-2xl text-zinc-400"></i>
+        </div>
+        <h3 class="text-2xl font-semibold text-zinc-100 tracking-tight">No messages yet</h3>
+        <p class="text-sm text-zinc-400 mt-1 max-w-[260px]">Start the conversation — your first message kicks off <span class="text-zinc-200 font-medium">#questions</span>.</p>
+      </div>
 
-    <!-- Empty composer (send disabled, placeholder visible) -->
-    <div class="p-3 bg-study-800">
-      <div class="relative flex items-end bg-study-900 recessed-input border border-study-600/60 rounded-md overflow-hidden">
-        <textarea rows="1" readonly placeholder="Message #questions" class="w-full bg-transparent text-base text-zinc-100 placeholder-zinc-300 py-3 px-4 outline-none resize-none min-h-[44px]"></textarea>
-        <div class="p-2 flex items-center shrink-0 self-stretch">
-          <button type="button" disabled aria-label="Send message (disabled — empty)" class="w-9 h-9 flex items-center justify-center rounded-md bg-study-700 text-zinc-500 cursor-not-allowed">
-            <i class="ph ph-paper-plane-right text-[18px]"></i>
-          </button>
+      <!-- Empty composer border-b -->
+      <div class="px-3 py-2 border-b border-study-border text-[11px] uppercase tracking-widest font-semibold text-zinc-500 bg-study-800">
+        Composer: Empty State
+      </div>
+      <div class="p-3 bg-study-800 border-b border-study-border">
+        <div class="relative flex items-end bg-study-900 recessed-input border border-study-600/60 rounded-md overflow-hidden">
+          <textarea rows="1" readonly placeholder="Message #questions" class="w-full bg-transparent text-base text-zinc-100 placeholder-zinc-300 py-3 px-4 outline-none resize-none min-h-[44px]"></textarea>
+          <div class="p-2 flex items-center shrink-0 self-stretch">
+            <button type="button" disabled aria-label="Send message (disabled — empty)" class="w-9 h-9 flex items-center justify-center rounded-md bg-study-700 text-zinc-500 cursor-not-allowed">
+              <i class="ph ph-paper-plane-right text-[18px]"></i>
+            </button>
+          </div>
+        </div>
+        <div class="text-[11px] text-zinc-500 mt-1.5 px-1 tracking-wide">Empty: send disabled until you type.</div>
+      </div>
+
+      <!-- Typing Indicator Variants -->
+      <div class="px-3 py-2 border-b border-study-border text-[11px] uppercase tracking-widest font-semibold text-zinc-500 bg-study-800">
+        Typing: 2-3 & Many
+      </div>
+      <div class="p-3 bg-study-800 flex flex-col gap-3 border-b border-study-border">
+        <div class="flex items-center gap-1.5">
+          <span class="text-[12px] text-zinc-400 font-medium truncate">Mia Wong, David C. and Sarah J. are typing</span>
+          <span class="flex items-center gap-[3px] mb-[1px]">
+            <span class="w-[3px] h-[3px] rounded-full bg-zinc-500 typing-dot" style="animation-delay: 0ms"></span>
+            <span class="w-[3px] h-[3px] rounded-full bg-zinc-500 typing-dot" style="animation-delay: 150ms"></span>
+            <span class="w-[3px] h-[3px] rounded-full bg-zinc-500 typing-dot" style="animation-delay: 300ms"></span>
+          </span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="text-[12px] text-zinc-400 font-medium truncate">Several people are typing</span>
+          <span class="flex items-center gap-[3px] mb-[1px]">
+            <span class="w-[3px] h-[3px] rounded-full bg-zinc-500 typing-dot" style="animation-delay: 0ms"></span>
+            <span class="w-[3px] h-[3px] rounded-full bg-zinc-500 typing-dot" style="animation-delay: 150ms"></span>
+            <span class="w-[3px] h-[3px] rounded-full bg-zinc-500 typing-dot" style="animation-delay: 300ms"></span>
+          </span>
         </div>
       </div>
-      <div class="text-[11px] text-zinc-500 mt-1.5 px-1 tracking-wide">Empty: send disabled until you type.</div>
+
+      <!-- Member Roster - Skeleton -->
+      <div class="px-3 py-2 border-b border-study-border text-[11px] uppercase tracking-widest font-semibold text-zinc-500 bg-study-800">
+        Member List: Loading
+      </div>
+      <div class="p-4 bg-study-900 border-b border-study-border">
+        <div class="space-y-6 animate-pulse">
+          <div>
+            <div class="h-[14px] w-20 bg-study-700 rounded-md mb-3"></div>
+            <div class="space-y-2">
+              <div class="flex items-center gap-3 p-1.5">
+                <div class="w-8 h-8 rounded-full bg-study-700 shrink-0"></div>
+                <div class="h-4 w-24 bg-study-700 rounded-md"></div>
+              </div>
+              <div class="flex items-center gap-3 p-1.5">
+                <div class="w-8 h-8 rounded-full bg-study-700 shrink-0"></div>
+                <div class="h-4 w-32 bg-study-700 rounded-md"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Member Roster - Empty State -->
+      <div class="px-3 py-2 border-b border-study-border text-[11px] uppercase tracking-widest font-semibold text-zinc-500 bg-study-800">
+        Member List: Empty
+      </div>
+      <div class="p-4 bg-study-900">
+        <div class="flex flex-col items-center justify-center text-center opacity-70 py-4">
+          <div class="w-12 h-12 rounded-full bg-study-800 flex items-center justify-center mb-3">
+            <i class="ph ph-users text-xl text-zinc-500"></i>
+          </div>
+          <p class="text-sm text-zinc-400 font-medium">No one else here yet</p>
+        </div>
+      </div>
     </div>
   </section>
 
