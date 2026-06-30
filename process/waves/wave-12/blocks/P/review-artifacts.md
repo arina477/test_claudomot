@@ -6,7 +6,7 @@
 | P-1 | done (multi-spec, whole chain; security→P-2) |
 | P-2 | done (3-block; messages model + channel-gate/WS-auth/no-leak ACs) |
 | P-3 | done (MessagingModule + Socket.IO WS-auth gateway + real-time UI; D-delta) |
-| P-4 | pending | |
+| P-4 | done | PASS (head-product APPROVED attempt2; karen REJECT→PASS [channelId-guard fix]; jenny APPROVE) | |
 ## Context
 - wave_db_id (wave 12); M3 6198650e. claimed [a0c322b4 MessagingModule-REST(seed), 723b5b6a Socket.IO-gateway, d999d29c message-UI]. multi-spec (~3200 LOC). UI wave → D-block. Delivers M3 success metric (2 students exchange messages real-time <1s).
 - Builds on M2 (servers/channels/membership/RBAC). REUSES wave-10 ChannelPermissionGuard (gate who posts/reads in a channel). Socket.IO WS-upgrade auth via SuperTokens session. messages schema + cursor pagination + idempotency-key dedup (decomposer contracts). DEFERRED: reactions/threads/mentions/attachments/presence/typing (later M3).
