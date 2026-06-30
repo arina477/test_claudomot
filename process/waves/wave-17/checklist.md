@@ -57,6 +57,6 @@ LEARN:
 - [x] L-2 Distill
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers (no close; BOARD N-1-ordering-wave-17 7/7 APPROVE B; threads decomposed)
+- [x] N-2 Seed (threads bundle: seed 497c2ae6 + 2 siblings; validated)
+- [x] N-3 Handoff (archive wave-17; open wave-18 P-0)
