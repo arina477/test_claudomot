@@ -23,7 +23,8 @@
     "test:ci": {
       "dependsOn": ["^build"],
       "outputs": ["coverage/**"],
-      "cache": false
+      "cache": false,
+      "env": ["DATABASE_URL_TEST"]
     },
     "dev": {
       "cache": false,
