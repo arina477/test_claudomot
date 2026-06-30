@@ -56,6 +56,9 @@ function makeServerCtx(override: Partial<ServerContextValue> = {}): ServerContex
     closeCreateModal: vi.fn(),
     selectedDetail: null,
     detailStatus: 'idle',
+    selectedChannelId: null,
+    selectedChannelName: null,
+    selectChannel: vi.fn(),
     ...override,
   };
 }

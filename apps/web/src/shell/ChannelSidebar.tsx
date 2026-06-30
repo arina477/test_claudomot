@@ -44,13 +44,15 @@ type ChannelItemProps = {
   icon: React.ReactNode;
   name: string;
   active?: boolean;
+  onClick?: () => void;
 };
 
-function ChannelItem({ icon, name, active = false }: ChannelItemProps) {
+function ChannelItem({ icon, name, active = false, onClick }: ChannelItemProps) {
   return (
     <button
       type="button"
       aria-current={active ? 'page' : undefined}
+      onClick={onClick}
       className="flex w-full items-center gap-2 rounded px-2 py-1.5 cursor-pointer select-none transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2"
       style={{
         backgroundColor: active ? '#27272a' : 'transparent',
@@ -112,7 +114,8 @@ function ChannelIcon({ type }: { type: string }) {
 
 export function ChannelSidebar() {
   const { profile } = useProfile();
-  const { selectedId, selectedDetail, detailStatus, servers } = useServers();
+  const { selectedId, selectedDetail, detailStatus, servers, selectedChannelId, selectChannel } =
+    useServers();
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [rolesPageOpen, setRolesPageOpen] = useState(false);
   const inviteBtnRef = useRef<HTMLButtonElement>(null);
@@ -294,7 +297,8 @@ export function ChannelSidebar() {
                     <ChannelItem
                       icon={<ChannelIcon type={ch.type} />}
                       name={ch.name}
-                      active={ch.name === 'general'}
+                      active={ch.id === selectedChannelId}
+                      onClick={() => selectChannel(ch.id, ch.name)}
                     />
                   </li>
                 ))}
