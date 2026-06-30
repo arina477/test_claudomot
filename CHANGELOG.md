@@ -44,6 +44,10 @@ All notable changes to StudyHall are documented here. Format follows
 - Images render inline in the message and open full-size on click; other files show as a chip with name and size, so attachments are always there to grab. (#31)
 - Offline-first messaging — read your cached channels even when you're offline, keep composing while disconnected, and on reconnect your queued messages send exactly once and in the order you wrote them. (#32)
 - The connection dot now shows your real status — online, reconnecting, or offline — and reconnecting recovers every message you missed while away, however long you were gone. (#33)
+- Assignments: organizers can post an assignment to a study server with a title, description, due date, and an optional attachment — only people allowed to manage channels can create them. (#34)
+- Everyone sees the server's assignments sorted by due date, with an amber chip when one is due soon and a red chip once it's overdue, so nothing slips past. (#34)
+- Each member gets a personal to-do / done toggle on every assignment that only changes their own status — your progress is yours and never visible to others. (#34)
+- Organizers can edit an assignment's details or remove it; a removed assignment disappears from everyone's list. (#34)
 
 ### Fixed
 

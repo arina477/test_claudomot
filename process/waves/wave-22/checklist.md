@@ -59,7 +59,7 @@ VERIFY:
 - [ ] V-3 Fast-fix loop (or close)
 
 LEARN:
-- [ ] L-1 Docs
+- [x] L-1 Docs (CHANGELOG.md:47-50 #34; M5 a5232e16 stays in_progress done=3/open=11; README skipped; no backlog-stockout)
 - [ ] L-2 Distill
 
 NEXT:
