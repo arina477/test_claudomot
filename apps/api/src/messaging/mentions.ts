@@ -37,8 +37,7 @@ export function parseMentions(body: string): string[] {
   const seen = new Set<string>();
   const result: string[] = [];
 
-  let match: RegExpExecArray | null;
-  while ((match = TOKEN_RE.exec(body)) !== null) {
+  for (const match of body.matchAll(TOKEN_RE)) {
     const username = match[1]!.toLowerCase();
     if (!seen.has(username)) {
       seen.add(username);
