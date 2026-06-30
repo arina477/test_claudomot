@@ -14,6 +14,7 @@ import type {
   MentionEvent,
   MessageList,
   MessageResponse,
+  MessagesAfterResponse,
   MyMentionsResponse,
   ReactionToggleResponse,
   SendMessageInput,
@@ -1446,6 +1447,113 @@ export class MessagesService {
 
     return {
       messages: chronological.map((row) =>
+        rowToDto(row, reactionRows, viewerUserId, mentionRows, attachmentRefMap.get(row.id) ?? []),
+      ),
+      nextCursor,
+    };
+  }
+
+  // -------------------------------------------------------------------------
+  // listMessagesAfter — forward catch-up cursor for offline reconnect
+  // wave-20 M4 task 92d85e0e
+  //
+  // GET /channels/:channelId/messages?after=<cursor>&limit=
+  //
+  // Returns channel messages AFTER the given cursor position, ordered oldest-
+  // first (ASC created_at, ASC id) — the forward keyset direction.
+  //
+  // Mirrors listThreadReplies (ASC/gt keyset) — NOT listMessages (DESC/lt).
+  //
+  // Security:
+  //   - channelId from route param (ChannelMessageGuard enforces membership
+  //     before the controller calls this method — 403 for non-members).
+  //   - viewerUserId from session (controller enforces).
+  //   - Tombstones excluded (is_deleted = true rows are not returned).
+  //
+  // Cursor semantics:
+  //   - after=<cursor>: return rows with (created_at, id) strictly greater than
+  //     the decoded cursor (oldest-next-page direction).
+  //   - after absent: return the first page (oldest messages first).
+  //   - Malformed after cursor (cannot decode) → BadRequestException 400.
+  //
+  // Response: MessagesAfterResponse { items: MessageResponse[], nextCursor? }
+  // -------------------------------------------------------------------------
+
+  async listMessagesAfter(
+    channelId: string,
+    viewerUserId: string,
+    after?: string,
+    limit = 50,
+  ): Promise<MessagesAfterResponse> {
+    const safeLimit = Math.min(Math.max(1, limit), 100);
+
+    let rows: (typeof messages.$inferSelect)[];
+
+    if (after !== undefined) {
+      const decoded = decodeCursor(after);
+      if (!decoded) {
+        throw new BadRequestException('Invalid after cursor');
+      }
+      // ASC keyset: fetch rows strictly AFTER the cursor position
+      // Pattern mirrors listThreadReplies — NOT listMessages DESC
+      rows = await db
+        .select()
+        .from(messages)
+        .where(
+          and(
+            eq(messages.channel_id, channelId),
+            eq(messages.is_deleted, false),
+            or(
+              sql`${messages.created_at} > ${decoded.createdAt.toISOString()}`,
+              and(
+                sql`${messages.created_at} = ${decoded.createdAt.toISOString()}`,
+                sql`${messages.id} > ${decoded.id}`,
+              ),
+            ),
+          ),
+        )
+        .orderBy(sql`${messages.created_at} ASC, ${messages.id} ASC`)
+        .limit(safeLimit + 1);
+    } else {
+      // No cursor — first page, oldest-first
+      rows = await db
+        .select()
+        .from(messages)
+        .where(and(eq(messages.channel_id, channelId), eq(messages.is_deleted, false)))
+        .orderBy(sql`${messages.created_at} ASC, ${messages.id} ASC`)
+        .limit(safeLimit + 1);
+    }
+
+    const hasMore = rows.length > safeLimit;
+    if (hasMore) rows.pop();
+
+    const lastRow = rows[rows.length - 1];
+    const nextCursor =
+      hasMore && lastRow !== undefined ? encodeCursor(lastRow.created_at, lastRow.id) : null;
+
+    // Batch-load reactions for the page (no N+1) — empty array when no rows
+    const messageIds = rows.map((r) => r.id);
+    let reactionRows: ReactionRow[] = [];
+    if (messageIds.length > 0) {
+      reactionRows = await db
+        .select({
+          message_id: message_reactions.message_id,
+          user_id: message_reactions.user_id,
+          emoji: message_reactions.emoji,
+        })
+        .from(message_reactions)
+        .where(inArray(message_reactions.message_id, messageIds));
+    }
+
+    // Batch-load mentions for the page
+    const mentionRows = await fetchMentionRows(messageIds);
+
+    // Batch-load attachments for the page (single query + presign — no N+1)
+    const attachmentRows = await fetchAttachmentRows(messageIds);
+    const attachmentRefMap = await buildAttachmentRefMap(attachmentRows, this.filesService);
+
+    return {
+      items: rows.map((row) =>
         rowToDto(row, reactionRows, viewerUserId, mentionRows, attachmentRefMap.get(row.id) ?? []),
       ),
       nextCursor,
