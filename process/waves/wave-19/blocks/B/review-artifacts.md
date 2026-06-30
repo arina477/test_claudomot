@@ -6,9 +6,9 @@
 | B-0 | stages/B-0-branch-and-schema.md | done | branch + claim + migration 0009 (attachments, message_id NOT NULL) |
 | B-1 | stages/B-1-contracts.md | done | AttachmentRef + MessageResponse.attachments[] + presign/confirm types |
 | B-2 | stages/B-2-backend.md | done | FilesService extend + attachments persistence + message-association (row-at-send) |
-| B-3 | stages/B-3-frontend.md | pending | composer picker/preview/upload + message-row render (vs canonical) |
-| B-4 | stages/B-4-wiring.md | pending | routes + typecheck + storage env |
-| B-5 | stages/B-5-verify.md | pending | |
+| B-3 | stages/B-3-frontend.md | done | composer picker/preview/upload + message-row render (vs canonical) |
+| B-4 | stages/B-4-wiring.md | done | routes + typecheck + storage env |
+| B-5 | stages/B-5-verify.md | done | |
 | B-6 | stages/B-6-review.md | pending | head-builder gate |
 ## Context
 - Branch: wave-19-m3-attachments | claimed: [20db0c16, 7c39c9e3, cf1ae370]
