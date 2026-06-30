@@ -216,3 +216,7 @@ First messaging bundle for M3's unshipped core text data plane — the most tech
 **Decision:** A test-coverage / test-infra tech-debt wave (e.g. the single create-server browser E2E, seed 46f16288) is permitted below the single-spec >1500-LOC floor. The LOC floor is a feature-sizing heuristic that guards against thin *feature* waves; test code is inherently lower-LOC than the feature it covers, and the decomposer cannot author feature-siblings for a tech-debt seed. Override-ship per P-1 §2b resolution (a), kept single-task to respect the N-2 seed pick.
 **Why:** Forcing a BOARD floor-merge or bundling unrelated test-debt to clear an inapplicable LOC floor adds ceremony without value. Recorded so future test-infra waves apply the same exemption rather than re-litigating.
 **By:** orchestrator (automatic mode), wave-16 P-1. Reframe trio all PROCEED.
+
+[2026-06-30] M3 (Real-time messaging): bundle authored — 3 tasks (thread replies: data plane + realtime + thread-view UI)
+- caller: N-1-next-bundle (BOARD override N-1-ordering-wave-17 — feature-first, threads-first)
+- decomposed by: milestone-decomposer (sub-agent)
