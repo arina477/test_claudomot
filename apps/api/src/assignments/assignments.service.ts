@@ -1,3 +1,4 @@
+import { NoSuchKey, NotFound } from '@aws-sdk/client-s3';
 import {
   BadRequestException,
   ForbiddenException,
@@ -86,15 +87,53 @@ export class AssignmentsService {
   // validateAndHeadAttachment — server-derive size+type via HeadObject BEFORE
   // inserting assignment_attachments row (karen B-note 1 anti-spoof pattern).
   //
+  // H1 fix (wave-22 B-6): validate key against anchored server-scoped regex
+  //   BEFORE headAttachment. Key must match:
+  //     ^attachments/<serverId>/[A-Za-z0-9._-]+$
+  //   where serverId is the assignment's REAL server_id (route-derived or
+  //   DB-derived — never a client-supplied value). This closes the cross-server
+  //   key-swap vector: an organizer cannot pass a key scoped to another server.
+  //   Pattern mirrors the messaging path's channelId-scoped regex (L366).
+  //   The serverId is escaped before interpolation (UUIDs are safe; belt+suspenders).
+  //
+  // H2 fix (wave-22 B-6): headAttachment NoSuchKey / NotFound → 400 BadRequest.
+  //   A forged or non-existent key returns a clean 400, not a 5xx. Consistent
+  //   with the messaging path's behaviour documented in FilesService.headAttachment
+  //   JSDoc (L324-L326).
+  //
   // Returns { sizeBytes, contentType } on success.
-  // Throws 400 for unsupported content-type.
+  // Throws 400 for out-of-scope key, unsupported content-type, or missing object.
   // Throws 413 for size > 10MB.
   // -------------------------------------------------------------------------
 
   private async validateAndHeadAttachment(
     key: string,
+    serverId: string,
   ): Promise<{ sizeBytes: number; contentType: string }> {
-    const { contentLength, contentType } = await this.filesService.headAttachment(key);
+    // H1: anchored server-scope + path-traversal guard (BEFORE headAttachment).
+    // Key format produced by FilesService.presignAttachmentUpload:
+    //   attachments/<serverId>/<uuid>.<ext>
+    // UUIDs contain only [A-Za-z0-9-], so escaping is a belt-and-suspenders measure.
+    const escapedServerId = serverId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const KEY_PATTERN = new RegExp(`^attachments/${escapedServerId}/[A-Za-z0-9._-]+$`);
+
+    if (!KEY_PATTERN.test(key)) {
+      throw new BadRequestException(
+        `Attachment key is not scoped to this server or contains invalid characters: ${key}`,
+      );
+    }
+
+    // H2: map S3 NoSuchKey / NotFound → 400 (forged/stale key → clean client error).
+    let contentLength: number;
+    let contentType: string;
+    try {
+      ({ contentLength, contentType } = await this.filesService.headAttachment(key));
+    } catch (err) {
+      if (err instanceof NoSuchKey || err instanceof NotFound) {
+        throw new BadRequestException('Attachment not found or invalid key');
+      }
+      throw err;
+    }
 
     if (!ATTACHMENT_ALLOWED_MIME[contentType]) {
       throw new BadRequestException(
@@ -199,7 +238,10 @@ export class AssignmentsService {
       contentType: string;
     } | null = null;
     if (dto.attachment) {
-      const { sizeBytes, contentType } = await this.validateAndHeadAttachment(dto.attachment.key);
+      const { sizeBytes, contentType } = await this.validateAndHeadAttachment(
+        dto.attachment.key,
+        serverId,
+      );
       attachmentMeta = {
         key: dto.attachment.key,
         filename: dto.attachment.filename,
@@ -327,7 +369,11 @@ export class AssignmentsService {
 
       if (dto.attachment !== null) {
         // Server-validate before insert (anti-spoof)
-        const { sizeBytes, contentType } = await this.validateAndHeadAttachment(dto.attachment.key);
+        // serverId is derived from existing.server_id (DB row — IDOR-safe, not client value)
+        const { sizeBytes, contentType } = await this.validateAndHeadAttachment(
+          dto.attachment.key,
+          existing.server_id,
+        );
         await db.insert(assignment_attachments).values({
           assignment_id: id,
           object_key: dto.attachment.key,

@@ -18,8 +18,16 @@
  *   - toggleStatus: member A's toggle does NOT affect member B's row (status isolation)
  *   - toggleStatus: idempotent upsert updates state ('todo' → 'done' → 'done')
  *   - presignAttachmentUpload: organizer → delegates to FilesService
+ *   [H1 — wave-22 B-6] createAssignment: cross-server key → 400 BadRequestException, headAttachment NOT reached
+ *   [H1 — wave-22 B-6] createAssignment: path-traversal key → 400 BadRequestException, headAttachment NOT reached
+ *   [H1 — wave-22 B-6] createAssignment: valid same-server key → passes key-scope check, headAttachment called
+ *   [H1 — wave-22 B-6] updateAssignment: cross-server key → 400 BadRequestException, headAttachment NOT reached
+ *   [H2 — wave-22 B-6] createAssignment: NoSuchKey from headAttachment → 400 BadRequestException (not 5xx)
+ *   [M1 — wave-22 B-6] toggleStatus: non-member → 403 ForbiddenException
+ *   [M2 — wave-22 B-6] toggleStatus: soft-deleted assignment → 404 NotFoundException
  */
 
+import { NoSuchKey, NotFound } from '@aws-sdk/client-s3';
 import {
   BadRequestException,
   ForbiddenException,
@@ -70,6 +78,16 @@ function makeUpdateChain(returningValue: unknown[] = []) {
   return chain;
 }
 
+function makeDeleteChain() {
+  const chain: Record<string, unknown> = {
+    // biome-ignore lint/suspicious/noThenProperty: intentional thenable mock
+    then: (res: (v: unknown) => unknown, rej?: (e: unknown) => unknown) =>
+      Promise.resolve([]).then(res, rej),
+  };
+  chain.where = vi.fn().mockReturnValue(chain);
+  return chain;
+}
+
 // ---------------------------------------------------------------------------
 // db module mock
 // ---------------------------------------------------------------------------
@@ -96,11 +114,15 @@ const mockDelete = db.delete as unknown as MockFn;
 // ---------------------------------------------------------------------------
 
 const SERVER_ID = 'server-001';
+const OTHER_SERVER_ID = 'server-999'; // different server — used for cross-server key tests
 const ORGANIZER_ID = 'user-organizer';
 const MEMBER_ID = 'user-member';
 const _OTHER_MEMBER_ID = 'user-other';
 const ASSIGNMENT_ID = 'assign-001';
-const ATTACHMENT_KEY = 'attachments/server-001/uuid.png';
+const ATTACHMENT_KEY = `attachments/${SERVER_ID}/uuid.png`;
+// H1 fixtures
+const CROSS_SERVER_KEY = `attachments/${OTHER_SERVER_ID}/uuid.png`; // scoped to a different server
+const PATH_TRAVERSAL_KEY = `attachments/${SERVER_ID}/../../../etc/passwd`; // path-traversal attempt
 
 const NOW = new Date('2026-06-30T10:00:00Z');
 const DUE_DATE = new Date('2026-07-10T12:00:00Z');
@@ -614,5 +636,226 @@ describe('AssignmentsService.presignAttachmentUpload', () => {
     await expect(
       service.presignAttachmentUpload(SERVER_ID, ORGANIZER_ID, 'video/mp4'),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: H1 — server-scoped key validation (wave-22 B-6)
+// ---------------------------------------------------------------------------
+
+describe('AssignmentsService — H1: server-scoped key validation', () => {
+  let service: AssignmentsService;
+  let rbac: ReturnType<typeof makeRbacService>;
+  let files: ReturnType<typeof makeFilesService>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    rbac = makeRbacService(true);
+    files = makeFilesService();
+    // biome-ignore lint/suspicious/noExplicitAny: test mock
+    service = new AssignmentsService(rbac as any, files as any);
+  });
+
+  it('createAssignment: cross-server key → 400 BadRequestException, headAttachment NOT called', async () => {
+    // CROSS_SERVER_KEY is scoped to OTHER_SERVER_ID, not SERVER_ID.
+    // Scope check must reject it before headAttachment is ever reached.
+    await expect(
+      service.createAssignment(SERVER_ID, ORGANIZER_ID, {
+        title: 'Test Assignment',
+        dueDate: DUE_DATE.toISOString(),
+        attachment: { key: CROSS_SERVER_KEY, filename: 'evil.png', contentType: 'image/png' },
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    // headAttachment must NOT have been called — the key-scope guard fires first
+    expect(files.headAttachment).not.toHaveBeenCalled();
+    // No assignment row should have been inserted
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it('createAssignment: path-traversal key → 400 BadRequestException, headAttachment NOT called', async () => {
+    // PATH_TRAVERSAL_KEY contains ".." segments — anchored regex rejects it.
+    await expect(
+      service.createAssignment(SERVER_ID, ORGANIZER_ID, {
+        title: 'Test Assignment',
+        dueDate: DUE_DATE.toISOString(),
+        attachment: { key: PATH_TRAVERSAL_KEY, filename: 'traversal', contentType: 'image/png' },
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(files.headAttachment).not.toHaveBeenCalled();
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it('createAssignment: valid same-server key → passes scope check, headAttachment called', async () => {
+    // ATTACHMENT_KEY = 'attachments/server-001/uuid.png' — matches ^attachments/server-001/[A-Za-z0-9._-]+$
+    let insertCallCount = 0;
+    mockInsert.mockImplementation(() => {
+      insertCallCount++;
+      if (insertCallCount === 1) return makeInsertChain([mockAssignmentRow]);
+      return makeInsertChain([]);
+    });
+
+    let selectCallCount = 0;
+    mockSelect.mockImplementation(() => {
+      selectCallCount++;
+      if (selectCallCount === 1) return makeSelectChain([mockStatusRow]);
+      return makeSelectChain([]);
+    });
+
+    await service.createAssignment(SERVER_ID, ORGANIZER_ID, {
+      title: 'Test Assignment',
+      dueDate: DUE_DATE.toISOString(),
+      attachment: { key: ATTACHMENT_KEY, filename: 'valid.png', contentType: 'image/png' },
+    });
+
+    // headAttachment IS called — key passed the scope check
+    expect(files.headAttachment).toHaveBeenCalledWith(ATTACHMENT_KEY);
+  });
+
+  it('updateAssignment: cross-server key → 400 BadRequestException, headAttachment NOT called', async () => {
+    // existing.server_id = SERVER_ID (from DB row); key scoped to OTHER_SERVER_ID → rejected.
+    // updateAssignment flow: SELECT existing → organizer check → UPDATE row → DELETE old attachments
+    // → validateAndHeadAttachment (scope check fires → 400, before headAttachment).
+    const updatedRow = { ...mockAssignmentRow };
+    mockSelect.mockReturnValue(makeSelectChain([mockAssignmentRow])); // existing row has server_id = SERVER_ID
+    mockUpdate.mockReturnValue(makeUpdateChain([updatedRow]));
+    mockDelete.mockReturnValue(makeDeleteChain()); // DELETE existing attachment rows
+
+    await expect(
+      service.updateAssignment(ASSIGNMENT_ID, ORGANIZER_ID, {
+        attachment: { key: CROSS_SERVER_KEY, filename: 'evil.png', contentType: 'image/png' },
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    // headAttachment must NOT have been called — scope guard fires first
+    expect(files.headAttachment).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: H2 — NoSuchKey / NotFound → 400 BadRequest (wave-22 B-6)
+// ---------------------------------------------------------------------------
+
+describe('AssignmentsService — H2: NoSuchKey from headAttachment → 400 BadRequest', () => {
+  let service: AssignmentsService;
+  let rbac: ReturnType<typeof makeRbacService>;
+  let files: ReturnType<typeof makeFilesService>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    rbac = makeRbacService(true);
+    files = makeFilesService();
+    // biome-ignore lint/suspicious/noExplicitAny: test mock
+    service = new AssignmentsService(rbac as any, files as any);
+  });
+
+  it('createAssignment: NoSuchKey from headAttachment → 400 BadRequestException (not 5xx)', async () => {
+    // Simulate S3 returning NoSuchKey (forged / non-existent key that passes scope check).
+    // ATTACHMENT_KEY is same-server-scoped so it clears the regex guard; then headAttachment throws.
+    files.headAttachment.mockRejectedValue(new NoSuchKey({ message: 'NoSuchKey', $metadata: {} }));
+
+    await expect(
+      service.createAssignment(SERVER_ID, ORGANIZER_ID, {
+        title: 'Test Assignment',
+        dueDate: DUE_DATE.toISOString(),
+        attachment: { key: ATTACHMENT_KEY, filename: 'ghost.png', contentType: 'image/png' },
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    // No assignment row should have been inserted
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it('createAssignment: NotFound from headAttachment → 400 BadRequestException (not 5xx)', async () => {
+    files.headAttachment.mockRejectedValue(new NotFound({ message: 'NotFound', $metadata: {} }));
+
+    await expect(
+      service.createAssignment(SERVER_ID, ORGANIZER_ID, {
+        title: 'Test Assignment',
+        dueDate: DUE_DATE.toISOString(),
+        attachment: { key: ATTACHMENT_KEY, filename: 'ghost.png', contentType: 'image/png' },
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it('createAssignment: unexpected S3 error re-throws (non-NoSuchKey error propagates as 5xx)', async () => {
+    // Internal errors must still propagate — only NoSuchKey / NotFound are mapped.
+    const internalErr = new Error('S3 internal error');
+    files.headAttachment.mockRejectedValue(internalErr);
+
+    await expect(
+      service.createAssignment(SERVER_ID, ORGANIZER_ID, {
+        title: 'Test Assignment',
+        dueDate: DUE_DATE.toISOString(),
+        attachment: { key: ATTACHMENT_KEY, filename: 'ghost.png', contentType: 'image/png' },
+      }),
+    ).rejects.toBe(internalErr);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: M1 — toggleStatus non-member → 403 (wave-22 B-6)
+// ---------------------------------------------------------------------------
+
+describe('AssignmentsService — M1: toggleStatus non-member → 403', () => {
+  let service: AssignmentsService;
+  let rbac: ReturnType<typeof makeRbacService>;
+  let files: ReturnType<typeof makeFilesService>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    rbac = makeRbacService(true);
+    files = makeFilesService();
+    // biome-ignore lint/suspicious/noExplicitAny: test mock
+    service = new AssignmentsService(rbac as any, files as any);
+  });
+
+  it('toggleStatus: non-member → 403 ForbiddenException (server membership check)', async () => {
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return makeSelectChain([mockAssignmentRow]); // assignment exists
+      return makeSelectChain([]); // server_members lookup returns nothing → not a member
+    });
+
+    await expect(
+      service.toggleStatus(ASSIGNMENT_ID, 'non-member-user', 'done'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    // No upsert INSERT should have been called
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: M2 — toggleStatus on soft-deleted assignment → 404 (wave-22 B-6)
+// ---------------------------------------------------------------------------
+
+describe('AssignmentsService — M2: toggleStatus soft-deleted assignment → 404', () => {
+  let service: AssignmentsService;
+  let rbac: ReturnType<typeof makeRbacService>;
+  let files: ReturnType<typeof makeFilesService>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    rbac = makeRbacService(true);
+    files = makeFilesService();
+    // biome-ignore lint/suspicious/noExplicitAny: test mock
+    service = new AssignmentsService(rbac as any, files as any);
+  });
+
+  it('toggleStatus: soft-deleted assignment → 404 NotFoundException (excluded by is_deleted=false filter)', async () => {
+    // The toggleStatus query includes is_deleted=false in the WHERE clause.
+    // A soft-deleted assignment returns no row → NotFoundException.
+    mockSelect.mockReturnValue(makeSelectChain([])); // no row (is_deleted=true excluded)
+
+    await expect(service.toggleStatus(ASSIGNMENT_ID, MEMBER_ID, 'done')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+
+    expect(mockInsert).not.toHaveBeenCalled();
   });
 });
