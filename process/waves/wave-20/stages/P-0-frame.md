@@ -1,0 +1,20 @@
+# Wave 20 — P-0 Frame
+
+## Discover
+- **wave_db_id:** 5c301c2f-e354-4f90-9a39-4aff89266941 (wave_number 20)
+- **Milestone:** M4 — Offline-first reliability (eb2a1688), THE founder wedge. Just ACTIVATED (M3 closed wave-19). M4 = first wave. Class=product-feature, Tier T2.
+- **Prior-work:** builds on the M3 messaging send-path (createMessage idempotency + the wave-13/18/19 optimistic outbox). NO offline/IndexedDB today.
+- **Spec-contract short-circuit:** no-prior-spec (decomposer prose) → full P-1..P-3.
+
+## Reframe (trio)
+- **problem-framer: REFRAME** — seed 92d85e0e is MIS-FRAMED on a STALE PREMISE. Verified against M3 code: server message idempotency ALREADY EXISTS (createMessage `.onConflictDoNothing(target:[channel_id, idempotency_key])` + replay-refetch since wave-13). The seed's "no idempotency today → double-post" is FALSE. The genuine gaps: (a) idempotency_key is OPTIONAL (`?? null` = no dedup) → make it BINDING for the outbox path; (b) the forward `?after=` keyset catch-up cursor is ABSENT (listMessages is backward-only DESC/lt; reuse the forward-ASC pattern from listThreadReplies L1132). Bundle structure stays; coherent offline-send spine; no split. Gold-plating OUT: CRDT/conflict-resolution, background-sync service-worker, offline-for-all-entities, multi-device sync.
+- **ceo-reviewer: PROCEED / HOLD-SCOPE** — THIS IS THE WEDGE (the sole live bet's differentiator vs Discord/Teams/Notion online-only). Correctly sequenced (M1→M2→M3→M4). 4 tasks all load-bearing (drop any → exactly-once collapses). CRDT/PWA/multi-device correctly OUT. **Gating AC for T/V: exactly-once + in-order delivery** (a first offline mode that drops/dupes is worse than none — feeds the bet's falsifier). Heavy fake-indexeddb testing = correct rigor.
+- **mvp-thinner: OK** — 4-task spine right-sized (~2800-3800 LOC, above floor); the decomposer ALREADY cleanly split spine (this wave) vs UI/catch-up (connection-state indicator, pending/failed UI, reconnect bulk-replay = a 2nd M4 wave). Read-cache mvp-critical (metric conjoins "keep reading cached" AND "exactly-once send" — same Dexie/IndexedDB lib as the outbox). No AC split; test harness explicitly mvp-critical.
+- **Merge (REFRAME + PROCEED + OK): PROCEED with the SEED REFRAME applied** (head-product Action-6). The reframe is to the seed's framing/scope (bind-key + forward-cursor), NOT a milestone-scope change — ceo PROCEED + mvp OK stand on the corrected scope. Seed 92d85e0e description patched in DB with the [P-0 REFRAME] note. design_gap: likely FALSE-to-LOW this wave (the SPINE is logic/store; the connection-state + pending/failed UI surfaces are the deferred 2nd M4 wave — P-1 confirms; a minimal pending/failed indicator may be needed but the M3 optimistic pending/failed states already exist).
+
+## Carries to P-1/P-2/P-3
+1. **Server idempotency EXISTS — do NOT rebuild.** Seed = (a) make idempotency_key binding for the outbox replay (outbox always supplies a stable client key) + (b) add the forward `?after=` keyset catch-up cursor (reuse listThreadReplies ASC/gt pattern).
+2. **Dexie/IndexedDB + fake-indexeddb = P-0/P-2 SDK-research item** (per external-sdk-integration-rules → SDK-Docs/<Name>/). CLIENT-SIDE only → NO founder cred-ask. New deps (dexie, fake-indexeddb) — the one P-block dependency.
+3. **This bundle = the SPINE only** (idempotent-contract-hardening + IndexedDB store [reads+outbox] + outbox/optimistic integration + fake-indexeddb test harness). The connection-state indicator + pending/failed UI + reconnect bulk-replay + catch-up history UI = a deliberate 2nd M4 wave.
+4. **Gating AC (T/V):** exactly-once + in-order queued-send on reconnect, no data loss — proven via fake-indexeddb (not asserted).
+- **Final framing:** wave-20 ships the M4 offline-send SPINE: bind the existing server idempotency for replay + forward catch-up cursor + IndexedDB local store (cached reads + outbox) + composer routes through the outbox (stays enabled offline) + heavily fake-indexeddb-tested. claimed = [92d85e0e, 7332a4b8, 9a4ab31d, e29f6566].

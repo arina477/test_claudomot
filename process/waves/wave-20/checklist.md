@@ -14,7 +14,7 @@
 - **Unassigned queue + M4 backlog:** P-0 walks the unassigned queue (depth 2) AND should surface the 6 re-homed M3 tech-debt tasks now living under M4 (invite-rotation d058283d, presence-dots 10b9d18e, real-PG test tier 02fa8011, presence-perf 6a546c7b, presence-debt d23a0740, mention-parity c18b8089) — these are independent backlog, NOT part of this wave's authored offline-first bundle.
 
 PRODUCT:
-- [ ] P-0 Frame (discover + reframe)
+- [x] P-0 Frame
 - [ ] P-1 Decompose
 - [ ] P-2 Spec
 - [ ] P-3 Plan
