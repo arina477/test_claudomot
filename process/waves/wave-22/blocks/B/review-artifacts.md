@@ -4,8 +4,8 @@
 | Stage | Deliverable | Status |
 |---|---|---|
 | B-0 | stages/B-0-branch-and-schema.md | done | branch + claim + migration 0010 |
-| B-1 | stages/B-1-contracts.md | pending | Assignment/AssignmentStatus/DTOs |
-| B-2 | stages/B-2-backend.md | pending | assignments service/controller/module (CRUD+toggle+can()-authz+attachment) |
+| B-1 | stages/B-1-contracts.md | done | Assignment/AssignmentStatus/DTOs |
+| B-2 | stages/B-2-backend.md | done | assignments service/controller/module (CRUD+toggle+can()-authz+attachment) |
 | B-3 | stages/B-3-frontend.md | pending | AssignmentsPanel + AssignmentCard + AssignmentForm (vs adopted design) |
 | B-4 | stages/B-4-wiring.md | pending | routes + DESIGN-SYSTEM --danger-text promotion + panel entry + typecheck |
 | B-5 | stages/B-5-verify.md | pending | |
