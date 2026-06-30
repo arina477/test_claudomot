@@ -28,6 +28,9 @@ All notable changes to StudyHall are documented here. Format follows
 - The share dialog now defaults to your server's permanent invite link, with one-off limited invites moved to a secondary option. (#19)
 - Server roles and permissions: assign roles to members, choose which roles can see which channels, and owner-protection that stops a server from being left without an owner. (#20, #21)
 - Real-time messaging: send and receive messages in your study channels live. (#23)
+- Edit and delete your own messages — edited messages show an "(edited)" mark and deleted ones leave a tombstone — with changes appearing live for everyone in the channel. (#24)
+- React to messages with emoji: tap to add or remove a reaction, see counts and who reacted, all updating live for the channel. (#24)
+- Reacting to a deleted message is now blocked, so reactions can't pile up on content that's no longer there. (#25)
 
 ### Fixed
 
