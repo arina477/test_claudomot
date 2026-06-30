@@ -11,9 +11,9 @@
 | B-0 | stages/B-0-branch-and-schema.md | done | branch + claim + CI secrets set; no schema |
 | B-1 | stages/B-1-contracts.md | SKIP | no contract surface (test-infra) |
 | B-2 | stages/B-2-backend.md | SKIP | no backend |
-| B-3 | stages/B-3-frontend.md | pending | E2E + authed harness (ui-comprehensive-tester per karen swap) |
-| B-4 | stages/B-4-wiring.md | pending | playwright config + ci.yml env |
-| B-5 | stages/B-5-verify.md | pending | run authed E2E green; smoke untouched |
+| B-3 | stages/B-3-frontend.md | done | authed E2E + storageState harness (ui-comprehensive-tester); 4/4 green live |
+| B-4 | stages/B-4-wiring.md | done | typecheck 4/4; CI secrets wired; biome artifact-ignore |
+| B-5 | stages/B-5-verify.md | done | lint 0-errors; E2E green live (deterministic) |
 | B-6 | stages/B-6-review.md | pending | head-builder gate |
 
 ## Block-specific context
