@@ -56,3 +56,6 @@ export type {
   AssignRoleInput,
   UpsertChannelOverrideInput,
 } from './rbac.js';
+
+export { MessageResponseSchema, SendMessageSchema, MessageListSchema } from './messaging.js';
+export type { MessageResponse, SendMessageInput, MessageList } from './messaging.js';
