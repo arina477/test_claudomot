@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { AssignmentsModule } from './assignments/assignments.module';
 import { AuthModule } from './auth/auth.module';
 import { FilesModule } from './files/files.module';
 import { HealthModule } from './health/health.module';
@@ -34,6 +35,7 @@ import { ServersModule } from './servers/servers.module';
     ServersModule,
     MessagingModule,
     PresenceModule,
+    AssignmentsModule,
   ],
   providers: [
     // ThrottlerGuard as APP_GUARD covers all NestJS-handled routes.
