@@ -4,9 +4,9 @@
 | Stage | Deliverable | Status |
 |---|---|---|
 | P-0 | stages/P-0-frame.md | done (PROCEED; rule-1: organizer=owner-or-manage-flag, attachment-needs-schema, panel.html-adopted→D-partial; floor-bound keep-all) |
-| P-1 | stages/P-1-decompose.md | pending |
-| P-2 | stages/P-2-spec.md | pending |
-| P-3 | stages/P-3-plan.md | pending |
+| P-1 | stages/P-1-decompose.md | done |
+| P-2 | tasks.description of 01fcefb8 (+pointer) | done |
+| P-3 | stages/P-3-plan.md | done |
 | P-4 | blocks/P/gate-verdict.md | pending |
 ## Context
 - FIRST M5 wave (academic tooling: assignments — Tier T3, the differentiator Discord lacks). NEW DOMAIN. claimed: [01fcefb8 (CRUD+status spine), 916ecff7 (assignments-panel + assignment-card UI), a5f25f9b (tests)].
