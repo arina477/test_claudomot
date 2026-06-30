@@ -4,8 +4,8 @@
 | Stage | Deliverable | Status |
 |---|---|---|
 | B-0 | stages/B-0-branch-and-schema.md | done | branch + claim + migration 0009 (attachments, message_id NOT NULL) |
-| B-1 | stages/B-1-contracts.md | pending | AttachmentRef + MessageResponse.attachments[] + presign/confirm types |
-| B-2 | stages/B-2-backend.md | pending | FilesService extend + attachments persistence + message-association (row-at-send) |
+| B-1 | stages/B-1-contracts.md | done | AttachmentRef + MessageResponse.attachments[] + presign/confirm types |
+| B-2 | stages/B-2-backend.md | done | FilesService extend + attachments persistence + message-association (row-at-send) |
 | B-3 | stages/B-3-frontend.md | pending | composer picker/preview/upload + message-row render (vs canonical) |
 | B-4 | stages/B-4-wiring.md | pending | routes + typecheck + storage env |
 | B-5 | stages/B-5-verify.md | pending | |
