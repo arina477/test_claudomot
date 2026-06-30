@@ -15,7 +15,12 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import type { MessageList, MessageResponse, ReactionToggleResponse } from '@studyhall/shared';
+import type {
+  MessageList,
+  MessageResponse,
+  MyMentionsResponse,
+  ReactionToggleResponse,
+} from '@studyhall/shared';
 import { EditMessageSchema, ReactionToggleSchema, SendMessageSchema } from '@studyhall/shared';
 import { AuthGuard } from '../auth/auth.guard';
 import { ChannelMessageGuard } from '../rbac/channel-message.guard';
@@ -160,5 +165,49 @@ export class MessagesController {
       userId,
       parsed.data.emoji,
     );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// MentionsController — /me/mentions
+//
+// Route: GET /me/mentions?cursor=&limit=
+//
+// Returns the authenticated user's mentioned messages, most-recent-first,
+// cursor-paginated. Response shape: MyMentionsResponse.
+//
+// Security:
+//   - @UseGuards(AuthGuard) — session required, 401 if unauthed.
+//   - viewerUserId is ALWAYS from req.session.getUserId() — NEVER from a
+//     query/body param. The service re-enforces this (mentioned_user_id = viewerUserId).
+//   - A user CANNOT read another user's mention feed.
+// ---------------------------------------------------------------------------
+
+@Controller('me')
+export class MentionsController {
+  constructor(private readonly messagesService: MessagesService) {}
+
+  /**
+   * GET /me/mentions
+   *
+   * Query params:
+   *   cursor? — opaque pagination cursor (base64url encoded createdAt|id)
+   *   limit?  — max items per page (default 50, max 100)
+   *
+   * Returns: MyMentionsResponse { items: MessageResponse[], nextCursor: string | null }
+   * Status: 200 OK
+   * Errors: 401 (unauthenticated)
+   */
+  @Get('mentions')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async getMyMentions(
+    @Req() req: SessionAugmentedRequest,
+    @Query('cursor') cursor?: string,
+    @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit = 50,
+  ): Promise<MyMentionsResponse> {
+    // userId derived from session ONLY — never a request param
+    const viewerUserId = req.session.getUserId();
+    return await this.messagesService.getMyMentions(viewerUserId, cursor, limit);
   }
 }

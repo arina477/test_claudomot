@@ -37,7 +37,7 @@ function makeSelectChain(resolveWith: unknown[]) {
     then: (res: (v: unknown) => unknown, rej?: (e: unknown) => unknown) =>
       Promise.resolve(resolveWith).then(res, rej),
   };
-  for (const m of ['from', 'where', 'limit', 'orderBy', 'select']) {
+  for (const m of ['from', 'where', 'limit', 'orderBy', 'select', 'innerJoin']) {
     chain[m] = vi.fn().mockReturnValue(chain);
   }
   return chain;
@@ -161,8 +161,9 @@ describe('MessagesService.createMessage', () => {
     let callCount = 0;
     mockSelect.mockImplementation(() => {
       callCount++;
-      // First call: channel exists; second call: fetch inserted message; third: reactions
-      if (callCount === 1) return makeSelectChain([mockChannel]);
+      // 1: channel exists (with server_id); 2: fetch inserted message;
+      // 3: fetchMentionRows (no mentions in "Hello wave 12"); further: reactions etc.
+      if (callCount === 1) return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID }]);
       if (callCount === 2) return makeSelectChain([mockMessage]);
       return makeSelectChain([]);
     });
@@ -181,14 +182,16 @@ describe('MessagesService.createMessage', () => {
     expect(result.isEdited).toBe(false);
     expect(result.isDeleted).toBe(false);
     expect(result.reactions).toEqual([]);
+    expect(result.mentions).toEqual([]);
   });
 
   it('returns the existing message on idempotency key replay (no dup)', async () => {
     let callCount = 0;
     mockSelect.mockImplementation(() => {
       callCount++;
-      if (callCount === 1) return makeSelectChain([mockChannel]);
-      return makeSelectChain([mockMessage]);
+      if (callCount === 1) return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID }]);
+      if (callCount === 2) return makeSelectChain([mockMessage]);
+      return makeSelectChain([]); // resolveMentions (early exit for no tokens) / fetchMentionRows
     });
     mockInsert.mockReturnValue(makeInsertChain());
 
@@ -200,8 +203,9 @@ describe('MessagesService.createMessage', () => {
     callCount = 0;
     mockSelect.mockImplementation(() => {
       callCount++;
-      if (callCount === 1) return makeSelectChain([mockChannel]);
-      return makeSelectChain([mockMessage]); // same row
+      if (callCount === 1) return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID }]);
+      if (callCount === 2) return makeSelectChain([mockMessage]); // same row
+      return makeSelectChain([]);
     });
 
     const second = await service.createMessage(CHANNEL_ID, AUTHOR_ID, {
@@ -219,8 +223,9 @@ describe('MessagesService.createMessage', () => {
     const capturedMessages: { author_id: string }[] = [];
     mockSelect.mockImplementation(() => {
       callCount++;
-      if (callCount === 1) return makeSelectChain([mockChannel]);
-      return makeSelectChain([{ ...mockMessage, author_id: AUTHOR_ID }]);
+      if (callCount === 1) return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID }]);
+      if (callCount === 2) return makeSelectChain([{ ...mockMessage, author_id: AUTHOR_ID }]);
+      return makeSelectChain([]); // fetchMentionRows
     });
     const insertChain = makeInsertChain();
     const valuesFn = insertChain.values as unknown as MockFn;
@@ -245,8 +250,9 @@ describe('MessagesService.createMessage', () => {
     let callCount = 0;
     mockSelect.mockImplementation(() => {
       callCount++;
-      if (callCount === 1) return makeSelectChain([mockChannel]);
-      return makeSelectChain([mockMessage]);
+      if (callCount === 1) return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID }]);
+      if (callCount === 2) return makeSelectChain([mockMessage]);
+      return makeSelectChain([]); // fetchMentionRows
     });
     mockInsert.mockReturnValue(makeInsertChain());
 
@@ -313,6 +319,10 @@ describe('MessagesService.editMessage', () => {
     mockSelect.mockImplementation(() => {
       selectCallCount++;
       if (selectCallCount === 1) return makeSelectChain([mockMessage]); // fetch message
+      if (selectCallCount === 2) return makeSelectChain([mockChannelWithServer]); // channel for server_id
+      if (selectCallCount === 3) return makeSelectChain([]); // existing mention rows (none)
+      // resolveMentions: "edited content" has no tokens → skips DB call
+      if (selectCallCount === 4) return makeSelectChain([]); // fetchMentionRows
       return makeSelectChain([]); // reactions
     });
     mockUpdate.mockReturnValue(makeUpdateChain([updatedMessage]));
@@ -322,6 +332,7 @@ describe('MessagesService.editMessage', () => {
     expect(result.content).toBe('edited content');
     expect(result.isEdited).toBe(true);
     expect(result.editedAt).toBe('2026-06-30T11:00:00.000Z');
+    expect(result.mentions).toEqual([]);
     expect(eventEmitter.emit).toHaveBeenCalledWith('message.updated', result);
   });
 
@@ -650,7 +661,8 @@ describe('MessagesService.listMessages', () => {
       callCount++;
       if (callCount === 1) return makeSelectChain([mockChannel]);
       if (callCount === 2) return makeSelectChain([msg]); // messages
-      return makeSelectChain(reactions); // reactions
+      if (callCount === 3) return makeSelectChain(reactions); // reactions (batched)
+      return makeSelectChain([]); // fetchMentionRows (no mentions in this test)
     });
 
     const result = await service.listMessages(CHANNEL_ID, AUTHOR_ID, undefined, 50);

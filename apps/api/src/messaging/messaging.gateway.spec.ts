@@ -301,6 +301,7 @@ function makeMessageFixture(
     editedAt: null,
     isDeleted: false,
     reactions: [],
+    mentions: [],
     ...overrides,
   };
 }
