@@ -137,3 +137,6 @@ pr_conventions:
 
 3. Gate merge on per-job conclusions from `gh run view --json jobs`; never on `gh run watch --exit-status` alone.
    Why: The watch tool reflects the last-streamed job state, not the aggregate required-job result.
+
+4. Run the formatter check command at the wiring stage before commit, not only the test and typecheck commands.
+   Why: A file committed without the formatter passes a local test run but fails the CI format gate.
