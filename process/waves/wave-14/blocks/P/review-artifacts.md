@@ -3,7 +3,7 @@
 **Block:** P (Product)
 **Wave topic:** M3 presence + typing indicators + live member-list panel
 **Block exit gate:** P-4
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 
@@ -13,7 +13,7 @@
 | P-1 | process/waves/wave-14/stages/P-1-decompose.md | done | PROCEED multi-spec; design_gap_flag TRUE (member-list panel + typing indicator) |
 | P-2 | tasks.description of d1c4693d (+ pointer) | done | multi-spec 3 blocks; security-scoped ACs |
 | P-3 | process/waves/wave-14/stages/P-3-plan.md | done | reuse messaging gateway → /presence ns (in-memory, room-scoped); no migration, no new dep |
-| P-4 | process/waves/wave-14/stages/P-4-gemini-review.md | pending | |
+| P-4 | process/waves/wave-14/blocks/P/gate-verdict.md | done | PASSED — head-product+karen+jenny APPROVE; Gemini UNAVAILABLE (degraded) |
 
 ## Block-specific context
 

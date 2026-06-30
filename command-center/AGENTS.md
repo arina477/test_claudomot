@@ -82,6 +82,7 @@ All head-X agents are spawned as fresh sub-agents at the block-exit gate stage t
 | `react-specialist` | React 19 + Vite SPA components, hooks, state, performance | B-3 frontend (react component work) | _(pre-built — VoltAgent)_ |
 | `typescript-pro` | TS strict, project references, shared Zod types, type-level work | contracts / shared types / tsconfig | _(pre-built — VoltAgent)_ |
 | `node-specialist` | Node.js backend (NestJS) APIs, services, runtime | node / nestjs work | _(pre-built — VoltAgent)_ |
+| `websocket-engineer` | Real-time bidirectional comms — Socket.IO / WebSocket gateways at scale, namespaces, rooms, presence, fan-out scoping | B-3 realtime gateway work | _(pre-built — VoltAgent)_ |
 | `devops-engineer` | Monorepo tooling (Turborepo/pnpm/Biome), CI, Railway deploy wiring | infra / CI / monorepo tooling | _(pre-built — VoltAgent)_ |
 | `frontend-developer` | Multi-framework frontend (fallback for react-specialist) | B-3 frontend fallback | _(pre-built)_ |
 
