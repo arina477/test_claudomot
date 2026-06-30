@@ -842,9 +842,7 @@ export class MessagesService {
     const mentionRows = await fetchMentionRows(messageIds);
 
     return {
-      items: mentionedMessages.map((row) =>
-        rowToDto(row, reactionRows, viewerUserId, mentionRows),
-      ),
+      items: mentionedMessages.map((row) => rowToDto(row, reactionRows, viewerUserId, mentionRows)),
       nextCursor,
     };
   }

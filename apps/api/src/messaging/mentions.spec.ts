@@ -248,7 +248,8 @@ describe('MessagesService.createMessage — mentions', () => {
     mockSelect.mockImplementation(() => {
       selectCallCount++;
       if (selectCallCount === 1) return makeSelectChain([mockChannel]);
-      if (selectCallCount === 2) return makeSelectChain([{ ...mockMessage, content: 'Hello @nonmember' }]);
+      if (selectCallCount === 2)
+        return makeSelectChain([{ ...mockMessage, content: 'Hello @nonmember' }]);
       // resolveMentions → empty (no server member with that username)
       if (selectCallCount === 3) return makeSelectChain([]);
       // fetchMentionRows → empty (no rows persisted)
@@ -279,7 +280,10 @@ describe('MessagesService.createMessage — mentions', () => {
     mockSelect.mockImplementation(() => {
       selectCallCount++;
       if (selectCallCount === 1) return makeSelectChain([mockChannel]);
-      if (selectCallCount === 2) return makeSelectChain([{ ...mockMessage, author_id: AUTHOR_ID, content: `Hey @${AUTHOR_USERNAME}` }]);
+      if (selectCallCount === 2)
+        return makeSelectChain([
+          { ...mockMessage, author_id: AUTHOR_ID, content: `Hey @${AUTHOR_USERNAME}` },
+        ]);
       // resolveMentions → author is a server member
       if (selectCallCount === 3) return makeSelectChain([{ user_id: AUTHOR_ID }]);
       // fetchMentionRows
@@ -302,21 +306,14 @@ describe('MessagesService.createMessage — mentions', () => {
     mockSelect.mockImplementation(() => {
       selectCallCount++;
       if (selectCallCount === 1) return makeSelectChain([mockChannel]);
-      if (selectCallCount === 2) return makeSelectChain([{ ...mockMessage, content: '@alice @alice' }]);
+      if (selectCallCount === 2)
+        return makeSelectChain([{ ...mockMessage, content: '@alice @alice' }]);
       // parseMentions deduplicates → only alice resolved once
       if (selectCallCount === 3) return makeSelectChain([{ user_id: ALICE_ID }]);
       if (selectCallCount === 4) return makeSelectChain([mockMentionRowAlice]);
       return makeSelectChain([]);
     });
     mockInsert.mockReturnValue(makeInsertChain());
-
-    const insertChain = makeInsertChain();
-    const valuesFn = insertChain.values as unknown as MockFn;
-    let capturedValues: unknown[] | null = null;
-    valuesFn.mockImplementation((vals: unknown) => {
-      capturedValues = Array.isArray(vals) ? vals : [vals];
-      return insertChain;
-    });
 
     let insertCallCount = 0;
     mockInsert.mockImplementation(() => {
@@ -374,19 +371,26 @@ describe('MessagesService.editMessage — mention diff', () => {
       // 3: existing mentions → alice already mentioned
       if (selectCallCount === 3) return makeSelectChain([{ mentioned_user_id: ALICE_ID }]);
       // 4: resolveMentions for new body → alice + bob are members
-      if (selectCallCount === 4) return makeSelectChain([{ user_id: ALICE_ID }, { user_id: BOB_ID }]);
+      if (selectCallCount === 4)
+        return makeSelectChain([{ user_id: ALICE_ID }, { user_id: BOB_ID }]);
       // 5: fetchMentionRows → alice + bob
-      if (selectCallCount === 5) return makeSelectChain([
-        { message_id: MESSAGE_ID, mentioned_user_id: ALICE_ID, username: 'alice' },
-        { message_id: MESSAGE_ID, mentioned_user_id: BOB_ID, username: 'bob' },
-      ]);
+      if (selectCallCount === 5)
+        return makeSelectChain([
+          { message_id: MESSAGE_ID, mentioned_user_id: ALICE_ID, username: 'alice' },
+          { message_id: MESSAGE_ID, mentioned_user_id: BOB_ID, username: 'bob' },
+        ]);
       // 6: reactions fetch
       return makeSelectChain([]);
     });
     mockUpdate.mockReturnValue(makeUpdateChain([updatedMessage]));
     mockInsert.mockReturnValue(makeInsertChain());
 
-    const result = await service.editMessage(CHANNEL_ID, MESSAGE_ID, AUTHOR_ID, 'Hello @alice and @bob');
+    const result = await service.editMessage(
+      CHANNEL_ID,
+      MESSAGE_ID,
+      AUTHOR_ID,
+      'Hello @alice and @bob',
+    );
 
     expect(result.mentions).toHaveLength(2);
     // @bob was newly added → INSERT was called
@@ -415,7 +419,7 @@ describe('MessagesService.editMessage — mention diff', () => {
       // 4: resolveMentions for new body ("Hello there") → no tokens → returns [] directly
       // parseMentions("Hello there") returns [] so resolveMentions returns [] without a DB call
       // But selectCallCount 4 would be fetchMentionRows
-      if (selectCallCount === 4) return makeSelectChain([]);  // fetchMentionRows → empty
+      if (selectCallCount === 4) return makeSelectChain([]); // fetchMentionRows → empty
       // 5: reactions
       return makeSelectChain([]);
     });
@@ -466,9 +470,10 @@ describe('MessagesService.getMyMentions', () => {
       // 2: reactions fetch
       if (selectCallCount === 2) return makeSelectChain([]);
       // 3: fetchMentionRows
-      if (selectCallCount === 3) return makeSelectChain([
-        { message_id: 'msg-my-mention', mentioned_user_id: ALICE_ID, username: 'alice' },
-      ]);
+      if (selectCallCount === 3)
+        return makeSelectChain([
+          { message_id: 'msg-my-mention', mentioned_user_id: ALICE_ID, username: 'alice' },
+        ]);
       return makeSelectChain([]);
     });
 
@@ -499,9 +504,24 @@ describe('MessagesService.getMyMentions', () => {
 
   it('returns nextCursor when there are more items than the limit', async () => {
     const msgs = [
-      { ...mockMessage, id: 'msg-a', created_at: new Date('2026-06-30T10:03:00Z'), author_id: BOB_ID },
-      { ...mockMessage, id: 'msg-b', created_at: new Date('2026-06-30T10:02:00Z'), author_id: BOB_ID },
-      { ...mockMessage, id: 'msg-c', created_at: new Date('2026-06-30T10:01:00Z'), author_id: BOB_ID }, // sentinel
+      {
+        ...mockMessage,
+        id: 'msg-a',
+        created_at: new Date('2026-06-30T10:03:00Z'),
+        author_id: BOB_ID,
+      },
+      {
+        ...mockMessage,
+        id: 'msg-b',
+        created_at: new Date('2026-06-30T10:02:00Z'),
+        author_id: BOB_ID,
+      },
+      {
+        ...mockMessage,
+        id: 'msg-c',
+        created_at: new Date('2026-06-30T10:01:00Z'),
+        author_id: BOB_ID,
+      }, // sentinel
     ];
 
     let selectCallCount = 0;
