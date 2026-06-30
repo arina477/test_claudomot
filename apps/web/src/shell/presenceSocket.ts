@@ -21,14 +21,26 @@
  *   typing:stop        — { channelId }   — user stopped typing
  */
 
-import {
-  PRESENCE_EVENTS,
-  type PresenceOfflinePayload,
-  type PresenceOnlinePayload,
-  type PresenceSnapshot,
-  type PresenceStatus,
-  type TypingActive,
+import type {
+  PresenceOfflinePayload,
+  PresenceOnlinePayload,
+  PresenceSnapshot,
+  PresenceStatus,
+  TypingActive,
 } from '@studyhall/shared';
+
+// Local event-name constants — mirrors packages/shared/src/presence.ts PRESENCE_EVENTS
+// values exactly. Not imported at runtime to avoid rollup CJS named-export resolution
+// failure (shared compiles to CJS; Vite/rollup cannot statically resolve a named value
+// export from it when every other web import is import-type only).
+const PRESENCE_EVENTS = {
+  SNAPSHOT: 'presence:snapshot',
+  ONLINE: 'presence:online',
+  OFFLINE: 'presence:offline',
+  TYPING_START: 'typing:start',
+  TYPING_STOP: 'typing:stop',
+  TYPING_ACTIVE: 'typing:active',
+} as const;
 import { type Socket, io } from 'socket.io-client';
 
 // ---------------------------------------------------------------------------

@@ -192,10 +192,9 @@ export function MainColumn({ connectionState = 'online', onToggleSidebar }: Prop
       {selectedChannelId && (
         <div className="shrink-0 relative">
           {/* Typing indicator — zero-height container so it floats above the composer */}
-          <div
-            className="relative w-full pointer-events-none"
+          <output
+            className="relative block w-full pointer-events-none"
             style={{ height: 0, zIndex: 10 }}
-            role="status"
             aria-live="polite"
             aria-atomic="true"
           >
@@ -218,7 +217,7 @@ export function MainColumn({ connectionState = 'online', onToggleSidebar }: Prop
                 </span>
               </div>
             )}
-          </div>
+          </output>
 
           <MessageComposer
             {...(selectedChannelName ? { channelName: selectedChannelName } : {})}
