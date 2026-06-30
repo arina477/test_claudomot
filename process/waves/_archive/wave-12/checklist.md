@@ -64,6 +64,6 @@ LEARN:
 - [x] L-2 Distill
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers — M3 stays in_progress; decomposition fired (next bundle: edit/delete + reactions)
+- [x] N-2 Seed — wave-13 seed e12886d7 + 2 siblings (d78df376, f323a71f); validated
+- [x] N-3 Handoff — wave-12 closed (status=ok); archived; wave-13 opened; loop_state: ready
