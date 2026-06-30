@@ -20,15 +20,76 @@ import {
 } from './pg-harness';
 
 // SUT import AFTER harness so the lazy db proxy resolves to the test DB
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { PoolClient } from 'pg';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import * as dbModule from '../../src/db/index';
-import { servers as serversTable } from '../../src/db/schema/servers';
 import { ServersService } from '../../src/servers/servers.service';
-import * as serversMod from '../../src/servers/servers.service';
 
 // Skip-with-reason when DATABASE_URL_TEST is absent (local dev without PG).
 // Runs in CI where the Postgres 16 service + DATABASE_URL_TEST are provided.
 const SKIP = !process.env.DATABASE_URL_TEST;
+
+// ---------------------------------------------------------------------------
+// Pool-query fault injection helpers
+//
+// Rationale: the SUT's `db` export is a get-only Proxy (only a `get` trap,
+// no `set` trap), so vi.spyOn(dbModule.db, 'transaction') throws at the spyOn
+// line — the spy never installs. Similarly, createServer calls generateCode()
+// as a bare intra-module reference, so module-level spies on
+// serversMod.generateCode are no-ops under esbuild/ESM.
+//
+// The reliable injection point is the underlying node-postgres Pool: drizzle's
+// transaction() calls pool.connect() to get a PoolClient, then runs all
+// queries (BEGIN / INSERTs / COMMIT or ROLLBACK) through that client's
+// query() method. By wrapping pool.connect() to return a proxy client whose
+// query() method throws at the desired moment — INSIDE the open transaction —
+// the real Postgres ROLLBACK fires, leaving zero orphan rows.
+//
+// This is the mechanism described in the B-6 review fix plan ("pool-query
+// fault injection — inject the mid-txn fault at a SETTABLE, real target").
+// ---------------------------------------------------------------------------
+
+/**
+ * Wrap pool.connect() so the returned PoolClient's query() method applies
+ * `queryInterceptor` to every query. The interceptor receives the query SQL
+ * text and the call count (1-based across all queries for this connection
+ * lifetime) and may throw to inject a fault.
+ *
+ * Returns a restore function that reverts the pool.connect() binding.
+ */
+function wrapPoolConnect(queryInterceptor: (sql: string, callNumber: number) => void): () => void {
+  // biome-ignore lint/suspicious/noExplicitAny: pool patching requires any — see module docstring
+  const pool = dbModule.pool() as any;
+  const originalConnect = pool.connect.bind(pool);
+
+  pool.connect = async () => {
+    const client: PoolClient = await originalConnect();
+    // biome-ignore lint/suspicious/noExplicitAny: patching client.query to intercept all statements
+    const originalQuery = (client as any).query.bind(client);
+    let callCount = 0;
+
+    // Patch query — intercept every call regardless of overload shape
+    // biome-ignore lint/suspicious/noExplicitAny: drizzle uses multiple client.query overloads
+    (client as any).query = (...queryArgs: any[]) => {
+      // Extract SQL text regardless of call shape (string or {text:...} config object)
+      const sqlText: string =
+        typeof queryArgs[0] === 'string'
+          ? queryArgs[0]
+          : typeof queryArgs[0] === 'object' && queryArgs[0] !== null
+            ? (queryArgs[0].text ?? '')
+            : '';
+      queryInterceptor(sqlText, ++callCount);
+      return originalQuery(...queryArgs);
+    };
+
+    return client;
+  };
+
+  // Return a restore function — reverts pool.connect to the unpatched version
+  return () => {
+    pool.connect = originalConnect;
+  };
+}
 
 describe.skipIf(SKIP)('createServer — real-Postgres transaction (rollback + commit)', () => {
   // Fixture owner user — satisfies FK on servers.owner_id + server_members.user_id
@@ -43,10 +104,17 @@ describe.skipIf(SKIP)('createServer — real-Postgres transaction (rollback + co
     await teardownHarness();
   });
 
+  let restorePool: (() => void) | undefined;
+
   beforeEach(async () => {
-    vi.restoreAllMocks();
     await truncateTables();
     await insertFixtureUser(OWNER_ID, OWNER_EMAIL);
+  });
+
+  afterEach(() => {
+    // Always restore pool.connect() after each test, even on failure
+    restorePool?.();
+    restorePool = undefined;
   });
 
   // -----------------------------------------------------------------------
@@ -63,7 +131,7 @@ describe.skipIf(SKIP)('createServer — real-Postgres transaction (rollback + co
   // Positive case: successful createServer commits ALL 5 row-kinds.
   //
   // Proves: the harness runs real transactions (not no-ops), migrations were
-  // applied, and the positive path works end-to-end.
+  // applied, and the positive path works end-to-end. No fault injection here.
   // -----------------------------------------------------------------------
   it('commits all 5 row-kinds on success', async () => {
     const sut = makeSut();
@@ -87,60 +155,44 @@ describe.skipIf(SKIP)('createServer — real-Postgres transaction (rollback + co
   // -----------------------------------------------------------------------
   // Rollback case (load-bearing AC): mid-txn failure after ≥1 insert.
   //
-  // Mechanism: spy on db.transaction so we can intercept the drizzle `tx`
-  // proxy and count insert calls. On the 5th tx.insert call (channels — the
-  // LAST insert in the transaction), we throw a synthetic error. This fires
-  // AFTER server + role + server_member + category rows have been inserted
-  // within the open transaction but BEFORE commit. The transaction is never
-  // committed; drizzle catches the throw and issues ROLLBACK.
+  // Mechanism: wrap pool.connect() so the returned PoolClient's query()
+  // method counts every INSERT call and throws a synthetic error on the 5th
+  // INSERT (which targets "channels" — the last insert in createServer's
+  // transaction). At that point server + role + server_member + category rows
+  // exist inside the open transaction. The throw propagates out of drizzle's
+  // transaction() callback, drizzle issues ROLLBACK, and zero rows are
+  // committed.
   //
-  // Why this mechanism: the channels table has no UNIQUE constraint to hit
-  // with a pre-seeded row, and the other late-insert targets require knowing
-  // the server UUID assigned by gen_random_uuid() inside the txn (e.g.
-  // server_members: unique(server_id, user_id)). Intercepting the drizzle tx
-  // object is the "acceptable alternative" described in P-3 plan: "wrap the
-  // pool client / a single tx.insert to throw after N statements (still
-  // through the real txn so ROLLBACK actually fires)".
+  // Why pool-query injection: the `db` export is a get-only Proxy (no set
+  // trap), so vi.spyOn(dbModule.db, 'transaction') throws before the test
+  // runs. Pool.connect() IS writable — we replace it on the singleton and
+  // restore after the test via afterEach.
   //
-  // The ROLLBACK is real: the 4 rows inserted before the throw are never
-  // committed. The assertion countRows = 0 for all tables proves this.
+  // The ROLLBACK is real: all 4 rows inserted before the throw are abandoned.
+  // countRows via the SEPARATE harness pool proves zero cross-connection
+  // visibility (standard Postgres commit-visibility semantics).
   // -----------------------------------------------------------------------
   it('rolls back ALL rows when channels insert fails mid-txn', async () => {
-    // Capture the real transaction method before spying, typed as any to avoid
-    // fighting drizzle's complex generic signatures in test code.
-    // biome-ignore lint/suspicious/noExplicitAny: test-only capture of drizzle internal
-    const realTransaction = dbModule.db.transaction.bind(dbModule.db) as any;
+    let insertCount = 0;
 
-    // Wrap db.transaction: intercept the callback's `tx` argument and count
-    // insert calls. Throw on the 5th (channels) to simulate mid-txn failure.
-    // biome-ignore lint/suspicious/noExplicitAny: mocking drizzle tx internals requires any
-    vi.spyOn(dbModule.db, 'transaction').mockImplementation(async (callback: any) =>
-      // biome-ignore lint/suspicious/noExplicitAny: intercepting drizzle internal tx proxy
-      realTransaction(async (tx: any) => {
-        const originalInsert = tx.insert.bind(tx);
-        let insertCallCount = 0;
-
-        // Count insert calls; throw on 5th (channels — last insert in txn)
-        // biome-ignore lint/suspicious/noExplicitAny: drizzle tx.insert signature varies
-        tx.insert = (...args: any[]) => {
-          insertCallCount++;
-          if (insertCallCount === 5) {
-            // 5th insert = channels — throw AFTER server+role+member+category inserted
-            throw new Error('Simulated mid-txn failure on channels insert (insert call #5)');
-          }
-          return originalInsert(...args);
-        };
-
-        return callback(tx);
-      }),
-    );
+    restorePool = wrapPoolConnect((sqlText, _callNumber) => {
+      // Count only INSERT statements (case-insensitive match on query text)
+      if (/^\s*insert/i.test(sqlText)) {
+        insertCount++;
+        if (insertCount === 5) {
+          // 5th INSERT = channels — throw AFTER server+role+member+category inserted
+          throw new Error('Simulated mid-txn failure on channels insert (INSERT #5)');
+        }
+      }
+    });
 
     const sut = makeSut();
 
-    // createServer must reject — the mid-txn failure must propagate
-    await expect(sut.createServer(OWNER_ID, 'Rollback Test Server')).rejects.toThrow(
-      'Simulated mid-txn failure on channels insert (insert call #5)',
-    );
+    // createServer must reject — the mid-txn failure must propagate.
+    // Drizzle wraps the thrown error in DrizzleQueryError("Failed query: insert into
+    // "channels" …") with our error as .cause. Match on the drizzle wrapper message
+    // (the SQL text it contains) — the countRows=0 assertions below are the real proof.
+    await expect(sut.createServer(OWNER_ID, 'Rollback Test Server')).rejects.toThrow('channels');
 
     // ROLLBACK must have fired: zero rows across ALL 5 tables
     expect(await countRows('servers')).toBe(0);
@@ -153,35 +205,38 @@ describe.skipIf(SKIP)('createServer — real-Postgres transaction (rollback + co
   // -----------------------------------------------------------------------
   // Edge case: early failure (1st insert — servers) also produces zero orphans.
   //
-  // Uses the servers.invite_code UNIQUE constraint: spy on generateCode to
-  // return a fixed value, pre-seed a server row with that invite_code, then
-  // invoke createServer. The servers INSERT (position 1) throws a Postgres
-  // 23505 unique_violation → ROLLBACK immediately → zero additional rows.
+  // Mechanism: wrap pool.connect() so the returned PoolClient's query()
+  // method throws a synthetic error on the very first INSERT it sees
+  // (targeting the "servers" table). The transaction rolls back immediately
+  // with zero rows committed.
+  //
+  // Why pool-query injection instead of generateCode spy: createServer calls
+  // generateCode() as a bare intra-module reference (servers.service.ts:69).
+  // Under esbuild/CommonJS, the module-namespace spy vi.spyOn(serversMod,
+  // 'generateCode') does NOT intercept bare calls — only the exported binding
+  // is patched, not the closure variable used inside the module. Pool-query
+  // injection is module-boundary-agnostic: it fires at the network level
+  // regardless of how the SUT calls its helpers.
   // -----------------------------------------------------------------------
-  it('rolls back cleanly on first-insert failure (invite_code collision)', async () => {
-    const COLLISION_CODE = 'wave17-collision-code';
-
-    // Pre-seed a second user + server that owns the collision invite_code.
-    const OTHER_OWNER_ID = 'test-other-owner-wave17';
-    await insertFixtureUser(OTHER_OWNER_ID, 'wave17-other@test.local');
-
-    // Insert a server directly (bypassing createServer) with the known code.
-    await dbModule.db.insert(serversTable).values({
-      name: 'Pre-existing Server',
-      owner_id: OTHER_OWNER_ID,
-      invite_code: COLLISION_CODE,
+  it('rolls back cleanly on first-insert failure (servers insert fault)', async () => {
+    restorePool = wrapPoolConnect((sqlText, _callNumber) => {
+      if (/^\s*insert\s+into\s+"?servers"?/i.test(sqlText)) {
+        throw new Error('Simulated first-insert failure on servers table');
+      }
     });
-
-    // Force generateCode to return the colliding value
-    vi.spyOn(serversMod, 'generateCode').mockReturnValue(COLLISION_CODE);
 
     const sut = makeSut();
 
-    // createServer must reject with a PG unique violation on invite_code
-    await expect(sut.createServer(OWNER_ID, 'Collision Server')).rejects.toThrow();
+    // createServer must reject — the first-insert failure must propagate.
+    // Drizzle wraps the thrown error in DrizzleQueryError("Failed query: insert into
+    // "servers" …") with our error as .cause. Match on the drizzle wrapper message
+    // (the SQL text it contains) — the countRows=0 assertions below are the real proof.
+    await expect(sut.createServer(OWNER_ID, 'First-Insert Failure Server')).rejects.toThrow(
+      '"servers"',
+    );
 
-    // Only the pre-seeded server row exists; the failed attempt left no trace
-    expect(await countRows('servers')).toBe(1); // only the pre-seeded one
+    // No rows at all — transaction rolled back before the first INSERT committed
+    expect(await countRows('servers')).toBe(0);
     expect(await countRows('roles')).toBe(0);
     expect(await countRows('server_members')).toBe(0);
     expect(await countRows('categories')).toBe(0);
