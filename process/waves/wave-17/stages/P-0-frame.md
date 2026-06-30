@@ -1,0 +1,15 @@
+# Wave 17 — P-0 Frame
+
+## Discover
+- **wave_db_id:** 787ef61a-52af-4c71-b595-0eae0b23ef24 (wave_number 17)
+- **Prior-work:** createServer (apps/api/src/servers/servers.service.ts:68) = atomic db.transaction (server→role→server_member→category→channel). Unit test (servers.service.spec.ts:76) MOCKS db.transaction → rollback path unproven. Only 2 db.transaction call-sites (servers + rbac/owner-lockout); this wave scopes to create-server.
+- **Roadmap milestone:** M3 (6198650e) — seed 25523fb0 is an M3 top-level todo (wave-7 carry, reassigned M2→M3 at wave-10). Wave-17 milestone backfilled.
+- **Spec-contract short-circuit:** no-prior-spec (prose) → full P-1..P-3.
+- **Data hygiene done at P-0:** cleared stale wave_id (closed-wave claims) on 6 parked M3 todos (02fa8011, 6a546c7b, d23a0740, 67881a58, c18b8089, 4e994e96) → seedable again.
+
+## Reframe
+- **problem-framer: PROCEED** — real rollback proof gap (mock can't prove transactional atomicity; real PG is the only proof), right layer (integration vs real txn boundary), right-sized (scopes to create-server, defers owner-lockout). The PGlite/testcontainers harness is the irreducible enabler, not over-infra. NOTE: harness is the shared enabler for 02fa8011 — but KEEP this wave focused on create-server rollback; do NOT bundle 02fa8011 (P-1 sizing call: 02fa8011 may become a follow-on once the harness lands).
+- **ceo-reviewer: PROCEED / HOLD-SCOPE — with a BINDING ordering note.** This is the 2nd consecutive tech-debt/test-infra wave (wave-16 E2E + wave-17 rollback test). Acceptable: it builds reusable real-PG infra that resolves the ESCALATING recurring-gap 02fa8011 (V-3 flagged 3rd-recurrence) + hardens the create-server atomicity guarantee; no founder signal makes M3 closure calendar-urgent; ritual ordering is by design. **THE LINE: 2 tech-debt waves building shared infra = OK (here). 3 consecutive tech-debt waves displacing M3 success-metric features (threads + attachments) = DRIFT. BINDING CARRY → wave-17 N-1: if a parked seed would AGAIN out-prioritize threads/attachments, route a tech-debt-vs-feature ORDERING DECISION to BOARD (automatic mode) before the decomposer fires (strategist seat weighs cancelling/deferring remaining parked tech-debt so the decomposer can author the threads/attachments bundle). At the 2/3 line — proceed once more, then decide.**
+- **mvp-thinner: OK** — single indivisible test+harness; no AC to thin; doesn't trace to M3 success metric (carried tech-debt); testing all txn call-sites would be expansion (ceo-reviewer's lane), not thinning.
+- **Disposition: PROCEED.** Single test-infra task. Carry the ceo-reviewer BINDING ordering note to N-1 (feature-vs-debt BOARD decision if wave-18 would be tech-debt again).
+- **Final framing:** Wave-17 builds a real-Postgres (PGlite/testcontainers — P-3 picks) test harness + a test forcing a mid-txn failure in createServer → asserts NO orphan rows (server/role/member/category/channel). claimed_task_ids = [25523fb0]. 02fa8011 NOT bundled (P-1 may note it as a harness-reuse follow-on).

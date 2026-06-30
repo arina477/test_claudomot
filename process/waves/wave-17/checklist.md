@@ -11,7 +11,7 @@
 >   - Unassigned queue (2): 67881a58 (Playwright MCP bundled-chromium reconfig), 4e994e96 (biome lint-warning cleanup) — P-0 walks the unassigned queue and assigns what it can.
 
 PRODUCT:
-- [ ] P-0 Frame (discover + reframe)
+- [x] P-0 Frame (discover + reframe)
 - [ ] P-1 Decompose
 - [ ] P-2 Spec
 - [ ] P-3 Plan
