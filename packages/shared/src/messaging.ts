@@ -1,6 +1,50 @@
 import { z } from 'zod';
 
 // ---------------------------------------------------------------------------
+// AttachmentRef — rendered attachment on a delivered message DTO
+// wave-19 M3 task 20db0c16
+//
+// url is a presigned-GET (Railway Buckets are private; resolved server-side
+// via resolveAttachmentUrl with GetObjectCommand).
+// ---------------------------------------------------------------------------
+
+export const AttachmentRefSchema = z.object({
+  id: z.string(),
+  filename: z.string(),
+  contentType: z.string(),
+  sizeBytes: z.number().int().nonnegative(),
+  url: z.string(),
+});
+export type AttachmentRef = z.infer<typeof AttachmentRefSchema>;
+
+// ---------------------------------------------------------------------------
+// AttachmentPresignResponse — POST /channels/:channelId/attachments/presign
+// wave-19 M3 task 20db0c16
+// ---------------------------------------------------------------------------
+
+export const AttachmentPresignResponseSchema = z.object({
+  uploadUrl: z.string(),
+  key: z.string(),
+});
+export type AttachmentPresignResponse = z.infer<typeof AttachmentPresignResponseSchema>;
+
+// ---------------------------------------------------------------------------
+// ValidatedAttachment — the confirmed descriptor returned by /confirm
+// wave-19 M3 task 20db0c16
+//
+// NO db id — the row is not born at confirm (row-at-send P-4 decision).
+// The client passes this as-is in the message send body under attachments[].
+// ---------------------------------------------------------------------------
+
+export const ValidatedAttachmentSchema = z.object({
+  key: z.string(),
+  filename: z.string(),
+  contentType: z.string(),
+  sizeBytes: z.number().int().nonnegative(),
+});
+export type ValidatedAttachment = z.infer<typeof ValidatedAttachmentSchema>;
+
+// ---------------------------------------------------------------------------
 // ReactionSummary — aggregated reaction count for a single emoji
 // Included in MessageResponse.reactions — wave-13 task d78df376
 // ---------------------------------------------------------------------------
@@ -55,6 +99,8 @@ export const MessageResponseSchema = z.object({
   threadParentId: z.string().nullable().optional(),
   replyCount: z.number().int().nonnegative().optional(),
   lastReplyAt: z.string().nullable().optional(),
+  // wave-19 M3 attachments
+  attachments: z.array(AttachmentRefSchema).optional(),
 });
 export type MessageResponse = z.infer<typeof MessageResponseSchema>;
 
@@ -144,6 +190,8 @@ export const SendMessageSchema = z.object({
     .min(1, 'Message content must not be empty')
     .max(4000, 'Message content must not exceed 4000 characters'),
   idempotencyKey: z.string().optional(),
+  // wave-19 M3 — validated descriptors from /confirm; INSERT to attachments at send-time
+  attachments: z.array(ValidatedAttachmentSchema).optional(),
 });
 export type SendMessageInput = z.infer<typeof SendMessageSchema>;
 

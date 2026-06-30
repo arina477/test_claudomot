@@ -18,6 +18,16 @@
  * - Escape closes the popover without inserting.
  * - Popover positioned above the composer form (absolute, bottom-full).
  *
+ * Wave-19 additions (M3 attachments):
+ * - Paperclip attach button (hidden file input, D-carry: hidden-input pattern).
+ * - Staged-attachment strip: image thumbnail via URL.createObjectURL / file chip
+ *   + filename + human size + remove ✕.
+ * - Client-side guard: ≤10MB + content-type allowlist (mirrors server).
+ * - Per-tile upload progress (emerald bar) + failed-upload tile with retry/clear.
+ * - On SEND: presign → PUT → confirm → collect ValidatedAttachment[] → send.
+ * - aria-live="polite" on the staged strip (D-carry).
+ * - Broken-send guard: never sends if any tile is in the uploading/error state.
+ *
  * A11y (combobox pattern — WAI-ARIA 1.2 §combo-with-list):
  * - The textarea carries role=combobox + aria-expanded + aria-controls
  *   (pointing at the listbox id) + aria-activedescendant (the focused option id).
@@ -25,10 +35,61 @@
  *   carry aria-activedescendant and do NOT need to be focusable.
  */
 
+import type { ValidatedAttachment } from '@studyhall/shared';
 import { useCallback, useId, useRef, useState } from 'react';
+import { api } from '../auth/api';
 import type { MentionInsertPayload } from './MentionAutocomplete';
 import { MentionAutocomplete } from './MentionAutocomplete';
-import { PaperPlaneIcon, SpinnerIcon } from './icons';
+import type { StagedAttachmentPreview } from './MessageList';
+import { PaperPlaneIcon, PaperclipIcon, SpinnerIcon, WarningCircleIcon, XIcon } from './icons';
+
+// ---------------------------------------------------------------------------
+// Constants — mirror server-side allowlist
+// ---------------------------------------------------------------------------
+
+/** Maximum file size in bytes (10 MB). Must mirror server validation. */
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+
+/**
+ * Allowlisted content-types.
+ * Must mirror the server-side attachment allowlist in apps/api
+ * (ATTACHMENT_ALLOWED_MIME in apps/api/src/files/files.service.ts).
+ */
+const ALLOWED_CONTENT_TYPES = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+  'image/gif',
+  'application/pdf',
+  'text/plain',
+]);
+
+/** Accept attribute string for the file input (union of all allowed types). */
+const ACCEPT = [...ALLOWED_CONTENT_TYPES].join(',');
+
+// ---------------------------------------------------------------------------
+// Staged attachment state machine
+// ---------------------------------------------------------------------------
+
+type StagedState =
+  | { phase: 'ready'; localUrl?: string } // waiting to be uploaded on send
+  | { phase: 'uploading'; localUrl?: string; progress: number }
+  | { phase: 'done'; validated: ValidatedAttachment; localUrl?: string }
+  | { phase: 'error'; message: string; localUrl?: string };
+
+/** Helper: spread `localUrl` only when it is defined (exactOptionalPropertyTypes). */
+function withLocalUrl(url: string | undefined): { localUrl: string } | Record<string, never> {
+  return url !== undefined ? { localUrl: url } : {};
+}
+
+type StagedFile = {
+  id: string; // local UUID
+  file: File;
+  filename: string;
+  contentType: string;
+  sizeBytes: number;
+  state: StagedState;
+};
 
 // ---------------------------------------------------------------------------
 // @-trigger detection helpers
@@ -62,13 +123,28 @@ function getMentionQuery(value: string, cursor: number): string | null {
 }
 
 // ---------------------------------------------------------------------------
+// Human-readable size
+// ---------------------------------------------------------------------------
+
+function humanSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
 
 type Props = {
   channelName?: string;
+  channelId?: string | null;
   disabled?: boolean;
-  onSend: (content: string) => void;
+  onSend: (
+    content: string,
+    attachments?: ValidatedAttachment[],
+    previews?: StagedAttachmentPreview[],
+  ) => void;
   /** Called on every keypress (for typing indicator throttling). */
   onKeyPress?: () => void;
   /** Called when the textarea loses focus (to stop typing indicator). */
@@ -81,11 +157,121 @@ type Props = {
 };
 
 // ---------------------------------------------------------------------------
+// StagedTile — individual attachment tile in the staged-preview strip
+// ---------------------------------------------------------------------------
+
+type StagedTileProps = {
+  staged: StagedFile;
+  onRemove: (id: string) => void;
+};
+
+function StagedTile({ staged, onRemove }: StagedTileProps) {
+  const isImage = staged.contentType.startsWith('image/');
+  const { state } = staged;
+
+  const isError = state.phase === 'error';
+  const isUploading = state.phase === 'uploading';
+  const isDone = state.phase === 'done';
+
+  return (
+    <div
+      role={isError ? 'alert' : undefined}
+      className="relative flex min-w-[200px] max-w-[260px] items-center gap-2 overflow-hidden rounded-md border p-1.5 pr-2"
+      style={{
+        backgroundColor: '#27272a',
+        borderColor: isError ? 'rgba(239,68,68,0.60)' : 'rgba(63,63,70,0.50)',
+      }}
+    >
+      {/* Thumbnail / icon */}
+      <div
+        className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded"
+        style={{ backgroundColor: '#1c1c1f' }}
+      >
+        {isImage && state.localUrl && !isError ? (
+          <img src={state.localUrl} alt={staged.filename} className="h-full w-full object-cover" />
+        ) : isError ? (
+          <WarningCircleIcon size={18} style={{ color: '#f87171' }} />
+        ) : (
+          <span
+            className="text-[11px] font-bold uppercase tracking-wider"
+            style={{ color: '#10b981' }}
+          >
+            {staged.filename.split('.').pop()?.slice(0, 3) ?? '?'}
+          </span>
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <span
+          className="truncate text-[13px] font-medium leading-tight"
+          style={{ color: 'rgba(255,255,255,0.92)' }}
+        >
+          {staged.filename}
+        </span>
+        <span
+          className="mt-0.5 flex items-center gap-1 truncate text-[11px] leading-tight"
+          style={{ color: isError ? '#f87171' : 'rgba(255,255,255,0.40)' }}
+        >
+          {isUploading ? (
+            <>
+              <SpinnerIcon size={10} className="animate-spin shrink-0" />
+              Uploading…
+            </>
+          ) : isError ? (
+            (state as { phase: 'error'; message: string }).message
+          ) : isDone ? (
+            <>{humanSize(staged.sizeBytes)} · Ready</>
+          ) : (
+            humanSize(staged.sizeBytes)
+          )}
+        </span>
+      </div>
+
+      {/* Remove button */}
+      {!isUploading && (
+        <button
+          type="button"
+          aria-label={`Remove ${staged.filename}`}
+          onClick={() => onRemove(staged.id)}
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70"
+          style={{ color: 'rgba(255,255,255,0.40)' }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#3f3f46';
+            (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.90)';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = '';
+            (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.40)';
+          }}
+        >
+          <XIcon size={12} />
+        </button>
+      )}
+
+      {/* Progress bar (uploading phase) */}
+      {isUploading && (
+        <div
+          className="absolute bottom-0 left-0 h-[2px] rounded-full"
+          style={{
+            width: `${(state as { phase: 'uploading'; progress: number }).progress}%`,
+            backgroundColor: '#10b981',
+            transition: 'width 200ms ease',
+          }}
+          aria-hidden="true"
+        />
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // MessageComposer
 // ---------------------------------------------------------------------------
 
 export function MessageComposer({
   channelName,
+  channelId,
   disabled = false,
   onSend,
   onKeyPress,
@@ -97,6 +283,11 @@ export function MessageComposer({
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   // Tracks the aria-activedescendant id reported by MentionAutocomplete.
   const [activeDescendantId, setActiveDescendantId] = useState<string | undefined>(undefined);
+
+  // ── Staged attachments ──────────────────────────────────────────────────────
+  const [stagedFiles, setStagedFiles] = useState<StagedFile[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Stable id for the listbox — shared with MentionAutocomplete so aria-controls
@@ -105,7 +296,13 @@ export function MessageComposer({
   const listboxId = `mention-listbox-${rawId.replace(/:/g, '')}`;
 
   const autocompleteOpen = mentionQuery !== null;
-  const canSend = value.trim().length > 0 && !disabled && !sending;
+
+  // Has any tile still uploading or errored?
+  const hasBlockingTile = stagedFiles.some(
+    (f) => f.state.phase === 'uploading' || f.state.phase === 'error',
+  );
+
+  const canSend = value.trim().length > 0 && !disabled && !sending && !hasBlockingTile;
 
   // ---------------------------------------------------------------------------
   // Helpers
@@ -124,16 +321,192 @@ export function MessageComposer({
   }
 
   // ---------------------------------------------------------------------------
+  // Attachment file selection + client-side guard
+  // ---------------------------------------------------------------------------
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    // Reset so the same file can be re-selected after removal
+    e.target.value = '';
+    if (files.length === 0) return;
+
+    const newStaged: StagedFile[] = files.map((file) => {
+      const id = crypto.randomUUID();
+      let errorMsg: string | null = null;
+
+      if (file.size > MAX_ATTACHMENT_BYTES) {
+        errorMsg = `Too large (max ${humanSize(MAX_ATTACHMENT_BYTES)})`;
+      } else if (!ALLOWED_CONTENT_TYPES.has(file.type)) {
+        errorMsg = 'File type not allowed';
+      }
+
+      const localUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined;
+
+      if (errorMsg) {
+        return {
+          id,
+          file,
+          filename: file.name,
+          contentType: file.type,
+          sizeBytes: file.size,
+          state: { phase: 'error', message: errorMsg, ...withLocalUrl(localUrl) },
+        } satisfies StagedFile;
+      }
+
+      return {
+        id,
+        file,
+        filename: file.name,
+        contentType: file.type,
+        sizeBytes: file.size,
+        state: { phase: 'ready', ...withLocalUrl(localUrl) },
+      } satisfies StagedFile;
+    });
+
+    setStagedFiles((prev) => [...prev, ...newStaged]);
+  }
+
+  function removeStagedFile(fileId: string) {
+    setStagedFiles((prev) => {
+      const target = prev.find((f) => f.id === fileId);
+      // Revoke object URL to avoid memory leaks
+      if (target?.state.localUrl) {
+        URL.revokeObjectURL(target.state.localUrl);
+      }
+      return prev.filter((f) => f.id !== fileId);
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Upload a single staged file: presign → PUT → confirm → mark done
+  // ---------------------------------------------------------------------------
+
+  async function uploadFile(
+    staged: StagedFile,
+    cid: string,
+    updateState: (id: string, updater: (f: StagedFile) => StagedFile) => void,
+  ): Promise<ValidatedAttachment | null> {
+    // Mark uploading at 0%
+    updateState(staged.id, (f) => ({
+      ...f,
+      state: { phase: 'uploading', progress: 0, ...withLocalUrl(f.state.localUrl) },
+    }));
+
+    try {
+      // Step 1: presign
+      const { uploadUrl, key } = await api.presignAttachment(
+        cid,
+        staged.contentType,
+        staged.filename,
+      );
+
+      // Mark progress at 30% (presign done)
+      updateState(staged.id, (f) => ({
+        ...f,
+        state: { phase: 'uploading', progress: 30, ...withLocalUrl(f.state.localUrl) },
+      }));
+
+      // Step 2: PUT to storage (no credentials header — goes direct to S3)
+      await fetch(uploadUrl, {
+        method: 'PUT',
+        body: staged.file,
+        headers: { 'Content-Type': staged.contentType },
+      }).then((res) => {
+        if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+      });
+
+      // Mark progress at 80% (PUT done)
+      updateState(staged.id, (f) => ({
+        ...f,
+        state: { phase: 'uploading', progress: 80, ...withLocalUrl(f.state.localUrl) },
+      }));
+
+      // Step 3: confirm
+      const validated = await api.confirmAttachment(cid, key, staged.filename, staged.contentType);
+
+      // Mark done
+      updateState(staged.id, (f) => ({
+        ...f,
+        state: { phase: 'done', validated, ...withLocalUrl(f.state.localUrl) },
+      }));
+
+      return validated;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Upload failed';
+      const shortMsg = msg.length > 40 ? `${msg.slice(0, 37)}…` : msg;
+      updateState(staged.id, (f) => ({
+        ...f,
+        state: { phase: 'error', message: shortMsg, ...withLocalUrl(f.state.localUrl) },
+      }));
+      return null;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Send
   // ---------------------------------------------------------------------------
 
   async function handleSend() {
     const content = value.trim();
-    if (!content || disabled || sending) return;
+    if (!content || disabled || sending || hasBlockingTile) return;
     setSending(true);
     try {
-      onSend(content);
+      // Upload all ready tiles (already-done tiles keep their validated result)
+      const readyFiles = stagedFiles.filter(
+        (f) => f.state.phase === 'ready' || f.state.phase === 'done',
+      );
+
+      const updateState = (id: string, updater: (f: StagedFile) => StagedFile) => {
+        setStagedFiles((prev) => prev.map((f) => (f.id === id ? updater(f) : f)));
+      };
+
+      // Run uploads in parallel (safe: each presigns independently)
+      const channelIdForUpload = channelId ?? null;
+      const uploadResults: (ValidatedAttachment | null)[] =
+        readyFiles.length > 0 && channelIdForUpload
+          ? await Promise.all(
+              readyFiles.map((sf) => {
+                if (sf.state.phase === 'done') {
+                  return Promise.resolve(
+                    (sf.state as { phase: 'done'; validated: ValidatedAttachment }).validated,
+                  );
+                }
+                return uploadFile(sf, channelIdForUpload, updateState);
+              }),
+            )
+          : [];
+
+      // If any upload failed, do not send
+      if (uploadResults.some((r) => r === null)) {
+        // Tiles are already in error state; user sees the red tiles
+        return;
+      }
+
+      const validated = uploadResults.filter((r): r is ValidatedAttachment => r !== null);
+
+      // Build staged previews for the optimistic row
+      const previews: StagedAttachmentPreview[] = stagedFiles
+        .filter((f) => f.state.phase === 'ready' || f.state.phase === 'done')
+        .map((f) => ({
+          filename: f.filename,
+          contentType: f.contentType,
+          sizeBytes: f.sizeBytes,
+          ...withLocalUrl(f.state.localUrl),
+        }));
+
+      onSend(
+        content,
+        validated.length > 0 ? validated : undefined,
+        previews.length > 0 ? previews : undefined,
+      );
+
+      // Revoke object URLs to free memory
+      for (const f of stagedFiles) {
+        if (f.state.localUrl) URL.revokeObjectURL(f.state.localUrl);
+      }
+
       setValue('');
+      setStagedFiles([]);
       setMentionQuery(null);
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
@@ -239,6 +612,8 @@ export function MessageComposer({
   // Render
   // ---------------------------------------------------------------------------
 
+  const hasStagedFiles = stagedFiles.length > 0;
+
   return (
     <div className="shrink-0 px-5 pb-5 pt-2 relative" aria-label="Message composer">
       {/* Mention autocomplete popover — anchored above the composer form */}
@@ -259,75 +634,129 @@ export function MessageComposer({
         </div>
       )}
 
+      {/* Hidden file input — D-carry: hidden-input pattern for accessible file picker */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={ACCEPT}
+        multiple
+        className="sr-only"
+        aria-hidden="true"
+        tabIndex={-1}
+        onChange={handleFileChange}
+        data-testid="file-input"
+      />
+
       <form
         onSubmit={(e) => {
           e.preventDefault();
           void handleSend();
         }}
-        className="relative flex items-end rounded-md overflow-hidden"
+        className="relative flex flex-col overflow-hidden rounded-md"
         style={{
           backgroundColor: '#27272a',
           border: '1px solid rgba(63,63,70,0.6)',
           boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.02)',
         }}
       >
-        <label htmlFor="composer-input" className="sr-only">
-          Message {channelName ? `#${channelName}` : 'channel'}
-        </label>
-        <textarea
-          ref={textareaRef}
-          id="composer-input"
-          data-testid="composer-input"
-          rows={1}
-          placeholder={`Message ${channelName ? `#${channelName}` : 'channel'}`}
-          value={value}
-          disabled={disabled || sending}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          onSelect={handleSelect}
-          onBlur={handleBlur}
-          // --- Combobox ARIA (WAI-ARIA 1.2 §combo-with-list) ---
-          // Focus stays on this textarea at all times while the popover is open.
-          // aria-activedescendant + aria-controls + role=combobox all live here
-          // (on the focusable element), NOT on the listbox.
-          role={serverId ? 'combobox' : undefined}
-          aria-autocomplete={serverId ? 'list' : undefined}
-          aria-expanded={autocompleteOpen || undefined}
-          aria-controls={autocompleteOpen ? listboxId : undefined}
-          aria-activedescendant={autocompleteOpen ? activeDescendantId : undefined}
-          className="w-full bg-transparent text-[14px] outline-none resize-none overflow-y-auto"
-          style={{
-            color: 'rgba(255,255,255,0.92)',
-            caretColor: '#10b981',
-            padding: '14px 16px',
-            minHeight: '48px',
-            maxHeight: '40dvh',
-            lineHeight: '1.5',
-          }}
-        />
-        <div
-          className="p-2.5 flex items-center shrink-0 self-stretch"
-          style={{ paddingBottom: '10px' }}
-        >
-          <button
-            type="submit"
-            data-testid="send-button"
-            disabled={!canSend}
-            aria-label="Send message"
-            className="w-9 h-9 flex items-center justify-center rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2"
-            style={{
-              backgroundColor: canSend ? '#10b981' : '#27272a',
-              color: canSend ? '#0a0a0b' : 'rgba(255,255,255,0.30)',
-              cursor: canSend ? 'pointer' : 'not-allowed',
-              border: canSend ? 'none' : '1px solid rgba(255,255,255,0.06)',
-            }}
+        {/* STAGED-PREVIEW STRIP — D-carry: aria-live="polite" */}
+        {hasStagedFiles && (
+          <div
+            aria-live="polite"
+            aria-label="Staged attachments"
+            className="flex flex-wrap gap-2 overflow-y-auto px-3 pb-1 pt-3"
+            style={{ maxHeight: 160 }}
+            data-testid="staged-attachment-strip"
           >
-            {sending ? (
-              <SpinnerIcon size={18} className="animate-spin" />
-            ) : (
-              <PaperPlaneIcon size={18} />
-            )}
-          </button>
+            {stagedFiles.map((sf) => (
+              <StagedTile key={sf.id} staged={sf} onRemove={removeStagedFile} />
+            ))}
+          </div>
+        )}
+
+        {/* INPUT ROW */}
+        <div className="flex items-end w-full">
+          {/* Attach button — left of textarea */}
+          <div className="flex shrink-0 items-center self-stretch p-2.5 pr-1">
+            <button
+              type="button"
+              aria-label="Attach file"
+              disabled={disabled || sending}
+              onClick={() => fileInputRef.current?.click()}
+              className="flex h-9 w-9 items-center justify-center rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70"
+              style={{ color: 'rgba(255,255,255,0.40)' }}
+              onMouseEnter={(e) => {
+                if (!disabled && !sending) {
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#3f3f46';
+                  (e.currentTarget as HTMLButtonElement).style.color = '#10b981';
+                }
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = '';
+                (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.40)';
+              }}
+              data-testid="attach-button"
+            >
+              <PaperclipIcon size={20} />
+            </button>
+          </div>
+
+          <label htmlFor="composer-input" className="sr-only">
+            Message {channelName ? `#${channelName}` : 'channel'}
+          </label>
+          <textarea
+            ref={textareaRef}
+            id="composer-input"
+            data-testid="composer-input"
+            rows={1}
+            placeholder={`Message ${channelName ? `#${channelName}` : 'channel'}`}
+            value={value}
+            disabled={disabled || sending}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            onSelect={handleSelect}
+            onBlur={handleBlur}
+            // --- Combobox ARIA (WAI-ARIA 1.2 §combo-with-list) ---
+            role={serverId ? 'combobox' : undefined}
+            aria-autocomplete={serverId ? 'list' : undefined}
+            aria-expanded={autocompleteOpen || undefined}
+            aria-controls={autocompleteOpen ? listboxId : undefined}
+            aria-activedescendant={autocompleteOpen ? activeDescendantId : undefined}
+            className="w-full bg-transparent text-[14px] outline-none resize-none overflow-y-auto"
+            style={{
+              color: 'rgba(255,255,255,0.92)',
+              caretColor: '#10b981',
+              padding: '14px 16px 14px 0',
+              minHeight: '48px',
+              maxHeight: '40dvh',
+              lineHeight: '1.5',
+            }}
+          />
+
+          <div
+            className="flex shrink-0 items-center self-stretch p-2.5"
+            style={{ paddingBottom: '10px' }}
+          >
+            <button
+              type="submit"
+              data-testid="send-button"
+              disabled={!canSend}
+              aria-label="Send message"
+              className="w-9 h-9 flex items-center justify-center rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2"
+              style={{
+                backgroundColor: canSend ? '#10b981' : '#27272a',
+                color: canSend ? '#0a0a0b' : 'rgba(255,255,255,0.30)',
+                cursor: canSend ? 'pointer' : 'not-allowed',
+                border: canSend ? 'none' : '1px solid rgba(255,255,255,0.06)',
+              }}
+            >
+              {sending ? (
+                <SpinnerIcon size={18} className="animate-spin" />
+              ) : (
+                <PaperPlaneIcon size={18} />
+              )}
+            </button>
+          </div>
         </div>
       </form>
 

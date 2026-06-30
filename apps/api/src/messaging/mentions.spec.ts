@@ -152,6 +152,7 @@ vi.mock('../db/index', () => ({
     insert: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
+    transaction: vi.fn(),
   },
 }));
 
@@ -162,6 +163,7 @@ const mockSelect = db.select as unknown as MockFn;
 const mockInsert = db.insert as unknown as MockFn;
 const mockUpdate = db.update as unknown as MockFn;
 const mockDelete = db.delete as unknown as MockFn;
+const mockTransaction = db.transaction as unknown as MockFn;
 
 // -- Fixtures ----------------------------------------------------------------
 
@@ -202,6 +204,13 @@ function makeRbacService(canResult = false) {
   return { can: vi.fn().mockResolvedValue(canResult) };
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: test mock — FilesService stub for wave-19 M3
+function makeFilesService(): any {
+  return {
+    resolveAttachmentUrl: vi.fn().mockResolvedValue('https://presigned.example.com/attachment'),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // createMessage: mention persistence
 // ---------------------------------------------------------------------------
@@ -213,8 +222,20 @@ describe('MessagesService.createMessage — mentions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     eventEmitter = makeEventEmitter();
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    service = new MessagesService(eventEmitter as any, makeRbacService() as any);
+    service = new MessagesService(
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      eventEmitter as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeRbacService() as any,
+      makeFilesService(),
+    );
+
+    // createMessage wraps in db.transaction (wave-19 M3 row-at-send).
+    // Forward callback to the same select/insert mocks.
+    // biome-ignore lint/suspicious/noExplicitAny: test transaction mock
+    mockTransaction.mockImplementation(async (cb: (tx: any) => Promise<unknown>) =>
+      cb({ select: mockSelect, insert: mockInsert, update: mockUpdate, delete: mockDelete }),
+    );
   });
 
   it('persists mention rows and returns mentions[] in DTO when @username is a server member', async () => {
@@ -349,8 +370,13 @@ describe('MessagesService.editMessage — mention diff', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     eventEmitter = makeEventEmitter();
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    service = new MessagesService(eventEmitter as any, makeRbacService() as any);
+    service = new MessagesService(
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      eventEmitter as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeRbacService() as any,
+      makeFilesService(),
+    );
   });
 
   it('adding a new @username on edit creates a new mention row', async () => {
@@ -447,8 +473,13 @@ describe('MessagesService.getMyMentions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     eventEmitter = makeEventEmitter();
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    service = new MessagesService(eventEmitter as any, makeRbacService() as any);
+    service = new MessagesService(
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      eventEmitter as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeRbacService() as any,
+      makeFilesService(),
+    );
   });
 
   it("returns only the authed user's mentioned messages (session-derived userId, no cross-user read)", async () => {

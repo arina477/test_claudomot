@@ -15,7 +15,7 @@
  * Design system §8 spec: ChannelHeader + MessageRow (3 states) + Composer.
  */
 
-import type { MessageResponse } from '@studyhall/shared';
+import type { MessageResponse, ValidatedAttachment } from '@studyhall/shared';
 import { useCallback, useContext, useRef, useState } from 'react';
 import { type ConnectionState, ConnectionStateIndicator } from './ConnectionStateIndicator';
 import { MessageComposer } from './MessageComposer';
@@ -87,10 +87,14 @@ export function MainColumn({ connectionState = 'online', onToggleSidebar }: Prop
   // Typing presence — self-exclusion is enforced server-side via getTypers(excludeUserId).
   const { onComposerKeyPress, stopTyping, typingLabel } = useTyping(selectedChannelId);
 
-  // Wrap sendMessage to also stop typing
-  function handleSend(content: string) {
+  // Wrap sendMessage to also stop typing and forward attachments
+  function handleSend(
+    content: string,
+    attachments?: ValidatedAttachment[],
+    previews?: import('./MessageList').StagedAttachmentPreview[],
+  ) {
     stopTyping();
-    sendMessage(content);
+    sendMessage(content, attachments, previews);
   }
 
   const displayName = selectedChannelName ?? 'channel';
@@ -277,6 +281,7 @@ export function MainColumn({ connectionState = 'online', onToggleSidebar }: Prop
 
             <MessageComposer
               {...(selectedChannelName ? { channelName: selectedChannelName } : {})}
+              channelId={selectedChannelId}
               onSend={handleSend}
               onKeyPress={onComposerKeyPress}
               onBlur={stopTyping}

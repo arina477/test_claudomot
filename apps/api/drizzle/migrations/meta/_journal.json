@@ -64,6 +64,13 @@
       "when": 1782826758566,
       "tag": "0008_dazzling_bushwacker",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1782837923756,
+      "tag": "0009_narrow_carnage",
+      "breakpoints": true
     }
   ]
 }

@@ -5,6 +5,7 @@
  */
 
 import type {
+  AttachmentPresignResponse,
   AvatarPresignResponse,
   CreateServerInput,
   EditMessageInput,
@@ -24,6 +25,7 @@ import type {
   ServerResponse,
   ServerSummary,
   UpdateProfileInput,
+  ValidatedAttachment,
 } from '@studyhall/shared';
 
 const BASE = import.meta.env.VITE_API_ORIGIN ?? '';
@@ -211,8 +213,46 @@ export const api = {
 
   // ── Messaging endpoints (wave-12 M3) ─────────────────────────────────────
 
+  // ── Attachment endpoints (wave-19 M3) ────────────────────────────────────
+
   /**
-   * POST /channels/:channelId/messages {content, idempotencyKey} → 201 MessageResponse.
+   * POST /channels/:channelId/attachments/presign {contentType, filename}
+   * → {uploadUrl, key}.
+   * Throws: 401 unauthed, 403 non-member, 400 bad content-type.
+   */
+  presignAttachment: (channelId: string, contentType: string, filename: string) =>
+    request<AttachmentPresignResponse>(`/channels/${channelId}/attachments/presign`, {
+      method: 'POST',
+      body: JSON.stringify({ contentType, filename }),
+    }),
+
+  /**
+   * PUT the file directly to object storage.
+   * NOTE: no credentials:include — goes to S3-compatible endpoint.
+   * The Content-Type must match what was presigned.
+   */
+  putAttachmentToStorage: (uploadUrl: string, file: File): Promise<void> =>
+    fetch(uploadUrl, {
+      method: 'PUT',
+      body: file,
+      headers: { 'Content-Type': file.type },
+    }).then((res) => {
+      if (!res.ok) throw new Error(`Storage PUT failed: ${res.status}`);
+    }),
+
+  /**
+   * POST /channels/:channelId/attachments/confirm {key, filename, contentType}
+   * → ValidatedAttachment.
+   * Throws: 401 unauthed, 403 non-member, 400 bad key.
+   */
+  confirmAttachment: (channelId: string, key: string, filename: string, contentType: string) =>
+    request<ValidatedAttachment>(`/channels/${channelId}/attachments/confirm`, {
+      method: 'POST',
+      body: JSON.stringify({ key, filename, contentType }),
+    }),
+
+  /**
+   * POST /channels/:channelId/messages {content, idempotencyKey, attachments?} → 201 MessageResponse.
    * Throws: 401 unauthed, 403 non-permitted, 400 bad content.
    */
   sendMessage: (channelId: string, body: SendMessageInput) =>

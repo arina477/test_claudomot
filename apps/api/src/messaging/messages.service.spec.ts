@@ -42,7 +42,13 @@
  *   - listThreadReplies: ordered ASC, excludes soft-deleted
  */
 
-import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+  PayloadTooLargeException,
+} from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MessagesService } from './messages.service';
 
@@ -172,6 +178,29 @@ function makeRbacService(canResult = false, canViewChannelResult = true) {
 }
 
 // ---------------------------------------------------------------------------
+// Mock FilesService — wave-19 M3 (task 20db0c16)
+//
+// resolveAttachmentUrl returns a stable presigned-GET URL stub so existing
+// tests that don't exercise attachments still pass without real S3 creds.
+//
+// headAttachment — added B-6: returns server-derived { contentLength, contentType }
+// used by validateAndHeadAttachments at send time (C-1 fix).  Default: 100 KB,
+// image/png — within limits, in allowlist.
+// ---------------------------------------------------------------------------
+
+function makeFilesService(
+  headResult: { contentLength: number; contentType: string } = {
+    contentLength: 102400, // 100 KB — within 10 MB cap
+    contentType: 'image/png', // in ATTACHMENT_ALLOWED_MIME
+  },
+) {
+  return {
+    resolveAttachmentUrl: vi.fn().mockResolvedValue('https://presigned.example.com/attachment'),
+    headAttachment: vi.fn().mockResolvedValue(headResult),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Tests: createMessage
 // ---------------------------------------------------------------------------
 
@@ -182,8 +211,22 @@ describe('MessagesService.createMessage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     eventEmitter = makeEventEmitter();
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    service = new MessagesService(eventEmitter as any, makeRbacService() as any);
+    service = new MessagesService(
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      eventEmitter as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeRbacService() as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeFilesService() as any,
+    );
+
+    // createMessage is now wrapped in db.transaction (wave-19 M3 row-at-send).
+    // The mock transaction forwards the callback to the same db mock (select/insert/update)
+    // so existing per-method mocks continue to work inside the transaction boundary.
+    // biome-ignore lint/suspicious/noExplicitAny: test transaction mock
+    mockTransaction.mockImplementation(async (cb: (tx: any) => Promise<unknown>) =>
+      cb({ select: mockSelect, insert: mockInsert, update: mockUpdate, delete: mockDelete }),
+    );
   });
 
   it('creates a message and returns a MessageResponse DTO', async () => {
@@ -314,8 +357,14 @@ describe('MessagesService.editMessage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     eventEmitter = makeEventEmitter();
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    service = new MessagesService(eventEmitter as any, makeRbacService() as any);
+    service = new MessagesService(
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      eventEmitter as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeRbacService() as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeFilesService() as any,
+    );
   });
 
   it('non-author cannot edit the message → ForbiddenException', async () => {
@@ -387,8 +436,14 @@ describe('MessagesService.deleteMessage', () => {
     vi.clearAllMocks();
     eventEmitter = makeEventEmitter();
     rbacService = makeRbacService(false);
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    service = new MessagesService(eventEmitter as any, rbacService as any);
+    service = new MessagesService(
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      eventEmitter as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      rbacService as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeFilesService() as any,
+    );
   });
 
   it('author can delete their own message', async () => {
@@ -523,8 +578,14 @@ describe('MessagesService.toggleReaction', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     eventEmitter = makeEventEmitter();
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    service = new MessagesService(eventEmitter as any, makeRbacService() as any);
+    service = new MessagesService(
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      eventEmitter as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeRbacService() as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeFilesService() as any,
+    );
   });
 
   it('toggle ON: reaction does not exist → INSERT → reacted: true, emits reaction.added', async () => {
@@ -624,8 +685,14 @@ describe('MessagesService.listMessages', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     eventEmitter = makeEventEmitter();
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    service = new MessagesService(eventEmitter as any, makeRbacService() as any);
+    service = new MessagesService(
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      eventEmitter as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeRbacService() as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeFilesService() as any,
+    );
   });
 
   it('returns messages in chronological order with no nextCursor for a single page', async () => {
@@ -762,8 +829,14 @@ describe('MessagesService.createMessage — wave-15 mention.created events', () 
   beforeEach(() => {
     vi.clearAllMocks();
     eventEmitter = makeEventEmitter();
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    service = new MessagesService(eventEmitter as any, makeRbacService() as any);
+    service = new MessagesService(
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      eventEmitter as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeRbacService() as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeFilesService() as any,
+    );
   });
 
   it('emits mention.created for the mentioned user (non-author) with correct shape', async () => {
@@ -873,8 +946,14 @@ describe('MessagesService.editMessage — wave-15 mention.created for new mentio
   beforeEach(() => {
     vi.clearAllMocks();
     eventEmitter = makeEventEmitter();
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    service = new MessagesService(eventEmitter as any, makeRbacService() as any);
+    service = new MessagesService(
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      eventEmitter as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeRbacService() as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeFilesService() as any,
+    );
   });
 
   it('emits mention.created for a newly-added mention on edit (not present before edit)', async () => {
@@ -983,8 +1062,14 @@ describe('MessagesService.createReply — wave-18 thread replies', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     eventEmitter = makeEventEmitter();
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    service = new MessagesService(eventEmitter as any, makeRbacService() as any);
+    service = new MessagesService(
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      eventEmitter as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeRbacService() as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeFilesService() as any,
+    );
   });
 
   it('rejects reply-of-reply (one-level-only) → BadRequestException', async () => {
@@ -1109,8 +1194,14 @@ describe('MessagesService.deleteMessage — wave-18 reply soft-delete', () => {
     vi.clearAllMocks();
     eventEmitter = makeEventEmitter();
     rbacService = makeRbacService(false);
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    service = new MessagesService(eventEmitter as any, rbacService as any);
+    service = new MessagesService(
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      eventEmitter as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      rbacService as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeFilesService() as any,
+    );
   });
 
   it('reply soft-delete: decrements reply_count always; leaves last_reply_at unchanged on non-tail delete', async () => {
@@ -1275,8 +1366,14 @@ describe('MessagesService.listThreadReplies — wave-18', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     eventEmitter = makeEventEmitter();
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    service = new MessagesService(eventEmitter as any, makeRbacService() as any);
+    service = new MessagesService(
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      eventEmitter as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeRbacService() as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeFilesService() as any,
+    );
   });
 
   it('returns replies ordered ASC (oldest first) with no nextCursor for a single page', async () => {
@@ -1382,8 +1479,14 @@ describe('MessagesService thread IDOR — wave-18 B-6 (C-1)', () => {
   it('createReply: non-member → ForbiddenException (403)', async () => {
     // Parent exists, belongs to CHANNEL_ID, is a top-level message
     const rbac = makeRbacServiceWithViewChannel(false);
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    const service = new MessagesService(eventEmitter as any, rbac as any);
+    const service = new MessagesService(
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      eventEmitter as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      rbac as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeFilesService() as any,
+    );
 
     mockSelect.mockReturnValue(makeSelectChain([mockParentMessage]));
 
@@ -1402,8 +1505,14 @@ describe('MessagesService thread IDOR — wave-18 B-6 (C-1)', () => {
 
   it('listThreadReplies: non-member → ForbiddenException (403)', async () => {
     const rbac = makeRbacServiceWithViewChannel(false);
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    const service = new MessagesService(eventEmitter as any, rbac as any);
+    const service = new MessagesService(
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      eventEmitter as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      rbac as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeFilesService() as any,
+    );
 
     // Parent exists — select returns a row with channel_id
     mockSelect.mockReturnValue(
@@ -1424,8 +1533,14 @@ describe('MessagesService thread IDOR — wave-18 B-6 (C-1)', () => {
 
   it('listThreadReplies: member is allowed through (returns items)', async () => {
     const rbac = makeRbacServiceWithViewChannel(true);
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    const service = new MessagesService(eventEmitter as any, rbac as any);
+    const service = new MessagesService(
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      eventEmitter as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      rbac as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeFilesService() as any,
+    );
 
     let selectCallCount = 0;
     mockSelect.mockImplementation(() => {
@@ -1465,8 +1580,14 @@ describe('MessagesService.deleteMessage — wave-18 B-6 thread:reply:deleted (H-
     vi.clearAllMocks();
     eventEmitter = makeEventEmitter();
     rbacService = makeRbacService(false);
-    // biome-ignore lint/suspicious/noExplicitAny: test mock
-    service = new MessagesService(eventEmitter as any, rbacService as any);
+    service = new MessagesService(
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      eventEmitter as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      rbacService as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeFilesService() as any,
+    );
   });
 
   it('emits thread.reply.deleted with post-decrement parent counters when a reply is soft-deleted', async () => {
@@ -1530,5 +1651,523 @@ describe('MessagesService.deleteMessage — wave-18 B-6 thread:reply:deleted (H-
       replyCount: 1,
       lastReplyAt: '2026-06-30T11:00:00.000Z',
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: wave-19 M3 — attachment row-at-send association
+//
+// Covers:
+//   - createMessage with attachments[] → inserts attachment rows atomically
+//   - idempotent replay (isNewInsert=false) → NO attachment rows inserted (no double-attach)
+//   - rowToDto attachments[] populated with presigned-GET urls
+//   - listMessages batch-loads attachments (no N+1 — single select covers all message IDs)
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Tests: wave-19 B-6 — C-1 send-time attachment validation (security fix)
+//
+// These tests cover the server-side re-validation added at send time:
+//   - cross-channel key → 400 (IDOR prevention)
+//   - key fails anchored regex (path traversal attempt) → 400
+//   - HeadObject reports >10MB → 413 (size-bypass closed)
+//   - HeadObject reports disallowed MIME → 400 (type-spoof closed)
+//   - happy path: server-derived size+type persisted (not client-claimed values)
+//   - idempotent replay still no double-attach
+// ---------------------------------------------------------------------------
+
+describe('MessagesService.createMessage — wave-19 B-6 C-1 send-time attachment validation', () => {
+  let service: MessagesService;
+  let eventEmitter: ReturnType<typeof makeEventEmitter>;
+  let filesService: ReturnType<typeof makeFilesService>;
+
+  const VALID_KEY = `attachments/${CHANNEL_ID}/uuid-valid.pdf`;
+  const CROSS_CHANNEL_KEY = 'attachments/OTHER-CHANNEL-999/uuid-valid.pdf';
+  const TRAVERSAL_KEY = `attachments/${CHANNEL_ID}/../other-channel/uuid.pdf`;
+
+  function makeServiceWithHeadResult(
+    headResult: { contentLength: number; contentType: string } = {
+      contentLength: 102400, // 100 KB — within 10 MB
+      contentType: 'application/pdf', // in allowlist
+    },
+  ) {
+    filesService = makeFilesService(headResult);
+    service = new MessagesService(
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      eventEmitter as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeRbacService() as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      filesService as any,
+    );
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    eventEmitter = makeEventEmitter();
+    makeServiceWithHeadResult();
+
+    // biome-ignore lint/suspicious/noExplicitAny: test transaction mock
+    mockTransaction.mockImplementation(async (cb: (tx: any) => Promise<unknown>) =>
+      cb({ select: mockSelect, insert: mockInsert, update: mockUpdate, delete: mockDelete }),
+    );
+  });
+
+  function setupChannelSelect() {
+    mockSelect.mockImplementation(() => {
+      // First select: channel existence check (createMessage always does this first)
+      return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID, name: 'general' }]);
+    });
+  }
+
+  it('cross-channel key → 400 BadRequestException (IDOR prevention)', async () => {
+    setupChannelSelect();
+
+    await expect(
+      service.createMessage(CHANNEL_ID, AUTHOR_ID, {
+        content: 'Hi',
+        attachments: [
+          {
+            key: CROSS_CHANNEL_KEY, // belongs to OTHER-CHANNEL-999, not CHANNEL_ID
+            filename: 'doc.pdf',
+            contentType: 'application/pdf',
+            sizeBytes: 1000,
+          },
+        ],
+      }),
+    ).rejects.toThrow(BadRequestException);
+
+    // headAttachment must NOT have been called — key is rejected before I/O
+    expect(filesService.headAttachment).not.toHaveBeenCalled();
+  });
+
+  it('key with path-traversal segment → 400 BadRequestException (anchored regex)', async () => {
+    setupChannelSelect();
+
+    await expect(
+      service.createMessage(CHANNEL_ID, AUTHOR_ID, {
+        content: 'Hi',
+        attachments: [
+          {
+            key: TRAVERSAL_KEY, // "../other-channel/" nested slash → fails regex
+            filename: 'doc.pdf',
+            contentType: 'application/pdf',
+            sizeBytes: 1000,
+          },
+        ],
+      }),
+    ).rejects.toThrow(BadRequestException);
+
+    expect(filesService.headAttachment).not.toHaveBeenCalled();
+  });
+
+  it('HeadObject reports >10MB → 413 PayloadTooLargeException (size-bypass closed)', async () => {
+    makeServiceWithHeadResult({
+      contentLength: 11 * 1024 * 1024, // 11 MB — exceeds cap
+      contentType: 'application/pdf',
+    });
+    setupChannelSelect();
+
+    await expect(
+      service.createMessage(CHANNEL_ID, AUTHOR_ID, {
+        content: 'Big file',
+        attachments: [
+          {
+            key: VALID_KEY,
+            filename: 'big.pdf',
+            contentType: 'application/pdf',
+            sizeBytes: 500, // client claims tiny — server says 11 MB
+          },
+        ],
+      }),
+    ).rejects.toThrow(PayloadTooLargeException);
+
+    // headAttachment was called (key passed channel-scope check)
+    expect(filesService.headAttachment).toHaveBeenCalledWith(VALID_KEY);
+  });
+
+  it('HeadObject reports disallowed MIME → 400 BadRequestException (type-spoof closed)', async () => {
+    makeServiceWithHeadResult({
+      contentLength: 1024,
+      contentType: 'video/mp4', // NOT in ATTACHMENT_ALLOWED_MIME
+    });
+    setupChannelSelect();
+
+    await expect(
+      service.createMessage(CHANNEL_ID, AUTHOR_ID, {
+        content: 'Video',
+        attachments: [
+          {
+            key: VALID_KEY,
+            filename: 'video.mp4',
+            contentType: 'application/pdf', // client spoofs allowed type
+            sizeBytes: 1024,
+          },
+        ],
+      }),
+    ).rejects.toThrow(BadRequestException);
+
+    expect(filesService.headAttachment).toHaveBeenCalledWith(VALID_KEY);
+  });
+
+  it('happy path: INSERT uses SERVER-DERIVED size+type (not client-claimed values)', async () => {
+    // Server reports different values than what the client claims
+    makeServiceWithHeadResult({
+      contentLength: 204800, // 200 KB — server says; client claimed 500
+      contentType: 'image/png', // server says; client claimed application/pdf
+    });
+
+    const capturedAttachValues: Record<string, unknown>[] = [];
+    let insertCallCount = 0;
+    mockInsert.mockImplementation(() => {
+      insertCallCount++;
+      const chain = makeInsertChain();
+      if (insertCallCount === 1) {
+        // message insert — returning the message row
+        chain.returning = vi.fn().mockResolvedValue([mockMessage]);
+      } else {
+        // attachment insert — capture values
+        const origValues = chain.values as unknown as MockFn;
+        (chain.values as unknown as MockFn) = vi
+          .fn()
+          .mockImplementation((vals: Record<string, unknown>[]) => {
+            capturedAttachValues.push(...vals);
+            return origValues(vals);
+          });
+      }
+      return chain;
+    });
+
+    let selectCallCount = 0;
+    mockSelect.mockImplementation(() => {
+      selectCallCount++;
+      if (selectCallCount === 1)
+        return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID, name: 'general' }]);
+      return makeSelectChain([]);
+    });
+
+    await service.createMessage(CHANNEL_ID, AUTHOR_ID, {
+      content: 'Upload',
+      attachments: [
+        {
+          key: VALID_KEY,
+          filename: 'photo.png',
+          contentType: 'application/pdf', // client spoofs MIME
+          sizeBytes: 500, // client claims tiny size
+        },
+      ],
+    });
+
+    // The persisted row must carry SERVER-DERIVED values, not client claims
+    expect(capturedAttachValues).toHaveLength(1);
+    expect(capturedAttachValues[0]).toMatchObject({
+      content_type: 'image/png', // server-derived, not client's 'application/pdf'
+      size_bytes: 204800, // server-derived, not client's 500
+      object_key: VALID_KEY,
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: wave-19 B-6 — C-1 createReply send-time attachment validation
+//
+// Mirror of the createMessage C-1 tests for the reply path (createReply also
+// inserts attachments at send via the same validateAndHeadAttachments helper).
+// ---------------------------------------------------------------------------
+
+describe('MessagesService.createReply — wave-19 B-6 C-1 send-time attachment validation', () => {
+  let service: MessagesService;
+  let eventEmitter: ReturnType<typeof makeEventEmitter>;
+  let filesService: ReturnType<typeof makeFilesService>;
+
+  const VALID_KEY = `attachments/${CHANNEL_ID}/uuid-reply-attach.pdf`;
+  const CROSS_CHANNEL_KEY = 'attachments/WRONG-CHANNEL/uuid-reply-attach.pdf';
+
+  function makeServiceWithHeadResult(
+    headResult: { contentLength: number; contentType: string } = {
+      contentLength: 102400,
+      contentType: 'application/pdf',
+    },
+  ) {
+    filesService = makeFilesService(headResult);
+    service = new MessagesService(
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      eventEmitter as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeRbacService(false, true) as any, // can=false, canViewChannel=true
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      filesService as any,
+    );
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    eventEmitter = makeEventEmitter();
+    makeServiceWithHeadResult();
+  });
+
+  it('cross-channel key in reply → 400 BadRequestException', async () => {
+    // Pre-flight: parent exists, in correct channel, is a top-level message
+    mockSelect.mockReturnValue(makeSelectChain([mockParentMessage]));
+
+    await expect(
+      service.createReply(CHANNEL_ID, PARENT_ID, AUTHOR_ID, {
+        content: 'Reply',
+        attachments: [
+          {
+            key: CROSS_CHANNEL_KEY, // points at wrong channel
+            filename: 'doc.pdf',
+            contentType: 'application/pdf',
+            sizeBytes: 1000,
+          },
+        ],
+      }),
+    ).rejects.toThrow(BadRequestException);
+
+    expect(filesService.headAttachment).not.toHaveBeenCalled();
+  });
+
+  it('HeadObject reports >10MB in reply path → 413 PayloadTooLargeException', async () => {
+    makeServiceWithHeadResult({
+      contentLength: 15 * 1024 * 1024, // 15 MB
+      contentType: 'application/pdf',
+    });
+
+    mockSelect.mockReturnValue(makeSelectChain([mockParentMessage]));
+
+    await expect(
+      service.createReply(CHANNEL_ID, PARENT_ID, AUTHOR_ID, {
+        content: 'Big reply',
+        attachments: [
+          {
+            key: VALID_KEY,
+            filename: 'huge.pdf',
+            contentType: 'application/pdf',
+            sizeBytes: 100, // client claims tiny
+          },
+        ],
+      }),
+    ).rejects.toThrow(PayloadTooLargeException);
+
+    expect(filesService.headAttachment).toHaveBeenCalledWith(VALID_KEY);
+  });
+});
+
+describe('MessagesService.createMessage — wave-19 M3 attachment row-at-send', () => {
+  let service: MessagesService;
+  let eventEmitter: ReturnType<typeof makeEventEmitter>;
+  let filesService: ReturnType<typeof makeFilesService>;
+
+  const ATTACH_KEY = `attachments/${CHANNEL_ID}/uuid-attach-001.pdf`;
+  const ATTACH_PRESIGN_URL = 'https://presigned.example.com/attach.pdf';
+
+  const mockAttachmentDescriptor = {
+    key: ATTACH_KEY,
+    filename: 'report.pdf',
+    contentType: 'application/pdf',
+    sizeBytes: 102400,
+  };
+
+  const mockAttachmentRow = {
+    id: 'attach-row-001',
+    message_id: MESSAGE_ID,
+    object_key: ATTACH_KEY,
+    filename: 'report.pdf',
+    content_type: 'application/pdf',
+    size_bytes: 102400,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    eventEmitter = makeEventEmitter();
+    // headAttachment returns server-authoritative values matching the test fixtures
+    // (application/pdf, 102400 bytes) so the INSERT assertions below are correct.
+    filesService = makeFilesService({ contentLength: 102400, contentType: 'application/pdf' });
+    filesService.resolveAttachmentUrl = vi.fn().mockResolvedValue(ATTACH_PRESIGN_URL);
+    service = new MessagesService(
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      eventEmitter as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeRbacService() as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      filesService as any,
+    );
+
+    // Transaction proxy — forwards tx.insert/tx.select to the same mocks
+    // biome-ignore lint/suspicious/noExplicitAny: test transaction mock
+    mockTransaction.mockImplementation(async (cb: (tx: any) => Promise<unknown>) =>
+      cb({ select: mockSelect, insert: mockInsert, update: mockUpdate, delete: mockDelete }),
+    );
+  });
+
+  it('inserts attachment rows atomically inside the message transaction (row-at-send)', async () => {
+    // Capture values() arguments to verify attachment INSERT
+    const capturedInsertValues: unknown[][] = [];
+
+    let insertCount = 0;
+    mockInsert.mockImplementation(() => {
+      insertCount++;
+      const chain = makeInsertChain();
+      const origValues = chain.values as unknown as MockFn;
+      (chain.values as unknown as MockFn) = vi.fn().mockImplementation((vals: unknown) => {
+        capturedInsertValues.push(Array.isArray(vals) ? vals : [vals]);
+        return origValues(vals);
+      });
+      // First insert (messages) returns the new message row via .returning()
+      if (insertCount === 1) {
+        chain.returning = vi.fn().mockResolvedValue([mockMessage]);
+      }
+      return chain;
+    });
+
+    let selectCallCount = 0;
+    mockSelect.mockImplementation(() => {
+      selectCallCount++;
+      // 1: channel check (outside txn, before db.transaction() call)
+      if (selectCallCount === 1)
+        return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID, name: 'general' }]);
+      // 2: fetchMentionRows (resolveMentions returns early — no @tokens in content)
+      if (selectCallCount === 2) return makeSelectChain([]);
+      // 3: fetchAttachmentRows — returns the persisted attachment row
+      if (selectCallCount === 3) return makeSelectChain([mockAttachmentRow]);
+      return makeSelectChain([]);
+    });
+
+    const result = await service.createMessage(CHANNEL_ID, AUTHOR_ID, {
+      content: 'Here is the report',
+      idempotencyKey: IDEM_KEY,
+      attachments: [mockAttachmentDescriptor],
+    });
+
+    // Attachment rows were inserted (second values() call — first is the message)
+    expect(capturedInsertValues.length).toBeGreaterThanOrEqual(2);
+    const attachInsertRows = capturedInsertValues[1];
+    expect(attachInsertRows).toBeDefined();
+    expect(attachInsertRows?.[0]).toMatchObject({
+      message_id: MESSAGE_ID,
+      uploader_id: AUTHOR_ID,
+      channel_id: CHANNEL_ID,
+      object_key: ATTACH_KEY,
+      filename: 'report.pdf',
+      content_type: 'application/pdf',
+      size_bytes: 102400,
+    });
+
+    // DTO carries the attachment with a presigned URL
+    expect(result.attachments).toBeDefined();
+    expect(result.attachments).toHaveLength(1);
+    expect(result.attachments?.[0]).toMatchObject({
+      id: 'attach-row-001',
+      filename: 'report.pdf',
+      contentType: 'application/pdf',
+      sizeBytes: 102400,
+      url: ATTACH_PRESIGN_URL,
+    });
+
+    // resolveAttachmentUrl was called with the object_key
+    expect(filesService.resolveAttachmentUrl).toHaveBeenCalledWith(ATTACH_KEY);
+  });
+
+  it('idempotent replay (isNewInsert=false) → attachment rows NOT re-inserted (no double-attach)', async () => {
+    // First insert returns [] (ON CONFLICT DO NOTHING → isNewInsert=false)
+    const attachmentInsertCalls: unknown[] = [];
+
+    mockInsert.mockImplementation(() => {
+      const chain = makeInsertChain();
+      const origValues = chain.values as unknown as MockFn;
+      (chain.values as unknown as MockFn) = vi.fn().mockImplementation((vals: unknown) => {
+        attachmentInsertCalls.push(vals);
+        return origValues(vals);
+      });
+      // All inserts return [] → isNewInsert = false (idempotent replay via ON CONFLICT DO NOTHING)
+      chain.returning = vi.fn().mockResolvedValue([]);
+      return chain;
+    });
+
+    let selectCallCount = 0;
+    mockSelect.mockImplementation(() => {
+      selectCallCount++;
+      // 1: channel check
+      if (selectCallCount === 1)
+        return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID, name: 'general' }]);
+      // 2: replay fetch by idempotency key
+      if (selectCallCount === 2) return makeSelectChain([mockMessage]);
+      // 3+: resolveMentions / fetchMentionRows / fetchAttachmentRows → empty
+      return makeSelectChain([]);
+    });
+
+    await service.createMessage(CHANNEL_ID, AUTHOR_ID, {
+      content: 'Here is the report',
+      idempotencyKey: IDEM_KEY,
+      attachments: [mockAttachmentDescriptor],
+    });
+
+    // Only the message INSERT values() was captured (attachments insert skipped on replay)
+    // The first values() call is for the messages table insert
+    expect(attachmentInsertCalls).toHaveLength(1); // ONLY the message insert
+    const firstInsertArg = attachmentInsertCalls[0];
+    // It's the message row (has channel_id, author_id, content), NOT the attachment
+    expect(firstInsertArg).toMatchObject({ channel_id: CHANNEL_ID, author_id: AUTHOR_ID });
+    // No attachment fields (like object_key) present
+    expect(firstInsertArg).not.toMatchObject({ object_key: ATTACH_KEY });
+  });
+
+  it('listMessages returns attachments[] with presigned urls (no N+1 — one select covers all message ids)', async () => {
+    const MSG_ID_2 = 'msg-002';
+    const ATTACH_KEY_2 = `attachments/${CHANNEL_ID}/uuid-attach-002.png`;
+    const ATTACH_PRESIGN_URL_2 = 'https://presigned.example.com/attach2.png';
+
+    filesService.resolveAttachmentUrl = vi.fn().mockImplementation(async (key: string) => {
+      if (key === ATTACH_KEY) return ATTACH_PRESIGN_URL;
+      if (key === ATTACH_KEY_2) return ATTACH_PRESIGN_URL_2;
+      return null;
+    });
+
+    const msg1 = { ...mockMessage, id: MESSAGE_ID };
+    const msg2 = { ...mockMessage, id: MSG_ID_2 };
+    const attachRow1 = { ...mockAttachmentRow, id: 'ar-1', message_id: MESSAGE_ID };
+    const attachRow2 = {
+      id: 'ar-2',
+      message_id: MSG_ID_2,
+      object_key: ATTACH_KEY_2,
+      filename: 'photo.png',
+      content_type: 'image/png',
+      size_bytes: 204800,
+    };
+
+    let selectCallCount = 0;
+    mockSelect.mockImplementation(() => {
+      selectCallCount++;
+      if (selectCallCount === 1) return makeSelectChain([{ id: CHANNEL_ID }]); // channel check
+      if (selectCallCount === 2) return makeSelectChain([msg2, msg1]); // messages page (desc order)
+      if (selectCallCount === 3) return makeSelectChain([]); // reactions
+      if (selectCallCount === 4) return makeSelectChain([]); // mentionRows
+      // 5: fetchAttachmentRows — returns BOTH attachment rows in ONE query
+      if (selectCallCount === 5) return makeSelectChain([attachRow1, attachRow2]);
+      return makeSelectChain([]);
+    });
+
+    const result = await service.listMessages(CHANNEL_ID, AUTHOR_ID);
+
+    // Both messages carry their attachments
+    const msgWithPdf = result.messages.find((m) => m.id === MESSAGE_ID);
+    const msgWithImg = result.messages.find((m) => m.id === MSG_ID_2);
+
+    expect(msgWithPdf?.attachments).toHaveLength(1);
+    expect(msgWithPdf?.attachments?.[0]).toMatchObject({
+      id: 'ar-1',
+      url: ATTACH_PRESIGN_URL,
+    });
+
+    expect(msgWithImg?.attachments).toHaveLength(1);
+    expect(msgWithImg?.attachments?.[0]).toMatchObject({
+      id: 'ar-2',
+      url: ATTACH_PRESIGN_URL_2,
+    });
+
+    // resolveAttachmentUrl called exactly twice (once per attachment — no N+1 per message)
+    expect(filesService.resolveAttachmentUrl).toHaveBeenCalledTimes(2);
+    // fetchAttachmentRows was called ONCE (select call 5 — single batch query)
+    expect(selectCallCount).toBe(5);
   });
 });

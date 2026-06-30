@@ -3,11 +3,14 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
+  PayloadTooLargeException,
 } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import type {
+  AttachmentRef,
   MentionEvent,
   MessageList,
   MessageResponse,
@@ -17,10 +20,12 @@ import type {
   ThreadRepliesResponse,
   ThreadReplyDeletedEvent,
   ThreadReplyEvent,
+  ValidatedAttachment,
 } from '@studyhall/shared';
 import { and, eq, inArray, lt, max, or, sql } from 'drizzle-orm';
 import { db } from '../db/index';
 import {
+  attachments,
   channels,
   message_mentions,
   message_reactions,
@@ -28,6 +33,8 @@ import {
   server_members,
   users,
 } from '../db/schema/index';
+// biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
+import { ATTACHMENT_ALLOWED_MIME, FilesService } from '../files/files.service';
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
 import { RbacService } from '../rbac/rbac.service';
 import { parseMentions } from './mentions';
@@ -108,6 +115,7 @@ function rowToDto(
   reactions: ReactionRow[],
   viewerUserId: string,
   mentionRows: MentionRow[] = [],
+  attachmentRefs: AttachmentRef[] = [],
 ): MessageResponse {
   // Aggregate reactions for this message
   const emojiMap = new Map<string, { count: number; reactedByMe: boolean }>();
@@ -156,6 +164,8 @@ function rowToDto(
     threadParentId: row.thread_parent_id ?? null,
     replyCount: row.reply_count ?? 0,
     lastReplyAt: row.last_reply_at ? row.last_reply_at.toISOString() : null,
+    // wave-19 M3 — attachments (empty array on soft-deleted or unattached messages)
+    attachments: attachmentRefs,
   };
 }
 
@@ -223,11 +233,191 @@ async function fetchMentionRows(messageIds: string[]): Promise<MentionRow[]> {
     .where(inArray(message_mentions.message_id, messageIds));
 }
 
+// ---------------------------------------------------------------------------
+// AttachmentRow — raw DB row from the attachments table (batch-load)
+// ---------------------------------------------------------------------------
+
+interface AttachmentRow {
+  id: string;
+  message_id: string;
+  object_key: string;
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+}
+
+// ---------------------------------------------------------------------------
+// fetchAttachmentRows — batch-load attachment rows for a set of message IDs.
+// Called once per page (no N+1).
+// ---------------------------------------------------------------------------
+
+async function fetchAttachmentRows(messageIds: string[]): Promise<AttachmentRow[]> {
+  if (messageIds.length === 0) return [];
+
+  return db
+    .select({
+      id: attachments.id,
+      message_id: attachments.message_id,
+      object_key: attachments.object_key,
+      filename: attachments.filename,
+      content_type: attachments.content_type,
+      size_bytes: attachments.size_bytes,
+    })
+    .from(attachments)
+    .where(inArray(attachments.message_id, messageIds));
+}
+
+// ---------------------------------------------------------------------------
+// buildAttachmentRefMap — given raw attachment rows + filesService for URL
+// signing, build a Map<messageId, AttachmentRef[]> for O(1) lookup in rowToDto.
+//
+// presigned-GET URLs are resolved in parallel (Promise.all) — Railway Buckets
+// are private so we cannot use static public URLs (karen C7 carry).
+// If filesService.resolveAttachmentUrl returns null (storage not configured),
+// the url field falls back to an empty string (graceful degradation consistent
+// with the 503 pattern elsewhere).
+// ---------------------------------------------------------------------------
+
+async function buildAttachmentRefMap(
+  rows: AttachmentRow[],
+  filesService: FilesService,
+): Promise<Map<string, AttachmentRef[]>> {
+  const map = new Map<string, AttachmentRef[]>();
+  if (rows.length === 0) return map;
+
+  // Resolve all presigned-GET URLs in parallel
+  const urls = await Promise.all(rows.map((r) => filesService.resolveAttachmentUrl(r.object_key)));
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const url = urls[i];
+    if (!row) continue;
+    const ref: AttachmentRef = {
+      id: row.id,
+      filename: row.filename,
+      contentType: row.content_type,
+      sizeBytes: row.size_bytes,
+      url: url ?? '',
+    };
+    const existing = map.get(row.message_id);
+    if (existing) {
+      existing.push(ref);
+    } else {
+      map.set(row.message_id, [ref]);
+    }
+  }
+
+  return map;
+}
+
+// ---------------------------------------------------------------------------
+// Attachment send-time invariants (C-1 fix — wave-19 B-6)
+//
+// /confirm is an OPTIONAL UX pre-check; SEND is the BINDING enforcement gate.
+//
+// Before any attachment row is INSERTed the following are checked per descriptor:
+//   1. Channel-scope guard (closes IDOR / cross-channel key swap):
+//      The object_key must match ^attachments/<channelId>/[A-Za-z0-9._-]+$
+//      anchored at both ends, with channelId from the message's ACTUAL channel
+//      (never a client-supplied value).  Path-traversal segments (".." etc.) and
+//      nested slashes are rejected by the character class.
+//
+//   2. HeadObject re-derive (closes size-bypass + type-spoof):
+//      FilesService.headAttachment() is called to get the SERVER-authoritative
+//      ContentLength and ContentType.  The client-supplied sizeBytes / contentType
+//      are discarded.  Only the server-derived values are INSERTed.
+//
+//   3. Size cap: server ContentLength must be ≤ ATTACHMENT_SEND_MAX_BYTES (10 MB).
+//
+//   4. MIME allowlist: server ContentType must be in ATTACHMENT_ALLOWED_MIME.
+// ---------------------------------------------------------------------------
+
+const ATTACHMENT_SEND_MAX_BYTES = 10 * 1024 * 1024; // 10 MB — mirrors FilesService cap
+
+/**
+ * Server-side attachment descriptor validation at SEND time (C-1 fix).
+ *
+ * Returns an array of { ...descriptor, sizeBytes, contentType } where
+ * sizeBytes and contentType come from HeadObject (NOT the client payload).
+ *
+ * Throws:
+ *   400 BadRequestException  — key fails anchored channel-scope regex
+ *   413 PayloadTooLargeException — server-reported size > 10 MB
+ *   400 BadRequestException  — server-reported MIME not in allowlist
+ *   503 ServiceUnavailableException — storage not configured (propagated)
+ */
+async function validateAndHeadAttachments(
+  descriptors: import('@studyhall/shared').ValidatedAttachment[],
+  channelId: string,
+  filesService: FilesService,
+): Promise<
+  Array<{
+    key: string;
+    filename: string;
+    contentType: string;
+    sizeBytes: number;
+  }>
+> {
+  if (descriptors.length === 0) return [];
+
+  // Escape channelId for regex interpolation (UUIDs are safe; belt-and-suspenders).
+  const escapedChannelId = channelId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const KEY_PATTERN = new RegExp(`^attachments/${escapedChannelId}/[A-Za-z0-9._-]+$`);
+
+  const validated: Array<{
+    key: string;
+    filename: string;
+    contentType: string;
+    sizeBytes: number;
+  }> = [];
+
+  for (const descriptor of descriptors) {
+    // 1. Channel-scope + path-traversal guard
+    if (!KEY_PATTERN.test(descriptor.key)) {
+      throw new BadRequestException(
+        `Attachment key is not scoped to this channel or contains invalid characters: ${descriptor.key}`,
+      );
+    }
+
+    // 2. HeadObject — server-derived ContentLength + ContentType
+    const { contentLength, contentType: serverContentType } = await filesService.headAttachment(
+      descriptor.key,
+    );
+
+    // 3. Size cap (server-authoritative)
+    if (contentLength > ATTACHMENT_SEND_MAX_BYTES) {
+      throw new PayloadTooLargeException({
+        code: 'ATTACHMENT_TOO_LARGE',
+        message: `Attachment must be ≤ 10 MB. Object ${descriptor.key} is ${Math.ceil(contentLength / 1024)} KB.`,
+      });
+    }
+
+    // 4. MIME allowlist (server-authoritative)
+    if (!(serverContentType in ATTACHMENT_ALLOWED_MIME)) {
+      throw new BadRequestException(
+        `Attachment content-type '${serverContentType}' is not permitted. Allowed: ${Object.keys(ATTACHMENT_ALLOWED_MIME).join(', ')}`,
+      );
+    }
+
+    validated.push({
+      key: descriptor.key,
+      filename: descriptor.filename,
+      contentType: serverContentType, // server-derived — NOT client-claimed
+      sizeBytes: contentLength, // server-derived — NOT client-claimed
+    });
+  }
+
+  return validated;
+}
+
 @Injectable()
 export class MessagesService {
+  private readonly logger = new Logger(MessagesService.name);
+
   constructor(
     private readonly eventEmitter: EventEmitter2,
     private readonly rbacService: RbacService,
+    private readonly filesService: FilesService,
   ) {}
 
   // -------------------------------------------------------------------------
@@ -263,58 +453,113 @@ export class MessagesService {
 
     // Attempt insert; idempotency_key may be null (no dedup) or a client key
     const idempotencyKey = input.idempotencyKey ?? null;
+    const rawAttachmentDescriptors: ValidatedAttachment[] = input.attachments ?? [];
 
-    // INSERT ... ON CONFLICT (channel_id, idempotency_key) DO NOTHING
-    // The UNIQUE constraint only fires when idempotency_key IS NOT NULL
-    // (NULL values are never considered equal in a UNIQUE index).
-    await db
-      .insert(messages)
-      .values({
-        channel_id: channelId,
-        author_id: authorId,
-        content: input.content,
-        idempotency_key: idempotencyKey,
-      })
-      .onConflictDoNothing({
-        target: [messages.channel_id, messages.idempotency_key],
-      });
+    // -----------------------------------------------------------------------
+    // C-1 fix (wave-19 B-6) — server-validate attachment descriptors BEFORE
+    // any DB write.  validateAndHeadAttachments:
+    //   (a) enforces an anchored channel-scope regex on each key (IDOR guard)
+    //   (b) calls HeadObject to get server-authoritative size + content-type
+    //   (c) rejects keys >10MB or with disallowed MIME
+    // The resulting `attachmentDescriptors` carry SERVER-DERIVED size/type,
+    // not the client-supplied values — so the INSERT below is safe.
+    // -----------------------------------------------------------------------
+    const attachmentDescriptors = await validateAndHeadAttachments(
+      rawAttachmentDescriptors,
+      channelId,
+      this.filesService,
+    );
 
-    // Fetch the canonical message row (handles both fresh insert + replay).
-    // For a replay, the UNIQUE constraint ensures only one row exists with
-    // this (channel_id, idempotency_key) pair.
-    let message: typeof messages.$inferSelect | undefined;
+    // -----------------------------------------------------------------------
+    // Wrap message INSERT + attachment INSERT in a single db.transaction.
+    //
+    // row-at-send (P-4): attachment rows are born here, not at /confirm.
+    // message_id is NOT NULL in the schema, so this transaction is the only
+    // location where attachment rows can be created.
+    //
+    // Idempotency: ON CONFLICT (channel_id, idempotency_key) DO NOTHING.
+    // On an idempotent replay (key conflict) the INSERT returns nothing; we
+    // re-fetch the existing message and skip attachment INSERT entirely
+    // (isNewInsert = false guard) so replays do NOT double-attach.
+    // -----------------------------------------------------------------------
+    const message = await db.transaction(async (tx) => {
+      // INSERT ... ON CONFLICT (channel_id, idempotency_key) DO NOTHING
+      // The UNIQUE constraint only fires when idempotency_key IS NOT NULL
+      // (NULL values are never considered equal in a UNIQUE index).
+      const insertReturning = await tx
+        .insert(messages)
+        .values({
+          channel_id: channelId,
+          author_id: authorId,
+          content: input.content,
+          idempotency_key: idempotencyKey,
+        })
+        .onConflictDoNothing({
+          target: [messages.channel_id, messages.idempotency_key],
+        })
+        .returning();
 
-    if (idempotencyKey !== null) {
-      const [existing] = await db
-        .select()
-        .from(messages)
-        .where(
-          and(eq(messages.channel_id, channelId), eq(messages.idempotency_key, idempotencyKey)),
-        )
-        .limit(1);
-      message = existing;
-    } else {
-      // No idempotency key — fetch the most recently inserted row for this
-      // author+channel+content within a small window (best-effort; non-idempotent path)
-      const [latest] = await db
-        .select()
-        .from(messages)
-        .where(
-          and(
-            eq(messages.channel_id, channelId),
-            eq(messages.author_id, authorId),
-            eq(messages.content, input.content),
-            sql`${messages.idempotency_key} IS NULL`,
-          ),
-        )
-        .orderBy(sql`${messages.created_at} DESC`)
-        .limit(1);
-      message = latest;
-    }
+      const isNewInsert = insertReturning.length > 0;
 
-    if (!message) {
-      throw new Error('Message insert failed unexpectedly');
-    }
+      // Fetch the canonical message row (handles both fresh insert + replay).
+      let messageRow: typeof messages.$inferSelect | undefined;
+
+      if (isNewInsert) {
+        messageRow = insertReturning[0];
+      } else if (idempotencyKey !== null) {
+        // Idempotent replay: fetch the existing row by idempotency_key
+        const [existing] = await tx
+          .select()
+          .from(messages)
+          .where(
+            and(eq(messages.channel_id, channelId), eq(messages.idempotency_key, idempotencyKey)),
+          )
+          .limit(1);
+        messageRow = existing;
+      } else {
+        // No idempotency key — fetch the most recently inserted row for this
+        // author+channel+content within a small window (best-effort; non-idempotent path)
+        const [latest] = await tx
+          .select()
+          .from(messages)
+          .where(
+            and(
+              eq(messages.channel_id, channelId),
+              eq(messages.author_id, authorId),
+              eq(messages.content, input.content),
+              sql`${messages.idempotency_key} IS NULL`,
+            ),
+          )
+          .orderBy(sql`${messages.created_at} DESC`)
+          .limit(1);
+        messageRow = latest;
+      }
+
+      if (!messageRow) {
+        throw new Error('Message insert failed unexpectedly');
+      }
+
+      // Attachment INSERT (row-at-send) — ONLY on new insert, not replay.
+      // uploader_id = authorId (session-derived), channel_id = channelId (route).
+      // On replay: skip to avoid double-attaching.
+      // messageRow is guaranteed non-null here (thrown above if undefined).
+      const confirmedMessageRow = messageRow;
+      if (isNewInsert && attachmentDescriptors.length > 0) {
+        await tx.insert(attachments).values(
+          attachmentDescriptors.map((a) => ({
+            message_id: confirmedMessageRow.id,
+            uploader_id: authorId,
+            channel_id: channelId,
+            object_key: a.key,
+            filename: a.filename,
+            content_type: a.contentType,
+            size_bytes: a.sizeBytes,
+          })),
+        );
+      }
+
+      return messageRow;
+    });
 
     // Resolve @username tokens to server members and persist mention rows.
     // ON CONFLICT DO NOTHING — idempotent if this path is replayed.
@@ -331,10 +576,15 @@ export class MessagesService {
     // Fetch persisted mention rows (with username) for the DTO
     const mentionRows = await fetchMentionRows([message.id]);
 
-    const dto = rowToDto(message, [], authorId, mentionRows);
+    // Batch-load attachments for this single message and resolve presigned URLs
+    const attachmentRows = await fetchAttachmentRows([message.id]);
+    const attachmentRefMap = await buildAttachmentRefMap(attachmentRows, this.filesService);
+    const attachmentRefs = attachmentRefMap.get(message.id) ?? [];
+
+    const dto = rowToDto(message, [], authorId, mentionRows, attachmentRefs);
 
     // Emit domain event for the Socket.IO gateway (@OnEvent('message.created'))
-    // mentions[] rides on the DTO — no new event needed (spec §contracts.api)
+    // mentions[] + attachments[] ride on the DTO — no new event needed
     this.eventEmitter.emit('message.created', dto);
 
     // Emit per-user mention events for cross-channel unread-mention signal.
@@ -764,6 +1014,17 @@ export class MessagesService {
     }
 
     const idempotencyKey = input.idempotencyKey ?? null;
+    const rawAttachmentDescriptors: ValidatedAttachment[] = input.attachments ?? [];
+
+    // -----------------------------------------------------------------------
+    // C-1 fix (wave-19 B-6) — same send-time validation as createMessage.
+    // Anchored channel-scope regex + HeadObject re-derive + size/MIME gate.
+    // -----------------------------------------------------------------------
+    const attachmentDescriptors = await validateAndHeadAttachments(
+      rawAttachmentDescriptors,
+      channelId,
+      this.filesService,
+    );
 
     // All DB writes in one atomic transaction (createServer template pattern)
     const reply = await db.transaction(async (tx) => {
@@ -824,12 +1085,34 @@ export class MessagesService {
             last_reply_at: replyRow.created_at,
           })
           .where(eq(messages.id, parentId));
+
+        // Attachment INSERT (row-at-send) — ONLY on new insert, not replay.
+        // replyRow is guaranteed non-null here (thrown unconditionally above if undefined).
+        const confirmedReplyRow = replyRow;
+        if (attachmentDescriptors.length > 0) {
+          await tx.insert(attachments).values(
+            attachmentDescriptors.map((a) => ({
+              message_id: confirmedReplyRow.id,
+              uploader_id: authorId,
+              channel_id: channelId,
+              object_key: a.key,
+              filename: a.filename,
+              content_type: a.contentType,
+              size_bytes: a.sizeBytes,
+            })),
+          );
+        }
       }
 
       return replyRow;
     });
 
-    const dto = rowToDto(reply, [], authorId);
+    // Batch-load attachments for the reply and resolve presigned URLs
+    const attachmentRows = await fetchAttachmentRows([reply.id]);
+    const attachmentRefMap = await buildAttachmentRefMap(attachmentRows, this.filesService);
+    const attachmentRefs = attachmentRefMap.get(reply.id) ?? [];
+
+    const dto = rowToDto(reply, [], authorId, [], attachmentRefs);
 
     // Emit domain event for the Socket.IO gateway (@OnEvent('thread.reply.created'))
     const threadEvent: ThreadReplyEvent = {
@@ -947,8 +1230,14 @@ export class MessagesService {
     // Batch-load mentions for the reply page
     const mentionRows = await fetchMentionRows(messageIds);
 
+    // Batch-load attachments for the reply page (single query + presign — no N+1)
+    const attachmentRows = await fetchAttachmentRows(messageIds);
+    const attachmentRefMap = await buildAttachmentRefMap(attachmentRows, this.filesService);
+
     return {
-      items: rows.map((row) => rowToDto(row, reactionRows, viewerUserId, mentionRows)),
+      items: rows.map((row) =>
+        rowToDto(row, reactionRows, viewerUserId, mentionRows, attachmentRefMap.get(row.id) ?? []),
+      ),
       nextCursor,
     };
   }
@@ -1151,8 +1440,14 @@ export class MessagesService {
     // Fetch mentions for all messages in the page (single query, not N+1)
     const mentionRows = await fetchMentionRows(messageIds);
 
+    // Fetch attachments for all messages in the page (single query + presign — no N+1)
+    const attachmentRows = await fetchAttachmentRows(messageIds);
+    const attachmentRefMap = await buildAttachmentRefMap(attachmentRows, this.filesService);
+
     return {
-      messages: chronological.map((row) => rowToDto(row, reactionRows, viewerUserId, mentionRows)),
+      messages: chronological.map((row) =>
+        rowToDto(row, reactionRows, viewerUserId, mentionRows, attachmentRefMap.get(row.id) ?? []),
+      ),
       nextCursor,
     };
   }
@@ -1269,8 +1564,14 @@ export class MessagesService {
 
     const mentionRows = await fetchMentionRows(messageIds);
 
+    // Batch-load attachments for the mentions page (single query + presign — no N+1)
+    const attachmentRows = await fetchAttachmentRows(messageIds);
+    const attachmentRefMap = await buildAttachmentRefMap(attachmentRows, this.filesService);
+
     return {
-      items: mentionedMessages.map((row) => rowToDto(row, reactionRows, viewerUserId, mentionRows)),
+      items: mentionedMessages.map((row) =>
+        rowToDto(row, reactionRows, viewerUserId, mentionRows, attachmentRefMap.get(row.id) ?? []),
+      ),
       nextCursor,
     };
   }

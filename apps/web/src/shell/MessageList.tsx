@@ -20,11 +20,20 @@
  * Receives the full message list (real + optimistic) from useMessages hook.
  */
 
-import type { MentionRef, MessageResponse, ReactionSummary } from '@studyhall/shared';
-import { useEffect, useRef, useState } from 'react';
+import type {
+  AttachmentRef,
+  MentionRef,
+  MessageResponse,
+  ReactionSummary,
+} from '@studyhall/shared';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ArrowsOutIcon,
   ChatsCircleIcon,
   ClockIcon,
+  DownloadSimpleIcon,
+  FileIcon,
+  ImageBrokenIcon,
   PencilSimpleIcon,
   ProhibitIcon,
   RetryIcon,
@@ -39,6 +48,15 @@ import {
 // Types
 // ---------------------------------------------------------------------------
 
+/** Staged attachment preview — used while the message is in the outbox. */
+export type StagedAttachmentPreview = {
+  /** Local object-URL for images (revoke after send); undefined for file-chips */
+  previewUrl?: string;
+  filename: string;
+  contentType: string;
+  sizeBytes: number;
+};
+
 export type OptimisticMessage = {
   /** Unique client-generated key — also used for dedup with the server id */
   idempotencyKey: string;
@@ -46,6 +64,15 @@ export type OptimisticMessage = {
   /** Display name shown in the row */
   authorDisplay: string;
   state: 'pending' | 'failed';
+  /** Staged attachment previews shown while the message is in the outbox */
+  stagedAttachments?: StagedAttachmentPreview[];
+  /**
+   * Validated attachments carried for retry — not rendered directly but
+   * passed back to the retry call so the API body is correct.
+   * Kept as unknown[] to avoid importing ValidatedAttachment in MessageList
+   * (shared types are type-only in the web package).
+   */
+  validatedAttachments?: unknown[];
 };
 
 export type DisplayMessage =
@@ -140,6 +167,327 @@ function initials(s: string): string {
 }
 
 const COMMON_EMOJI = ['👍', '❤️', '😂', '🎉', '🤔', '✅'];
+
+// ---------------------------------------------------------------------------
+// Attachment helpers
+// ---------------------------------------------------------------------------
+
+/** Format bytes into human-readable string (KB / MB). */
+function humanSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/** True when the content-type is an image we can preview inline. */
+function isImageType(contentType: string): boolean {
+  return contentType.startsWith('image/');
+}
+
+// ---------------------------------------------------------------------------
+// Image lightbox (D-carry: focus-trap, Esc close, backdrop click, focus restore)
+// ---------------------------------------------------------------------------
+
+type LightboxProps = {
+  src: string;
+  alt: string;
+  onClose: () => void;
+  triggerRef: React.RefObject<HTMLButtonElement | null>;
+};
+
+function ImageLightbox({ src, alt, onClose, triggerRef }: LightboxProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
+
+  // Focus the close button on mount; restore focus to trigger on unmount.
+  useEffect(() => {
+    closeBtnRef.current?.focus();
+    const prev = triggerRef.current;
+    return () => {
+      prev?.focus();
+    };
+  }, [triggerRef]);
+
+  // Esc to close + focus trap
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      // Focus trap: keep Tab inside dialog
+      if (e.key === 'Tab') {
+        const dialog = dialogRef.current;
+        if (!dialog) return;
+        const focusable = dialog.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        );
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (!first || !last) return;
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+    }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [onClose]);
+
+  return (
+    // Backdrop — role="presentation" so screen readers focus the inner dialog.
+    // Esc is handled by the document keydown listener above; onKeyDown here
+    // satisfies the lint/a11y/useKeyWithClickEvents rule.
+    <div
+      role="presentation"
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onClose();
+      }}
+    >
+      {/* Dialog */}
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={alt || 'Image preview'}
+        className="relative flex flex-col items-center max-w-[90vw] max-h-[90dvh]"
+      >
+        {/* Close button */}
+        <button
+          ref={closeBtnRef}
+          type="button"
+          aria-label="Close image preview"
+          onClick={onClose}
+          className="absolute -top-10 right-0 flex h-8 w-8 items-center justify-center rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70"
+          style={{ color: 'rgba(255,255,255,0.70)', backgroundColor: 'rgba(39,39,42,0.80)' }}
+        >
+          <XIcon size={16} />
+        </button>
+
+        {/* Full-size image */}
+        <img
+          src={src}
+          alt={alt}
+          className="rounded-md object-contain"
+          style={{ maxWidth: '90vw', maxHeight: '85dvh' }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// File chip — non-image attachments (+ broken-image fallback chip)
+// ---------------------------------------------------------------------------
+
+type FileChipProps = {
+  filename: string;
+  sizeBytes: number;
+  url?: string;
+  /** When true renders the broken-image icon/label instead of the generic file icon */
+  isBroken?: boolean;
+  'aria-label'?: string;
+};
+
+function FileChip({ filename, sizeBytes, url, isBroken, 'aria-label': ariaLabel }: FileChipProps) {
+  const label =
+    ariaLabel ??
+    (isBroken ? `Download ${filename} (image failed to preview)` : `Download ${filename}`);
+
+  const inner = (
+    <>
+      <span
+        className="shrink-0 flex h-8 w-8 items-center justify-center rounded"
+        style={{ backgroundColor: '#27272a' }}
+      >
+        {isBroken ? (
+          <ImageBrokenIcon size={18} style={{ color: 'rgba(255,255,255,0.60)' }} />
+        ) : (
+          <FileIcon size={18} style={{ color: '#10b981' }} />
+        )}
+      </span>
+      <span className="flex min-w-0 flex-col">
+        <span
+          className="truncate text-[13px] font-medium leading-tight"
+          style={{ color: 'rgba(255,255,255,0.92)' }}
+        >
+          {filename}
+        </span>
+        <span
+          className="mt-0.5 text-[11px] leading-tight tracking-wide"
+          style={{ color: 'rgba(255,255,255,0.40)' }}
+        >
+          {isBroken ? `Preview unavailable · ${humanSize(sizeBytes)}` : humanSize(sizeBytes)}
+        </span>
+      </span>
+      {url && (
+        <DownloadSimpleIcon
+          size={16}
+          style={{ color: '#10b981', opacity: 0, transition: 'opacity 120ms' }}
+          className="ml-1 shrink-0 group-hover/chip:opacity-100"
+        />
+      )}
+    </>
+  );
+
+  if (url) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={label}
+        download
+        className="group/chip flex max-w-[280px] min-w-[200px] items-center gap-2.5 rounded-md border px-2 py-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70"
+        style={{
+          backgroundColor: '#1c1c1f',
+          borderColor: 'rgba(63,63,70,0.60)',
+        }}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLAnchorElement).style.backgroundColor = '#27272a';
+          const dl = (e.currentTarget as HTMLAnchorElement).querySelector('svg:last-child');
+          if (dl) (dl as SVGElement).style.opacity = '1';
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLAnchorElement).style.backgroundColor = '#1c1c1f';
+          const dl = (e.currentTarget as HTMLAnchorElement).querySelector('svg:last-child');
+          if (dl) (dl as SVGElement).style.opacity = '0';
+        }}
+      >
+        {inner}
+      </a>
+    );
+  }
+
+  // No URL — static chip (staged preview or broken without URL)
+  return (
+    <div
+      aria-label={label}
+      className="group/chip flex max-w-[280px] min-w-[200px] items-center gap-2.5 rounded-md border px-2 py-1.5"
+      style={{
+        backgroundColor: '#1c1c1f',
+        borderColor: 'rgba(63,63,70,0.60)',
+      }}
+    >
+      {inner}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// AttachmentRender — renders a single attachment in a message row
+// D-carries: inline image preview (max-h-320px) → lightbox on click;
+//            img onerror → swap to broken-image chip
+// ---------------------------------------------------------------------------
+
+type AttachmentRenderProps = {
+  attachment: AttachmentRef;
+};
+
+function AttachmentRender({ attachment }: AttachmentRenderProps) {
+  const [broken, setBroken] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+
+  const handleOpenLightbox = useCallback(() => setLightboxOpen(true), []);
+  const handleCloseLightbox = useCallback(() => setLightboxOpen(false), []);
+
+  const isImage = isImageType(attachment.contentType);
+
+  if (isImage && !broken) {
+    return (
+      <>
+        <button
+          ref={triggerRef}
+          type="button"
+          aria-label={`View full size: ${attachment.filename}`}
+          onClick={handleOpenLightbox}
+          className="group/img relative block overflow-hidden rounded-md border focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70"
+          style={{
+            backgroundColor: '#1c1c1f',
+            borderColor: 'rgba(63,63,70,0.60)',
+          }}
+        >
+          <img
+            src={attachment.url}
+            alt={attachment.filename}
+            className="w-auto max-w-full object-cover"
+            style={{ maxHeight: 320, display: 'block' }}
+            onError={() => setBroken(true)}
+          />
+          {/* Hover overlay with expand cue */}
+          <div
+            className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity"
+            style={{ backgroundColor: 'rgba(10,10,11,0.40)', backdropFilter: 'blur(1px)' }}
+            aria-hidden="true"
+          >
+            <div
+              className="flex h-10 w-10 items-center justify-center rounded-full transition-transform scale-95 group-hover/img:scale-100"
+              style={{
+                backgroundColor: 'rgba(28,28,31,0.90)',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+              }}
+            >
+              <ArrowsOutIcon size={20} style={{ color: 'rgba(255,255,255,0.92)' }} />
+            </div>
+          </div>
+        </button>
+
+        {/* Lightbox portal — rendered outside the message row */}
+        {lightboxOpen && (
+          <ImageLightbox
+            src={attachment.url}
+            alt={attachment.filename}
+            onClose={handleCloseLightbox}
+            triggerRef={triggerRef as React.RefObject<HTMLButtonElement | null>}
+          />
+        )}
+      </>
+    );
+  }
+
+  // Broken image or non-image: file chip
+  return (
+    <FileChip
+      filename={attachment.filename}
+      sizeBytes={attachment.sizeBytes}
+      url={attachment.url}
+      isBroken={isImage && broken}
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------
+// AttachmentList — renders 0-N attachments below message content
+// ---------------------------------------------------------------------------
+
+type AttachmentListProps = {
+  attachments: AttachmentRef[];
+};
+
+function AttachmentList({ attachments }: AttachmentListProps) {
+  if (attachments.length === 0) return null;
+  return (
+    <div className="mt-2.5 flex flex-wrap gap-2">
+      {attachments.map((a) => (
+        <AttachmentRender key={a.id} attachment={a} />
+      ))}
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Mention pill rendering
@@ -764,6 +1112,11 @@ function SentRow({
               )}
             </p>
 
+            {/* Attachment render (wave-19 M3) */}
+            {msg.attachments && msg.attachments.length > 0 && (
+              <AttachmentList attachments={msg.attachments} />
+            )}
+
             {/* Reaction pills */}
             {(msg.reactions.length > 0 || onReaction !== null) && (
               <div className="relative">
@@ -902,6 +1255,39 @@ function PendingRow({ msg }: { msg: { kind: 'optimistic' } & OptimisticMessage }
         >
           {msg.content}
         </p>
+        {/* Staged attachment previews shown while the message is in the outbox */}
+        {msg.stagedAttachments && msg.stagedAttachments.length > 0 && (
+          <div className="mt-2.5 flex flex-wrap gap-2" style={{ opacity: 0.6 }}>
+            {msg.stagedAttachments.map((sa, idx) => {
+              const isImg = isImageType(sa.contentType);
+              if (isImg && sa.previewUrl) {
+                return (
+                  <div
+                    // biome-ignore lint/suspicious/noArrayIndexKey: stable staged order
+                    key={idx}
+                    className="overflow-hidden rounded-md border"
+                    style={{ borderColor: 'rgba(63,63,70,0.60)', backgroundColor: '#1c1c1f' }}
+                  >
+                    <img
+                      src={sa.previewUrl}
+                      alt={sa.filename}
+                      className="w-auto object-cover"
+                      style={{ maxHeight: 120, maxWidth: 200, display: 'block' }}
+                    />
+                  </div>
+                );
+              }
+              return (
+                <FileChip
+                  // biome-ignore lint/suspicious/noArrayIndexKey: stable staged order
+                  key={idx}
+                  filename={sa.filename}
+                  sizeBytes={sa.sizeBytes}
+                />
+              );
+            })}
+          </div>
+        )}
       </div>
     </article>
   );
@@ -948,6 +1334,39 @@ function FailedRow({
         <p className="mt-0.5 text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.80)' }}>
           {msg.content}
         </p>
+        {/* Staged attachment previews shown in failed row */}
+        {msg.stagedAttachments && msg.stagedAttachments.length > 0 && (
+          <div className="mt-2.5 flex flex-wrap gap-2" style={{ opacity: 0.6 }}>
+            {msg.stagedAttachments.map((sa, idx) => {
+              const isImg = isImageType(sa.contentType);
+              if (isImg && sa.previewUrl) {
+                return (
+                  <div
+                    // biome-ignore lint/suspicious/noArrayIndexKey: stable staged order
+                    key={idx}
+                    className="overflow-hidden rounded-md border"
+                    style={{ borderColor: 'rgba(63,63,70,0.60)', backgroundColor: '#1c1c1f' }}
+                  >
+                    <img
+                      src={sa.previewUrl}
+                      alt={sa.filename}
+                      className="w-auto object-cover"
+                      style={{ maxHeight: 120, maxWidth: 200, display: 'block' }}
+                    />
+                  </div>
+                );
+              }
+              return (
+                <FileChip
+                  // biome-ignore lint/suspicious/noArrayIndexKey: stable staged order
+                  key={idx}
+                  filename={sa.filename}
+                  sizeBytes={sa.sizeBytes}
+                />
+              );
+            })}
+          </div>
+        )}
         <div className="mt-1.5 flex items-center gap-3">
           <button
             type="button"
