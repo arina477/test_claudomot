@@ -96,6 +96,17 @@ export async function loadPending(store: StudyHallDB): Promise<OutboxItem[]> {
 // ── Drain ─────────────────────────────────────────────────────────────────────
 
 /**
+ * Module-level re-entrancy guard for drain().
+ *
+ * Only ONE drain may execute at a time. Concurrent callers (e.g. socket
+ * 'connect' and window 'online' firing together on reconnect) get the
+ * in-flight promise back — they do NOT start a second overlapping drain
+ * that would snapshot the same pending set and risk double-POSTs or
+ * broken ordering.
+ */
+let _drainInFlight: Promise<void> | null = null;
+
+/**
  * Drain all pending outbox items: POST each SEQUENTIALLY (oldest-first),
  * delete on success, increment attempts / mark failed on error.
  *
@@ -104,19 +115,58 @@ export async function loadPending(store: StudyHallDB): Promise<OutboxItem[]> {
  * onFailed    — called when an item exceeds MAX_ATTEMPTS so useMessages
  *               can flip the optimistic row to 'failed'.
  *
- * Sequential by design — prevents out-of-order delivery on the server.
+ * Sequential AND stop-on-failure — if a send fails the drain halts
+ * immediately, leaving the failed item and ALL later items pending.
+ * This guarantees IN-ORDER delivery: a later message can NEVER be sent
+ * ahead of an earlier un-sent one. The failed item is retried first on
+ * the next drain call (after attempts++; at MAX_ATTEMPTS it becomes
+ * state='failed', which blocks later items until the user calls
+ * retryOutboxItem() or discards it).
+ *
+ * Re-entrant callers receive the in-flight promise; at most one drain
+ * executes at any time.
+ *
+ * M2: items with the same createdAt are broken by id (auto-increment
+ * integer) so the drain order is fully deterministic.
  */
-export async function drain(
+export function drain(
+  store: StudyHallDB,
+  send: SendFn,
+  onDelivered: (idempotencyKey: string, confirmedId: string) => void,
+  onFailed: (idempotencyKey: string) => void,
+): Promise<void> {
+  // Re-entrancy guard: if a drain is already running, return the in-flight promise.
+  if (_drainInFlight !== null) {
+    return _drainInFlight;
+  }
+
+  _drainInFlight = _drainImpl(store, send, onDelivered, onFailed).finally(() => {
+    _drainInFlight = null;
+  });
+
+  return _drainInFlight;
+}
+
+async function _drainImpl(
   store: StudyHallDB,
   send: SendFn,
   onDelivered: (idempotencyKey: string, confirmedId: string) => void,
   onFailed: (idempotencyKey: string) => void,
 ): Promise<void> {
   // Snapshot pending items oldest-first before the loop.
-  const pending = await store.outbox
+  // Primary sort: createdAt (from compound index [state+createdAt]).
+  // Secondary sort: id (auto-increment integer) — tiebreak for same-millisecond enqueues.
+  const unsorted = await store.outbox
     .where('[state+createdAt]')
     .between(['pending', Dexie.minKey], ['pending', Dexie.maxKey])
     .toArray();
+
+  const pending = unsorted.slice().sort((a, b) => {
+    if (a.createdAt < b.createdAt) return -1;
+    if (a.createdAt > b.createdAt) return 1;
+    // Same createdAt — break tie by auto-increment id (always present after add()).
+    return (a.id as number) - (b.id as number);
+  });
 
   for (const item of pending) {
     // id is assigned by Dexie auto-increment — always present after add().
@@ -142,7 +192,10 @@ export async function drain(
       } else {
         await store.outbox.update(outboxId, { attempts: newAttempts });
       }
-      // Continue draining next item even on failure — partial drain.
+      // STOP-ON-FAILURE: halt the drain here. The failed item (and all later
+      // items) remain pending. A later message NEVER sends ahead of an
+      // earlier un-sent one — in-order guarantee is preserved.
+      return;
     }
   }
 }

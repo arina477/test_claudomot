@@ -459,12 +459,14 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
 
       if (db) {
         const store = db;
-        // Enqueue to durable store first, then reflect in optimistic state.
+        // Enqueue to durable store first (outbox is the SINGLE source of truth for send),
+        // then reflect optimistic state, then trigger drain() — no separate direct POST.
+        // This prevents the double-send race (direct POST + drain re-POSTing same item).
         enqueue(store, channelId, content, outboxAttachments)
           .then(({ idempotencyKey }) => {
             if (!mountedRef.current) return;
 
-            // Reflect as pending in UI.
+            // Reflect as pending in UI immediately — composer feels instant.
             setOptimisticMessages((prev) => [
               ...prev,
               {
@@ -477,34 +479,33 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
               },
             ]);
 
-            // Attempt network POST immediately (drain pattern for single item).
-            api
-              .sendMessage(channelId, {
-                content,
-                idempotencyKey,
-                ...(attachments && attachments.length > 0 ? { attachments } : {}),
-              })
-              .then((confirmed) => {
+            // Trigger drain — outbox handles the actual POST. drain() is
+            // re-entrant-safe (module-level guard): concurrent calls are
+            // de-duped. If offline, the row stays pending until next reconnect.
+            void drain(
+              store,
+              (chId, body) => api.sendMessage(chId, body),
+              (deliveredKey, confirmedId) => {
                 if (!mountedRef.current) return;
-                // Delete from outbox (delivered).
-                void store.outbox.where('idempotencyKey').equals(idempotencyKey).delete();
-                // Reconcile.
                 setRealMessages((prev) => {
-                  if (prev.some((m) => m.id === confirmed.id)) return prev;
-                  lastSeenCursorRef.current = confirmed.createdAt;
-                  if (db) {
-                    void putCachedMessage(db, { ...confirmed, cachedAt: new Date().toISOString() });
-                  }
-                  return [...prev, confirmed];
+                  if (prev.some((m) => m.id === confirmedId)) return prev;
+                  return prev;
+                  // Full MessageResponse arrives via socket message:new — just
+                  // remove the optimistic row here.
                 });
                 setOptimisticMessages((prev) =>
-                  prev.filter((m) => m.idempotencyKey !== idempotencyKey),
+                  prev.filter((m) => m.idempotencyKey !== deliveredKey),
                 );
-              })
-              .catch(() => {
-                // Offline or network error — leave in outbox (pending), keep optimistic row.
-                // The reconnect drain will retry.
-              });
+              },
+              (failedKey) => {
+                if (!mountedRef.current) return;
+                setOptimisticMessages((prev) =>
+                  prev.map((m) =>
+                    m.idempotencyKey === failedKey ? { ...m, state: 'failed' as const } : m,
+                  ),
+                );
+              },
+            );
           })
           .catch(() => {
             // IDB enqueue failed (e.g. QuotaExceededError) — fall back to in-memory only.

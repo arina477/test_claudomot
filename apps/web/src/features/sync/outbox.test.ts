@@ -1,7 +1,7 @@
 /**
  * outbox.test.ts — integration tests for the durable outbox send loop.
  *
- * GATING PROOF (task e29f6566): exactly-once delivery + in-order replay.
+ * GATING PROOF (task 9a4ab31d): exactly-once delivery + strict in-order replay.
  *
  * All tests use per-test IDBFactory injection for hard isolation.
  * No real timers — fully deterministic.
@@ -10,12 +10,16 @@
  *   1. enqueue N items offline → drain → N POSTs in order, each exactly once.
  *   2. Replayed item (same idempotencyKey) does NOT dup — mock POST honours
  *      ON CONFLICT semantics (returns same id for same key).
- *   3. Partial drain (fail mid-drain) resumes next drain with no dup.
+ *   3. Stop-on-failure: a failed item blocks later items; no later message
+ *      sends ahead of an earlier un-sent one (in-order preserved).
  *   4. Failed item (MAX_ATTEMPTS exceeded) → state='failed', callback fires.
  *   5. Retry a failed item → resets to pending → drained on next call.
  *   6. Drain is sequential (POST[i+1] only called after POST[i] resolves).
  *   7. Empty outbox drain is a no-op.
  *   8. Failed items are skipped by drain.
+ *   9. Re-entrancy guard: two concurrent drain() calls — each pending item
+ *      POSTed exactly once, in order.
+ *  10. id tiebreak: items with identical createdAt drained in id order.
  */
 
 import { IDBFactory, IDBKeyRange } from 'fake-indexeddb';
@@ -175,15 +179,20 @@ describe('outbox drain — exactly-once + in-order (gating proof)', () => {
     expect(delivered2[0]).toBe(confirmedId); // same id — no dup from server's ON CONFLICT
   });
 
-  // ── Test 3: Partial drain (fail mid-drain) resumes, no dup ───────────────
+  // ── Test 3: Stop-on-failure — in-order preserved ─────────────────────────
+  //
+  // POLICY: drain stops when a send fails. All items after the failed item
+  // stay pending. A later message NEVER sends ahead of an earlier un-sent one.
+  // This is the in-order guarantee (the wedge). The failed item is retried
+  // FIRST on the next drain call.
 
-  it('partial drain (fail mid-drain) — next drain resumes without duplication', async () => {
+  it('stop-on-failure: failed item blocks later items; no later message sends ahead of earlier un-sent one', async () => {
     const timestamps = [
       '2026-06-30T10:00:00.000Z',
       '2026-06-30T10:01:00.000Z',
       '2026-06-30T10:02:00.000Z',
     ];
-    const keys = ['partial-key-0', 'partial-key-1', 'partial-key-2'];
+    const keys = ['stop-key-0', 'stop-key-1', 'stop-key-2'];
 
     for (let i = 0; i < 3; i++) {
       await db.outbox.add({
@@ -196,8 +205,10 @@ describe('outbox drain — exactly-once + in-order (gating proof)', () => {
       });
     }
 
-    // First drain: item at index 1 fails — but drain continues to item 2.
-    const failKeys = new Set(['partial-key-1']);
+    // First drain: item at index 1 (stop-key-1) fails.
+    // EXPECTED: stop-key-0 POSTed (success), stop-key-1 attempted (fails),
+    //           drain STOPS — stop-key-2 is NEVER POSTed (in-order preserved).
+    const failKeys = new Set(['stop-key-1']);
     const idMap = new Map<string, string>();
     const delivered1: string[] = [];
     const failed1: string[] = [];
@@ -210,22 +221,30 @@ describe('outbox drain — exactly-once + in-order (gating proof)', () => {
       (k) => failed1.push(k),
     );
 
-    // 3 POSTs attempted (drain continues past failures).
-    expect(calls1).toHaveLength(3);
-    // key-0 and key-2 delivered, key-1 failed.
-    expect(delivered1).toContain('partial-key-0');
-    expect(delivered1).toContain('partial-key-2');
-    // key-1 not yet at MAX_ATTEMPTS → still pending, no failed callback yet.
-    expect(failed1).toHaveLength(0);
+    // Only 2 POSTs attempted: stop-key-0 (success) + stop-key-1 (fail, stops drain).
+    expect(calls1).toHaveLength(2);
+    expect(calls1[0]?.idempotencyKey).toBe('stop-key-0');
+    expect(calls1[1]?.idempotencyKey).toBe('stop-key-1');
+    // stop-key-2 was NEVER sent — it was blocked behind stop-key-1.
+    expect(calls1.map((c) => c.idempotencyKey)).not.toContain('stop-key-2');
 
-    // Outbox: only key-1 remains, attempts=1.
-    const remaining = await db.outbox.toArray();
-    expect(remaining).toHaveLength(1);
-    expect(remaining[0]?.idempotencyKey).toBe('partial-key-1');
-    expect(remaining[0]?.attempts).toBe(1);
-    expect(remaining[0]?.state).toBe('pending');
+    // stop-key-0 delivered; stop-key-1 and stop-key-2 remain pending.
+    expect(delivered1).toContain('stop-key-0');
+    expect(delivered1).not.toContain('stop-key-1');
+    expect(delivered1).not.toContain('stop-key-2');
+    expect(failed1).toHaveLength(0); // not yet at MAX_ATTEMPTS
 
-    // Second drain: key-1 fails again.
+    // Outbox: stop-key-1 (attempts=1, pending) and stop-key-2 (attempts=0, pending) remain.
+    const remaining1 = await db.outbox.toArray();
+    expect(remaining1).toHaveLength(2);
+    const key1row = remaining1.find((r) => r.idempotencyKey === 'stop-key-1');
+    const key2row = remaining1.find((r) => r.idempotencyKey === 'stop-key-2');
+    expect(key1row?.attempts).toBe(1);
+    expect(key1row?.state).toBe('pending');
+    expect(key2row?.attempts).toBe(0); // untouched
+    expect(key2row?.state).toBe('pending');
+
+    // Second drain: stop-key-1 fails again, drain stops — stop-key-2 still blocked.
     const { sendFn: send2, calls: calls2 } = makeSendFn({ idMap, failKeys });
     const delivered2: string[] = [];
     const failed2: string[] = [];
@@ -237,15 +256,22 @@ describe('outbox drain — exactly-once + in-order (gating proof)', () => {
       (k) => failed2.push(k),
     );
 
-    // Only key-1 in queue now, attempted again.
+    // Only stop-key-1 attempted (head of queue), drain stops after failure.
     expect(calls2).toHaveLength(1);
-    expect(calls2[0]?.idempotencyKey).toBe('partial-key-1');
+    expect(calls2[0]?.idempotencyKey).toBe('stop-key-1');
+    // stop-key-2 still NEVER sent.
+    expect(calls2.map((c) => c.idempotencyKey)).not.toContain('stop-key-2');
     expect(delivered2).toHaveLength(0);
-    // attempts=2, still pending.
-    const remaining2 = await db.outbox.toArray();
-    expect(remaining2[0]?.attempts).toBe(2);
+    expect(failed2).toHaveLength(0); // attempts=2, still below MAX_ATTEMPTS
 
-    // Third drain: key-1 fails again — now hits MAX_ATTEMPTS (3), marked failed.
+    const remaining2 = await db.outbox.toArray();
+    const key1row2 = remaining2.find((r) => r.idempotencyKey === 'stop-key-1');
+    expect(key1row2?.attempts).toBe(2);
+    const key2row2 = remaining2.find((r) => r.idempotencyKey === 'stop-key-2');
+    expect(key2row2?.attempts).toBe(0); // still untouched
+
+    // Third drain: stop-key-1 fails again — hits MAX_ATTEMPTS (3), becomes failed.
+    // stop-key-2 is still blocked (head-of-line is now state=failed).
     const { sendFn: send3, calls: calls3 } = makeSendFn({ idMap, failKeys });
     const failed3: string[] = [];
 
@@ -256,19 +282,27 @@ describe('outbox drain — exactly-once + in-order (gating proof)', () => {
       (k) => failed3.push(k),
     );
 
+    // stop-key-1 attempted, becomes failed. Drain stops.
     expect(calls3).toHaveLength(1);
-    expect(failed3).toContain('partial-key-1');
+    expect(calls3[0]?.idempotencyKey).toBe('stop-key-1');
+    expect(failed3).toContain('stop-key-1');
 
-    // Item is now state='failed' in outbox.
-    const final = await db.outbox.toArray();
-    expect(final[0]?.state).toBe('failed');
+    const remaining3 = await db.outbox.toArray();
+    const key1Final = remaining3.find((r) => r.idempotencyKey === 'stop-key-1');
+    expect(key1Final?.state).toBe('failed');
+    const key2Final = remaining3.find((r) => r.idempotencyKey === 'stop-key-2');
+    // stop-key-2 never sent across ALL drains — it was always blocked.
+    expect(key2Final?.state).toBe('pending');
+    expect(key2Final?.attempts).toBe(0);
 
-    // key-0 and key-2 were only POSTed once each across all drains (no dup).
+    // Verify stop-key-2 was NEVER POSTed across all three drains.
     const allCalls = [...calls1, ...calls2, ...calls3];
-    const countKey0 = allCalls.filter((c) => c.idempotencyKey === 'partial-key-0').length;
-    const countKey2 = allCalls.filter((c) => c.idempotencyKey === 'partial-key-2').length;
-    expect(countKey0).toBe(1); // exactly once
-    expect(countKey2).toBe(1); // exactly once
+    const key2PostCount = allCalls.filter((c) => c.idempotencyKey === 'stop-key-2').length;
+    expect(key2PostCount).toBe(0); // in-order preserved: never sent ahead of stop-key-1
+
+    // stop-key-0 POSTed exactly once (no dup).
+    const key0PostCount = allCalls.filter((c) => c.idempotencyKey === 'stop-key-0').length;
+    expect(key0PostCount).toBe(1);
   });
 
   // ── Test 4: MAX_ATTEMPTS exhausted → state='failed', onFailed fires ───────
@@ -451,5 +485,112 @@ describe('outbox drain — exactly-once + in-order (gating proof)', () => {
     const failedItem = await db.outbox.where('idempotencyKey').equals('failed-item').first();
     expect(failedItem?.state).toBe('failed');
     expect(failedItem?.attempts).toBe(3);
+  });
+
+  // ── Test 9: Re-entrancy guard — two concurrent drain() calls ─────────────
+  //
+  // H1 fix proof: socket 'connect' and window 'online' commonly fire together
+  // on reconnect. Both call drain(). The module-level guard ensures only ONE
+  // drain executes; the second caller gets the in-flight promise back.
+  // Each pending item must be POSTed exactly once, in order.
+
+  it('two concurrent drain() calls — each pending item POSTed exactly once, in order', async () => {
+    const keys = ['concurrent-key-0', 'concurrent-key-1', 'concurrent-key-2'];
+    const timestamps = [
+      '2026-06-30T10:00:00.000Z',
+      '2026-06-30T10:01:00.000Z',
+      '2026-06-30T10:02:00.000Z',
+    ];
+
+    for (let i = 0; i < 3; i++) {
+      await db.outbox.add({
+        channelId: 'ch-1',
+        idempotencyKey: keys[i] ?? '',
+        content: `msg ${i}`,
+        state: 'pending',
+        createdAt: timestamps[i] ?? '',
+        attempts: 0,
+      });
+    }
+
+    const idMap = new Map<string, string>();
+    const delivered: Array<string> = [];
+    const { sendFn, calls } = makeSendFn({ idMap });
+
+    const onDelivered = (k: string, _id: string) => delivered.push(k);
+    const onFailed = () => {};
+
+    // Fire two drain() calls simultaneously — the guard must serialize them.
+    const [p1, p2] = [
+      drain(db, sendFn, onDelivered, onFailed),
+      drain(db, sendFn, onDelivered, onFailed),
+    ];
+    await Promise.all([p1, p2]);
+
+    // Each item POSTed exactly once — no double-send from overlapping drains.
+    expect(calls).toHaveLength(3);
+    const seen = new Set(calls.map((c) => c.idempotencyKey));
+    expect(seen.size).toBe(3); // all distinct — each appeared exactly once
+
+    // Items delivered in order (oldest first).
+    expect(delivered).toEqual(keys);
+
+    // Outbox empty.
+    expect(await db.outbox.toArray()).toHaveLength(0);
+  });
+
+  // ── Test 10: id tiebreak — items with identical createdAt drain in id order ─
+  //
+  // M2 fix proof: when two items have the same createdAt millisecond,
+  // the auto-increment id is the secondary sort key — deterministic order.
+
+  it('items with identical createdAt are drained in ascending id (auto-increment) order', async () => {
+    const sameTimestamp = '2026-06-30T10:00:00.000Z';
+
+    // Add in intended order — Dexie assigns ascending auto-increment ids.
+    const id0 = await db.outbox.add({
+      channelId: 'ch-1',
+      idempotencyKey: 'tiebreak-key-0',
+      content: 'msg 0',
+      state: 'pending',
+      createdAt: sameTimestamp,
+      attempts: 0,
+    });
+    const id1 = await db.outbox.add({
+      channelId: 'ch-1',
+      idempotencyKey: 'tiebreak-key-1',
+      content: 'msg 1',
+      state: 'pending',
+      createdAt: sameTimestamp,
+      attempts: 0,
+    });
+    const id2 = await db.outbox.add({
+      channelId: 'ch-1',
+      idempotencyKey: 'tiebreak-key-2',
+      content: 'msg 2',
+      state: 'pending',
+      createdAt: sameTimestamp,
+      attempts: 0,
+    });
+
+    // Confirm ascending id assignment.
+    expect(id0 as number).toBeLessThan(id1 as number);
+    expect(id1 as number).toBeLessThan(id2 as number);
+
+    const idMap = new Map<string, string>();
+    const { sendFn, calls } = makeSendFn({ idMap });
+
+    await drain(
+      db,
+      sendFn,
+      () => {},
+      () => {},
+    );
+
+    // All 3 sent in id order (tiebreak-key-0 before tiebreak-key-1 before tiebreak-key-2).
+    expect(calls).toHaveLength(3);
+    expect(calls[0]?.idempotencyKey).toBe('tiebreak-key-0');
+    expect(calls[1]?.idempotencyKey).toBe('tiebreak-key-1');
+    expect(calls[2]?.idempotencyKey).toBe('tiebreak-key-2');
   });
 });
