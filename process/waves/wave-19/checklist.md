@@ -39,8 +39,8 @@ BUILD:
 - [ ] B-6 Review
 
 CI/CD:
-- [ ] C-1 PR, CI & merge
-- [ ] C-2 Deploy & verify (canary armed when real users > 1000)
+- [x] C-1 PR, CI & merge — PR #31 merged dbf6b25 (squash); 1 fix-up cycle cleared lint+test reds; all 7 CI jobs green; C-1 negative-path tests executed+passed
+- [x] C-2 Deploy & verify — api 8ef2c228 + web 8d3e0c36 deployment-state SUCCESS (distinct from baselines); migration 0009 applied+verified; presign route serves 401; canary skipped (DAU 0 < 1000)
 
 TEST:
 - [ ] T-1 Static
