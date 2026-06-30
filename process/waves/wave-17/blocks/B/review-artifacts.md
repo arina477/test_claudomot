@@ -11,9 +11,9 @@
 | B-0 | stages/B-0-branch-and-schema.md | done | branch + claim; no schema |
 | B-1 | stages/B-1-contracts.md | SKIP | no contract surface |
 | B-2 | stages/B-2-backend.md | SKIP | no routes/services (the SUT createServer already exists) |
-| B-3 | stages/B-3-frontend.md | pending | integration spec + real-PG harness (backend-developer) |
-| B-4 | stages/B-4-wiring.md | pending | parallel-safe vitest integration project + CI confirm |
-| B-5 | stages/B-5-verify.md | pending | spec skips-clean locally; runs in CI |
+| B-3 | stages/B-3-frontend.md | done | integration spec + reusable PG harness (CF-2 redirect, 3 cases) |
+| B-4 | stages/B-4-wiring.md | done | parallel-safe integration project; test:ci runs unit+integration |
+| B-5 | stages/B-5-verify.md | done | typecheck+lint+292 unit green; integration skip-clean local / runs CI |
 | B-6 | stages/B-6-review.md | pending | head-builder gate (verify integration PROJECT parallel-safe) |
 
 ## Block-specific context

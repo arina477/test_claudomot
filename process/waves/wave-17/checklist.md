@@ -24,11 +24,11 @@ DESIGN (skip block if non-UI wave):
 
 BUILD:
 - [ ] B-0 Branch & schema
-- [ ] B-1 Contracts
-- [ ] B-2 Backend
-- [ ] B-3 Frontend
-- [ ] B-4 Wiring
-- [ ] B-5 Verify
+- [x] B-1 Contracts (SKIP)
+- [x] B-2 Backend (SKIP)
+- [x] B-3 (integration test)
+- [x] B-4 Wiring
+- [x] B-5 Verify
 - [ ] B-6 Review
 
 CI/CD:
