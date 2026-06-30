@@ -43,11 +43,11 @@ TEST:
 - [ ] T-2 Unit
 - [ ] T-3 Contract
 - [ ] T-4 Integration
-- [ ] T-5 E2E
-- [ ] T-6 Layout
-- [ ] T-7 Perf
-- [ ] T-8 Security
-- [ ] T-9 Journey
+- [x] T-5 E2E (CI + live two-client F-1 closed)
+- [x] T-6 Layout
+- [x] T-7 Perf
+- [x] T-8 Security (IDOR ratified)
+- [x] T-9 Journey + gate APPROVED
 
 VERIFY:
 - [ ] V-1 Independent reviews (Karen + jenny, parallel)
