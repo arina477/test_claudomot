@@ -107,7 +107,7 @@ export function AppShell({ connectionState = 'online' }: Props) {
        * We hide it with CSS rather than unmounting so the socket subscription
        * stays active when the user resizes their viewport.
        */}
-      <div className="hidden xl:flex" style={{ flexShrink: 0 }}>
+      <div className="hidden lg:flex" style={{ flexShrink: 0 }}>
         <MemberListPanel serverId={selectedId} />
       </div>
 
