@@ -17,7 +17,6 @@ import { InviteShareModal } from './InviteShareModal';
 import { useProfile } from './ProfileContext';
 import { useServers } from './ServerContext';
 import { ServerRolesPage } from './ServerRolesPage';
-import { useMentionBadge } from './useMentionBadge';
 import {
   CaretDownIcon,
   GearIcon,
@@ -28,6 +27,7 @@ import {
   SpinnerIcon,
   UserAddIcon,
 } from './icons';
+import { useMentionBadge } from './useMentionBadge';
 
 /** Derive 2-character initials from a display name or username. */
 function getInitials(displayName: string | null, username: string | null): string {

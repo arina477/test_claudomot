@@ -178,8 +178,7 @@ function renderBodyWithMentions(
       const ref = mentionMap.get(raw.toLowerCase());
       if (ref) {
         const isSelf =
-          viewerUsername !== null &&
-          ref.username.toLowerCase() === viewerUsername.toLowerCase();
+          viewerUsername !== null && ref.username.toLowerCase() === viewerUsername.toLowerCase();
         return (
           <MentionPill
             // biome-ignore lint/suspicious/noArrayIndexKey: static split, stable
@@ -552,7 +551,14 @@ type SentRowProps = {
   onReaction: ((messageId: string, emoji: string) => void) | null;
 };
 
-function SentRow({ msg, currentUserId, viewerUsername, onEdit, onDelete, onReaction }: SentRowProps) {
+function SentRow({
+  msg,
+  currentUserId,
+  viewerUsername,
+  onEdit,
+  onDelete,
+  onReaction,
+}: SentRowProps) {
   const abbr = initials(msg.authorId);
   const isOwn = !!currentUserId && msg.authorId === currentUserId;
   const [rowState, setRowState] = useState<'normal' | 'editing' | 'deleting'>('normal');
