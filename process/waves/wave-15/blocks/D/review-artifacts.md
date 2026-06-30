@@ -3,14 +3,14 @@
 **Block:** D (Design)
 **Wave topic:** M3 @mentions UI — composer autocomplete dropdown + mention-pill + unread-mention affordance
 **Block exit gate:** D-3
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file(s) | Status | Notes |
 |---|---|---|---|
 | D-1 | stages/D-1-brief/{mention-autocomplete,mention-pill,unread-mention}-brief.md | done | 3 briefs, mask PASS |
 | D-2 | stages/D-2-variants/* | done | 3 surfaces composed onto staging; checkpoint skipped (automatic) |
-| D-3 | stages/D-3-review-and-adopt/* | pending | dual-reviewer + head-designer gate + canonicalize |
+| D-3 | stages/D-3-review-and-adopt/* | done | A+B APPROVE (iter2); head-designer APPROVED; canonicalized |
 
 ## Block-specific context
 - **Wave topic:** @-autocomplete dropdown (composer), inline mention-pill (message rows, viewer-targeted distinct), unread-mention badge/affordance
@@ -24,3 +24,12 @@ none
 
 ## Gate verdict log
 <appended by head-designer at D-3>
+
+## Block exit handoff
+```yaml
+design_block_status: complete
+gaps_resolved: [mention-autocomplete, mention-pill, unread-mention]
+gaps_deferred: []
+design_system_updates: []
+canonicalized_at: 2026-06-30T08:30:00Z
+```
