@@ -17,10 +17,10 @@
  *   Own optimistic actions are reconciled against incoming events to avoid double-flip.
  */
 
-import type { MessageResponse } from '@studyhall/shared';
+import type { MessageResponse, ValidatedAttachment } from '@studyhall/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../auth/api';
-import type { DisplayMessage, OptimisticMessage } from './MessageList';
+import type { DisplayMessage, OptimisticMessage, StagedAttachmentPreview } from './MessageList';
 import {
   applyReactionEvent,
   joinChannel,
@@ -41,7 +41,11 @@ type UseMessagesResult = {
   errorInitial: boolean;
   hasOlderMessages: boolean;
   loadOlder: () => void;
-  sendMessage: (content: string) => void;
+  sendMessage: (
+    content: string,
+    attachments?: ValidatedAttachment[],
+    stagedPreviews?: StagedAttachmentPreview[],
+  ) => void;
   retryMessage: (idempotencyKey: string) => void;
   editMessage: (messageId: string, content: string) => void;
   deleteMessage: (messageId: string) => void;
@@ -262,15 +266,30 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
 
   // ── Optimistic send ────────────────────────────────────────────────────────
   const sendMessage = useCallback(
-    (content: string) => {
+    (
+      content: string,
+      attachments?: ValidatedAttachment[],
+      stagedPreviews?: StagedAttachmentPreview[],
+    ) => {
       if (!channelId) return;
       const idempotencyKey = crypto.randomUUID();
       setOptimisticMessages((prev) => [
         ...prev,
-        { idempotencyKey, content, authorDisplay: 'You', state: 'pending' },
+        {
+          idempotencyKey,
+          content,
+          authorDisplay: 'You',
+          state: 'pending',
+          ...(stagedPreviews ? { stagedAttachments: stagedPreviews } : {}),
+          ...(attachments ? { validatedAttachments: attachments } : {}),
+        },
       ]);
       api
-        .sendMessage(channelId, { content, idempotencyKey })
+        .sendMessage(channelId, {
+          content,
+          idempotencyKey,
+          ...(attachments && attachments.length > 0 ? { attachments } : {}),
+        })
         .then((confirmed) => {
           if (!mountedRef.current) return;
           setRealMessages((prev) => {
@@ -302,8 +321,15 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
           m.idempotencyKey === idempotencyKey ? { ...m, state: 'pending' as const } : m,
         ),
       );
+      const retryAttachments = failed.validatedAttachments as ValidatedAttachment[] | undefined;
       api
-        .sendMessage(channelId, { content: failed.content, idempotencyKey })
+        .sendMessage(channelId, {
+          content: failed.content,
+          idempotencyKey,
+          ...(retryAttachments && retryAttachments.length > 0
+            ? { attachments: retryAttachments }
+            : {}),
+        })
         .then((confirmed) => {
           if (!mountedRef.current) return;
           setRealMessages((prev) => {

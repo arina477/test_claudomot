@@ -341,6 +341,116 @@ describe('MessageList', () => {
     fireEvent.click(retryBtn);
     expect(onRetry).toHaveBeenCalledWith('ikey-2');
   });
+
+  // ── Wave-19 M3 attachment render tests ─────────────────────────────────────
+
+  it('renders file-chip for a non-image attachment', () => {
+    const msgs: DisplayMessage[] = [
+      {
+        kind: 'real',
+        ...makeMsg({
+          content: 'Check this out',
+          attachments: [
+            {
+              id: 'att-1',
+              filename: 'hw1.pdf',
+              contentType: 'application/pdf',
+              sizeBytes: 1234567,
+              url: 'https://example.com/hw1.pdf',
+            },
+          ],
+        }),
+      },
+    ];
+    render(
+      <MessageList
+        messages={msgs}
+        loadingInitial={false}
+        loadingOlder={false}
+        errorInitial={false}
+        hasOlderMessages={false}
+        onLoadOlder={vi.fn()}
+        onRetry={vi.fn()}
+      />,
+    );
+    // File chip shows filename
+    expect(screen.getByText('hw1.pdf')).toBeInTheDocument();
+    // It's a download link
+    const chip = document.querySelector('a[download]') as HTMLAnchorElement;
+    expect(chip).toBeTruthy();
+    expect(chip.href).toContain('https://example.com/hw1.pdf');
+  });
+
+  it('renders inline image preview for an image attachment', () => {
+    const msgs: DisplayMessage[] = [
+      {
+        kind: 'real',
+        ...makeMsg({
+          content: 'Look at this image',
+          attachments: [
+            {
+              id: 'att-2',
+              filename: 'diagram.png',
+              contentType: 'image/png',
+              sizeBytes: 200000,
+              url: 'https://example.com/diagram.png',
+            },
+          ],
+        }),
+      },
+    ];
+    render(
+      <MessageList
+        messages={msgs}
+        loadingInitial={false}
+        loadingOlder={false}
+        errorInitial={false}
+        hasOlderMessages={false}
+        onLoadOlder={vi.fn()}
+        onRetry={vi.fn()}
+      />,
+    );
+    // Inline img element with the attachment URL
+    const img = document.querySelector('img[src="https://example.com/diagram.png"]') as HTMLImageElement;
+    expect(img).toBeTruthy();
+    expect(img.alt).toBe('diagram.png');
+  });
+
+  it('tombstone renders no attachments even when present in data', () => {
+    const msgs: DisplayMessage[] = [
+      {
+        kind: 'real',
+        ...makeMsg({
+          isDeleted: true,
+          content: null,
+          attachments: [
+            {
+              id: 'att-del',
+              filename: 'secret.pdf',
+              contentType: 'application/pdf',
+              sizeBytes: 500,
+              url: 'https://example.com/secret.pdf',
+            },
+          ],
+        }),
+      },
+    ];
+    render(
+      <MessageList
+        messages={msgs}
+        loadingInitial={false}
+        loadingOlder={false}
+        errorInitial={false}
+        hasOlderMessages={false}
+        onLoadOlder={vi.fn()}
+        onRetry={vi.fn()}
+      />,
+    );
+    // Tombstone text
+    expect(screen.getByText(/This message was deleted/i)).toBeInTheDocument();
+    // No attachment filename visible
+    expect(screen.queryByText('secret.pdf')).not.toBeInTheDocument();
+  });
 });
 
 // ── MessageComposer tests ─────────────────────────────────────────────────────
@@ -366,7 +476,9 @@ describe('MessageComposer', () => {
     const ta = screen.getByTestId('composer-input') as HTMLTextAreaElement;
     await user.type(ta, 'Test message');
     await user.keyboard('{Enter}');
-    expect(onSend).toHaveBeenCalledWith('Test message');
+    // Wave-19: onSend signature is (content, attachments?, previews?).
+    // When no attachments are staged, the latter two args are undefined.
+    expect(onSend).toHaveBeenCalledWith('Test message', undefined, undefined);
     expect(ta.value).toBe('');
   });
 
@@ -377,7 +489,8 @@ describe('MessageComposer', () => {
     const ta = screen.getByTestId('composer-input');
     await user.type(ta, 'Click send');
     await user.click(screen.getByTestId('send-button'));
-    expect(onSend).toHaveBeenCalledWith('Click send');
+    // Wave-19: onSend signature is (content, attachments?, previews?).
+    expect(onSend).toHaveBeenCalledWith('Click send', undefined, undefined);
   });
 
   it('Shift+Enter inserts newline instead of sending', async () => {
@@ -401,6 +514,57 @@ describe('MessageComposer', () => {
     await user.type(ta, '   ');
     await user.keyboard('{Enter}');
     expect(onSend).not.toHaveBeenCalled();
+  });
+
+  // ── Wave-19 M3 attachment guard tests ──────────────────────────────────────
+
+  it('rejects a file that is too large (>10MB) — shows error tile, does not enable send', () => {
+    const onSend = vi.fn();
+    render(<MessageComposer onSend={onSend} />);
+
+    const input = document.querySelector('[data-testid="file-input"]') as HTMLInputElement;
+    expect(input).toBeTruthy();
+
+    // 11 MB image — exceeds the 10 MB limit
+    const bigFile = new File(['x'.repeat(11 * 1024 * 1024)], 'big.png', { type: 'image/png' });
+    Object.defineProperty(bigFile, 'size', { value: 11 * 1024 * 1024 });
+    fireEvent.change(input, { target: { files: [bigFile] } });
+
+    // Strip should appear
+    expect(screen.getByTestId('staged-attachment-strip')).toBeInTheDocument();
+    // Error tile: role=alert
+    const alert = document.querySelector('[role="alert"]');
+    expect(alert).toBeTruthy();
+    // Send button should still be disabled (no text + error tile)
+    expect(screen.getByTestId('send-button')).toBeDisabled();
+  });
+
+  it('rejects a file with a disallowed content-type — shows error tile', () => {
+    const onSend = vi.fn();
+    render(<MessageComposer onSend={onSend} />);
+
+    const input = document.querySelector('[data-testid="file-input"]') as HTMLInputElement;
+    const badFile = new File(['data'], 'video.mp4', { type: 'video/mp4' });
+    fireEvent.change(input, { target: { files: [badFile] } });
+
+    expect(screen.getByTestId('staged-attachment-strip')).toBeInTheDocument();
+    const alert = document.querySelector('[role="alert"]');
+    expect(alert).toBeTruthy();
+  });
+
+  it('accepts a valid PDF attachment and shows it in the staged strip', () => {
+    const onSend = vi.fn();
+    render(<MessageComposer onSend={onSend} />);
+
+    const input = document.querySelector('[data-testid="file-input"]') as HTMLInputElement;
+    const pdf = new File(['%PDF'], 'notes.pdf', { type: 'application/pdf' });
+    fireEvent.change(input, { target: { files: [pdf] } });
+
+    const strip = screen.getByTestId('staged-attachment-strip');
+    expect(strip).toBeInTheDocument();
+    expect(strip.textContent).toContain('notes.pdf');
+    // No error alert
+    expect(document.querySelector('[role="alert"]')).toBeNull();
   });
 });
 
