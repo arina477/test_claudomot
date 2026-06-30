@@ -6,9 +6,9 @@
 | B-0 | stages/B-0-branch-and-schema.md | done | branch + claim; no schema |
 | B-1 | stages/B-1-contracts.md | SKIP | no new shared contract (reuse connectionState union + MessagesAfterResponse) |
 | B-2 | stages/B-2-backend.md | SKIP | frontend-only, no server change |
-| B-3 | stages/B-3-frontend.md | pending | useConnectionState + AppHome wiring + catch-up loop + tests |
-| B-4 | stages/B-4-wiring.md | pending | typecheck + build + boot-probe |
-| B-5 | stages/B-5-verify.md | pending | |
+| B-3 | stages/B-3-frontend.md | done | useConnectionState + AppHome wiring + catch-up loop + tests |
+| B-4 | stages/B-4-wiring.md | done | typecheck + build + boot-probe |
+| B-5 | stages/B-5-verify.md | done | |
 | B-6 | stages/B-6-review.md | pending | head-builder gate |
 ## Context
 - Branch: wave-21-m4-offline-ux | claimed: [c1dbee64, 94e41695, 2fe6b517]. Frontend-only, no schema/server/dep.
