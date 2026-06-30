@@ -37,15 +37,15 @@ CI/CD:
 - [ ] C-3 Canary
 
 TEST:
-- [ ] T-1 Static
-- [ ] T-2 Unit
-- [ ] T-3 Contract
-- [ ] T-4 Integration
-- [ ] T-5 E2E
-- [ ] T-6 Layout
-- [ ] T-7 Perf
-- [ ] T-8 Security
-- [ ] T-9 Journey
+- [x] T-1 Static (CI-verified: lint 0-err + typecheck green)
+- [x] T-2 Unit (CI-verified: 292 unit pass; unchanged by wave)
+- [x] T-3 Contract (SKIP — no contract surface)
+- [x] T-4 Integration (THE layer; real-PG rollback test RATIFIED real, 3/3 CI)
+- [x] T-5 E2E (SKIP — no UI/browser flow change)
+- [x] T-6 Layout (SKIP — non-UI wave)
+- [x] T-7 Perf (SKIP — not heavy)
+- [x] T-8 Security (light — no auth surface; credential hygiene confirmed)
+- [x] T-9 Journey (APPROVED; journey map regen committed 0150b9a)
 
 VERIFY:
 - [ ] V-1 Independent reviews (Karen + jenny, parallel)
