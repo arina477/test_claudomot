@@ -4,8 +4,8 @@
 | Stage | Deliverable | Status |
 |---|---|---|
 | B-0 | stages/B-0-branch-and-schema.md | done | branch + claim; NO server schema (Dexie client schema in B-4) |
-| B-1 | stages/B-1-contracts.md | pending | forward-list/after-cursor + OutboxItem/cached types |
-| B-2 | stages/B-2-backend.md | pending | listMessagesAfter forward cursor + idempotency-lock test |
+| B-1 | stages/B-1-contracts.md | done | forward-list/after-cursor + OutboxItem/cached types |
+| B-2 | stages/B-2-backend.md | done | listMessagesAfter forward cursor + idempotency-lock test |
 | B-3 | stages/B-3-frontend.md | pending | Dexie store (cache+outbox) + outbox integration + composer offline + fake-indexeddb tests |
 | B-4 | stages/B-4-wiring.md | pending | deps dexie+fake-indexeddb + vitest fake-indexeddb setup |
 | B-5 | stages/B-5-verify.md | pending | |
