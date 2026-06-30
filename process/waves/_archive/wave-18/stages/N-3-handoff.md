@@ -5,8 +5,8 @@ n_stage_verdict: COMPLETE
 verdict_evidence:
   - "next wave: 19"
   - "next wave checklist: process/waves/wave-19/checklist.md"
-  - "archive commit: <set after git mv commit>"
-  - "wave-18 row closed: status running→ok (UPDATE waves)"
+  - "archive commit: 13e672a"
+  - "wave-18 row closed: status running->ok (UPDATE waves; ended_at trigger-set)"
 prev_wave: 18
 next_wave: 19
 loop_state: ready
