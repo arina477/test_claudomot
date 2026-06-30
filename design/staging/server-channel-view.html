@@ -126,10 +126,14 @@
             <h2 class="text-xs font-semibold text-zinc-500 uppercase tracking-widest">Coursework</h2>
           </div>
           <div class="space-y-[2px]">
-            <!-- ADDITION 3: UNREAD-MENTION BADGE ON A CHANNEL -->
+            <!-- ADDITION/FIX 3: UNREAD-MENTION BADGE ON A CHANNEL (BEFORE VIEW) -->
             <a href="#" class="flex items-center px-2 py-1.5 rounded text-zinc-100 font-medium hover:bg-study-800 transition-all" aria-label="general channel, 2 unread mentions">
-              <i class="ph ph-hash text-zinc-300 mr-2 text-lg"></i><span class="text-[14px]">general</span>
+              <i class="ph ph-hash text-zinc-300 mr-2 text-lg"></i><span class="text-[14px]">general (unread)</span>
               <span class="ml-auto inline-flex items-center justify-center h-[18px] min-w-[18px] px-1 bg-emerald-500 rounded-full text-[11px] font-bold text-study-950 shadow-[inset_0_-1px_0_rgba(0,0,0,0.1)]">2</span>
+            </a>
+            <!-- FIX 3: POST-VIEW STATE (BADGE CLEARED) -->
+            <a href="#" class="flex items-center px-2 py-1.5 rounded text-zinc-400 hover:bg-study-800 transition-all hover:text-zinc-200" aria-label="general channel, read state">
+              <i class="ph ph-hash text-zinc-500 mr-2 text-lg"></i><span class="text-[14px]">general (read)</span>
             </a>
             <a href="#" class="flex items-center px-2 py-1.5 rounded bg-study-700/50 text-zinc-100 border border-white/5" aria-current="page">
               <i class="ph ph-hash text-zinc-300 mr-2 text-lg"></i><span class="text-[14px] font-medium">questions</span>
@@ -191,7 +195,6 @@
               <span class="font-medium text-zinc-100 text-sm">Mia Wong</span>
               <span class="text-xs text-zinc-400 font-medium tracking-wide">10:42 AM</span>
             </div>
-            <!-- ADDITION 2: OTHER-MENTION PILL (Muted chip) -->
             <p class="text-sm leading-relaxed text-zinc-200 mt-0.5">
               Did <span class="inline-flex items-center px-1.5 py-0.5 mx-[1px] -my-[1px] align-baseline rounded-md bg-study-700 text-zinc-100 font-medium text-[14px]">@David C.</span> mention if red-black trees are on the midterm? The syllabus is vague on how deep we go into balancing.
             </p>
@@ -215,8 +218,8 @@
           </div>
         </article>
 
-        <!-- 2. Row: David C. / Self-mention pill  -->
-        <article role="article" class="group px-4 py-2 flex gap-3.5 hover:bg-study-700/30 transition-colors rounded-md">
+        <!-- 2. Row: David C. / Self-mention pill (FIX 4: Added msg-row, relative, and row-actions) -->
+        <article role="article" class="msg-row group relative px-4 py-2 flex gap-3.5 hover:bg-study-700/30 transition-colors rounded-md">
           <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=64&q=80" alt="David C." class="w-10 h-10 rounded-full object-cover shrink-0 mt-0.5">
           <div class="flex flex-col w-full min-w-0">
             <div class="flex items-baseline gap-2">
@@ -228,6 +231,9 @@
               <span class="inline-flex items-center px-1.5 py-0.5 mx-[1px] -my-[1px] align-baseline rounded-md bg-emerald-500/10 text-emerald-300 font-medium text-[14px] ring-1 ring-emerald-500/30">@Elias</span>
               have you started Pset 4? Stuck on problem 2 — the graph traversal keeps giving me memory-limit-exceeded.
             </p>
+          </div>
+          <div class="row-actions absolute -top-3 right-3 flex items-center bg-study-700 border border-study-border rounded-md shadow-[0_8px_24px_rgba(0,0,0,0.5)] overflow-hidden">
+            <button type="button" aria-label="Add reaction to David C's message" aria-haspopup="true" class="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-study-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70"><i class="ph ph-smiley text-[16px]"></i></button>
           </div>
         </article>
 
@@ -358,40 +364,71 @@
       <!-- ============ COMPOSER ============ -->
       <div class="px-5 pb-5 pt-2 shrink-0 relative flex flex-col justify-end">
         
-        <!-- ADDITION 1: MENTION AUTOCOMPLETE POPOVER -->
-        <div class="absolute bottom-[calc(100%+4px)] left-5 w-[280px] max-h-[240px] flex flex-col bg-study-800 border border-white/10 shadow-[0_8px_24px_rgba(0,0,0,0.5)] rounded-lg overflow-hidden z-20">
-          <div class="px-3 py-2 border-b border-study-border text-[11px] font-semibold text-zinc-400 bg-study-900 shadow-sm shrink-0 uppercase tracking-widest">
-            Members matching "@dav"
+        <!-- MENTION AUTOCOMPLETE DEMO POPOVERS (Mapped as Flex container for side-by-side view) -->
+        <div class="absolute bottom-[calc(100%+4px)] left-5 flex gap-4 z-20 pointer-events-none w-[calc(100%-40px)] flex-wrap lg:flex-nowrap">
+          
+          <!-- STATE 1: MENTION RESULTS (Pointer events auto to allow interaction) -->
+          <div class="w-[280px] max-h-[240px] flex flex-col bg-study-800 border border-white/10 shadow-[0_8px_24px_rgba(0,0,0,0.5)] rounded-lg overflow-hidden shrink-0 pointer-events-auto">
+            <div class="px-3 py-2 border-b border-study-border text-[11px] font-semibold text-zinc-400 bg-study-900 shadow-sm shrink-0 uppercase tracking-widest">
+              Members matching "@dav"
+            </div>
+            <ul class="overflow-y-auto w-full flex-1 p-1.5 space-y-0.5" role="listbox">
+              <li role="option" aria-selected="true" class="flex items-center gap-2.5 px-2 py-1.5 rounded-md bg-study-700 ring-2 ring-emerald-500/50 cursor-pointer">
+                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=64&q=80" alt="David C." class="w-6 h-6 rounded-full object-cover">
+                <div class="flex flex-col justify-center overflow-hidden">
+                  <span class="text-sm font-medium text-zinc-100 truncate leading-tight">David C.</span>
+                  <span class="text-[11px] text-zinc-400 truncate leading-tight">@davidc</span>
+                </div>
+              </li>
+              <li role="option" aria-selected="false" class="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-study-700/50 cursor-pointer transition-colors">
+                <div class="relative shrink-0">
+                  <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=64&q=80" alt="Davis Lee" class="w-6 h-6 rounded-full object-cover">
+                  <div class="absolute -bottom-[1px] -right-[1px] w-2.5 h-2.5 bg-study-800 rounded-full flex items-center justify-center pointer-events-none">
+                    <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
+                  </div>
+                </div>
+                <div class="flex flex-col justify-center overflow-hidden">
+                  <span class="text-sm font-medium text-zinc-200 truncate leading-tight">Davis Lee</span>
+                  <span class="text-[11px] text-zinc-400 truncate leading-tight">@davislee</span>
+                </div>
+              </li>
+            </ul>
           </div>
-          <ul class="overflow-y-auto w-full flex-1 p-1.5 space-y-0.5" role="listbox">
-            <!-- Active Row -->
-            <li role="option" aria-selected="true" class="flex items-center gap-2.5 px-2 py-1.5 rounded-md bg-study-700 ring-2 ring-emerald-500/50 cursor-pointer">
-              <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=64&q=80" alt="David C." class="w-6 h-6 rounded-full object-cover">
-              <div class="flex flex-col justify-center overflow-hidden">
-                <span class="text-sm font-medium text-zinc-100 truncate leading-tight">David C.</span>
-                <span class="text-[11px] text-zinc-400 truncate leading-tight">@davidc</span>
-              </div>
-            </li>
-            <!-- Default Row -->
-            <li role="option" aria-selected="false" class="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-study-700/50 cursor-pointer transition-colors">
-              <div class="relative shrink-0">
-                <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=64&q=80" alt="Davis Lee" class="w-6 h-6 rounded-full object-cover">
-                <div class="absolute -bottom-[1px] -right-[1px] w-2.5 h-2.5 bg-study-800 rounded-full flex items-center justify-center pointer-events-none">
-                  <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
+
+          <!-- STATE 2: LOADING SKELETON (FIX 2) -->
+          <div class="w-[280px] flex flex-col bg-study-800 border border-white/10 shadow-[0_8px_24px_rgba(0,0,0,0.5)] rounded-lg overflow-hidden shrink-0 pointer-events-auto">
+            <div class="px-3 py-2 border-b border-study-border text-[11px] font-semibold text-zinc-400 bg-study-900 shadow-sm shrink-0 uppercase tracking-widest flex items-center gap-1.5">
+              Searching <span class="typing-dot bg-zinc-500 w-[3px] h-[3px] rounded-full inline-block"></span><span class="typing-dot bg-zinc-500 w-[3px] h-[3px] rounded-full inline-block" style="animation-delay: 150ms"></span><span class="typing-dot bg-zinc-500 w-[3px] h-[3px] rounded-full inline-block" style="animation-delay: 300ms"></span>
+            </div>
+            <div class="p-2 space-y-1 bg-study-800 flex-1">
+              <div class="flex items-center gap-2.5 px-2 py-2 animate-pulse">
+                <div class="w-6 h-6 rounded-full bg-study-700/80 shrink-0"></div>
+                <div class="flex flex-col gap-1.5 flex-1">
+                  <div class="h-[10px] bg-study-700/80 rounded w-1/2"></div>
+                  <div class="h-[8px] bg-study-700/50 rounded w-1/3"></div>
                 </div>
               </div>
-              <div class="flex flex-col justify-center overflow-hidden">
-                <span class="text-sm font-medium text-zinc-200 truncate leading-tight">Davis Lee</span>
-                <span class="text-[11px] text-zinc-400 truncate leading-tight">@davislee</span>
+              <div class="flex items-center gap-2.5 px-2 py-2 animate-pulse" style="animation-delay: 100ms">
+                <div class="w-6 h-6 rounded-full bg-study-700/80 shrink-0"></div>
+                <div class="flex flex-col gap-1.5 flex-1">
+                  <div class="h-[10px] bg-study-700/80 rounded w-2/3"></div>
+                  <div class="h-[8px] bg-study-700/50 rounded w-1/4"></div>
+                </div>
               </div>
-            </li>
-          </ul>
-          <!-- Commented empty state
-          <div class="p-6 flex flex-col items-center justify-center text-center">
-            <i class="ph ph-magnifying-glass text-2xl text-zinc-500 mb-2"></i>
-            <p class="text-sm text-zinc-400 font-medium">No members match "@xyz"</p>
+            </div>
           </div>
-          -->
+
+          <!-- STATE 3: EMPTY RESULTS (FIX 1) -->
+          <div class="w-[280px] flex flex-col bg-study-800 border border-white/10 shadow-[0_8px_24px_rgba(0,0,0,0.5)] rounded-lg overflow-hidden shrink-0 pointer-events-auto hidden sm:flex">
+            <div class="px-3 py-2 border-b border-study-border text-[11px] font-semibold text-zinc-400 bg-study-900 shadow-sm shrink-0 uppercase tracking-widest">
+              Members matching "@xyz"
+            </div>
+            <div class="flex-1 flex flex-col items-center justify-center text-center py-6 px-4 bg-study-800">
+              <i class="ph ph-magnifying-glass text-[24px] text-zinc-600 mb-2"></i>
+              <p class="text-[13px] text-zinc-500 font-medium">No members match</p>
+            </div>
+          </div>
+
         </div>
 
         <div class="relative w-full h-0 z-10 pointer-events-none" role="status" aria-live="polite">
@@ -407,7 +444,6 @@
 
         <form id="composerForm" class="relative flex items-end bg-study-900 recessed-input border border-study-600/60 rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500/40 focus-within:border-emerald-500/60 transition-shadow">
           <label for="composerInput" class="sr-only">Message #questions</label>
-          <!-- Changed placeholder logic slightly to reflect autocomplete demo context -->
           <textarea id="composerInput" rows="1"
             class="w-full bg-transparent text-base text-zinc-100 placeholder-zinc-300 py-3.5 px-4 outline-none resize-none max-h-[40dvh] overflow-y-auto min-h-[48px]"
           >Yes @dav</textarea>
