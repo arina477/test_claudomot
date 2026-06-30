@@ -66,7 +66,7 @@ verdict_evidence:
   - "CHANGELOG.md:46 (1 bullet, Added, #33)"
   - "command-center/product/product-decisions.md:255-266 (floor-exemption precedent extension)"
   - "milestones row UPDATE: NONE (M4 eb2a1688 census 7 done / 6 open → open_count≠0, mechanical non-close; stays in_progress)"
-  - "commit: <COMMIT_SHA>"
+  - "commit: 42123c9533d035df78eb6ae5bc453763e023308a (pushed to main)"
 changelog_entry_added: true
 roadmap_milestones_progressed: []
 roadmap_skip_reason: "M4 (eb2a1688) has 6 open children (re-homed M3 tech-debt) → open_count=6≠0 → mechanical closure UPDATE does not fire at L-1. Closure-eligibility RECORDED for N-1 (all ## Scope shipped + success metric met)."
