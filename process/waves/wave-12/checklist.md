@@ -26,9 +26,9 @@ PRODUCT:
 - [ ] P-4 Gate
 
 DESIGN (skip block if non-UI wave):
-- [ ] D-1 Brief
-- [ ] D-2 Variants (with bounded iteration)
-- [ ] D-3 Review & adopt
+- [x] D-1 Brief — message-ui brief APPROVED (job named, 9 states scoped, tokens cited, non-goals §10)
+- [x] D-2 Variants (with bounded iteration) — V1 composed; 3 refine iterations (cap 3)
+- [x] D-3 Review & adopt — APPROVED (dual-reviewer APPROVE/APPROVE); canonical: design/server-channel-view.html; design_system_updates: []
 
 BUILD:
 - [ ] B-0 Branch & schema
