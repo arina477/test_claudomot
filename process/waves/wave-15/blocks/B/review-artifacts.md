@@ -11,7 +11,7 @@
 | B-0 | stages/B-0-branch-and-schema.md | done | branch + 0007 message_mentions (drizzle-gen) |
 | B-1 | stages/B-1-contracts.md | done | mention DTO (shared typecheck clean) |
 | B-2 | stages/B-2-backend.md | done | parser+resolve/persist+edit-diff+my-mentions(authz)+realtime; 276 tests |
-| B-3 | stages/B-3-frontend.md | pending | MentionAutocomplete, mention-pill, unread store/badge |
+| B-3 | stages/B-3-frontend.md | done | autocomplete+pills+unread; username-drift fix at B-4 |
 | B-4 | stages/B-4-wiring.md | pending | |
 | B-5 | stages/B-5-verify.md | pending | |
 | B-6 | stages/B-6-review.md | pending | |
