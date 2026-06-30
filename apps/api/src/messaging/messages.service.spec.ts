@@ -2431,43 +2431,21 @@ describe('MessagesService.listMessagesAfter — wave-20 M4 forward catch-up curs
     expect(mockSelect).not.toHaveBeenCalled();
   });
 
-  it('non-member → ForbiddenException 403 (guard rejects; service canViewChannelById enforcement)', async () => {
-    // The ChannelMessageGuard is a decorator on the controller route — it calls
-    // rbacService.canViewChannelById before the controller reaches the service.
-    // For service-layer coverage: we verify listMessagesAfter itself does NOT
-    // bypass the membership check when called from a service test context where
-    // the guard is not present — the 403 is the controller+guard's responsibility.
-    //
-    // However: to ensure the non-member rejection is exercised end-to-end, we
-    // use a dedicated service instance wired with a canViewChannelById=false rbac
-    // mock and simulate the guard calling canViewChannelById before the service.
-    const rbacNonMember = makeRbacServiceWithViewChannel(false);
-    const nonMemberService = new MessagesService(
-      // biome-ignore lint/suspicious/noExplicitAny: test mock
-      eventEmitter as any,
-      // biome-ignore lint/suspicious/noExplicitAny: test mock
-      rbacNonMember as any,
-      // biome-ignore lint/suspicious/noExplicitAny: test mock
-      makeFilesService() as any,
-    );
-
-    // Simulate: guard calls canViewChannelById → false → throws ForbiddenException
-    // (the guard throws before listMessagesAfter is reached in production)
-    const canView = await rbacNonMember.canViewChannelById(NON_MEMBER_ID, CHANNEL_ID);
-    expect(canView).toBe(false);
-
-    // Guard would throw ForbiddenException — replicate the guard's behaviour
-    const { ForbiddenException: Forbidden } = await import('@nestjs/common');
-    if (!canView) {
-      await expect(
-        Promise.reject(new Forbidden('Insufficient permissions to access this channel')),
-      ).rejects.toThrow(Forbidden);
-    }
-
-    // The service itself was NOT called (guard short-circuits)
-    expect(mockSelect).not.toHaveBeenCalled();
-    void nonMemberService; // referenced to satisfy no-unused-vars
-  });
+  // Non-member → 403 coverage note (not a service-layer concern):
+  //
+  // The GET /channels/:channelId/messages handler (both the ?cursor= backward path
+  // and the ?after= forward catch-up path) share a single @Get() handler decorated
+  // with @UseGuards(AuthGuard, ChannelMessageGuard) — see messages.controller.ts.
+  //
+  // ChannelMessageGuard calls rbacService.canViewChannelById() and throws
+  // ForbiddenException when it returns false, BEFORE the controller dispatches to
+  // this service. The real proof lives in:
+  //   apps/api/src/rbac/channel-message.guard.spec.ts
+  //     → "throws ForbiddenException (403) for a non-member on a private channel"
+  //
+  // No service-layer test is required here — listMessagesAfter is never reached
+  // for a non-member; a hand-built Promise.reject() at this layer would be
+  // tautological theater (B-6 fix, wave-20).
 
   it('tombstones excluded (is_deleted=true messages not in result)', async () => {
     // listMessagesAfter filters WHERE is_deleted = false at the query level.
