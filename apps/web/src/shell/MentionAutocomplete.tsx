@@ -115,20 +115,23 @@ export function MentionAutocomplete({ serverId, query, onSelect, onDismiss }: Pr
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serverId]);
 
-  // Filter by query — prefix match on username OR displayName, case-insensitive.
-  const filtered: ServerMember[] = loadStatus === 'loaded'
-    ? allMembers.filter((m) => {
-        if (!query) return true;
-        const q = query.toLowerCase();
-        return (
-          m.displayName.toLowerCase().startsWith(q) ||
-          // ServerMember has displayName but not a separate username field.
-          // The username is embedded in displayName at the data layer for this project.
-          // We also do a contains-search as a secondary pass.
-          m.displayName.toLowerCase().includes(q)
-        );
-      })
+  // Only members with a non-null username are mentionable — the resolver
+  // matches users.username (IS NOT NULL guard). Members without a username
+  // are excluded so the autocomplete never produces an unresolvable @token.
+  const mentionableMembers: ServerMember[] = loadStatus === 'loaded'
+    ? allMembers.filter((m) => m.username !== null)
     : [];
+
+  // Filter by query — prefix match on username (canonical) OR displayName, case-insensitive.
+  const filtered: ServerMember[] = mentionableMembers.filter((m) => {
+    if (!query) return true;
+    const q = query.toLowerCase();
+    // m.username is non-null here (filtered above)
+    return (
+      (m.username as string).toLowerCase().startsWith(q) ||
+      m.displayName.toLowerCase().includes(q)
+    );
+  });
 
   // Clamp activeIndex when filtered list shrinks
   const safeActive = filtered.length > 0 ? Math.min(activeIndex, filtered.length - 1) : 0;
@@ -152,10 +155,11 @@ export function MentionAutocomplete({ serverId, query, onSelect, onDismiss }: Pr
 
   const handleSelect = useCallback(
     (member: ServerMember) => {
-      // Use displayName as the @mention text since ServerMember doesn't expose
-      // a separate username field — strip spaces for a valid @handle.
-      const username = member.displayName.replace(/\s+/g, '');
-      onSelect({ username });
+      // Use member.username as the canonical @-token — this is the value that
+      // resolveMentions matches against users.username in the database.
+      // Members with null username are excluded from the filtered list before
+      // this callback is ever reachable, so the non-null cast is safe.
+      onSelect({ username: member.username as string });
     },
     [onSelect],
   );
@@ -314,7 +318,7 @@ export function MentionAutocomplete({ serverId, query, onSelect, onDismiss }: Pr
                     className="text-[11px] truncate leading-tight"
                     style={{ color: 'rgba(255,255,255,0.40)' }}
                   >
-                    @{member.displayName.replace(/\s+/g, '').toLowerCase()}
+                    @{member.username}
                   </span>
                 </div>
               </li>

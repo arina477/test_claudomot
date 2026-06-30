@@ -238,6 +238,7 @@ export class ServersService {
         displayName: users.display_name,
         email: users.email,
         avatarUrl: users.avatar_url,
+        username: users.username,
       })
       .from(server_members)
       .innerJoin(users, eq(users.id, server_members.user_id))
@@ -247,6 +248,7 @@ export class ServersService {
       userId: r.userId,
       displayName: r.displayName ?? r.email.split('@')[0] ?? r.userId,
       avatarUrl: r.avatarUrl ?? null,
+      username: r.username ?? null,
     }));
   }
 

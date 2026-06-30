@@ -126,6 +126,8 @@ vi.mock('../auth/api', () => ({
     editMessage: vi.fn(),
     deleteMessage: vi.fn(),
     toggleReaction: vi.fn(),
+    getServerMembers: vi.fn(),
+    getMyMentions: vi.fn().mockResolvedValue({ items: [], nextCursor: null }),
     getProfile: vi.fn().mockReturnValue(new Promise(() => {})),
     getServers: vi.fn().mockReturnValue(new Promise(() => {})),
     getServerDetail: vi.fn().mockReturnValue(new Promise(() => {})),
@@ -140,11 +142,13 @@ const mockApi = api as unknown as {
   editMessage: ReturnType<typeof vi.fn>;
   deleteMessage: ReturnType<typeof vi.fn>;
   toggleReaction: ReturnType<typeof vi.fn>;
+  getServerMembers: ReturnType<typeof vi.fn>;
 };
 
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
 
 import { MainColumn } from './MainColumn';
+import { MentionAutocomplete } from './MentionAutocomplete';
 import { MessageComposer } from './MessageComposer';
 import { MessageList } from './MessageList';
 import type { DisplayMessage } from './MessageList';
@@ -931,5 +935,107 @@ describe('MessageList — delete message UI', () => {
     expect(screen.getByText('Keep me')).toBeInTheDocument();
     expect(screen.queryByTestId('delete-confirm-btn')).not.toBeInTheDocument();
     expect(onDelete).not.toHaveBeenCalled();
+  });
+});
+
+// ── MentionAutocomplete — wave-15 B-4 username threading ─────────────────────
+//
+// These tests verify the autocomplete→resolver chain:
+//   1. handleSelect inserts member.username (not displayName-derived text).
+//   2. Members with username=null are excluded from the candidate list.
+//   3. Filter matches on username prefix (not displayName stripping).
+
+describe('MentionAutocomplete — username threading (wave-15 B-4)', () => {
+  const onSelect = vi.fn();
+  const onDismiss = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('inserts member.username (not displayName-derived) when a member is selected', async () => {
+    mockApi.getServerMembers.mockResolvedValue([
+      { userId: 'u1', displayName: 'Mia Wong', avatarUrl: null, username: 'miaw' },
+    ]);
+
+    const user = userEvent.setup();
+    render(
+      <MentionAutocomplete
+        serverId="server-1"
+        query=""
+        onSelect={onSelect}
+        onDismiss={onDismiss}
+      />,
+    );
+
+    // Wait for members to load and the item to appear
+    const item = await screen.findByRole('option', { name: /Mia Wong/i });
+    await user.click(item);
+
+    expect(onSelect).toHaveBeenCalledWith({ username: 'miaw' });
+    // Crucially: NOT 'MiaWong' (the old displayName-strip behaviour)
+    expect(onSelect).not.toHaveBeenCalledWith({ username: 'MiaWong' });
+  });
+
+  it('excludes members with username=null from the candidate list', async () => {
+    mockApi.getServerMembers.mockResolvedValue([
+      { userId: 'u1', displayName: 'Has Username', avatarUrl: null, username: 'hasuser' },
+      { userId: 'u2', displayName: 'No Username', avatarUrl: null, username: null },
+    ]);
+
+    render(
+      <MentionAutocomplete
+        serverId="server-1"
+        query=""
+        onSelect={onSelect}
+        onDismiss={onDismiss}
+      />,
+    );
+
+    await screen.findByRole('option', { name: /Has Username/i });
+    // The null-username member must not appear
+    expect(screen.queryByRole('option', { name: /No Username/i })).not.toBeInTheDocument();
+  });
+
+  it('filters candidates by username prefix, not by displayName stripping', async () => {
+    // username 'miaw' — should match query 'mia', NOT match if only checking displayName strip
+    mockApi.getServerMembers.mockResolvedValue([
+      { userId: 'u1', displayName: 'Mia Wong', avatarUrl: null, username: 'miaw' },
+      { userId: 'u2', displayName: 'Bobby Tables', avatarUrl: null, username: 'btables' },
+    ]);
+
+    render(
+      <MentionAutocomplete
+        serverId="server-1"
+        query="mia"
+        onSelect={onSelect}
+        onDismiss={onDismiss}
+      />,
+    );
+
+    // 'miaw' starts with 'mia' → included
+    await screen.findByRole('option', { name: /Mia Wong/i });
+    // 'btables' does not start with 'mia' and displayName 'Bobby Tables' doesn't include 'mia'
+    expect(screen.queryByRole('option', { name: /Bobby Tables/i })).not.toBeInTheDocument();
+  });
+
+  it('displays the real username handle in the dropdown subtitle', async () => {
+    mockApi.getServerMembers.mockResolvedValue([
+      { userId: 'u1', displayName: 'Mia Wong', avatarUrl: null, username: 'miaw' },
+    ]);
+
+    render(
+      <MentionAutocomplete
+        serverId="server-1"
+        query=""
+        onSelect={onSelect}
+        onDismiss={onDismiss}
+      />,
+    );
+
+    await screen.findByRole('option', { name: /Mia Wong/i });
+    // Subtitle should show @miaw (the real username), not @MiaWong
+    expect(screen.getByText('@miaw')).toBeInTheDocument();
+    expect(screen.queryByText('@MiaWong')).not.toBeInTheDocument();
   });
 });

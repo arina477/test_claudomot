@@ -1080,3 +1080,112 @@ describe('ServersService.revokeInvite', () => {
     await expect(service.getInvitePreview('rev-code-123')).rejects.toThrow(NotFoundException);
   });
 });
+
+// ---------------------------------------------------------------------------
+// ServersService — listServerMembers (wave-15 B-4: username field added)
+// ---------------------------------------------------------------------------
+
+describe('ServersService.listServerMembers', () => {
+  let service: ServersService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    service = new ServersService(makeRbacServiceMock());
+  });
+
+  it('throws ForbiddenException (403) when caller is not a member of the server', async () => {
+    // First select (membership check) returns empty
+    mockSelect.mockReturnValue(makeSelectChain([]));
+
+    await expect(service.listServerMembers('non-member', 'server-1')).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  it('returns members with username included in each record', async () => {
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        // membership check — caller is a member
+        return makeSelectChain([{ id: 'mem-1' }]);
+      }
+      // member roster query
+      return makeSelectChain([
+        {
+          userId: 'user-1',
+          displayName: 'Mia Wong',
+          email: 'mia@example.com',
+          avatarUrl: null,
+          username: 'miaw',
+        },
+        {
+          userId: 'user-2',
+          displayName: null,
+          email: 'jane@example.com',
+          avatarUrl: 'https://example.com/avatar.png',
+          username: 'jane99',
+        },
+      ]);
+    });
+
+    const result = await service.listServerMembers('user-1', 'server-1');
+
+    expect(result).toHaveLength(2);
+    expect(result[0]).toEqual({
+      userId: 'user-1',
+      displayName: 'Mia Wong',
+      avatarUrl: null,
+      username: 'miaw',
+    });
+    expect(result[1]).toEqual({
+      userId: 'user-2',
+      displayName: 'jane',   // falls back to email prefix when display_name is null
+      avatarUrl: 'https://example.com/avatar.png',
+      username: 'jane99',
+    });
+  });
+
+  it('returns username: null for members whose users.username IS NULL', async () => {
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return makeSelectChain([{ id: 'mem-1' }]);
+      return makeSelectChain([
+        {
+          userId: 'user-3',
+          displayName: 'Bob',
+          email: 'bob@example.com',
+          avatarUrl: null,
+          username: null,
+        },
+      ]);
+    });
+
+    const result = await service.listServerMembers('user-1', 'server-1');
+
+    expect(result[0]).toMatchObject({ userId: 'user-3', username: null });
+  });
+
+  it('displayName falls back to email prefix when display_name is null', async () => {
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return makeSelectChain([{ id: 'mem-1' }]);
+      return makeSelectChain([
+        {
+          userId: 'user-4',
+          displayName: null,
+          email: 'someone@studyhall.app',
+          avatarUrl: null,
+          username: 'someone',
+        },
+      ]);
+    });
+
+    const result = await service.listServerMembers('user-1', 'server-1');
+
+    expect(result[0]?.displayName).toBe('someone');
+    expect(result[0]?.username).toBe('someone');
+  });
+});
