@@ -308,9 +308,7 @@ describe('PresenceService — co-member resolution', () => {
   });
 
   it('getServerIdsForUser returns the distinct server_id list from the mocked rows', async () => {
-    mockSelect.mockReturnValue(
-      makeSelectChain([{ server_id: SERVER_A }, { server_id: SERVER_B }]),
-    );
+    mockSelect.mockReturnValue(makeSelectChain([{ server_id: SERVER_A }, { server_id: SERVER_B }]));
 
     const result = await service.getServerIdsForUser(USER_A);
 
