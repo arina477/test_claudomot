@@ -42,6 +42,15 @@ let capturedReactionRemovedHandler:
       reactedByMe: boolean;
     }) => void)
   | null = null;
+let capturedThreadReplyDeletedHandler:
+  | ((p: {
+      parentId: string;
+      channelId: string;
+      replyId: string;
+      replyCount: number;
+      lastReplyAt: string | null;
+    }) => void)
+  | null = null;
 
 vi.mock('./messagingSocket', () => ({
   getMessagingSocket: vi.fn(() => ({
@@ -115,8 +124,24 @@ vi.mock('./messagingSocket', () => ({
       return existing.map((r, i) => (i === idx ? { emoji, count, reactedByMe } : r));
     },
   ),
-  // wave-18 thread event — no-op stub (thread panel not rendered in these tests)
+  // wave-18 thread events
   onThreadReplyCreated: vi.fn(() => () => {}),
+  onThreadReplyDeleted: vi.fn(
+    (
+      handler: (p: {
+        parentId: string;
+        channelId: string;
+        replyId: string;
+        replyCount: number;
+        lastReplyAt: string | null;
+      }) => void,
+    ) => {
+      capturedThreadReplyDeletedHandler = handler;
+      return () => {
+        capturedThreadReplyDeletedHandler = null;
+      };
+    },
+  ),
   getSocketState: vi.fn(() => 'online'),
 }));
 
@@ -389,6 +414,7 @@ describe('MainColumn — optimistic send + real-time dedup', () => {
     capturedMessageDeletedHandler = null;
     capturedReactionAddedHandler = null;
     capturedReactionRemovedHandler = null;
+    capturedThreadReplyDeletedHandler = null;
   });
 
   function renderWithChannel(channelId = 'ch-1', channelName = 'questions') {
@@ -691,6 +717,7 @@ describe('MainColumn — socket message:updated / deleted / reaction events', ()
     capturedMessageDeletedHandler = null;
     capturedReactionAddedHandler = null;
     capturedReactionRemovedHandler = null;
+    capturedThreadReplyDeletedHandler = null;
   });
 
   function renderWithChannel(channelId = 'ch-1', channelName = 'questions') {
@@ -1052,5 +1079,128 @@ describe('MentionAutocomplete — username threading (wave-15 B-4)', () => {
     // Subtitle should show @miaw (the real username), not @MiaWong
     expect(screen.getByText('@miaw')).toBeInTheDocument();
     expect(screen.queryByText('@MiaWong')).not.toBeInTheDocument();
+  });
+});
+
+// ── thread:reply:deleted — affordance update (wave-18 B-6) ───────────────────
+// Tests that the thread:reply:deleted socket event correctly updates the parent
+// message's replyCount/lastReplyAt in the channel message list so the affordance
+// chip hides when replyCount reaches 0.
+
+describe('MainColumn — socket thread:reply:deleted affordance', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedMessageNewHandler = null;
+    capturedMessageUpdatedHandler = null;
+    capturedMessageDeletedHandler = null;
+    capturedReactionAddedHandler = null;
+    capturedReactionRemovedHandler = null;
+    capturedThreadReplyDeletedHandler = null;
+  });
+
+  function renderWithChannel(channelId = 'ch-1', channelName = 'questions') {
+    const ctx = makeCtx({ selectedChannelId: channelId, selectedChannelName: channelName });
+    return render(
+      <ServerContext.Provider value={ctx}>
+        <MainColumn />
+      </ServerContext.Provider>,
+    );
+  }
+
+  it('thread:reply:deleted hides affordance chip when replyCount reaches 0', async () => {
+    // A parent message with one reply — affordance chip visible
+    const parent = makeMsg({
+      content: 'Parent message',
+      channelId: 'ch-1',
+      replyCount: 1,
+      lastReplyAt: new Date().toISOString(),
+    });
+    mockApi.listMessages.mockResolvedValue({ messages: [parent], nextCursor: null });
+    renderWithChannel();
+
+    // Wait for the message to appear
+    await waitFor(() => screen.getByText('Parent message'));
+
+    // Affordance chip must be visible (replyCount=1)
+    expect(screen.getByTestId(`thread-affordance-${parent.id}`)).toBeInTheDocument();
+
+    // Fire the delete event — replyCount drops to 0
+    act(() => {
+      capturedThreadReplyDeletedHandler?.({
+        parentId: parent.id,
+        channelId: 'ch-1',
+        replyId: 'reply-1',
+        replyCount: 0,
+        lastReplyAt: null,
+      });
+    });
+
+    // Affordance chip must now be hidden (replyCount=0)
+    await waitFor(() => {
+      expect(screen.queryByTestId(`thread-affordance-${parent.id}`)).not.toBeInTheDocument();
+    });
+  });
+
+  it('thread:reply:deleted updates affordance chip count when replies remain', async () => {
+    const parent = makeMsg({
+      content: 'Parent message',
+      channelId: 'ch-1',
+      replyCount: 3,
+      lastReplyAt: new Date().toISOString(),
+    });
+    mockApi.listMessages.mockResolvedValue({ messages: [parent], nextCursor: null });
+    renderWithChannel();
+
+    await waitFor(() => screen.getByText('Parent message'));
+
+    // Chip shows "3 replies"
+    expect(screen.getByTestId(`thread-affordance-${parent.id}`)).toBeInTheDocument();
+    expect(screen.getByText('3 replies')).toBeInTheDocument();
+
+    // Delete one reply — replyCount drops to 2
+    act(() => {
+      capturedThreadReplyDeletedHandler?.({
+        parentId: parent.id,
+        channelId: 'ch-1',
+        replyId: 'reply-x',
+        replyCount: 2,
+        lastReplyAt: parent.lastReplyAt ?? null,
+      });
+    });
+
+    // Chip now shows "2 replies"
+    await waitFor(() => {
+      expect(screen.getByTestId(`thread-affordance-${parent.id}`)).toBeInTheDocument();
+      expect(screen.getByText('2 replies')).toBeInTheDocument();
+    });
+  });
+
+  it('thread:reply:deleted for a different channel is ignored', async () => {
+    const parent = makeMsg({
+      content: 'Parent message',
+      channelId: 'ch-1',
+      replyCount: 1,
+      lastReplyAt: new Date().toISOString(),
+    });
+    mockApi.listMessages.mockResolvedValue({ messages: [parent], nextCursor: null });
+    renderWithChannel('ch-1');
+
+    await waitFor(() => screen.getByText('Parent message'));
+
+    // Fire event for a different channel
+    act(() => {
+      capturedThreadReplyDeletedHandler?.({
+        parentId: parent.id,
+        channelId: 'ch-OTHER',
+        replyId: 'reply-1',
+        replyCount: 0,
+        lastReplyAt: null,
+      });
+    });
+
+    // Affordance chip must remain (event was for a different channel)
+    await waitFor(() => {
+      expect(screen.getByTestId(`thread-affordance-${parent.id}`)).toBeInTheDocument();
+    });
   });
 });

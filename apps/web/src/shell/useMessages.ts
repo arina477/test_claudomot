@@ -31,6 +31,7 @@ import {
   onReactionAdded,
   onReactionRemoved,
   onThreadReplyCreated,
+  onThreadReplyDeleted,
 } from './messagingSocket';
 
 type UseMessagesResult = {
@@ -206,6 +207,31 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
                 ...m,
                 replyCount: (m.replyCount ?? 0) + 1,
                 lastReplyAt: event.reply.createdAt,
+              }
+            : m,
+        ),
+      );
+    });
+    return unsub;
+  }, [channelId]);
+
+  // ── Socket listener — thread:reply:deleted ───────────────────────────────
+  // Updates the parent message's replyCount and lastReplyAt with the server's
+  // authoritative post-decrement values. When replyCount hits 0 the affordance
+  // chip hides automatically because MessageList conditionally renders it only
+  // when replyCount > 0.
+  useEffect(() => {
+    if (!channelId) return;
+    const unsub = onThreadReplyDeleted((event) => {
+      if (!mountedRef.current) return;
+      if (event.channelId !== channelId) return;
+      setRealMessages((prev) =>
+        prev.map((m) =>
+          m.id === event.parentId
+            ? {
+                ...m,
+                replyCount: event.replyCount,
+                lastReplyAt: event.lastReplyAt,
               }
             : m,
         ),

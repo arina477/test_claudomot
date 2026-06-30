@@ -8,8 +8,8 @@
  * - Expose sendReply() that goes through the SAME optimistic outbox machinery as
  *   top-level messages (pending → confirmed/failed → retryable) — outbox parity
  *   task 0b728319.
- * - On successful send (or socket echo), reconcile the optimistic row via
- *   idempotency_key so there is no duplicate even if both paths deliver the message.
+ * - Reconcile the optimistic row by id (dedup-by-id on the socket echo; the
+ *   optimistic row is removed in sendReply's .then() when the API resolves).
  * - Reset all state when parentId changes (or becomes null → panel closed).
  *
  * Outbox parity detail (task 0b728319):
@@ -17,10 +17,11 @@
  *     MessageResponse → remove optimistic row, append confirmed row.
  *   Reply sends here: same shape — api.postReply replaces api.sendMessage;
  *     the idempotency_key is generated client-side and carried in the POST body;
- *     the 'thread:reply:created' socket event delivers the authoritative row
- *     including the same idempotency_key (server echoes it back); on match the
- *     optimistic row is replaced. On API error the row moves to 'failed' state;
- *     retryMessage re-sends the SAME idempotency_key (server ON CONFLICT DO NOTHING).
+ *     the API .then() removes the optimistic row by idempotencyKey; the
+ *     'thread:reply:created' socket echo dedups by id (MessageResponse carries
+ *     no idempotencyKey field — server does NOT echo it). On API error the row
+ *     moves to 'failed' state; retryReply re-sends the SAME idempotency_key
+ *     (server ON CONFLICT DO NOTHING).
  *
  * Wave-18 D-carry 5: The replies container carries aria-live="polite" — declared
  * on the <ol> in ThreadPanel; this hook fires setState which causes React to
@@ -31,7 +32,7 @@ import type { MessageResponse } from '@studyhall/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../auth/api';
 import type { OptimisticMessage } from './MessageList';
-import { onThreadReplyCreated } from './messagingSocket';
+import { onThreadReplyCreated, onThreadReplyDeleted } from './messagingSocket';
 
 export type ThreadState = {
   replies: MessageResponse[];
@@ -105,20 +106,29 @@ export function useThread(parentId: string | null, channelId: string | null): Th
 
       const incoming = event.reply;
 
-      // Dedup: skip if already present (own confirmed message via API race)
+      // Dedup by id: the real reconcile path. Skips the reply if it was already
+      // delivered by the API response (optimistic confirm → setReplies) so the
+      // socket echo doesn't produce a duplicate. The optimistic row is removed
+      // in sendReply's .then() when the API resolves — no idempotency_key echo
+      // is needed here (MessageResponse carries no idempotencyKey field).
       setReplies((prev) => {
         if (prev.some((r) => r.id === incoming.id)) return prev;
         return [...prev, incoming];
       });
+    });
+    return unsub;
+  }, [parentId]);
 
-      // Reconcile optimistic row by idempotency_key.
-      // The server echoes the idempotency_key back on the reply DTO so we can
-      // match it.  Cast is safe: the backend attaches idempotencyKey to the
-      // response body during the ack phase (same pattern as top-level send).
-      const key = (incoming as MessageResponse & { idempotencyKey?: string }).idempotencyKey;
-      if (key) {
-        setOptimisticReplies((prev) => prev.filter((m) => m.idempotencyKey !== key));
-      }
+  // ── Socket listener — thread:reply:deleted ───────────────────────────────
+  // Remove the deleted reply from the open panel by replyId.
+  // useMessages handles the affordance update (replyCount/lastReplyAt on the
+  // parent row in the channel list) — this hook focuses on the panel's reply list.
+  useEffect(() => {
+    if (!parentId) return;
+    const unsub = onThreadReplyDeleted((event) => {
+      if (!mountedRef.current) return;
+      if (event.parentId !== parentId) return;
+      setReplies((prev) => prev.filter((r) => r.id !== event.replyId));
     });
     return unsub;
   }, [parentId]);
