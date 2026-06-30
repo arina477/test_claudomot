@@ -1,0 +1,5 @@
+# D-3 Phase 1 Reconciliation — wave-18 (thread panel + affordance)
+- Reviewer A (ui-designer): REVISE — contrast: thread labels (THREAD/Thread-on:/4-Replies, zinc-500 on study-900 = 3.87:1) + affordance separator dot (zinc-500 on study-700 = 3.08:1) FAIL rule-1; failed-reply state absent from panel. Non-blocking: Esc + role=dialog/aria-modal for overlay; affordance truncate.
+- Reviewer B (accessibility-tester): APPROVE — measured the body text (passes 5.98-14.75:1) + good a11y semantics (button aria-haspopup, aside aria-label, focus rings); listed list-semantics/live-region/focus-trap/Esc as B-block refinements.
+- **Matrix: A REVISE + B APPROVE → aggregate A's concerns → D-2 refine (iteration 1).** (A's contrast finding is specific + the exact rule-1 case; B missed the zinc-500 wayfinding labels.)
+- iter1 applied: thread-region zinc-500→zinc-400 (THREAD/Thread-on:/4-Replies + 2 separator dots + empty-state icon); role=dialog aria-modal on panel; failed-reply panel demo. 9 articles preserved. → re-review.
