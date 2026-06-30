@@ -1,0 +1,5 @@
+# D-3 Phase 1 Reconciliation — wave-19 (attachment surfaces)
+- Reviewer A (ui-designer): REVISE — C-1 (blocking) 3 pre-existing zinc-500 contrast failures (Coursework / Members+Online+Offline / composer-hint, 3.5-4.1:1) must fix per rule 1; C-2 (blocking) uploading/error/lightbox states only commented; C-3 broken-image fallback chip absent; C-4 focus→focus-visible; C-5 lightbox focus-trap/Esc unannotated. Attachment-surface contrast PASSES; image preview properly constrained.
+- Reviewer B (accessibility-tester): APPROVE — contrast 7.8-17.9:1, semantic buttons, descriptive alt, lightbox dialog; minor nits (chip download aria, retry aria, aria-live, hidden-input JS).
+- **Matrix: A REVISE + B APPROVE → aggregate A → D-2 refine (iter1).**
+- iter1 applied: C-1 (5 cited text instances zinc-500→zinc-400); C-2 (uploading/error/lightbox now live, error role=alert); C-3 (broken-image fallback chip ph-image-broken); C-4 (focus-visible globally on rings); C-5 (lightbox focus-trap/Esc B-block annotation comment). 9 articles + panels intact. → re-review.
