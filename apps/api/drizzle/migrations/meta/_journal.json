@@ -50,6 +50,13 @@
       "when": 1782788530536,
       "tag": "0006_wave13_message_lifecycle",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1782805688451,
+      "tag": "0007_massive_chamber",
+      "breakpoints": true
     }
   ]
 }
