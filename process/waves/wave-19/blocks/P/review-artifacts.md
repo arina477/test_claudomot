@@ -1,5 +1,5 @@
 # Wave 19 — P-block review artifacts
-**Block:** P (Product) | **Wave topic:** M3 attachments — upload/storage data plane + composer send + message-row render | **Gate:** P-4 | **Status:** in-progress
+**Block:** P (Product) | **Wave topic:** M3 attachments — upload/storage data plane + composer send + message-row render | **Gate:** P-4 | **Status:** gate-passed
 ## Stage deliverables
 | Stage | Deliverable | Status |
 |---|---|---|
@@ -7,7 +7,7 @@
 | P-1 | stages/P-1-decompose.md | done |
 | P-2 | tasks.description of 20db0c16 (+pointer) | done |
 | P-3 | stages/P-3-plan.md | done |
-| P-4 | blocks/P/gate-verdict.md | pending |
+| P-4 | blocks/P/gate-verdict.md | done | PASSED — head-product+karen+jenny APPROVE; Gemini orphan-concern→row-at-send annotation |
 ## Context
 - **THE LAST M3 SUCCESS-METRIC FEATURE** — completes "reactions, threads, and attachments working". BOARD-endorsed feature-first lineage (wave-17 7/7).
 - claimed: [20db0c16 (data plane), 7c39c9e3 (composer send), cf1ae370 (message-row render)]

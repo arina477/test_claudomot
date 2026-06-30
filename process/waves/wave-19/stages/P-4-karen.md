@@ -1,0 +1,40 @@
+# P-4 Phase-2 — Karen load-bearing-claim verification (wave-19 M3 attachments)
+
+**Verdict: APPROVE**
+
+Storage-reuse, authz, and migration claims are all grounded in real code. The presigned-GET URL question is the one substantive carry the builder must resolve (claim 7 — WRONG-as-written-but-non-blocking; flagged below). All other load-bearing claims VERIFIED.
+
+## Per-claim
+
+1. **FilesService presign→PUT→HeadObject-confirm pattern exists — VERIFIED.**
+   - `presignAvatarUpload(userId, contentType)` — `apps/api/src/files/files.service.ts:79-115` (allowlist `AVATAR_ALLOWED_MIME` :12-16, 503 `STORAGE_NOT_CONFIGURED` :84-86/:95-97, presigned PUT via `getSignedUrl` :110).
+   - `checkAvatarSize(key)` — `:133-156` (HeadObject :144, `PayloadTooLargeException` 413 :151 when `ContentLength > AVATAR_MAX_SIZE_BYTES`).
+   - `resolvePublicUrl(key)` — `:162-169`. Lazy-503 client getter — `:41-67`.
+   - The plan's `presignAttachmentUpload` + `checkAttachmentSize` (P-3 plan.md:8) are a faithful mirror of proven methods. Grounded.
+
+2. **@aws-sdk/client-s3 + s3-request-presigner INSTALLED — VERIFIED.** `apps/api/package.json`: `@aws-sdk/client-s3 ^3.1075.0` + `@aws-sdk/s3-request-presigner ^3.1075.0`. No new dep. Plan claim "No new dep" (plan.md:18, AC sdk) holds.
+
+3. **0009 is next migration + attachments.message_id→messages.id FK sound — VERIFIED.** Migrations dir max = `0008_dazzling_bushwacker.sql` → 0009 next (the gap at 0003 is historical, irrelevant to next-number). FK precedent confirmed: `message_reactions.message_id → messages.id ON DELETE CASCADE` (`apps/api/src/db/schema/messages.ts:77-79`) and `message_mentions.message_id → messages.id ON DELETE CASCADE` (:113-115). Plan's attachments table CASCADE FK (plan.md:9) matches precedent. One note: plan declares `message_id` NULLABLE-until-associated — sound (FK allows NULL), and distinct from the reactions/mentions notNull precedent, but the NULLABILITY is the deliberate orphan-upload design (spec edge-case), not a contradiction.
+
+4. **canViewChannelById is the established channel-derived authz pattern — VERIFIED.** `apps/api/src/rbac/rbac.service.ts:344-355`: resolves `server_id` FROM `channels` WHERE `id = channelId` (DB-derived, NOT a client param), default-deny on missing channel, delegates to `canViewChannel`. Live reuse sites: `createReply` (`messages.service.ts:751`) and `listThreadReplies` (:877), both deriving channel from the parent ROW not the query param — the wave-18 IDOR fix. `ChannelMessageGuard` (`rbac/channel-message.guard.ts:53`) wraps it; its spec asserts the route-param (not body) is the authz source (`channel-message.guard.spec.ts:88-91`). Plan's presign/confirm/associate authz (plan.md:10, AC[5], BUILD-PRINCIPLES rule 4) is grounded. **Builder note:** for presign the channel comes from the route param `:channelId` — that param IS the authz subject passed to `canViewChannelById`, which re-derives server membership server-side, so it is sound (param identifies the resource; membership is server-verified). For associate, channel must be derived from the message/attachment row, mirroring createReply.
+
+5. **Association in-txn — VERIFIED with the advisory the prompt expects.** Confirmed asymmetry: `createMessage` is sequential-await + idempotency `ON CONFLICT DO NOTHING` + re-fetch, NOT wrapped in `db.transaction` (`messages.service.ts:246-365`); `createReply` IS `db.transaction` (:769-830). The plan associates attachments "in the same message-insert transaction" (plan.md:11) — for `createMessage` there is NO enclosing transaction today, so the builder MUST either wrap createMessage's insert+associate in `db.transaction` or accept the existing non-atomic shape. **HEAD-PRODUCT ADVISORY (carry to B-3):** the builder must pick a sound atomic shape — do not assume createMessage is transactional. The association guard `SET message_id = new.id WHERE id = ANY(ids) AND uploader_id = sender AND channel_id = msg.channel AND message_id IS NULL` (plan.md:11) is realistic and correctly rejects cross-owner / cross-channel / already-associated rows (matches spec edge-cases "associate an attachment that isn't the uploader's / different channel → reject" + orphan handling). Realistic. Not blocking — it's an implementation-shape decision the plan correctly defers and flags ("P-4 will confirm", plan.md:48-49).
+
+6. **rowToDto is the sole DTO populate site — VERIFIED.** `rowToDto` (`messages.service.ts:92-160`) is the single mapper; every list/create/edit/delete path funnels through it (createMessage :334, createReply :832, listMessages :1155, listThreadReplies :951, getMyMentions :1273, edit :485, delete :650/:697). Adding `attachments[]` there (plan.md:11) is the correct single-site change. Grounded. **Note:** rowToDto currently takes pre-fetched reaction/mention rows as params (batch-loaded, no N+1) — the builder must follow the same batch-load-then-pass pattern for attachments (fetch attachments WHERE message_id = ANY(pageIds) once per page), NOT a per-row JOIN. Plan says "JOIN/select attachments WHERE message_id" (plan.md:11) — acceptable as long as it's the batched form. Advisory carry.
+
+7. **Presigned-GET render URL — WRONG as the spec/plan literally reads, but NON-BLOCKING; must be resolved at B-3.** The avatar reuse target `resolvePublicUrl` (`files.service.ts:162-169`) builds a STATIC public URL (`<endpoint>/<bucket>/<key>`, :26-30) — that works for avatars only because the avatar bucket is public-read. The spec AC[4]/contracts and plan.md:8 say "reuse `resolvePublicUrl`" and AttachmentRef carries a `url`. **If the attachments bucket is private (Railway Buckets are private-only, per the prompt's head-product carry), a static resolvePublicUrl will 403 on render.** The render `url` must be a presigned-GET (`GetObjectCommand` + `getSignedUrl`, short TTL) or a server proxy — NEITHER exists in FilesService today (only `PutObjectCommand` HeadObject are imported, :2). This is the one claim where "reuse resolvePublicUrl" is unverified/wrong for private storage.
+   - **Why non-blocking:** the gap is an implementation detail inside the data-plane task, not a plan-structure or architecture error; AttachmentRef.url contract is unchanged regardless of how the URL is produced; the avatar-reuse claim for presign/confirm/size (claims 1-3) is unaffected.
+   - **MANDATORY B-3 carry:** add `resolveAttachmentUrl(key)` returning a presigned-GET (or proxy URL), do NOT reuse the static `resolvePublicUrl` unless B-0 confirms the attachments bucket is public-read. Confirm bucket visibility at B-0 (plan.md:18 already flags bucket verification — extend it to "public-read vs private → drives static-URL vs presigned-GET").
+
+8. **Antipatterns — clean.**
+   - ACs falsifiable: yes — every AC has an observable outcome (presigned PUT returned, 413 at confirm, 4xx at presign, 403 non-member, attachments[] on DTO, fan-out on existing event). Spec edge-cases enumerate negative paths.
+   - ≤10MB server-enforced at confirm via HeadObject: yes (spec AC[2], edge-case ">10MB → 413 at confirm", plan.md:8/:49 — defense-in-depth, mirrors avatar 2MB pattern, NOT client-only).
+   - Gold-plating OUT: yes — transcode / CDN / resize-thumbnail-service / virus-scan / drag-drop-grids / versioning / PDF-render all explicitly OUT (spec "OUT", plan scope).
+   - No new dep: confirmed (claim 2).
+
+## Summary
+APPROVE. The three load-bearing pillars (FilesService-pattern-reuse, canViewChannelById channel-derived authz, migration 0009 + FK-to-messages) are real-code-grounded at the file:line cited above. Two mandatory B-block carries, neither blocking:
+- **C5 (atomicity):** createMessage is NOT transactional today — builder must pick a sound atomic shape for insert+associate (head-product advisory).
+- **C7 (render URL):** private-bucket render requires a presigned-GET / proxy, NOT the static `resolvePublicUrl`; confirm bucket visibility at B-0 and add `resolveAttachmentUrl` if private.
+
+Both are correctly anticipated by the plan's "B-block carries (P-4 will confirm)" section (plan.md:47-50) — they sharpen it, they do not contradict it.

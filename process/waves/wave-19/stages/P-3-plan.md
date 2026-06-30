@@ -48,3 +48,12 @@
 - BUILD-PRINCIPLES rule 4 (the freshly-promoted rule): the presign/confirm/associate authz is a real authz boundary — B-6 Phase-2 MUST reproduce a non-member 403 negative path (the wave-18 IDOR class). Channel-derived authz, not a client param as the authz source.
 - ≤10MB enforced server-side at confirm (HeadObject), NOT just client (defense-in-depth; presigned-PUT can't carry ContentLengthRange).
 - Storage graceful-degrade (503 STORAGE_NOT_CONFIGURED) if env absent — matches avatars; don't crash boot.
+
+## P-4 PHASE-2 ANNOTATION (Gemini→head-product MATERIAL — row-at-send, kills orphans + resolves C5)
+**Change the attachment-row birth location from confirm → message-send.** No orphan rows by construction; association is atomic; migration 0009 `message_id` is NOT NULL.
+- `confirmAttachment(channelId, userId, key, filename, contentType)` becomes VALIDATION-ONLY: HeadObject (≤10MB→413) + content-type allowlist check; returns the VALIDATED descriptor `{key, filename, contentType, sizeBytes}` — does NOT INSERT a DB row.
+- The composer stages the validated descriptor client-side (preview is client-side — no persisted row needed pre-send).
+- `createMessage` / `createReply` accept `attachments[]` (the validated descriptors {key, filename, contentType, sizeBytes}) and, in the send path, INSERT the attachment rows with `message_id = newMessage.id` set atomically (createReply already db.transaction; createMessage must be wrapped — this MAKES B-block carry #1's wrap MANDATORY, resolved in favor of wrapping). Guard: uploader_id = sender, channel_id = message.channel.
+- migration 0009: attachments.message_id uuid NOT NULL FK→messages CASCADE (row born associated).
+- Abandoned STORAGE objects (presigned+PUT but message never sent) = logged KNOWN-DEBT; NO GC cron this wave (gold-plating at sole-user scale; optional follow-on at multi-user scale).
+- Contract delta: message-send body carries `attachments[]` (validated descriptors), NOT pre-created attachmentIds. AttachmentRef (id, filename, contentType, sizeBytes, url) is returned on the message DTO after the send INSERT. AttachmentRef.url = presigned-GET (karen C7 — Railway Buckets private; add resolveAttachmentUrl with GetObjectCommand+getSignedUrl, NOT the static resolvePublicUrl).
