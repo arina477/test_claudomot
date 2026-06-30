@@ -32,8 +32,8 @@ BUILD:
 - [x] B-6 Review
 
 CI/CD:
-- [ ] C-1 PR, CI & merge
-- [ ] C-2 Deploy & verify
+- [x] C-1 PR, CI & merge
+- [x] C-2 Deploy & verify (NO deploy — test-only)
 - [ ] C-3 Canary
 
 TEST:

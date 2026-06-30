@@ -1,0 +1,41 @@
+# C-block (CI/CD) manifest — wave-17
+block: ci-cd
+wave: 17
+mode: automatic
+pattern: spawn (head-ci-cd)
+status: complete
+
+pr_number: 29
+pr_url: https://github.com/arina477/test_claudomot/pull/29
+branch: wave-17-create-server-rollback-test    # deleted on origin after merge
+ci_run_id_final: 28444194621                    # green run on fix commit b0d8d22
+merge_commit_sha: dfb65ca59be5e564c592179abddc6e830d25a090
+merge_strategy: squash
+
+stages:
+  C-1:
+    verdict: PASS
+    integration_cases_ran_in_ci: true
+    integration_cases_passed_in_ci: true        # 3/3 against Postgres 16
+    test_ci_totals: "292 unit + 3 integration passed"
+    first_run_false_green:
+      run_id: 28443884419
+      fail_class: false-green-by-suppression
+      detail: "GitHub checks green but integration suite SKIPPED (DATABASE_URL_TEST stripped by Turbo 2.x strict env mode — no env passthrough in turbo.json)"
+      caught_by: "test-job log inspection (NOT trusted from the green check)"
+      routed_to: devops-engineer
+      route_via: /investigate
+      route_tag: configuration
+      fix_commit: b0d8d22
+      fix: 'turbo.json — added "env": ["DATABASE_URL_TEST"] to test:ci task'
+    fix_up_cycles: 1
+  C-2:
+    verdict: PASS
+    deploy: none (test-only; no product artifact changed)
+    health_sanity:
+      api: "https://api-production-b93e.up.railway.app/health → 200 {status:ok}"
+      web: "https://web-production-bce1a8.up.railway.app/ → 200"
+    canary: skipped
+
+cicd_block_status: complete
+ready_for_test: true
