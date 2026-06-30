@@ -127,3 +127,23 @@ body {
     animation: none;
   }
 }
+
+/* ── Message lifecycle (wave-13 §8 MessageRow) ── */
+
+/* Row-action bar: hidden at rest; revealed on row hover OR keyboard focus-within
+   (never hover-only — keyboard users must also reach it). Floats top-right. */
+.row-actions {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+.msg-row:hover .row-actions,
+.msg-row:focus-within .row-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  .row-actions {
+    transition: none;
+  }
+}

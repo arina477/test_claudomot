@@ -43,6 +43,13 @@
       "when": 1782781858784,
       "tag": "0005_boring_satana",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1782788530536,
+      "tag": "0006_wave13_message_lifecycle",
+      "breakpoints": true
     }
   ]
 }

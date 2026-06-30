@@ -19,8 +19,29 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
-// Mock socket singleton — captures the message:new handler so tests can trigger it
+// Mock socket singleton — captures handlers so tests can trigger them
 let capturedMessageNewHandler: ((msg: MessageResponse) => void) | null = null;
+let capturedMessageUpdatedHandler: ((msg: MessageResponse) => void) | null = null;
+let capturedMessageDeletedHandler: ((p: { messageId: string; channelId: string }) => void) | null =
+  null;
+let capturedReactionAddedHandler:
+  | ((p: {
+      messageId: string;
+      channelId: string;
+      emoji: string;
+      count: number;
+      reactedByMe: boolean;
+    }) => void)
+  | null = null;
+let capturedReactionRemovedHandler:
+  | ((p: {
+      messageId: string;
+      channelId: string;
+      emoji: string;
+      count: number;
+      reactedByMe: boolean;
+    }) => void)
+  | null = null;
 
 vi.mock('./messagingSocket', () => ({
   getMessagingSocket: vi.fn(() => ({
@@ -38,6 +59,62 @@ vi.mock('./messagingSocket', () => ({
       capturedMessageNewHandler = null;
     };
   }),
+  onMessageUpdated: vi.fn((handler: (msg: MessageResponse) => void) => {
+    capturedMessageUpdatedHandler = handler;
+    return () => {
+      capturedMessageUpdatedHandler = null;
+    };
+  }),
+  onMessageDeleted: vi.fn((handler: (p: { messageId: string; channelId: string }) => void) => {
+    capturedMessageDeletedHandler = handler;
+    return () => {
+      capturedMessageDeletedHandler = null;
+    };
+  }),
+  onReactionAdded: vi.fn(
+    (
+      handler: (p: {
+        messageId: string;
+        channelId: string;
+        emoji: string;
+        count: number;
+        reactedByMe: boolean;
+      }) => void,
+    ) => {
+      capturedReactionAddedHandler = handler;
+      return () => {
+        capturedReactionAddedHandler = null;
+      };
+    },
+  ),
+  onReactionRemoved: vi.fn(
+    (
+      handler: (p: {
+        messageId: string;
+        channelId: string;
+        emoji: string;
+        count: number;
+        reactedByMe: boolean;
+      }) => void,
+    ) => {
+      capturedReactionRemovedHandler = handler;
+      return () => {
+        capturedReactionRemovedHandler = null;
+      };
+    },
+  ),
+  applyReactionEvent: vi.fn(
+    (
+      existing: { emoji: string; count: number; reactedByMe: boolean }[],
+      payload: { emoji: string; count: number; reactedByMe: boolean },
+    ) => {
+      const { emoji, count, reactedByMe } = payload;
+      if (count === 0) return existing.filter((r) => r.emoji !== emoji);
+      const idx = existing.findIndex((r) => r.emoji === emoji);
+      if (idx === -1) return [...existing, { emoji, count, reactedByMe }];
+      return existing.map((r, i) => (i === idx ? { emoji, count, reactedByMe } : r));
+    },
+  ),
   getSocketState: vi.fn(() => 'online'),
 }));
 
@@ -46,6 +123,9 @@ vi.mock('../auth/api', () => ({
   api: {
     listMessages: vi.fn(),
     sendMessage: vi.fn(),
+    editMessage: vi.fn(),
+    deleteMessage: vi.fn(),
+    toggleReaction: vi.fn(),
     getProfile: vi.fn().mockReturnValue(new Promise(() => {})),
     getServers: vi.fn().mockReturnValue(new Promise(() => {})),
     getServerDetail: vi.fn().mockReturnValue(new Promise(() => {})),
@@ -57,6 +137,9 @@ import { api } from '../auth/api';
 const mockApi = api as unknown as {
   listMessages: ReturnType<typeof vi.fn>;
   sendMessage: ReturnType<typeof vi.fn>;
+  editMessage: ReturnType<typeof vi.fn>;
+  deleteMessage: ReturnType<typeof vi.fn>;
+  toggleReaction: ReturnType<typeof vi.fn>;
 };
 
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
@@ -77,6 +160,10 @@ function makeMsg(overrides: Partial<MessageResponse> = {}): MessageResponse {
     authorId: 'user-abc',
     content: 'Hello world',
     createdAt: new Date().toISOString(),
+    isEdited: false,
+    editedAt: null,
+    isDeleted: false,
+    reactions: [],
     ...overrides,
   };
 }
@@ -288,6 +375,10 @@ describe('MainColumn — optimistic send + real-time dedup', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     capturedMessageNewHandler = null;
+    capturedMessageUpdatedHandler = null;
+    capturedMessageDeletedHandler = null;
+    capturedReactionAddedHandler = null;
+    capturedReactionRemovedHandler = null;
   });
 
   function renderWithChannel(channelId = 'ch-1', channelName = 'questions') {
@@ -444,5 +535,400 @@ describe('MainColumn — optimistic send + real-time dedup', () => {
     await waitFor(() => {
       expect(screen.queryByText('Wrong channel')).not.toBeInTheDocument();
     });
+  });
+});
+
+// ── Message lifecycle tests (wave-13 B-3) ─────────────────────────────────────
+
+describe('MessageList — lifecycle UI (wave-13 B-3)', () => {
+  it('renders (edited) indicator for isEdited messages', () => {
+    const msg = makeMsg({
+      content: 'Edited text',
+      isEdited: true,
+      editedAt: new Date().toISOString(),
+    });
+    const msgs: DisplayMessage[] = [{ kind: 'real', ...msg }];
+    render(
+      <MessageList
+        messages={msgs}
+        loadingInitial={false}
+        loadingOlder={false}
+        errorInitial={false}
+        hasOlderMessages={false}
+        onLoadOlder={vi.fn()}
+        onRetry={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId(`edited-indicator-${msg.id}`)).toBeInTheDocument();
+    expect(screen.getByText('(edited)')).toBeInTheDocument();
+  });
+
+  it('renders tombstone for isDeleted messages, no content shown', () => {
+    const msg = makeMsg({ content: null, isDeleted: true });
+    const msgs: DisplayMessage[] = [{ kind: 'real', ...msg }];
+    render(
+      <MessageList
+        messages={msgs}
+        loadingInitial={false}
+        loadingOlder={false}
+        errorInitial={false}
+        hasOlderMessages={false}
+        onLoadOlder={vi.fn()}
+        onRetry={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId(`tombstone-${msg.id}`)).toBeInTheDocument();
+    expect(screen.getByText('This message was deleted')).toBeInTheDocument();
+  });
+
+  it('renders reaction pills with count', () => {
+    const msg = makeMsg({
+      reactions: [
+        { emoji: '👍', count: 3, reactedByMe: false },
+        { emoji: '❤️', count: 1, reactedByMe: true },
+      ],
+    });
+    const msgs: DisplayMessage[] = [{ kind: 'real', ...msg }];
+    render(
+      <MessageList
+        messages={msgs}
+        loadingInitial={false}
+        loadingOlder={false}
+        errorInitial={false}
+        hasOlderMessages={false}
+        onLoadOlder={vi.fn()}
+        onRetry={vi.fn()}
+        onReaction={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId(`reaction-pill-${msg.id}-👍`)).toBeInTheDocument();
+    expect(screen.getByTestId(`reaction-pill-${msg.id}-❤️`)).toBeInTheDocument();
+    expect(screen.getByText('3')).toBeInTheDocument();
+  });
+
+  it('reaction pill aria-pressed=true for reactedByMe', () => {
+    const msg = makeMsg({
+      reactions: [{ emoji: '👍', count: 2, reactedByMe: true }],
+    });
+    const msgs: DisplayMessage[] = [{ kind: 'real', ...msg }];
+    render(
+      <MessageList
+        messages={msgs}
+        loadingInitial={false}
+        loadingOlder={false}
+        errorInitial={false}
+        hasOlderMessages={false}
+        onLoadOlder={vi.fn()}
+        onRetry={vi.fn()}
+        onReaction={vi.fn()}
+      />,
+    );
+    const pill = screen.getByTestId(`reaction-pill-${msg.id}-👍`);
+    expect(pill).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('reaction pill aria-pressed=false when not reacted', () => {
+    const msg = makeMsg({
+      reactions: [{ emoji: '🤔', count: 1, reactedByMe: false }],
+    });
+    const msgs: DisplayMessage[] = [{ kind: 'real', ...msg }];
+    render(
+      <MessageList
+        messages={msgs}
+        loadingInitial={false}
+        loadingOlder={false}
+        errorInitial={false}
+        hasOlderMessages={false}
+        onLoadOlder={vi.fn()}
+        onRetry={vi.fn()}
+        onReaction={vi.fn()}
+      />,
+    );
+    const pill = screen.getByTestId(`reaction-pill-${msg.id}-🤔`);
+    expect(pill).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('clicking a reaction pill calls onReaction with messageId and emoji', async () => {
+    const onReaction = vi.fn();
+    const msg = makeMsg({ reactions: [{ emoji: '👍', count: 1, reactedByMe: false }] });
+    const msgs: DisplayMessage[] = [{ kind: 'real', ...msg }];
+    const user = userEvent.setup();
+    render(
+      <MessageList
+        messages={msgs}
+        loadingInitial={false}
+        loadingOlder={false}
+        errorInitial={false}
+        hasOlderMessages={false}
+        onLoadOlder={vi.fn()}
+        onRetry={vi.fn()}
+        onReaction={onReaction}
+      />,
+    );
+    const pill = screen.getByTestId(`reaction-pill-${msg.id}-👍`);
+    await user.click(pill);
+    expect(onReaction).toHaveBeenCalledWith(msg.id, '👍');
+  });
+});
+
+// ── Socket lifecycle events (wave-13 B-3) ─────────────────────────────────────
+
+describe('MainColumn — socket message:updated / deleted / reaction events', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedMessageNewHandler = null;
+    capturedMessageUpdatedHandler = null;
+    capturedMessageDeletedHandler = null;
+    capturedReactionAddedHandler = null;
+    capturedReactionRemovedHandler = null;
+  });
+
+  function renderWithChannel(channelId = 'ch-1', channelName = 'questions') {
+    const ctx = makeCtx({ selectedChannelId: channelId, selectedChannelName: channelName });
+    return render(
+      <ServerContext.Provider value={ctx}>
+        <MainColumn />
+      </ServerContext.Provider>,
+    );
+  }
+
+  it('socket message:updated replaces existing message in UI', async () => {
+    const original = makeMsg({ content: 'Original', channelId: 'ch-1' });
+    mockApi.listMessages.mockResolvedValue({ messages: [original], nextCursor: null });
+    renderWithChannel();
+
+    await waitFor(() => screen.getByText('Original'));
+
+    const updated = { ...original, content: 'Updated content', isEdited: true };
+    act(() => {
+      capturedMessageUpdatedHandler?.(updated);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Updated content')).toBeInTheDocument();
+      expect(screen.queryByText('Original')).not.toBeInTheDocument();
+    });
+  });
+
+  it('socket message:deleted marks message as tombstone', async () => {
+    const msg = makeMsg({ content: 'Will be deleted', channelId: 'ch-1' });
+    mockApi.listMessages.mockResolvedValue({ messages: [msg], nextCursor: null });
+    renderWithChannel();
+
+    await waitFor(() => screen.getByText('Will be deleted'));
+
+    act(() => {
+      capturedMessageDeletedHandler?.({ messageId: msg.id, channelId: 'ch-1' });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('This message was deleted')).toBeInTheDocument();
+      expect(screen.queryByText('Will be deleted')).not.toBeInTheDocument();
+    });
+  });
+
+  it('socket reaction:added adds a reaction to the message', async () => {
+    const msg = makeMsg({ reactions: [], channelId: 'ch-1' });
+    mockApi.listMessages.mockResolvedValue({ messages: [msg], nextCursor: null });
+    renderWithChannel();
+
+    await waitFor(() => screen.getByTestId(`message-row-${msg.id}`));
+
+    act(() => {
+      capturedReactionAddedHandler?.({
+        messageId: msg.id,
+        channelId: 'ch-1',
+        emoji: '👍',
+        count: 1,
+        reactedByMe: false,
+      });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId(`reaction-pill-${msg.id}-👍`)).toBeInTheDocument();
+    });
+  });
+
+  it('socket reaction:removed removes a reaction when count reaches 0', async () => {
+    const msg = makeMsg({
+      reactions: [{ emoji: '👍', count: 1, reactedByMe: false }],
+      channelId: 'ch-1',
+    });
+    mockApi.listMessages.mockResolvedValue({ messages: [msg], nextCursor: null });
+    renderWithChannel();
+
+    await waitFor(() => screen.getByTestId(`reaction-pill-${msg.id}-👍`));
+
+    act(() => {
+      capturedReactionRemovedHandler?.({
+        messageId: msg.id,
+        channelId: 'ch-1',
+        emoji: '👍',
+        count: 0,
+        reactedByMe: false,
+      });
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId(`reaction-pill-${msg.id}-👍`)).not.toBeInTheDocument();
+    });
+  });
+});
+
+// ── Edit message UI (wave-13 B-3) ────────────────────────────────────────────
+// Tests use MessageList directly with currentUserId so profile loading isn't involved.
+
+describe('MessageList — edit own message UI', () => {
+  it('shows inline edit form when Edit button is clicked (own message)', async () => {
+    const onEdit = vi.fn();
+    const msg = makeMsg({ content: 'Original message', authorId: 'testuser' });
+    const msgs: DisplayMessage[] = [{ kind: 'real', ...msg }];
+    const user = userEvent.setup();
+    render(
+      <MessageList
+        messages={msgs}
+        loadingInitial={false}
+        loadingOlder={false}
+        errorInitial={false}
+        hasOlderMessages={false}
+        onLoadOlder={vi.fn()}
+        onRetry={vi.fn()}
+        onEdit={onEdit}
+        currentUserId="testuser"
+      />,
+    );
+
+    // Edit button in row-actions (accessible even though CSS opacity:0 in tests)
+    const editBtn = screen.getByRole('button', { name: /edit your message/i });
+    await user.click(editBtn);
+
+    // Inline edit form should appear
+    expect(screen.getByTestId('inline-edit-form')).toBeInTheDocument();
+    expect(screen.getByTestId('edit-textarea')).toBeInTheDocument();
+  });
+
+  it('saves edit via Save button and calls onEdit', async () => {
+    const onEdit = vi.fn();
+    const msg = makeMsg({ content: 'Original message', authorId: 'testuser' });
+    const msgs: DisplayMessage[] = [{ kind: 'real', ...msg }];
+    const user = userEvent.setup();
+    render(
+      <MessageList
+        messages={msgs}
+        loadingInitial={false}
+        loadingOlder={false}
+        errorInitial={false}
+        hasOlderMessages={false}
+        onLoadOlder={vi.fn()}
+        onRetry={vi.fn()}
+        onEdit={onEdit}
+        currentUserId="testuser"
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /edit your message/i }));
+    const ta = screen.getByTestId('edit-textarea') as HTMLTextAreaElement;
+    await user.clear(ta);
+    await user.type(ta, 'Updated content');
+    await user.click(screen.getByTestId('edit-save-btn'));
+
+    expect(onEdit).toHaveBeenCalledWith(msg.id, 'Updated content');
+    // Form should dismiss
+    expect(screen.queryByTestId('inline-edit-form')).not.toBeInTheDocument();
+  });
+
+  it('Esc key cancels inline edit without calling onEdit', async () => {
+    const onEdit = vi.fn();
+    const msg = makeMsg({ content: 'Keep this', authorId: 'testuser' });
+    const msgs: DisplayMessage[] = [{ kind: 'real', ...msg }];
+    const user = userEvent.setup();
+    render(
+      <MessageList
+        messages={msgs}
+        loadingInitial={false}
+        loadingOlder={false}
+        errorInitial={false}
+        hasOlderMessages={false}
+        onLoadOlder={vi.fn()}
+        onRetry={vi.fn()}
+        onEdit={onEdit}
+        currentUserId="testuser"
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /edit your message/i }));
+    expect(screen.getByTestId('inline-edit-form')).toBeInTheDocument();
+
+    fireEvent.keyDown(screen.getByTestId('edit-textarea'), { key: 'Escape' });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('inline-edit-form')).not.toBeInTheDocument();
+    });
+    expect(onEdit).not.toHaveBeenCalled();
+  });
+});
+
+// ── Delete message UI (wave-13 B-3) ──────────────────────────────────────────
+
+describe('MessageList — delete message UI', () => {
+  it('shows delete confirm strip on Delete click, then calls onDelete and dismisses', async () => {
+    const onDelete = vi.fn();
+    const msg = makeMsg({ content: 'Delete me', authorId: 'testuser' });
+    const msgs: DisplayMessage[] = [{ kind: 'real', ...msg }];
+    const user = userEvent.setup();
+    render(
+      <MessageList
+        messages={msgs}
+        loadingInitial={false}
+        loadingOlder={false}
+        errorInitial={false}
+        hasOlderMessages={false}
+        onLoadOlder={vi.fn()}
+        onRetry={vi.fn()}
+        onDelete={onDelete}
+        currentUserId="testuser"
+      />,
+    );
+
+    const deleteBtn = screen.getByRole('button', { name: /delete your message/i });
+    await user.click(deleteBtn);
+
+    expect(screen.getByTestId('delete-confirm-btn')).toBeInTheDocument();
+    expect(screen.getByText('Delete this message?')).toBeInTheDocument();
+
+    await user.click(screen.getByTestId('delete-confirm-btn'));
+
+    expect(onDelete).toHaveBeenCalledWith(msg.id);
+    // Confirm strip dismissed
+    expect(screen.queryByTestId('delete-confirm-btn')).not.toBeInTheDocument();
+  });
+
+  it('cancel from delete-confirm strip keeps message visible', async () => {
+    const onDelete = vi.fn();
+    const msg = makeMsg({ content: 'Keep me', authorId: 'testuser' });
+    const msgs: DisplayMessage[] = [{ kind: 'real', ...msg }];
+    const user = userEvent.setup();
+    render(
+      <MessageList
+        messages={msgs}
+        loadingInitial={false}
+        loadingOlder={false}
+        errorInitial={false}
+        hasOlderMessages={false}
+        onLoadOlder={vi.fn()}
+        onRetry={vi.fn()}
+        onDelete={onDelete}
+        currentUserId="testuser"
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /delete your message/i }));
+    expect(screen.getByTestId('delete-cancel-btn')).toBeInTheDocument();
+
+    await user.click(screen.getByTestId('delete-cancel-btn'));
+
+    expect(screen.getByText('Keep me')).toBeInTheDocument();
+    expect(screen.queryByTestId('delete-confirm-btn')).not.toBeInTheDocument();
+    expect(onDelete).not.toHaveBeenCalled();
   });
 });

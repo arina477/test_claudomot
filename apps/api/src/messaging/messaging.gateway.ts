@@ -60,6 +60,14 @@ interface LeaveChannelPayload {
   channelId: string;
 }
 
+// Reaction event payload emitted by MessagesService
+interface ReactionEventPayload {
+  messageId: string;
+  channelId: string;
+  userId: string;
+  emoji: string;
+}
+
 // ---------------------------------------------------------------------------
 // Gateway
 // ---------------------------------------------------------------------------
@@ -208,5 +216,62 @@ export class MessagingGateway implements OnGatewayInit, OnGatewayConnection {
   handleMessageCreated(message: MessageResponse): void {
     this.server.to(`channel:${message.channelId}`).emit('message:new', message);
     this.logger.debug(`Fanned out message ${message.id} to channel:${message.channelId}`);
+  }
+
+  // -------------------------------------------------------------------------
+  // message.updated → fan-out to channel room (wave-13 edit)
+  //
+  // Emitted by MessagesService.editMessage() after DB update.
+  // Room-only fan-out: same pattern as message.created.
+  // -------------------------------------------------------------------------
+
+  @OnEvent('message.updated')
+  handleMessageUpdated(message: MessageResponse): void {
+    this.server.to(`channel:${message.channelId}`).emit('message:updated', message);
+    this.logger.debug(`Fanned out message.updated ${message.id} to channel:${message.channelId}`);
+  }
+
+  // -------------------------------------------------------------------------
+  // message.deleted → fan-out to channel room (wave-13 soft-delete)
+  //
+  // Emitted by MessagesService.deleteMessage() after soft-delete.
+  // Payload has content: null (tombstone), is_deleted: true.
+  // Room-only fan-out: same pattern as message.created.
+  // -------------------------------------------------------------------------
+
+  @OnEvent('message.deleted')
+  handleMessageDeleted(message: MessageResponse): void {
+    this.server.to(`channel:${message.channelId}`).emit('message:deleted', message);
+    this.logger.debug(`Fanned out message.deleted ${message.id} to channel:${message.channelId}`);
+  }
+
+  // -------------------------------------------------------------------------
+  // reaction.added → fan-out to channel room (wave-13 reactions)
+  //
+  // Emitted by MessagesService.toggleReaction() when reaction is added.
+  // Room-only fan-out to the message's channel.
+  // -------------------------------------------------------------------------
+
+  @OnEvent('reaction.added')
+  handleReactionAdded(payload: ReactionEventPayload): void {
+    this.server.to(`channel:${payload.channelId}`).emit('reaction:added', payload);
+    this.logger.debug(
+      `Fanned out reaction.added emoji=${payload.emoji} msg=${payload.messageId} channel=${payload.channelId}`,
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // reaction.removed → fan-out to channel room (wave-13 reactions)
+  //
+  // Emitted by MessagesService.toggleReaction() when reaction is removed.
+  // Room-only fan-out to the message's channel.
+  // -------------------------------------------------------------------------
+
+  @OnEvent('reaction.removed')
+  handleReactionRemoved(payload: ReactionEventPayload): void {
+    this.server.to(`channel:${payload.channelId}`).emit('reaction:removed', payload);
+    this.logger.debug(
+      `Fanned out reaction.removed emoji=${payload.emoji} msg=${payload.messageId} channel=${payload.channelId}`,
+    );
   }
 }
