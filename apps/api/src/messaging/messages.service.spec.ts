@@ -558,6 +558,19 @@ describe('MessagesService.toggleReaction', () => {
       NotFoundException,
     );
   });
+
+  it('react to a deleted message → ConflictException, no INSERT/DELETE', async () => {
+    // Message exists but is soft-deleted
+    mockSelect.mockReturnValue(makeSelectChain([{ id: MESSAGE_ID, is_deleted: true }]));
+
+    await expect(service.toggleReaction(CHANNEL_ID, MESSAGE_ID, AUTHOR_ID, '👍')).rejects.toThrow(
+      ConflictException,
+    );
+
+    // No reaction mutation must have occurred
+    expect(mockInsert).not.toHaveBeenCalled();
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
 });
 
 // ---------------------------------------------------------------------------
