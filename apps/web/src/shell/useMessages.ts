@@ -15,14 +15,28 @@
  * - toggleReaction(messageId, emoji) — POST toggle + optimistic update.
  * - Socket handlers for message:updated / message:deleted / reaction:added / reaction:removed.
  *   Own optimistic actions are reconciled against incoming events to avoid double-flip.
+ *
+ * Wave-20 M4 additions (offline-first SPINE):
+ * - sendMessage() writes to the Dexie outbox FIRST (durable), then attempts
+ *   network POST. No separate send path — outbox BACKS the optimistic state.
+ * - Composer stays ENABLED offline (sends enqueue as pending, no error/block).
+ * - On socket reconnect + window 'online': drain() outbox then catch-up via
+ *   api.getMessagesAfter(lastSeenCursor).
+ * - On mount: load pending outbox rows (cold-start hydration across page reload).
+ * - Network-first for initial load; on offline/fetch-fail, read from Dexie cache.
+ * - Socket message:new events write through to the Dexie cache.
  */
 
 import type { MessageResponse, ValidatedAttachment } from '@studyhall/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../auth/api';
+import { getCachedMessages, putCachedMessage, putCachedMessages } from '../features/sync/cache';
+import { db } from '../features/sync/db';
+import { drain, enqueue, loadPending, retryOutboxItem } from '../features/sync/outbox';
 import type { DisplayMessage, OptimisticMessage, StagedAttachmentPreview } from './MessageList';
 import {
   applyReactionEvent,
+  getMessagingSocket,
   joinChannel,
   leaveChannel,
   onMessageDeleted,
@@ -62,6 +76,8 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
 
   const subscribedChannelRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
+  // Track the last message createdAt seen — used as the catch-up cursor on reconnect.
+  const lastSeenCursorRef = useRef<string | null>(null);
 
   // Track in-flight optimistic reaction toggles to deduplicate socket echoes.
   // Key: `${messageId}:${emoji}`, value: true while the POST is in-flight.
@@ -74,6 +90,94 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
     };
   }, []);
 
+  // ── Reconnect + catch-up helper ────────────────────────────────────────────
+  // Called on socket reconnect AND window 'online' event.
+  const runDrainAndCatchup = useCallback(async (forChannelId: string) => {
+    if (!mountedRef.current) return;
+
+    // 1. Drain outbox first (sequential, oldest-first).
+    if (db) {
+      await drain(
+        db,
+        (chId, body) => api.sendMessage(chId, body),
+        (idempotencyKey, confirmedId) => {
+          if (!mountedRef.current) return;
+          // Reconcile: add confirmed message to real list, remove optimistic.
+          setRealMessages((prev) => {
+            if (prev.some((m) => m.id === confirmedId)) return prev;
+            // We don't have the full MessageResponse here from drain's perspective —
+            // the socket message:new will arrive and add it. Just remove optimistic.
+            return prev;
+          });
+          setOptimisticMessages((prev) => prev.filter((m) => m.idempotencyKey !== idempotencyKey));
+        },
+        (idempotencyKey) => {
+          if (!mountedRef.current) return;
+          setOptimisticMessages((prev) =>
+            prev.map((m) =>
+              m.idempotencyKey === idempotencyKey ? { ...m, state: 'failed' as const } : m,
+            ),
+          );
+        },
+      );
+    }
+
+    // 2. Catch-up: fetch messages produced while offline.
+    const cursor = lastSeenCursorRef.current;
+    if (cursor) {
+      try {
+        const result = await api.getMessagesAfter(forChannelId, cursor);
+        if (!mountedRef.current) return;
+        if (result.items.length > 0) {
+          setRealMessages((prev) => {
+            const existingIds = new Set(prev.map((m) => m.id));
+            const newItems = result.items.filter((m) => !existingIds.has(m.id));
+            if (newItems.length === 0) return prev;
+            // Write through to cache.
+            if (db) {
+              const cachedAt = new Date().toISOString();
+              void putCachedMessages(
+                db,
+                newItems.map((m) => ({ ...m, cachedAt })),
+              );
+            }
+            // Update cursor to the last item.
+            const last = newItems[newItems.length - 1];
+            if (last) lastSeenCursorRef.current = last.createdAt;
+            return [...prev, ...newItems];
+          });
+        }
+      } catch {
+        // Catch-up fail is non-fatal — socket will deliver new messages.
+      }
+    }
+  }, []);
+
+  // ── Socket reconnect listener ──────────────────────────────────────────────
+  useEffect(() => {
+    if (!channelId) return;
+    const socket = getMessagingSocket();
+    const handleReconnect = () => {
+      void runDrainAndCatchup(channelId);
+    };
+    socket.on('connect', handleReconnect);
+    return () => {
+      socket.off('connect', handleReconnect);
+    };
+  }, [channelId, runDrainAndCatchup]);
+
+  // ── Window 'online' listener ───────────────────────────────────────────────
+  useEffect(() => {
+    if (!channelId) return;
+    const handleOnline = () => {
+      void runDrainAndCatchup(channelId);
+    };
+    window.addEventListener('online', handleOnline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [channelId, runDrainAndCatchup]);
+
   // ── Fetch initial + socket room join on channel change ─────────────────────
   useEffect(() => {
     if (!channelId) {
@@ -82,6 +186,7 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
       setLoadingInitial(false);
       setErrorInitial(false);
       setNextCursor(null);
+      lastSeenCursorRef.current = null;
       return;
     }
 
@@ -96,23 +201,86 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
     setOptimisticMessages([]);
     setErrorInitial(false);
     setNextCursor(null);
+    lastSeenCursorRef.current = null;
     setLoadingInitial(true);
 
+    // Network-first: attempt GET; on offline/fetch-fail, read from Dexie cache.
     api
       .listMessages(channelId)
       .then((result) => {
         if (!mountedRef.current) return;
         setRealMessages(result.messages);
         setNextCursor(result.nextCursor ?? null);
+        // Update cursor to the last message we received.
+        const last = result.messages[result.messages.length - 1];
+        if (last) lastSeenCursorRef.current = last.createdAt;
+        // Write through to cache.
+        if (db) {
+          const cachedAt = new Date().toISOString();
+          void putCachedMessages(
+            db,
+            result.messages.map((m) => ({ ...m, cachedAt })),
+          );
+        }
       })
-      .catch(() => {
+      .catch(async () => {
         if (!mountedRef.current) return;
-        setErrorInitial(true);
+        // Offline fallback — read from Dexie cache.
+        if (db) {
+          try {
+            const cached = await getCachedMessages(db, channelId);
+            if (!mountedRef.current) return;
+            setRealMessages(cached);
+            const last = cached[cached.length - 1];
+            if (last) lastSeenCursorRef.current = last.createdAt;
+          } catch {
+            setErrorInitial(true);
+          }
+        } else {
+          setErrorInitial(true);
+        }
       })
       .finally(() => {
         if (!mountedRef.current) return;
         setLoadingInitial(false);
       });
+
+    // Cold-start hydration: load pending outbox rows into optimistic state.
+    if (db) {
+      const store = db;
+      loadPending(store)
+        .then((pendingItems) => {
+          if (!mountedRef.current) return;
+          const pendingForChannel = pendingItems.filter((item) => item.channelId === channelId);
+          if (pendingForChannel.length === 0) return;
+          setOptimisticMessages((prev) => {
+            const existingKeys = new Set(prev.map((m) => m.idempotencyKey));
+            const toAdd: OptimisticMessage[] = pendingForChannel
+              .filter((item) => !existingKeys.has(item.idempotencyKey))
+              .map((item) => ({
+                idempotencyKey: item.idempotencyKey,
+                content: item.content,
+                authorDisplay: 'You',
+                state: 'pending' as const,
+                ...(item.attachments && item.attachments.length > 0
+                  ? {
+                      validatedAttachments: item.attachments.map((a) => ({
+                        key: a.key,
+                        filename: a.filename,
+                        contentType: a.contentType,
+                        sizeBytes: a.sizeBytes,
+                        url: '',
+                      })),
+                    }
+                  : {}),
+              }));
+            return toAdd.length > 0 ? [...prev, ...toAdd] : prev;
+          });
+        })
+        .catch(() => {
+          // Cold-start hydration failure is non-fatal.
+        });
+    }
   }, [channelId]);
 
   // ── Socket listener — real-time message:new ────────────────────────────────
@@ -123,6 +291,12 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
       if (msg.channelId !== channelId) return;
       setRealMessages((prev) => {
         if (prev.some((m) => m.id === msg.id)) return prev;
+        // Update cursor.
+        lastSeenCursorRef.current = msg.createdAt;
+        // Write through to cache.
+        if (db) {
+          void putCachedMessage(db, { ...msg, cachedAt: new Date().toISOString() });
+        }
         return [...prev, msg];
       });
     });
@@ -195,10 +369,6 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
   }, [channelId]);
 
   // ── Socket listener — thread:reply:created ────────────────────────────────
-  // Updates the parent message's replyCount and lastReplyAt in the channel list
-  // so the affordance chip live-updates even when the thread panel is closed.
-  // The reply itself is NOT added to the channel message list (it only lives in
-  // the thread panel — handled by useThread).
   useEffect(() => {
     if (!channelId) return;
     const unsub = onThreadReplyCreated((event) => {
@@ -220,10 +390,6 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
   }, [channelId]);
 
   // ── Socket listener — thread:reply:deleted ───────────────────────────────
-  // Updates the parent message's replyCount and lastReplyAt with the server's
-  // authoritative post-decrement values. When replyCount hits 0 the affordance
-  // chip hides automatically because MessageList conditionally renders it only
-  // when replyCount > 0.
   useEffect(() => {
     if (!channelId) return;
     const unsub = onThreadReplyDeleted((event) => {
@@ -254,6 +420,14 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
         if (!mountedRef.current) return;
         setRealMessages((prev) => [...result.messages, ...prev]);
         setNextCursor(result.nextCursor ?? null);
+        // Write through to cache.
+        if (db) {
+          const cachedAt = new Date().toISOString();
+          void putCachedMessages(
+            db,
+            result.messages.map((m) => ({ ...m, cachedAt })),
+          );
+        }
       })
       .catch(() => {
         /* silently ignore — user can scroll up and retry */
@@ -264,7 +438,9 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
       });
   }, [channelId, nextCursor, loadingOlder]);
 
-  // ── Optimistic send ────────────────────────────────────────────────────────
+  // ── Optimistic send (outbox-backed) ───────────────────────────────────────
+  // The Dexie outbox is the durable backing store for every send.
+  // The composer stays ENABLED offline — sends enqueue as pending.
   const sendMessage = useCallback(
     (
       content: string,
@@ -272,40 +448,142 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
       stagedPreviews?: StagedAttachmentPreview[],
     ) => {
       if (!channelId) return;
-      const idempotencyKey = crypto.randomUUID();
-      setOptimisticMessages((prev) => [
-        ...prev,
-        {
-          idempotencyKey,
-          content,
-          authorDisplay: 'You',
-          state: 'pending',
-          ...(stagedPreviews ? { stagedAttachments: stagedPreviews } : {}),
-          ...(attachments ? { validatedAttachments: attachments } : {}),
-        },
-      ]);
-      api
-        .sendMessage(channelId, {
-          content,
-          idempotencyKey,
-          ...(attachments && attachments.length > 0 ? { attachments } : {}),
-        })
-        .then((confirmed) => {
-          if (!mountedRef.current) return;
-          setRealMessages((prev) => {
-            if (prev.some((m) => m.id === confirmed.id)) return prev;
-            return [...prev, confirmed];
+
+      // Strip to OutboxItem-compatible attachment descriptors (drop url).
+      const outboxAttachments = attachments?.map((a) => ({
+        key: a.key,
+        filename: a.filename,
+        contentType: a.contentType,
+        sizeBytes: a.sizeBytes,
+      }));
+
+      if (db) {
+        const store = db;
+        // Enqueue to durable store first, then reflect in optimistic state.
+        enqueue(store, channelId, content, outboxAttachments)
+          .then(({ idempotencyKey }) => {
+            if (!mountedRef.current) return;
+
+            // Reflect as pending in UI.
+            setOptimisticMessages((prev) => [
+              ...prev,
+              {
+                idempotencyKey,
+                content,
+                authorDisplay: 'You',
+                state: 'pending',
+                ...(stagedPreviews ? { stagedAttachments: stagedPreviews } : {}),
+                ...(attachments ? { validatedAttachments: attachments } : {}),
+              },
+            ]);
+
+            // Attempt network POST immediately (drain pattern for single item).
+            api
+              .sendMessage(channelId, {
+                content,
+                idempotencyKey,
+                ...(attachments && attachments.length > 0 ? { attachments } : {}),
+              })
+              .then((confirmed) => {
+                if (!mountedRef.current) return;
+                // Delete from outbox (delivered).
+                void store.outbox.where('idempotencyKey').equals(idempotencyKey).delete();
+                // Reconcile.
+                setRealMessages((prev) => {
+                  if (prev.some((m) => m.id === confirmed.id)) return prev;
+                  lastSeenCursorRef.current = confirmed.createdAt;
+                  if (db) {
+                    void putCachedMessage(db, { ...confirmed, cachedAt: new Date().toISOString() });
+                  }
+                  return [...prev, confirmed];
+                });
+                setOptimisticMessages((prev) =>
+                  prev.filter((m) => m.idempotencyKey !== idempotencyKey),
+                );
+              })
+              .catch(() => {
+                // Offline or network error — leave in outbox (pending), keep optimistic row.
+                // The reconnect drain will retry.
+              });
+          })
+          .catch(() => {
+            // IDB enqueue failed (e.g. QuotaExceededError) — fall back to in-memory only.
+            const idempotencyKey = crypto.randomUUID();
+            setOptimisticMessages((prev) => [
+              ...prev,
+              {
+                idempotencyKey,
+                content,
+                authorDisplay: 'You',
+                state: 'pending',
+                ...(stagedPreviews ? { stagedAttachments: stagedPreviews } : {}),
+                ...(attachments ? { validatedAttachments: attachments } : {}),
+              },
+            ]);
+            api
+              .sendMessage(channelId, {
+                content,
+                idempotencyKey,
+                ...(attachments && attachments.length > 0 ? { attachments } : {}),
+              })
+              .then((confirmed) => {
+                if (!mountedRef.current) return;
+                setRealMessages((prev) => {
+                  if (prev.some((m) => m.id === confirmed.id)) return prev;
+                  return [...prev, confirmed];
+                });
+                setOptimisticMessages((prev) =>
+                  prev.filter((m) => m.idempotencyKey !== idempotencyKey),
+                );
+              })
+              .catch(() => {
+                if (!mountedRef.current) return;
+                setOptimisticMessages((prev) =>
+                  prev.map((m) =>
+                    m.idempotencyKey === idempotencyKey ? { ...m, state: 'failed' as const } : m,
+                  ),
+                );
+              });
           });
-          setOptimisticMessages((prev) => prev.filter((m) => m.idempotencyKey !== idempotencyKey));
-        })
-        .catch(() => {
-          if (!mountedRef.current) return;
-          setOptimisticMessages((prev) =>
-            prev.map((m) =>
-              m.idempotencyKey === idempotencyKey ? { ...m, state: 'failed' as const } : m,
-            ),
-          );
-        });
+      } else {
+        // No IDB available — in-memory-only path (same as pre-wave-20).
+        const idempotencyKey = crypto.randomUUID();
+        setOptimisticMessages((prev) => [
+          ...prev,
+          {
+            idempotencyKey,
+            content,
+            authorDisplay: 'You',
+            state: 'pending',
+            ...(stagedPreviews ? { stagedAttachments: stagedPreviews } : {}),
+            ...(attachments ? { validatedAttachments: attachments } : {}),
+          },
+        ]);
+        api
+          .sendMessage(channelId, {
+            content,
+            idempotencyKey,
+            ...(attachments && attachments.length > 0 ? { attachments } : {}),
+          })
+          .then((confirmed) => {
+            if (!mountedRef.current) return;
+            setRealMessages((prev) => {
+              if (prev.some((m) => m.id === confirmed.id)) return prev;
+              return [...prev, confirmed];
+            });
+            setOptimisticMessages((prev) =>
+              prev.filter((m) => m.idempotencyKey !== idempotencyKey),
+            );
+          })
+          .catch(() => {
+            if (!mountedRef.current) return;
+            setOptimisticMessages((prev) =>
+              prev.map((m) =>
+                m.idempotencyKey === idempotencyKey ? { ...m, state: 'failed' as const } : m,
+              ),
+            );
+          });
+      }
     },
     [channelId],
   );
@@ -316,11 +594,19 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
       if (!channelId) return;
       const failed = optimisticMessages.find((m) => m.idempotencyKey === idempotencyKey);
       if (!failed) return;
+
+      // Reset to pending in UI.
       setOptimisticMessages((prev) =>
         prev.map((m) =>
           m.idempotencyKey === idempotencyKey ? { ...m, state: 'pending' as const } : m,
         ),
       );
+
+      // Re-queue in outbox (reset attempts + state=pending) if IDB available.
+      if (db) {
+        void retryOutboxItem(db, idempotencyKey);
+      }
+
       const retryAttachments = failed.validatedAttachments as ValidatedAttachment[] | undefined;
       api
         .sendMessage(channelId, {
@@ -332,6 +618,10 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
         })
         .then((confirmed) => {
           if (!mountedRef.current) return;
+          // Delete from outbox on success.
+          if (db) {
+            void db.outbox.where('idempotencyKey').equals(idempotencyKey).delete();
+          }
           setRealMessages((prev) => {
             if (prev.some((m) => m.id === confirmed.id)) return prev;
             return [...prev, confirmed];
@@ -351,11 +641,9 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
   );
 
   // ── Edit a message ─────────────────────────────────────────────────────────
-  // Optimistic: immediately reflect the edit in UI; server response reconciles.
   const editMessage = useCallback(
     (messageId: string, content: string) => {
       if (!channelId) return;
-      // Optimistic update — mark isEdited locally
       setRealMessages((prev) =>
         prev.map((m) =>
           m.id === messageId
@@ -367,13 +655,10 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
         .editMessage(channelId, messageId, { content })
         .then((updated) => {
           if (!mountedRef.current) return;
-          // Reconcile with server response (authoritative timestamps)
           setRealMessages((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
         })
         .catch(() => {
-          // On failure we leave the optimistic state (the socket message:updated
-          // will correct it if the server actually succeeded, or the user can
-          // reload; edit failures are uncommon and non-destructive).
+          // Leave optimistic state; socket message:updated will correct if server succeeded.
         });
     },
     [channelId],
@@ -383,15 +668,12 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
   const deleteMessage = useCallback(
     (messageId: string) => {
       if (!channelId) return;
-      // Optimistic tombstone
       setRealMessages((prev) =>
         prev.map((m) =>
           m.id === messageId ? { ...m, isDeleted: true, content: null, reactions: [] } : m,
         ),
       );
       api.deleteMessage(channelId, messageId).catch(() => {
-        // On failure roll back — the socket event would have never arrived
-        // so we need to undo our optimistic tombstone.
         setRealMessages((prev) =>
           prev.map((m) =>
             m.id === messageId ? { ...m, isDeleted: false, content: m.content } : m,
@@ -407,7 +689,6 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
     (messageId: string, emoji: string) => {
       if (!channelId) return;
 
-      // Determine current state to flip optimistically
       const msg = realMessages.find((m) => m.id === messageId);
       if (!msg) return;
 
@@ -415,11 +696,9 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
       const wasReacted = existing?.reactedByMe ?? false;
       const newCount = wasReacted ? (existing?.count ?? 1) - 1 : (existing?.count ?? 0) + 1;
 
-      // Mark in-flight to suppress socket echo
       const key = `${messageId}:${emoji}`;
       inflightReactionsRef.current.add(key);
 
-      // Optimistic update
       setRealMessages((prev) =>
         prev.map((m) => {
           if (m.id !== messageId) return m;
@@ -440,21 +719,13 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
         .toggleReaction(channelId, messageId, { emoji })
         .then((res) => {
           if (!mountedRef.current) return;
-          // Server returns {reacted: bool} — do a final reconcile via message:updated
-          // socket event which the server emits. Nothing extra needed here unless
-          // we want belt-and-suspenders: the optimistic state already reflects res.reacted.
-          // Remove in-flight marker so future socket events are processed.
           inflightReactionsRef.current.delete(key);
-          // If the server disagrees, correct via refetch of the single message.
-          // In practice message:updated socket arrives and corrects state.
-          // Just ensure the reacted flag matches.
           setRealMessages((prev) =>
             prev.map((m) => {
               if (m.id !== messageId) return m;
               const r = m.reactions.find((rx) => rx.emoji === emoji);
               if (!r) return m;
               if (r.reactedByMe === res.reacted) return m;
-              // Flip back to match server
               return {
                 ...m,
                 reactions: m.reactions.map((rx) =>
@@ -467,7 +738,6 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
         .catch(() => {
           if (!mountedRef.current) return;
           inflightReactionsRef.current.delete(key);
-          // Roll back optimistic toggle
           setRealMessages((prev) =>
             prev.map((m) => {
               if (m.id !== messageId) return m;
@@ -477,7 +747,6 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
                   messageId,
                   channelId,
                   emoji,
-                  // Restore original count/state
                   count: existing?.count ?? 0,
                   reactedByMe: wasReacted,
                 }),

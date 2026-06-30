@@ -15,6 +15,7 @@ import type {
   MeResponse,
   MessageList,
   MessageResponse,
+  MessagesAfterResponse,
   MyMentionsResponse,
   ProfileResponse,
   ReactionToggleInput,
@@ -269,6 +270,17 @@ export const api = {
     const qs = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
     return request<MessageList>(`/channels/${channelId}/messages${qs}`);
   },
+
+  /**
+   * GET /channels/:channelId/messages?after=<cursor> → MessagesAfterResponse.
+   * Forward catch-up cursor — returns all messages AFTER the given cursor
+   * (ASC created_at, oldest-first). Used on reconnect to fill the offline gap.
+   * wave-20 M4 (B-2 backend: forward cursor + idempotency-lock).
+   */
+  getMessagesAfter: (channelId: string, after: string) =>
+    request<MessagesAfterResponse>(
+      `/channels/${channelId}/messages?after=${encodeURIComponent(after)}`,
+    ),
 
   /**
    * PATCH /channels/:channelId/messages/:messageId {content} → 200 updated MessageResponse.
