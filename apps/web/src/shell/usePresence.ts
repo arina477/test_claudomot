@@ -11,8 +11,8 @@
  * items, keeping subscription count at 1 regardless of member count.
  */
 
-import { useCallback, useEffect, useState } from 'react';
 import type { PresenceStatus } from '@studyhall/shared';
+import { useCallback, useEffect, useState } from 'react';
 import { getPresenceStatus, subscribePresence } from './presenceSocket';
 
 export type UsePresenceResult = {

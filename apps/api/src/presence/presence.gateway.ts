@@ -111,8 +111,7 @@ export class PresenceGateway implements OnGatewayInit, OnGatewayConnection, OnGa
         .limit(1);
 
       // Fall back to email prefix if display_name is not set
-      const displayName =
-        userRow?.display_name ?? userRow?.email?.split('@')[0] ?? userId;
+      const displayName = userRow?.display_name ?? userRow?.email?.split('@')[0] ?? userId;
       socket.data.displayName = displayName;
     } catch {
       socket.data.displayName = userId;
@@ -190,9 +189,7 @@ export class PresenceGateway implements OnGatewayInit, OnGatewayConnection, OnGa
 
       const offlinePayload: PresenceOfflinePayload = { userId };
       for (const serverId of serverIds) {
-        this.server
-          .to(`presence:server:${serverId}`)
-          .emit(PRESENCE_EVENTS.OFFLINE, offlinePayload);
+        this.server.to(`presence:server:${serverId}`).emit(PRESENCE_EVENTS.OFFLINE, offlinePayload);
       }
       this.logger.debug(
         `userId=${userId} went offline — notified ${serverIds.length} server room(s)`,
