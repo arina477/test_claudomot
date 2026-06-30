@@ -20,10 +20,10 @@
 > 4. **3 carried tech-debt tasks remain parked** as top-level M3 todos for a future wave (NOT this bundle): 46f16288 (browser-E2E create-server), 25523fb0 (PG-rollback test), d058283d (invite_code rotation).
 
 PRODUCT:
-- [ ] P-0 Frame (discover + reframe)
-- [ ] P-1 Decompose
-- [ ] P-2 Spec
-- [ ] P-3 Plan
+- [x] P-0 Frame (discover + reframe)
+- [x] P-1 Decompose
+- [x] P-2 Spec
+- [x] P-3 Plan
 - [ ] P-4 Gate
 
 DESIGN (skip block if non-UI wave):
