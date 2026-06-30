@@ -3,7 +3,7 @@
 **Block:** B (Build)
 **Wave topic:** Real-Postgres create-server rollback integration test (test-infra)
 **Block exit gate:** B-6
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
@@ -14,7 +14,7 @@
 | B-3 | stages/B-3-frontend.md | done | integration spec + reusable PG harness (CF-2 redirect, 3 cases) |
 | B-4 | stages/B-4-wiring.md | done | parallel-safe integration project; test:ci runs unit+integration |
 | B-5 | stages/B-5-verify.md | done | typecheck+lint+292 unit green; integration skip-clean local / runs CI |
-| B-6 | stages/B-6-review.md | pending | head-builder gate (verify integration PROJECT parallel-safe) |
+| B-6 | stages/B-6-review.md | done | head-builder APPROVED; /review caught+fixed C1/H1/H2 (real-PG run); clean |
 
 ## Block-specific context
 - **Spec contract:** tasks row 25523fb0 (DB); single-spec
@@ -33,3 +33,14 @@ none
 
 ## Gate verdict log
 <appended by head-builder at B-6>
+
+## Block exit handoff
+```yaml
+build_block_status: complete
+branch: wave-17-create-server-rollback-test
+stages_run: [B-0,B-3,B-4,B-5,B-6]
+stages_skipped: [B-1, B-2]
+review_verdict: APPROVE
+last_commit_sha: 03542b2
+ready_for_ci: true
+```
