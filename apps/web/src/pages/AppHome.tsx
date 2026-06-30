@@ -16,10 +16,13 @@ import { VerifyEmailBanner } from '../components/VerifyEmailBanner';
 import { AppShell } from '../shell/AppShell';
 import { ProfileProvider } from '../shell/ProfileContext';
 import { ServerProvider } from '../shell/ServerContext';
+import { useConnectionState } from '../shell/useConnectionState';
 
 export function AppHome() {
   const [me, setMe] = useState<MeResponse | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
+
+  const connectionState = useConnectionState();
 
   useEffect(() => {
     api
@@ -36,7 +39,7 @@ export function AppHome() {
         <div className="flex h-full flex-col overflow-hidden">
           {showBanner && <VerifyEmailBanner onDismiss={() => setBannerDismissed(true)} />}
           <div className="flex-1 overflow-hidden">
-            <AppShell connectionState="online" />
+            <AppShell connectionState={connectionState} />
           </div>
         </div>
       </ServerProvider>
