@@ -241,6 +241,17 @@ export class FilesService {
     // extra security here since the presign is already authz-gated at the controller).
     const key = `attachments/${channelId}/${randomUUID()}.${ext}`;
 
+    // H-2 (wave-19 B-6): presigned-PUT cannot carry a ContentLengthRange condition
+    // (that is a presigned-POST-only feature).  An oversized object CAN therefore
+    // land in the bucket without being blocked at PUT time.  This is the accepted
+    // known-debt for this wave (no GC cron).
+    //
+    // SEND is the binding size gate: MessagesService.createMessage / createReply
+    // call headAttachment() before INSERTing any attachment row, and reject keys
+    // whose server-reported ContentLength exceeds ATTACHMENT_MAX_SIZE_BYTES (10 MB).
+    // An oversized object that sneaks past the presigned-PUT becomes an
+    // abandoned/unreferenced object in storage — it is never persisted to the DB,
+    // and therefore never surfaced to any user.
     const command = new PutObjectCommand({
       Bucket: bucket,
       Key: key,
@@ -292,6 +303,44 @@ export class FilesService {
     }
 
     return contentLength;
+  }
+
+  /**
+   * HeadObject lookup for an attachment key — returns server-derived
+   * {contentLength, contentType} WITHOUT fetching the body.
+   *
+   * Called by MessagesService at SEND time to server-derive the authoritative
+   * size and content-type that are persisted in the DB row.  The client-supplied
+   * sizeBytes / contentType in the send body are IGNORED; only the values
+   * returned here are INSERTed (closes the size-bypass and type-spoof vectors
+   * from the B-6 review).
+   *
+   * Size cap (10 MB) is enforced by the caller (MessagesService) using the
+   * returned contentLength — NOT here, so the caller can return the appropriate
+   * HTTP status code (413 vs 400).
+   *
+   * Throws:
+   *   - ServiceUnavailableException (503) if storage env is unconfigured.
+   *   - Any S3 SDK error propagates (e.g. NoSuchKey → caller gets a 5xx unless
+   *     it catches; MessagesService maps it to BadRequestException).
+   */
+  async headAttachment(key: string): Promise<{ contentLength: number; contentType: string }> {
+    const client = this.getS3Client();
+    if (!client) {
+      throw new ServiceUnavailableException({ code: 'STORAGE_NOT_CONFIGURED' });
+    }
+
+    const bucket = process.env.STORAGE_BUCKET_NAME;
+    if (!bucket) {
+      throw new ServiceUnavailableException({ code: 'STORAGE_NOT_CONFIGURED' });
+    }
+
+    const head = await client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
+
+    return {
+      contentLength: head.ContentLength ?? 0,
+      contentType: head.ContentType ?? '',
+    };
   }
 
   /**

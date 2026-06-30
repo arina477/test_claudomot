@@ -147,13 +147,26 @@ export class AttachmentsController {
       throw new ForbiddenException('Not a member of this channel');
     }
 
-    // Validate key: must be a string scoped to attachments/<channelId>/.
-    // This prevents a member of channel A from confirming a key written by
-    // a different channel's presign (cross-channel key swap IDOR).
+    // H-1 (wave-19 B-6): validate key with an ANCHORED regex that:
+    //   - pins the channel to THIS message's channel_id (no cross-channel swap)
+    //   - allows only safe filename characters after the prefix (no path traversal
+    //     via ".." or nested slashes)
+    //
+    // Pattern: ^attachments/<channelId>/[A-Za-z0-9._-]+$
+    //   - anchored at both ends (^ and $) — no bypass via prefix match alone
+    //   - channelId interpolated from the route param (not from the client body)
+    //   - filename segment: alphanumeric, dots, underscores, hyphens only
+    //
+    // A simple startsWith() check was replaced here because it admitted path
+    // traversal segments (e.g. "attachments/<channelId>/../other-channel/obj")
+    // and unvalidated channelIds from the body.
     const key = body?.key;
-    if (typeof key !== 'string' || !key.startsWith(`attachments/${channelId}/`)) {
+    // Escape any regex-special chars in channelId (UUIDs are safe but belt-and-suspenders)
+    const escapedChannelId = channelId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const KEY_PATTERN = new RegExp(`^attachments/${escapedChannelId}/[A-Za-z0-9._-]+$`);
+    if (typeof key !== 'string' || !KEY_PATTERN.test(key)) {
       throw new BadRequestException(
-        'key must be a valid attachment key scoped to this channel (attachments/<channelId>/...)',
+        'key must be a valid attachment key scoped to this channel (attachments/<channelId>/[safe-filename])',
       );
     }
 

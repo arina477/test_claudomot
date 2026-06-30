@@ -42,7 +42,13 @@
  *   - listThreadReplies: ordered ASC, excludes soft-deleted
  */
 
-import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+  PayloadTooLargeException,
+} from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MessagesService } from './messages.service';
 
@@ -176,11 +182,21 @@ function makeRbacService(canResult = false, canViewChannelResult = true) {
 //
 // resolveAttachmentUrl returns a stable presigned-GET URL stub so existing
 // tests that don't exercise attachments still pass without real S3 creds.
+//
+// headAttachment — added B-6: returns server-derived { contentLength, contentType }
+// used by validateAndHeadAttachments at send time (C-1 fix).  Default: 100 KB,
+// image/png — within limits, in allowlist.
 // ---------------------------------------------------------------------------
 
-function makeFilesService() {
+function makeFilesService(
+  headResult: { contentLength: number; contentType: string } = {
+    contentLength: 102400, // 100 KB — within 10 MB cap
+    contentType: 'image/png', // in ATTACHMENT_ALLOWED_MIME
+  },
+) {
   return {
     resolveAttachmentUrl: vi.fn().mockResolvedValue('https://presigned.example.com/attachment'),
+    headAttachment: vi.fn().mockResolvedValue(headResult),
   };
 }
 
@@ -1648,6 +1664,295 @@ describe('MessagesService.deleteMessage — wave-18 B-6 thread:reply:deleted (H-
 //   - listMessages batch-loads attachments (no N+1 — single select covers all message IDs)
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Tests: wave-19 B-6 — C-1 send-time attachment validation (security fix)
+//
+// These tests cover the server-side re-validation added at send time:
+//   - cross-channel key → 400 (IDOR prevention)
+//   - key fails anchored regex (path traversal attempt) → 400
+//   - HeadObject reports >10MB → 413 (size-bypass closed)
+//   - HeadObject reports disallowed MIME → 400 (type-spoof closed)
+//   - happy path: server-derived size+type persisted (not client-claimed values)
+//   - idempotent replay still no double-attach
+// ---------------------------------------------------------------------------
+
+describe('MessagesService.createMessage — wave-19 B-6 C-1 send-time attachment validation', () => {
+  let service: MessagesService;
+  let eventEmitter: ReturnType<typeof makeEventEmitter>;
+  let filesService: ReturnType<typeof makeFilesService>;
+
+  const VALID_KEY = `attachments/${CHANNEL_ID}/uuid-valid.pdf`;
+  const CROSS_CHANNEL_KEY = 'attachments/OTHER-CHANNEL-999/uuid-valid.pdf';
+  const TRAVERSAL_KEY = `attachments/${CHANNEL_ID}/../other-channel/uuid.pdf`;
+
+  function makeServiceWithHeadResult(
+    headResult: { contentLength: number; contentType: string } = {
+      contentLength: 102400, // 100 KB — within 10 MB
+      contentType: 'application/pdf', // in allowlist
+    },
+  ) {
+    filesService = makeFilesService(headResult);
+    service = new MessagesService(
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      eventEmitter as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeRbacService() as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      filesService as any,
+    );
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    eventEmitter = makeEventEmitter();
+    makeServiceWithHeadResult();
+
+    // biome-ignore lint/suspicious/noExplicitAny: test transaction mock
+    mockTransaction.mockImplementation(async (cb: (tx: any) => Promise<unknown>) =>
+      cb({ select: mockSelect, insert: mockInsert, update: mockUpdate, delete: mockDelete }),
+    );
+  });
+
+  function setupChannelSelect() {
+    mockSelect.mockImplementation(() => {
+      // First select: channel existence check (createMessage always does this first)
+      return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID, name: 'general' }]);
+    });
+  }
+
+  it('cross-channel key → 400 BadRequestException (IDOR prevention)', async () => {
+    setupChannelSelect();
+
+    await expect(
+      service.createMessage(CHANNEL_ID, AUTHOR_ID, {
+        content: 'Hi',
+        attachments: [
+          {
+            key: CROSS_CHANNEL_KEY, // belongs to OTHER-CHANNEL-999, not CHANNEL_ID
+            filename: 'doc.pdf',
+            contentType: 'application/pdf',
+            sizeBytes: 1000,
+          },
+        ],
+      }),
+    ).rejects.toThrow(BadRequestException);
+
+    // headAttachment must NOT have been called — key is rejected before I/O
+    expect(filesService.headAttachment).not.toHaveBeenCalled();
+  });
+
+  it('key with path-traversal segment → 400 BadRequestException (anchored regex)', async () => {
+    setupChannelSelect();
+
+    await expect(
+      service.createMessage(CHANNEL_ID, AUTHOR_ID, {
+        content: 'Hi',
+        attachments: [
+          {
+            key: TRAVERSAL_KEY, // "../other-channel/" nested slash → fails regex
+            filename: 'doc.pdf',
+            contentType: 'application/pdf',
+            sizeBytes: 1000,
+          },
+        ],
+      }),
+    ).rejects.toThrow(BadRequestException);
+
+    expect(filesService.headAttachment).not.toHaveBeenCalled();
+  });
+
+  it('HeadObject reports >10MB → 413 PayloadTooLargeException (size-bypass closed)', async () => {
+    makeServiceWithHeadResult({
+      contentLength: 11 * 1024 * 1024, // 11 MB — exceeds cap
+      contentType: 'application/pdf',
+    });
+    setupChannelSelect();
+
+    await expect(
+      service.createMessage(CHANNEL_ID, AUTHOR_ID, {
+        content: 'Big file',
+        attachments: [
+          {
+            key: VALID_KEY,
+            filename: 'big.pdf',
+            contentType: 'application/pdf',
+            sizeBytes: 500, // client claims tiny — server says 11 MB
+          },
+        ],
+      }),
+    ).rejects.toThrow(PayloadTooLargeException);
+
+    // headAttachment was called (key passed channel-scope check)
+    expect(filesService.headAttachment).toHaveBeenCalledWith(VALID_KEY);
+  });
+
+  it('HeadObject reports disallowed MIME → 400 BadRequestException (type-spoof closed)', async () => {
+    makeServiceWithHeadResult({
+      contentLength: 1024,
+      contentType: 'video/mp4', // NOT in ATTACHMENT_ALLOWED_MIME
+    });
+    setupChannelSelect();
+
+    await expect(
+      service.createMessage(CHANNEL_ID, AUTHOR_ID, {
+        content: 'Video',
+        attachments: [
+          {
+            key: VALID_KEY,
+            filename: 'video.mp4',
+            contentType: 'application/pdf', // client spoofs allowed type
+            sizeBytes: 1024,
+          },
+        ],
+      }),
+    ).rejects.toThrow(BadRequestException);
+
+    expect(filesService.headAttachment).toHaveBeenCalledWith(VALID_KEY);
+  });
+
+  it('happy path: INSERT uses SERVER-DERIVED size+type (not client-claimed values)', async () => {
+    // Server reports different values than what the client claims
+    makeServiceWithHeadResult({
+      contentLength: 204800, // 200 KB — server says; client claimed 500
+      contentType: 'image/png', // server says; client claimed application/pdf
+    });
+
+    const capturedAttachValues: Record<string, unknown>[] = [];
+    let insertCallCount = 0;
+    mockInsert.mockImplementation(() => {
+      insertCallCount++;
+      const chain = makeInsertChain();
+      if (insertCallCount === 1) {
+        // message insert — returning the message row
+        chain.returning = vi.fn().mockResolvedValue([mockMessage]);
+      } else {
+        // attachment insert — capture values
+        const origValues = chain.values as unknown as MockFn;
+        (chain.values as unknown as MockFn) = vi
+          .fn()
+          .mockImplementation((vals: Record<string, unknown>[]) => {
+            capturedAttachValues.push(...vals);
+            return origValues(vals);
+          });
+      }
+      return chain;
+    });
+
+    let selectCallCount = 0;
+    mockSelect.mockImplementation(() => {
+      selectCallCount++;
+      if (selectCallCount === 1)
+        return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID, name: 'general' }]);
+      return makeSelectChain([]);
+    });
+
+    await service.createMessage(CHANNEL_ID, AUTHOR_ID, {
+      content: 'Upload',
+      attachments: [
+        {
+          key: VALID_KEY,
+          filename: 'photo.png',
+          contentType: 'application/pdf', // client spoofs MIME
+          sizeBytes: 500, // client claims tiny size
+        },
+      ],
+    });
+
+    // The persisted row must carry SERVER-DERIVED values, not client claims
+    expect(capturedAttachValues).toHaveLength(1);
+    expect(capturedAttachValues[0]).toMatchObject({
+      content_type: 'image/png', // server-derived, not client's 'application/pdf'
+      size_bytes: 204800, // server-derived, not client's 500
+      object_key: VALID_KEY,
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: wave-19 B-6 — C-1 createReply send-time attachment validation
+//
+// Mirror of the createMessage C-1 tests for the reply path (createReply also
+// inserts attachments at send via the same validateAndHeadAttachments helper).
+// ---------------------------------------------------------------------------
+
+describe('MessagesService.createReply — wave-19 B-6 C-1 send-time attachment validation', () => {
+  let service: MessagesService;
+  let eventEmitter: ReturnType<typeof makeEventEmitter>;
+  let filesService: ReturnType<typeof makeFilesService>;
+
+  const VALID_KEY = `attachments/${CHANNEL_ID}/uuid-reply-attach.pdf`;
+  const CROSS_CHANNEL_KEY = 'attachments/WRONG-CHANNEL/uuid-reply-attach.pdf';
+
+  function makeServiceWithHeadResult(
+    headResult: { contentLength: number; contentType: string } = {
+      contentLength: 102400,
+      contentType: 'application/pdf',
+    },
+  ) {
+    filesService = makeFilesService(headResult);
+    service = new MessagesService(
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      eventEmitter as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeRbacService(false, true) as any, // can=false, canViewChannel=true
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      filesService as any,
+    );
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    eventEmitter = makeEventEmitter();
+    makeServiceWithHeadResult();
+  });
+
+  it('cross-channel key in reply → 400 BadRequestException', async () => {
+    // Pre-flight: parent exists, in correct channel, is a top-level message
+    mockSelect.mockReturnValue(makeSelectChain([mockParentMessage]));
+
+    await expect(
+      service.createReply(CHANNEL_ID, PARENT_ID, AUTHOR_ID, {
+        content: 'Reply',
+        attachments: [
+          {
+            key: CROSS_CHANNEL_KEY, // points at wrong channel
+            filename: 'doc.pdf',
+            contentType: 'application/pdf',
+            sizeBytes: 1000,
+          },
+        ],
+      }),
+    ).rejects.toThrow(BadRequestException);
+
+    expect(filesService.headAttachment).not.toHaveBeenCalled();
+  });
+
+  it('HeadObject reports >10MB in reply path → 413 PayloadTooLargeException', async () => {
+    makeServiceWithHeadResult({
+      contentLength: 15 * 1024 * 1024, // 15 MB
+      contentType: 'application/pdf',
+    });
+
+    mockSelect.mockReturnValue(makeSelectChain([mockParentMessage]));
+
+    await expect(
+      service.createReply(CHANNEL_ID, PARENT_ID, AUTHOR_ID, {
+        content: 'Big reply',
+        attachments: [
+          {
+            key: VALID_KEY,
+            filename: 'huge.pdf',
+            contentType: 'application/pdf',
+            sizeBytes: 100, // client claims tiny
+          },
+        ],
+      }),
+    ).rejects.toThrow(PayloadTooLargeException);
+
+    expect(filesService.headAttachment).toHaveBeenCalledWith(VALID_KEY);
+  });
+});
+
 describe('MessagesService.createMessage — wave-19 M3 attachment row-at-send', () => {
   let service: MessagesService;
   let eventEmitter: ReturnType<typeof makeEventEmitter>;
@@ -1675,7 +1980,9 @@ describe('MessagesService.createMessage — wave-19 M3 attachment row-at-send', 
   beforeEach(() => {
     vi.clearAllMocks();
     eventEmitter = makeEventEmitter();
-    filesService = makeFilesService();
+    // headAttachment returns server-authoritative values matching the test fixtures
+    // (application/pdf, 102400 bytes) so the INSERT assertions below are correct.
+    filesService = makeFilesService({ contentLength: 102400, contentType: 'application/pdf' });
     filesService.resolveAttachmentUrl = vi.fn().mockResolvedValue(ATTACH_PRESIGN_URL);
     service = new MessagesService(
       // biome-ignore lint/suspicious/noExplicitAny: test mock

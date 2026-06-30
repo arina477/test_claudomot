@@ -5,6 +5,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  PayloadTooLargeException,
 } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -33,7 +34,7 @@ import {
   users,
 } from '../db/schema/index';
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
-import { FilesService } from '../files/files.service';
+import { ATTACHMENT_ALLOWED_MIME, FilesService } from '../files/files.service';
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
 import { RbacService } from '../rbac/rbac.service';
 import { parseMentions } from './mentions';
@@ -309,6 +310,106 @@ async function buildAttachmentRefMap(
   return map;
 }
 
+// ---------------------------------------------------------------------------
+// Attachment send-time invariants (C-1 fix — wave-19 B-6)
+//
+// /confirm is an OPTIONAL UX pre-check; SEND is the BINDING enforcement gate.
+//
+// Before any attachment row is INSERTed the following are checked per descriptor:
+//   1. Channel-scope guard (closes IDOR / cross-channel key swap):
+//      The object_key must match ^attachments/<channelId>/[A-Za-z0-9._-]+$
+//      anchored at both ends, with channelId from the message's ACTUAL channel
+//      (never a client-supplied value).  Path-traversal segments (".." etc.) and
+//      nested slashes are rejected by the character class.
+//
+//   2. HeadObject re-derive (closes size-bypass + type-spoof):
+//      FilesService.headAttachment() is called to get the SERVER-authoritative
+//      ContentLength and ContentType.  The client-supplied sizeBytes / contentType
+//      are discarded.  Only the server-derived values are INSERTed.
+//
+//   3. Size cap: server ContentLength must be ≤ ATTACHMENT_SEND_MAX_BYTES (10 MB).
+//
+//   4. MIME allowlist: server ContentType must be in ATTACHMENT_ALLOWED_MIME.
+// ---------------------------------------------------------------------------
+
+const ATTACHMENT_SEND_MAX_BYTES = 10 * 1024 * 1024; // 10 MB — mirrors FilesService cap
+
+/**
+ * Server-side attachment descriptor validation at SEND time (C-1 fix).
+ *
+ * Returns an array of { ...descriptor, sizeBytes, contentType } where
+ * sizeBytes and contentType come from HeadObject (NOT the client payload).
+ *
+ * Throws:
+ *   400 BadRequestException  — key fails anchored channel-scope regex
+ *   413 PayloadTooLargeException — server-reported size > 10 MB
+ *   400 BadRequestException  — server-reported MIME not in allowlist
+ *   503 ServiceUnavailableException — storage not configured (propagated)
+ */
+async function validateAndHeadAttachments(
+  descriptors: import('@studyhall/shared').ValidatedAttachment[],
+  channelId: string,
+  filesService: FilesService,
+): Promise<
+  Array<{
+    key: string;
+    filename: string;
+    contentType: string;
+    sizeBytes: number;
+  }>
+> {
+  if (descriptors.length === 0) return [];
+
+  // Escape channelId for regex interpolation (UUIDs are safe; belt-and-suspenders).
+  const escapedChannelId = channelId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const KEY_PATTERN = new RegExp(`^attachments/${escapedChannelId}/[A-Za-z0-9._-]+$`);
+
+  const validated: Array<{
+    key: string;
+    filename: string;
+    contentType: string;
+    sizeBytes: number;
+  }> = [];
+
+  for (const descriptor of descriptors) {
+    // 1. Channel-scope + path-traversal guard
+    if (!KEY_PATTERN.test(descriptor.key)) {
+      throw new BadRequestException(
+        `Attachment key is not scoped to this channel or contains invalid characters: ${descriptor.key}`,
+      );
+    }
+
+    // 2. HeadObject — server-derived ContentLength + ContentType
+    const { contentLength, contentType: serverContentType } = await filesService.headAttachment(
+      descriptor.key,
+    );
+
+    // 3. Size cap (server-authoritative)
+    if (contentLength > ATTACHMENT_SEND_MAX_BYTES) {
+      throw new PayloadTooLargeException({
+        code: 'ATTACHMENT_TOO_LARGE',
+        message: `Attachment must be ≤ 10 MB. Object ${descriptor.key} is ${Math.ceil(contentLength / 1024)} KB.`,
+      });
+    }
+
+    // 4. MIME allowlist (server-authoritative)
+    if (!(serverContentType in ATTACHMENT_ALLOWED_MIME)) {
+      throw new BadRequestException(
+        `Attachment content-type '${serverContentType}' is not permitted. Allowed: ${Object.keys(ATTACHMENT_ALLOWED_MIME).join(', ')}`,
+      );
+    }
+
+    validated.push({
+      key: descriptor.key,
+      filename: descriptor.filename,
+      contentType: serverContentType, // server-derived — NOT client-claimed
+      sizeBytes: contentLength, // server-derived — NOT client-claimed
+    });
+  }
+
+  return validated;
+}
+
 @Injectable()
 export class MessagesService {
   private readonly logger = new Logger(MessagesService.name);
@@ -352,7 +453,22 @@ export class MessagesService {
 
     // Attempt insert; idempotency_key may be null (no dedup) or a client key
     const idempotencyKey = input.idempotencyKey ?? null;
-    const attachmentDescriptors: ValidatedAttachment[] = input.attachments ?? [];
+    const rawAttachmentDescriptors: ValidatedAttachment[] = input.attachments ?? [];
+
+    // -----------------------------------------------------------------------
+    // C-1 fix (wave-19 B-6) — server-validate attachment descriptors BEFORE
+    // any DB write.  validateAndHeadAttachments:
+    //   (a) enforces an anchored channel-scope regex on each key (IDOR guard)
+    //   (b) calls HeadObject to get server-authoritative size + content-type
+    //   (c) rejects keys >10MB or with disallowed MIME
+    // The resulting `attachmentDescriptors` carry SERVER-DERIVED size/type,
+    // not the client-supplied values — so the INSERT below is safe.
+    // -----------------------------------------------------------------------
+    const attachmentDescriptors = await validateAndHeadAttachments(
+      rawAttachmentDescriptors,
+      channelId,
+      this.filesService,
+    );
 
     // -----------------------------------------------------------------------
     // Wrap message INSERT + attachment INSERT in a single db.transaction.
@@ -898,7 +1014,17 @@ export class MessagesService {
     }
 
     const idempotencyKey = input.idempotencyKey ?? null;
-    const attachmentDescriptors: ValidatedAttachment[] = input.attachments ?? [];
+    const rawAttachmentDescriptors: ValidatedAttachment[] = input.attachments ?? [];
+
+    // -----------------------------------------------------------------------
+    // C-1 fix (wave-19 B-6) — same send-time validation as createMessage.
+    // Anchored channel-scope regex + HeadObject re-derive + size/MIME gate.
+    // -----------------------------------------------------------------------
+    const attachmentDescriptors = await validateAndHeadAttachments(
+      rawAttachmentDescriptors,
+      channelId,
+      this.filesService,
+    );
 
     // All DB writes in one atomic transaction (createServer template pattern)
     const reply = await db.transaction(async (tx) => {

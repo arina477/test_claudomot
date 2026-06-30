@@ -201,7 +201,7 @@ describe('AttachmentsController.confirm', () => {
     });
   });
 
-  describe('key scoping guard', () => {
+  describe('key scoping guard — H-1 anchored regex (wave-19 B-6)', () => {
     it('key not scoped to this channel → 400 (cross-channel key swap IDOR prevention)', async () => {
       const { controller } = makeController();
 
@@ -224,6 +224,47 @@ describe('AttachmentsController.confirm', () => {
           contentType: 'image/png',
         }),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('path-traversal segment in key → 400 (anchored regex rejects ".." sequences)', async () => {
+      const { controller } = makeController();
+
+      await expect(
+        controller.confirm(CHANNEL_ID, makeReq(), {
+          // "../other-channel/" embedded after correct prefix — old startsWith() would have
+          // passed this; anchored regex rejects it because "/" is not in [A-Za-z0-9._-]
+          key: `attachments/${CHANNEL_ID}/../other-channel/uuid-789.pdf`,
+          filename: 'doc.pdf',
+          contentType: 'application/pdf',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('nested slash in filename segment → 400 (anchored regex; no nested paths)', async () => {
+      const { controller } = makeController();
+
+      await expect(
+        controller.confirm(CHANNEL_ID, makeReq(), {
+          key: `attachments/${CHANNEL_ID}/sub/dir/file.pdf`, // slash in filename segment
+          filename: 'file.pdf',
+          contentType: 'application/pdf',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('valid key matching anchored pattern → passes key guard (checkAttachmentSize called)', async () => {
+      const { controller, filesService } = makeController();
+      filesService.checkAttachmentSize.mockResolvedValue(1024);
+
+      // Key exactly matches ^attachments/<channelId>/[A-Za-z0-9._-]+$
+      const validKey = `attachments/${CHANNEL_ID}/uuid-123.abc_def-ghi.pdf`;
+      await controller.confirm(CHANNEL_ID, makeReq(), {
+        key: validKey,
+        filename: 'file.pdf',
+        contentType: 'application/pdf',
+      });
+
+      expect(filesService.checkAttachmentSize).toHaveBeenCalledWith(validKey);
     });
   });
 
