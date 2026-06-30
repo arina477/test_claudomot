@@ -243,6 +243,24 @@ export const MessageListSchema = z.object({
 export type MessageList = z.infer<typeof MessageListSchema>;
 
 // ---------------------------------------------------------------------------
+// MessagesAfterResponse — forward catch-up cursor response
+// wave-20 M4 task 92d85e0e
+//
+// Mirrors ThreadRepliesResponse shape ({items, nextCursor}) but scoped to the
+// channel stream. Items are ordered oldest-first (ASC created_at, ASC id) so
+// the offline outbox can apply them in order.
+//
+// after: opaque cursor (base64url encoded createdAt|id) — the last locally
+// known message. The response carries all messages AFTER that cursor.
+// ---------------------------------------------------------------------------
+
+export const MessagesAfterResponseSchema = z.object({
+  items: z.array(MessageResponseSchema),
+  nextCursor: z.string().nullable().optional(),
+});
+export type MessagesAfterResponse = z.infer<typeof MessagesAfterResponseSchema>;
+
+// ---------------------------------------------------------------------------
 // MyMentionsResponse — paginated response for GET /me/mentions
 // wave-15 task 3d238446
 // ---------------------------------------------------------------------------

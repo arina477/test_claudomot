@@ -18,6 +18,7 @@ import {
 import type {
   MessageList,
   MessageResponse,
+  MessagesAfterResponse,
   MyMentionsResponse,
   ReactionToggleResponse,
   ThreadRepliesResponse,
@@ -85,6 +86,25 @@ export class MessagesController {
     return await this.messagesService.createMessage(channelId, authorId, parsed.data);
   }
 
+  // ---------------------------------------------------------------------------
+  // GET /channels/:channelId/messages
+  //
+  // Two dispatch modes determined by query params (same path, same guard):
+  //
+  // 1. Backward list (existing): ?cursor=<cursor>&limit=   — DESC oldest-before
+  //    Returns MessageList { messages: [], nextCursor }
+  //
+  // 2. Forward catch-up (wave-20 M4 task 92d85e0e): ?after=<cursor>&limit=
+  //    Returns MessagesAfterResponse { items: [], nextCursor? }
+  //    ASC oldest-first — forward keyset for offline reconnect.
+  //    Malformed after cursor → 400. Non-member → 403 (ChannelMessageGuard).
+  //
+  // When BOTH cursor and after are absent → backward list (first page, DESC).
+  // When after is present → forward catch-up (takes precedence over cursor).
+  //
+  // Auth: ChannelMessageGuard on both paths.
+  // ---------------------------------------------------------------------------
+
   @Get()
   @UseGuards(AuthGuard, ChannelMessageGuard)
   @HttpCode(HttpStatus.OK)
@@ -92,9 +112,17 @@ export class MessagesController {
     @Param('channelId') channelId: string,
     @Req() req: SessionAugmentedRequest,
     @Query('cursor') cursor?: string,
+    @Query('after') after?: string,
     @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit = 50,
-  ): Promise<MessageList> {
+  ): Promise<MessageList | MessagesAfterResponse> {
     const viewerUserId = req.session.getUserId();
+
+    // Forward catch-up path — ?after= takes precedence
+    if (after !== undefined) {
+      return await this.messagesService.listMessagesAfter(channelId, viewerUserId, after, limit);
+    }
+
+    // Backward list path — existing behaviour unchanged
     return await this.messagesService.listMessages(channelId, viewerUserId, cursor, limit);
   }
 
