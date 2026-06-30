@@ -26,9 +26,10 @@ PRODUCT:
 - [ ] P-4 Gate
 
 DESIGN (skip block if non-UI wave):
-- [ ] D-1 Brief
-- [ ] D-2 Variants (with bounded iteration)
-- [ ] D-3 Review & adopt
+- [x] D-1 Brief
+- [x] D-2 Variants (with bounded iteration)
+- [x] D-3 Review & adopt
+> D-block PASS — message-lifecycle gap (edit/(edited) + delete→tombstone + reaction-pills + add-reaction popover, hover+focus row-actions) composed onto design/server-channel-view.html. Dual reviewers: iter1 APPROVE|REVISE (1 WCAG tombstone-contrast fix) → iter2 APPROVE|APPROVE. head-designer gate APPROVED. Zero token additions. Reviewer-B sub: accessibility-tester for /ui-ux-pro-max.
 
 BUILD:
 - [ ] B-0 Branch & schema

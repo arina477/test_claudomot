@@ -55,6 +55,26 @@
       .spin { animation: none !important; }
     }
 
+    /* ============ MESSAGE LIFECYCLE (wave-13 delta) — DESIGN-SYSTEM §8 MessageRow ============ */
+
+    /* Row-action bar: hidden at rest; revealed on row hover OR keyboard focus-within
+       (never hover-only, brief §6). Floats top-right of the row. */
+    .row-actions {
+      opacity: 0; pointer-events: none;
+      transition: opacity 150ms ease;          /* §6 transition timing */
+    }
+    .msg-row:hover .row-actions,
+    .msg-row:focus-within .row-actions { opacity: 1; pointer-events: auto; }
+    @media (prefers-reduced-motion: reduce) { .row-actions { transition: none; } }
+
+    /* Reaction pill: surface-700 base; reactedByMe → emerald tint + emerald ring
+       (§8 "emerald ring if you reacted"). Conveyed by ring + tint + bolder count, not color alone. */
+    .reacted-by-me {
+      background: rgba(16,185,129,0.14) !important;
+      border-color: rgba(16,185,129,0.55) !important;
+      box-shadow: inset 0 0 0 1px rgba(16,185,129,0.35);
+    }
+
     /* Compact (≤1024): member list collapses; channel sidebar + rail persist (§9) */
     @media (max-width: 1024px) {
       .three-pane-grid { grid-template-columns: 72px 240px 1fr !important; }
@@ -171,8 +191,8 @@
           <div class="flex-1 h-[1px] bg-study-700"></div>
         </div>
 
-        <!-- ROW STATE: SENT (confirmed, normal) -->
-        <article role="article" class="group px-4 py-2 flex gap-3.5 hover:bg-study-700/30 transition-colors rounded-md">
+        <!-- ROW STATE: SENT (confirmed) + REACTIONS (one reactedByMe, one not) + ROW-ACTIONS (react only — not own message) -->
+        <article role="article" class="msg-row group relative px-4 py-2 flex gap-3.5 hover:bg-study-700/30 transition-colors rounded-md">
           <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=64&q=80" alt="Mia Wong" class="w-10 h-10 rounded-full object-cover shrink-0 mt-0.5">
           <div class="flex flex-col w-full min-w-0">
             <div class="flex items-baseline gap-2">
@@ -182,6 +202,31 @@
             <p class="text-sm leading-relaxed text-zinc-200 mt-0.5">
               Did Professor Smith mention if red-black trees are on the midterm? The syllabus is vague on how deep we go into balancing.
             </p>
+
+            <!-- REACTION-PILL ROW (§8 ReactionPill: emoji + count, emerald ring if reactedByMe). Toggle on click. -->
+            <div class="flex flex-wrap items-center gap-1.5 mt-2">
+              <button type="button" aria-pressed="true" aria-label="👍 reaction, 4, you reacted — click to remove"
+                class="reacted-by-me inline-flex items-center gap-1.5 h-7 pl-2 pr-2.5 rounded-full bg-study-700 border border-study-600/70 text-zinc-200 hover:border-study-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70">
+                <span class="text-[13px] leading-none">👍</span><span class="text-xs font-semibold text-emerald-200">4</span>
+              </button>
+              <button type="button" aria-pressed="false" aria-label="🤔 reaction, 1 — click to react"
+                class="inline-flex items-center gap-1.5 h-7 pl-2 pr-2.5 rounded-full bg-study-700 border border-study-600/70 text-zinc-200 hover:border-study-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70">
+                <span class="text-[13px] leading-none">🤔</span><span class="text-xs font-semibold text-zinc-400">1</span>
+              </button>
+              <!-- Add-reaction affordance: opens the common-emoji popover -->
+              <button type="button" aria-label="Add reaction" aria-haspopup="true"
+                class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-study-700/60 border border-study-600/50 text-zinc-400 hover:text-zinc-200 hover:bg-study-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70">
+                <i class="ph ph-smiley text-[15px]"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- ROW-ACTION BAR — react only (not your message; not a moderator demo here). Hover + focus reveal. -->
+          <div class="row-actions absolute -top-3 right-3 flex items-center bg-study-700 border border-study-border rounded-md shadow-[0_8px_24px_rgba(0,0,0,0.5)] overflow-hidden">
+            <button type="button" aria-label="Add reaction to Mia Wong's message" aria-haspopup="true"
+              class="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-study-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70">
+              <i class="ph ph-smiley text-[16px]"></i>
+            </button>
           </div>
         </article>
 
@@ -199,8 +244,8 @@
           </div>
         </article>
 
-        <!-- ROW STATE: SENT (you — confirmed) -->
-        <article role="article" class="group px-4 py-2 flex gap-3.5 hover:bg-study-700/30 transition-colors rounded-md">
+        <!-- ROW STATE: SENT (you — confirmed) + EDITED indicator + OWN-MESSAGE ROW-ACTIONS (react / edit / delete) -->
+        <article role="article" class="msg-row group relative px-4 py-2 flex gap-3.5 hover:bg-study-700/30 transition-colors rounded-md">
           <div class="w-10 h-10 rounded-full bg-study-600 flex items-center justify-center text-xs font-semibold text-zinc-100 shrink-0 mt-0.5">EL</div>
           <div class="flex flex-col w-full min-w-0">
             <div class="flex items-baseline gap-2">
@@ -209,7 +254,131 @@
             </div>
             <p class="text-sm leading-relaxed text-zinc-200 mt-0.5">
               Use a Set for visited nodes instead of an Array — the lookup cost is what's blowing the limit.
+              <!-- EDITED indicator: muted text (not icon-only), ≥4.5:1 on surface-800 -->
+              <span class="text-xs text-zinc-300 font-normal ml-1 align-baseline" title="Edited">(edited)</span>
             </p>
+          </div>
+
+          <!-- ROW-ACTION BAR — own message: react / edit / delete. Hover + focus reveal. -->
+          <div class="row-actions absolute -top-3 right-3 flex items-center bg-study-700 border border-study-border rounded-md shadow-[0_8px_24px_rgba(0,0,0,0.5)] overflow-hidden">
+            <button type="button" aria-label="Add reaction" aria-haspopup="true"
+              class="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-study-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70">
+              <i class="ph ph-smiley text-[16px]"></i>
+            </button>
+            <button type="button" aria-label="Edit your message"
+              class="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-study-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70">
+              <i class="ph ph-pencil-simple text-[16px]"></i>
+            </button>
+            <button type="button" aria-label="Delete your message"
+              class="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-red-300 hover:bg-study-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60">
+              <i class="ph ph-trash text-[16px]"></i>
+            </button>
+          </div>
+        </article>
+
+        <!-- ROW STATE: INLINE-EDIT ACTIVE (own message; body → auto-grow textarea + Save/Cancel; Enter saves / Esc cancels) -->
+        <article role="article" class="msg-row group relative px-4 py-2 flex gap-3.5 bg-study-700/20 rounded-md">
+          <div class="w-10 h-10 rounded-full bg-study-600 flex items-center justify-center text-xs font-semibold text-zinc-100 shrink-0 mt-0.5">EL</div>
+          <div class="flex flex-col w-full min-w-0">
+            <div class="flex items-baseline gap-2">
+              <span class="font-medium text-zinc-100 text-sm">Elias (You)</span>
+              <span class="text-xs text-zinc-400 font-medium tracking-wide">10:53 AM</span>
+              <span class="text-[11px] text-emerald-300 font-semibold tracking-wide flex items-center gap-1">
+                <i class="ph ph-pencil-simple text-[12px]"></i> Editing
+              </span>
+            </div>
+            <!-- Edit textarea echoes the composer's recessed-input + emerald focus language (prior art: composer L260-273) -->
+            <div class="mt-2 bg-study-900 recessed-input border border-study-600/60 rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500/40 focus-within:border-emerald-500/60 transition-shadow">
+              <label for="editArea" class="sr-only">Edit your message</label>
+              <textarea id="editArea" rows="2"
+                class="w-full bg-transparent text-sm leading-relaxed text-zinc-100 py-2.5 px-3 outline-none resize-none">Also — does the test suite count toward the grade or just for self-check?</textarea>
+            </div>
+            <div class="mt-2 flex items-center gap-2">
+              <button type="button"
+                class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-study-950 bg-emerald-500 hover:bg-emerald-400 rounded-md px-3 py-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70">
+                <i class="ph ph-check text-[14px]"></i> Save
+              </button>
+              <button type="button"
+                class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-zinc-300 bg-study-700 hover:bg-study-600 border border-study-600/60 rounded-md px-3 py-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">
+                <i class="ph ph-x text-[14px]"></i> Cancel
+              </button>
+              <span class="text-[11px] text-zinc-500 ml-1 tracking-wide">
+                <kbd class="font-sans text-zinc-400">Enter</kbd> to save &nbsp;·&nbsp; <kbd class="font-sans text-zinc-400">Esc</kbd> to cancel
+              </span>
+            </div>
+          </div>
+        </article>
+
+        <!-- ROW STATE: DELETE-CONFIRM (inline; in-flow, low-noise — Delete [danger] / Cancel) -->
+        <article role="article" class="msg-row group relative px-4 py-2 flex gap-3.5 rounded-md border border-danger/30 bg-danger/5">
+          <div class="w-10 h-10 rounded-full bg-study-600 flex items-center justify-center text-xs font-semibold text-zinc-100 shrink-0 mt-0.5">EL</div>
+          <div class="flex flex-col w-full min-w-0">
+            <div class="flex items-baseline gap-2">
+              <span class="font-medium text-zinc-100 text-sm">Elias (You)</span>
+              <span class="text-xs text-zinc-400 font-medium tracking-wide">10:55 AM</span>
+            </div>
+            <p class="text-sm leading-relaxed text-zinc-300 mt-0.5">
+              Wait, ignore the last part — I figured out the off-by-one.
+            </p>
+            <div class="mt-2 flex items-center gap-2.5">
+              <span class="text-[12px] text-zinc-300 font-medium">Delete this message?</span>
+              <button type="button"
+                class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-study-950 bg-red-500 hover:bg-red-400 rounded-md px-2.5 py-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60">
+                <i class="ph ph-trash text-[13px]"></i> Delete
+              </button>
+              <button type="button"
+                class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-zinc-300 bg-study-700 hover:bg-study-600 border border-study-600/60 rounded-md px-2.5 py-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </article>
+
+        <!-- ROW STATE: TOMBSTONE (deleted — muted, no content, no reactions, no actions; conveyed in TEXT not color alone) -->
+        <article role="article" aria-label="Deleted message" class="px-4 py-2 flex gap-3.5 rounded-md">
+          <div class="w-10 h-10 rounded-full bg-study-800 border border-study-700 flex items-center justify-center shrink-0 mt-0.5">
+            <i class="ph ph-prohibit text-zinc-600 text-[16px]"></i>
+          </div>
+          <div class="flex items-center min-w-0">
+            <span class="text-sm italic text-zinc-400 flex items-center gap-2">
+              <i class="ph ph-trash text-[14px] text-zinc-500"></i> This message was deleted
+            </span>
+          </div>
+        </article>
+
+        <!-- ROW STATE: SENT (David C. — another author) + MODERATOR DELETE affordance (delete shown on others' messages because viewer can manage_channels) + ADD-REACTION POPOVER OPEN -->
+        <article role="article" class="msg-row group relative px-4 py-2 flex gap-3.5 hover:bg-study-700/30 transition-colors rounded-md">
+          <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=64&q=80" alt="David C." class="w-10 h-10 rounded-full object-cover shrink-0 mt-0.5">
+          <div class="flex flex-col w-full min-w-0">
+            <div class="flex items-baseline gap-2">
+              <span class="font-medium text-zinc-100 text-sm">David C.</span>
+              <span class="text-xs text-zinc-400 font-medium tracking-wide">10:58 AM</span>
+            </div>
+            <p class="text-sm leading-relaxed text-zinc-200 mt-0.5">
+              Reminder: office hours moved to Thursday 3pm this week.
+            </p>
+
+            <!-- ADD-REACTION POPOVER (open state): minimal common-emoji set (NOT a full picker). Esc + outside-click close. -->
+            <div role="menu" aria-label="Add a reaction" class="mt-2 inline-flex items-center gap-1 w-max bg-study-700 border border-study-border rounded-md p-1 shadow-[0_8px_24px_rgba(0,0,0,0.5)]">
+              <button type="button" role="menuitem" aria-label="React 👍" class="w-8 h-8 rounded-md hover:bg-study-600 transition-colors text-[16px] leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70">👍</button>
+              <button type="button" role="menuitem" aria-label="React ❤️" class="w-8 h-8 rounded-md hover:bg-study-600 transition-colors text-[16px] leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70">❤️</button>
+              <button type="button" role="menuitem" aria-label="React 😂" class="w-8 h-8 rounded-md hover:bg-study-600 transition-colors text-[16px] leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70">😂</button>
+              <button type="button" role="menuitem" aria-label="React 🎉" class="w-8 h-8 rounded-md hover:bg-study-600 transition-colors text-[16px] leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70">🎉</button>
+              <button type="button" role="menuitem" aria-label="React 🤔" class="w-8 h-8 rounded-md hover:bg-study-600 transition-colors text-[16px] leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70">🤔</button>
+              <button type="button" role="menuitem" aria-label="React ✅" class="w-8 h-8 rounded-md hover:bg-study-600 transition-colors text-[16px] leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70">✅</button>
+            </div>
+          </div>
+
+          <!-- ROW-ACTION BAR — viewer is a MODERATOR: react + delete on someone else's message (no edit — never edit others'). -->
+          <div class="row-actions absolute -top-3 right-3 flex items-center bg-study-700 border border-study-border rounded-md shadow-[0_8px_24px_rgba(0,0,0,0.5)] overflow-hidden">
+            <button type="button" aria-label="Add reaction" aria-haspopup="true"
+              class="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-study-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70">
+              <i class="ph ph-smiley text-[16px]"></i>
+            </button>
+            <button type="button" aria-label="Delete message (moderator)" title="Delete (moderator)"
+              class="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-red-300 hover:bg-study-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60">
+              <i class="ph ph-trash text-[16px]"></i>
+            </button>
           </div>
         </article>
 
