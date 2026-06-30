@@ -211,3 +211,8 @@ First messaging bundle for M3's unshipped core text data plane — the most tech
 - **Bundle UUIDs:** seed `Implement @mention parsing, persistence, and realtime fan-out` (3d238446-25b9-4c3d-91ca-0fc3dbae17f2). Siblings: `Add @mention autocomplete member-picker to the composer` (cd585f04-c1d5-48b2-9d45-d01ecd3ae15f); `Render mention pills and unread-mention affordance in message list` (c3f3f62a-86c3-41cd-ba14-ce5e731e2d37).
 - caller: N-1-next-bundle
 - decomposed by: milestone-decomposer sub-agent (task-id self)
+
+## wave-16 — Test-coverage waves are exempt from the feature-LOC floor (P-1)
+**Decision:** A test-coverage / test-infra tech-debt wave (e.g. the single create-server browser E2E, seed 46f16288) is permitted below the single-spec >1500-LOC floor. The LOC floor is a feature-sizing heuristic that guards against thin *feature* waves; test code is inherently lower-LOC than the feature it covers, and the decomposer cannot author feature-siblings for a tech-debt seed. Override-ship per P-1 §2b resolution (a), kept single-task to respect the N-2 seed pick.
+**Why:** Forcing a BOARD floor-merge or bundling unrelated test-debt to clear an inapplicable LOC floor adds ceremony without value. Recorded so future test-infra waves apply the same exemption rather than re-litigating.
+**By:** orchestrator (automatic mode), wave-16 P-1. Reframe trio all PROCEED.
