@@ -48,6 +48,15 @@ import {
   onThreadReplyDeleted,
 } from './messagingSocket';
 
+/**
+ * Encode a forward catch-up cursor matching the server's decodeCursor contract:
+ * base64url(`${createdAt}|${id}`)
+ */
+function encodeForwardCursor(createdAt: string, id: string): string {
+  const raw = `${createdAt}|${id}`;
+  return btoa(raw).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
 type UseMessagesResult = {
   messages: DisplayMessage[];
   loadingInitial: boolean;
@@ -143,7 +152,7 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
             }
             // Update cursor to the last item.
             const last = newItems[newItems.length - 1];
-            if (last) lastSeenCursorRef.current = last.createdAt;
+            if (last) lastSeenCursorRef.current = encodeForwardCursor(last.createdAt, last.id);
             return [...prev, ...newItems];
           });
         }
@@ -213,7 +222,7 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
         setNextCursor(result.nextCursor ?? null);
         // Update cursor to the last message we received.
         const last = result.messages[result.messages.length - 1];
-        if (last) lastSeenCursorRef.current = last.createdAt;
+        if (last) lastSeenCursorRef.current = encodeForwardCursor(last.createdAt, last.id);
         // Write through to cache.
         if (db) {
           const cachedAt = new Date().toISOString();
@@ -232,7 +241,7 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
             if (!mountedRef.current) return;
             setRealMessages(cached);
             const last = cached[cached.length - 1];
-            if (last) lastSeenCursorRef.current = last.createdAt;
+            if (last) lastSeenCursorRef.current = encodeForwardCursor(last.createdAt, last.id);
           } catch {
             setErrorInitial(true);
           }
@@ -292,7 +301,7 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
       setRealMessages((prev) => {
         if (prev.some((m) => m.id === msg.id)) return prev;
         // Update cursor.
-        lastSeenCursorRef.current = msg.createdAt;
+        lastSeenCursorRef.current = encodeForwardCursor(msg.createdAt, msg.id);
         // Write through to cache.
         if (db) {
           void putCachedMessage(db, { ...msg, cachedAt: new Date().toISOString() });
