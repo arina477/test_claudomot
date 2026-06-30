@@ -1,0 +1,43 @@
+# C-block (CI/CD) manifest — wave-16
+block: C
+status: complete
+mode: automatic
+wave: 16
+wave_kind: test-only   # adds authed create-server E2E + storageState harness + CI env wiring; no product code/schema/dep
+
+stages:
+  C-1:
+    verdict: PASS
+    head_signoff: APPROVED
+    pr_number: 28
+    pr_url: https://github.com/arina477/test_climot/pull/28
+    ci_run_id: "28437054848"
+    final_commit_sha: 12dedc08a1c9b33706faf5e9326db9d9e195d998
+    merge_commit_sha: 6982ffeb443e813542f20b0daa5aa9a0f67dccf9
+    merge_strategy: squash
+    branch_deleted: true
+    checks_passed: [lint, typecheck, test, build, secret-scan, boot-probe, e2e]
+    e2e_job_verdict: "PASS — authed create-server E2E ran vs live prod with fixture secrets; 4 passed; local pass translated to CI"
+    fix_up_cycles: 0
+    rebase_cycles: 0
+  C-2:
+    verdict: PASS
+    head_signoff: APPROVED
+    deploy: none
+    deploy_rationale: "test-only change; no product artifact changed; api/web unchanged"
+    health_sanity:
+      api: "200 {status:ok}"
+      web: "200"
+    canary_status: skipped
+    canary_skip_reason: "no deploy + DAU<1000"
+
+block_exit:
+  cicd_block_status: complete
+  pr_number: 28
+  pr_url: https://github.com/arina477/test_climot/pull/28
+  merge_commit: 6982ffeb443e813542f20b0daa5aa9a0f67dccf9
+  deploy_targets:
+    - {platform: railway, state: "unchanged (no deploy — test-only)", commit: "n/a", verified_at: "2026-06-30T12:55:00Z"}
+  canary_status: skipped
+  ready_for_test: true
+  next_block: claudomat-brain/blocks/test/test.md

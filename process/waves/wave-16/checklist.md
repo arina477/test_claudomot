@@ -29,19 +29,19 @@ BUILD:
 - [x] B-6 Review
 
 CI/CD:
-- [ ] C-1 PR, CI & merge
-- [ ] C-2 Deploy & verify (canary armed when real users > 1000)
+- [x] C-1 PR, CI & merge — PR #28 MERGED (squash); all 7 checks green inc. e2e (authed create-server vs live prod); merge SHA 6982ffe
+- [x] C-2 Deploy & verify — NO DEPLOY (test-only; no product artifact changed); health sanity api/web 200; canary skipped (no deploy + DAU<1000)
 
 TEST:
-- [ ] T-1 Static
-- [ ] T-2 Unit
-- [ ] T-3 Contract
-- [ ] T-4 Integration
-- [ ] T-5 E2E
-- [ ] T-6 Layout
-- [ ] T-7 Perf
-- [ ] T-8 Security
-- [ ] T-9 Journey
+- [x] T-1 Static — Pattern A: lint 0-err + typecheck green at C-1 (run 28437054848); 0 bypasses; 9 pre-existing biome warnings = known carry
+- [x] T-2 Unit — Pattern A: no unit added (deliverable is an E2E); existing suites unchanged + green
+- [x] T-3 Contract — SKIP (no contract surface)
+- [x] T-4 Integration — SKIP (no schema/service)
+- [x] T-5 E2E — Pattern A: authed create-server E2E RATIFIED REAL + anti-flake; 4/4 in CI e2e job vs live prod
+- [x] T-6 Layout — SKIP (no UI change)
+- [x] T-7 Perf — SKIP (no perf surface)
+- [x] T-8 Security — light: fixture password NOT leaked (masked secrets / gitignored storageState / no artifact upload); no new authz surface
+- [x] T-9 Journey — gate APPROVED; journey map create-server flow annotated E2E-covered (commit 3235f83)
 
 VERIFY:
 - [ ] V-1 Independent reviews (Karen + jenny, parallel)
