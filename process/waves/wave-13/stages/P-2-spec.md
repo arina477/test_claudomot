@@ -1,0 +1,2 @@
+# Wave 13 — P-2 Spec (pointer)
+Source: task e12886d7 .description (3-block multi-spec). M3 lifecycle: edit(author-only)/delete(author||moderator)+soft-delete+realtime (e12886d7); reactions toggle idempotent UNIQUE + aggregated counts + realtime (d78df376); UI inline-edit/tombstone/reaction-pills (f323a71f). Reuses wave-12 gateway+ChannelMessageGuard. design_gap_flag TRUE. SECURITY → T-8 (edit/delete authz server-side, room-only fan-out, two-client via wave-11 fixture). Bare paths. NO threads/mentions/attachments/presence.
