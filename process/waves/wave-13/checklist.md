@@ -41,8 +41,8 @@ BUILD:
 - [ ] B-6 Review
 
 CI/CD:
-- [ ] C-1 PR, CI & merge
-- [ ] C-2 Deploy & verify (canary armed when real users > 1000)
+- [x] C-1 PR, CI & merge (PR #24, SHA 427d5d6, 6/6 checks incl boot-probe)
+- [x] C-2 Deploy & verify (api+web SUCCESS via CLI up; migration 0006 applied; lifecycle + two-client realtime verified; canary skipped <1000 DAU)
 
 TEST:
 - [ ] T-1 Static
