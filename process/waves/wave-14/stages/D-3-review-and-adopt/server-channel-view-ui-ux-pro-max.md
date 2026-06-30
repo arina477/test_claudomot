@@ -185,3 +185,13 @@ Minor enhancement (avatar `role="img"`) is deferred to a follow-up iteration as 
 **Verdict: REVISE**
 
 Fix offline name contrast; resubmit for final approval.
+
+---
+
+## Iteration 3 (FINAL) — re-review after contrast fix
+
+The single blocking item (offline names text-white/40 = 3.83:1) is FIXED: now text-white/50 = 5.32:1 on --surface-900, PASSES WCAG AA (≥4.5:1) and satisfies brief §9. Re-verified all a11y items intact: typing role=status aria-live=polite; presence sr-only Online/Offline (not color-only); <ul>/<li> roster; aside + avatar aria-labels; focus-visible rings; typing zero-layout-shift; aggregation grammar; self-excluded; prefers-reduced-motion. Token discipline clean; Phosphor icons consistent. Member-list §9: 7/7. Typing §9: 6/6. Zero WCAG violations. No remaining blockers.
+
+**Verdict: APPROVE**
+
+(Note: iter3 APPROVE returned by the reviewer agent but not persisted to file at the time — restored here per head-designer gate-integrity flag; surfaced to L-2 as process hygiene.)

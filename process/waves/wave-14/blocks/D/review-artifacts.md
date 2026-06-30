@@ -3,7 +3,7 @@
 **Block:** D (Design)
 **Wave topic:** M3 presence layer — member-list panel (live presence) + typing indicator
 **Block exit gate:** D-3
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 
@@ -11,7 +11,7 @@
 |---|---|---|---|
 | D-1 | process/waves/wave-14/stages/D-1-brief/{member-list-panel,typing-indicator}-brief.md | done | 2 briefs, mask_mode PASS |
 | D-2 | process/waves/wave-14/stages/D-2-variants/*-variants.md + *-iterate.md | done | composed onto staging server-channel-view.html; checkpoint skipped (automatic) |
-| D-3 | process/waves/wave-14/stages/D-3-review-and-adopt/*-{plan-design-review,ui-ux-pro-max,reconciliation,adopt}.md | pending | dual-reviewer + head-designer gate + canonicalize |
+| D-3 | process/waves/wave-14/stages/D-3-review-and-adopt/* | done | A+B APPROVE (iter3); head-designer APPROVED; canonicalized |
 
 ## Block-specific context
 
@@ -28,3 +28,12 @@ none
 
 ## Gate verdict log
 <appended by head-designer at D-3>
+
+## Block exit handoff
+```yaml
+design_block_status: complete
+gaps_resolved: [member-list-panel, typing-indicator]
+gaps_deferred: []
+design_system_updates: []
+canonicalized_at: 2026-06-30T05:00:00Z
+```
