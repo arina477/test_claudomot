@@ -266,4 +266,35 @@ export const api = {
     const qs = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
     return request<MyMentionsResponse>(`/me/mentions${qs}`);
   },
+
+  // ── Thread reply endpoints (wave-18 M3) ──────────────────────────────────
+
+  /**
+   * POST /messages/:parentId/replies?channelId=<channelId>
+   *   body: {content, idempotencyKey}
+   *   → 201 MessageResponse (the new reply row; threadParentId = parentId).
+   * Throws: 401 unauthed, 403 not member, 404 parent not found,
+   *         409 reply-of-reply (400), idempotency conflict (200 if already created).
+   */
+  postReply: (parentId: string, channelId: string, content: string, idempotencyKey: string) =>
+    request<import('@studyhall/shared').MessageResponse>(
+      `/messages/${parentId}/replies?channelId=${encodeURIComponent(channelId)}`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ content, idempotencyKey }),
+      },
+    ),
+
+  /**
+   * GET /messages/:parentId/replies?cursor=<cursor>
+   *   → ThreadRepliesResponse  {items: MessageResponse[], nextCursor?}
+   * Replies are ordered oldest-first (ASC created_at).
+   * Throws: 401 unauthed, 403 not member, 404 parent not found.
+   */
+  getThreadReplies: (parentId: string, cursor?: string) => {
+    const qs = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
+    return request<import('@studyhall/shared').ThreadRepliesResponse>(
+      `/messages/${parentId}/replies${qs}`,
+    );
+  },
 };

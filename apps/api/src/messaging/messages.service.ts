@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -13,8 +14,11 @@ import type {
   MyMentionsResponse,
   ReactionToggleResponse,
   SendMessageInput,
+  ThreadRepliesResponse,
+  ThreadReplyDeletedEvent,
+  ThreadReplyEvent,
 } from '@studyhall/shared';
-import { and, eq, inArray, lt, or, sql } from 'drizzle-orm';
+import { and, eq, inArray, lt, max, or, sql } from 'drizzle-orm';
 import { db } from '../db/index';
 import {
   channels,
@@ -32,6 +36,7 @@ import { parseMentions } from './mentions';
 // MessagesService — wave-12 M3 REST data plane (task a0c322b4)
 //                 + wave-13 M3 edit/delete/reactions (tasks e12886d7 + d78df376)
 //                 + wave-15 M3 @mention parse/resolve/persist (task 3d238446)
+//                 + wave-18 M3 thread replies (task 497c2ae6)
 // ---------------------------------------------------------------------------
 
 /** Opaque cursor encoding: base64(createdAt_iso|id) */
@@ -95,6 +100,10 @@ function rowToDto(
     edited_at: Date | null;
     is_deleted: boolean;
     deleted_at: Date | null;
+    // wave-18 thread reply fields (optional — older call-sites don't supply them)
+    thread_parent_id?: string | null;
+    reply_count?: number;
+    last_reply_at?: Date | null;
   },
   reactions: ReactionRow[],
   viewerUserId: string,
@@ -141,6 +150,12 @@ function rowToDto(
     isDeleted: row.is_deleted,
     reactions: reactionSummaries,
     mentions,
+    // wave-18 thread fields:
+    //   threadParentId — set on reply rows; null/undefined on top-level messages
+    //   replyCount / lastReplyAt — set on top-level messages (the parent); absent on replies
+    threadParentId: row.thread_parent_id ?? null,
+    replyCount: row.reply_count ?? 0,
+    lastReplyAt: row.last_reply_at ? row.last_reply_at.toISOString() : null,
   };
 }
 
@@ -553,6 +568,121 @@ export class MessagesService {
     }
 
     const now = new Date();
+
+    // -----------------------------------------------------------------------
+    // wave-18: if the message being deleted is a reply (threadParentId set),
+    // we must atomically:
+    //   (a) soft-delete the reply
+    //   (b) decrement reply_count on the parent (ALWAYS)
+    //   (c) recompute last_reply_at ONLY when the deleted reply was the tail
+    //       (deletedReply.created_at === parent.last_reply_at); otherwise leave
+    //       last_reply_at unchanged — avoids a wasted MAX() on non-tail deletes.
+    //       Set to NULL when no live replies remain after this delete.
+    //
+    // If the message is a top-level message (threadParentId is null), the
+    // existing simple UPDATE is used (no parent to update).
+    // -----------------------------------------------------------------------
+
+    if (message.thread_parent_id !== null) {
+      // Reply soft-delete — wrap in a transaction for atomicity
+      const updated = await db.transaction(async (tx) => {
+        // (a) Soft-delete the reply
+        const [deleted] = await tx
+          .update(messages)
+          .set({ is_deleted: true, deleted_at: now, content: '' })
+          .where(eq(messages.id, messageId))
+          .returning();
+
+        if (!deleted) {
+          throw new Error('Message delete failed unexpectedly');
+        }
+
+        // (b) Decrement reply_count on the parent — ALWAYS
+        // (c) Conditionally recompute last_reply_at (tail-only)
+        const parentId = message.thread_parent_id as string;
+
+        // Fetch the parent's current last_reply_at to determine if this was the tail
+        const [parent] = await tx
+          .select({ last_reply_at: messages.last_reply_at })
+          .from(messages)
+          .where(eq(messages.id, parentId))
+          .limit(1);
+
+        const isTailReply =
+          parent?.last_reply_at !== undefined &&
+          parent.last_reply_at !== null &&
+          deleted.created_at.getTime() === parent.last_reply_at.getTime();
+
+        if (isTailReply) {
+          // Recompute last_reply_at = MAX(created_at) over remaining live replies
+          // NULL when no live replies remain after this soft-delete.
+          const [maxRow] = await tx
+            .select({ maxCreatedAt: max(messages.created_at) })
+            .from(messages)
+            .where(
+              and(
+                eq(messages.thread_parent_id, parentId),
+                eq(messages.is_deleted, false),
+                sql`${messages.id} != ${messageId}`,
+              ),
+            );
+
+          const newLastReplyAt = maxRow?.maxCreatedAt ?? null;
+
+          await tx
+            .update(messages)
+            .set({
+              reply_count: sql`GREATEST(${messages.reply_count} - 1, 0)`,
+              last_reply_at: newLastReplyAt,
+            })
+            .where(eq(messages.id, parentId));
+        } else {
+          // Non-tail delete: decrement count only, leave last_reply_at unchanged
+          await tx
+            .update(messages)
+            .set({ reply_count: sql`GREATEST(${messages.reply_count} - 1, 0)` })
+            .where(eq(messages.id, parentId));
+        }
+
+        return deleted;
+      });
+
+      const dto = rowToDto(updated, [], userId);
+      this.eventEmitter.emit('message.deleted', dto);
+
+      // H-1 fix (wave-18 B-6): emit thread-scoped delete event so open thread
+      // panels remove the deleted reply and the affordance replyCount decrements.
+      //
+      // Fetch the parent's post-commit reply_count + last_reply_at — the txn
+      // already applied the decrement, so this read reflects the committed values.
+      const replyParentId = message.thread_parent_id as string;
+      const [updatedParent] = await db
+        .select({
+          reply_count: messages.reply_count,
+          last_reply_at: messages.last_reply_at,
+          channel_id: messages.channel_id,
+        })
+        .from(messages)
+        .where(eq(messages.id, replyParentId))
+        .limit(1);
+
+      if (updatedParent) {
+        const threadDeleteEvent: ThreadReplyDeletedEvent = {
+          parentId: replyParentId,
+          channelId: updatedParent.channel_id,
+          replyId: messageId,
+          replyCount: updatedParent.reply_count,
+          lastReplyAt: updatedParent.last_reply_at
+            ? updatedParent.last_reply_at.toISOString()
+            : null,
+        };
+        this.eventEmitter.emit('thread.reply.deleted', threadDeleteEvent);
+      }
+
+      return;
+    }
+
+    // Top-level message delete (no parent to update — existing path)
     const [updated] = await db
       .update(messages)
       .set({ is_deleted: true, deleted_at: now, content: '' })
@@ -566,6 +696,261 @@ export class MessagesService {
     // Emit event for gateway fan-out (content will be null in DTO due to is_deleted)
     const dto = rowToDto(updated, [], userId);
     this.eventEmitter.emit('message.deleted', dto);
+  }
+
+  // -------------------------------------------------------------------------
+  // createReply — POST /messages/:parentId/replies
+  //
+  // Creates a reply to an existing top-level message. All operations run in a
+  // single db.transaction() (createServer pattern — NOT the non-transactional
+  // createMessage sequential-await pattern).
+  //
+  // Validation (reject with 4xx before any write):
+  //   (a) parent not found → 404
+  //   (b) parent.channel_id !== channelId (cross-channel) → 400
+  //   (c) parent.thread_parent_id IS NOT NULL (reply-of-reply) → 400
+  //   (d) parent is soft-deleted → 409
+  //
+  // Insert: message row with thread_parent_id = parentId, idempotency ON
+  // CONFLICT(channel_id, idempotency_key) DO NOTHING + canonical re-fetch.
+  //
+  // Count: ONLY when the insert produced a NEW row (not idempotent replay),
+  // UPDATE parent SET reply_count = reply_count + 1, last_reply_at = <reply.created_at>
+  // in the SAME transaction. Idempotent retry returns the existing reply without
+  // double-counting.
+  //
+  // Emits: 'thread.reply.created' (EventEmitter2) for the Socket.IO gateway.
+  // -------------------------------------------------------------------------
+
+  async createReply(
+    channelId: string,
+    parentId: string,
+    authorId: string,
+    input: SendMessageInput,
+  ): Promise<MessageResponse> {
+    // Pre-flight: load the parent BEFORE opening the transaction.
+    // This is a read-only check — if it passes, we open the txn.
+    const [parent] = await db.select().from(messages).where(eq(messages.id, parentId)).limit(1);
+
+    if (!parent) {
+      throw new NotFoundException('Parent message not found');
+    }
+
+    // (b) cross-channel guard
+    // Validate the query param matches the parent's actual channel — the param
+    // is NOT trusted as the authoritative source; the parent row is.
+    if (parent.channel_id !== channelId) {
+      throw new BadRequestException('Parent message does not belong to this channel');
+    }
+
+    // (b2) channel membership guard — IDOR fix (wave-18 B-6)
+    // Derive the authoritative channelId from the parent row (already validated
+    // above). The query param cannot bypass this check even if forged because
+    // we already confirmed parent.channel_id === channelId, so the authoritative
+    // channel is parent.channel_id regardless.
+    const canView = await this.rbacService.canViewChannelById(authorId, parent.channel_id);
+    if (!canView) {
+      throw new ForbiddenException('Insufficient permissions to access this channel');
+    }
+
+    // (c) one-level-only guard: reject reply-of-reply
+    if (parent.thread_parent_id !== null) {
+      throw new BadRequestException('Replies to replies are not supported (one level only)');
+    }
+
+    // (d) soft-deleted parent guard
+    if (parent.is_deleted) {
+      throw new ConflictException('Cannot reply to a deleted message');
+    }
+
+    const idempotencyKey = input.idempotencyKey ?? null;
+
+    // All DB writes in one atomic transaction (createServer template pattern)
+    const reply = await db.transaction(async (tx) => {
+      // INSERT with RETURNING so we can detect new-vs-replay in a single statement.
+      // ON CONFLICT(channel_id, idempotency_key) DO NOTHING returns an empty array
+      // when the key already existed (idempotent replay) → skip count increment.
+      // When idempotencyKey IS NULL the UNIQUE constraint does not apply (NULL ≠ NULL
+      // in unique indexes), so every call inserts a new row and RETURNING always
+      // carries the new row.
+      const insertReturning = await tx
+        .insert(messages)
+        .values({
+          channel_id: channelId,
+          author_id: authorId,
+          content: input.content,
+          idempotency_key: idempotencyKey,
+          thread_parent_id: parentId,
+        })
+        .onConflictDoNothing({
+          target: [messages.channel_id, messages.idempotency_key],
+        })
+        .returning();
+
+      const isNewInsert = insertReturning.length > 0;
+
+      // Canonical row: new insert → use returning row; replay → re-fetch by key.
+      let replyRow: typeof messages.$inferSelect | undefined;
+
+      if (isNewInsert) {
+        replyRow = insertReturning[0];
+      } else if (idempotencyKey !== null) {
+        // Idempotent replay: fetch the existing row by idempotency_key
+        const [existing] = await tx
+          .select()
+          .from(messages)
+          .where(
+            and(eq(messages.channel_id, channelId), eq(messages.idempotency_key, idempotencyKey)),
+          )
+          .limit(1);
+        replyRow = existing;
+      } else {
+        // No idempotency key and RETURNING was empty — should not happen since
+        // NULL keys never conflict, but guard defensively.
+        throw new Error('Reply insert failed unexpectedly');
+      }
+
+      if (!replyRow) {
+        throw new Error('Reply insert failed unexpectedly');
+      }
+
+      // Count increment: ONLY on new insert, not idempotent replay.
+      // This is the load-bearing atomicity guarantee: insert + count++ in one txn.
+      if (isNewInsert) {
+        await tx
+          .update(messages)
+          .set({
+            reply_count: sql`${messages.reply_count} + 1`,
+            last_reply_at: replyRow.created_at,
+          })
+          .where(eq(messages.id, parentId));
+      }
+
+      return replyRow;
+    });
+
+    const dto = rowToDto(reply, [], authorId);
+
+    // Emit domain event for the Socket.IO gateway (@OnEvent('thread.reply.created'))
+    const threadEvent: ThreadReplyEvent = {
+      parentId,
+      channelId,
+      reply: dto,
+    };
+    this.eventEmitter.emit('thread.reply.created', threadEvent);
+
+    return dto;
+  }
+
+  // -------------------------------------------------------------------------
+  // listThreadReplies — GET /messages/:parentId/replies
+  //
+  // Returns replies WHERE thread_parent_id = parentId AND NOT soft-deleted,
+  // ordered ASC created_at (oldest-first for thread chronology), cursor-paginated.
+  //
+  // Excludes tombstoned replies (is_deleted = true) per spec.
+  //
+  // Cursor encodes (created_at, id) using the same scheme as listMessages.
+  // -------------------------------------------------------------------------
+
+  async listThreadReplies(
+    parentId: string,
+    viewerUserId: string,
+    cursor?: string,
+    limit = 50,
+  ): Promise<ThreadRepliesResponse> {
+    // Verify the parent exists — fetch channel_id so we can enforce membership.
+    // We select channel_id here (not just id) to drive the authz check below
+    // without a second DB round-trip.
+    const [parent] = await db
+      .select({ id: messages.id, is_deleted: messages.is_deleted, channel_id: messages.channel_id })
+      .from(messages)
+      .where(eq(messages.id, parentId))
+      .limit(1);
+
+    if (!parent) {
+      throw new NotFoundException('Parent message not found');
+    }
+
+    // Channel membership guard — IDOR fix (wave-18 B-6)
+    // Channel is derived from the parent row — never from a request param.
+    const canView = await this.rbacService.canViewChannelById(viewerUserId, parent.channel_id);
+    if (!canView) {
+      throw new ForbiddenException('Insufficient permissions to access this channel');
+    }
+
+    const safeLimit = Math.min(Math.max(1, limit), 100);
+
+    let rows: (typeof messages.$inferSelect)[];
+
+    if (cursor) {
+      const decoded = decodeCursor(cursor);
+      if (!decoded) {
+        // Invalid cursor — treat as no cursor (first page)
+        rows = await db
+          .select()
+          .from(messages)
+          .where(and(eq(messages.thread_parent_id, parentId), eq(messages.is_deleted, false)))
+          .orderBy(sql`${messages.created_at} ASC, ${messages.id} ASC`)
+          .limit(safeLimit + 1);
+      } else {
+        // ASC pagination: fetch rows AFTER the cursor position
+        rows = await db
+          .select()
+          .from(messages)
+          .where(
+            and(
+              eq(messages.thread_parent_id, parentId),
+              eq(messages.is_deleted, false),
+              or(
+                sql`${messages.created_at} > ${decoded.createdAt.toISOString()}`,
+                and(
+                  sql`${messages.created_at} = ${decoded.createdAt.toISOString()}`,
+                  sql`${messages.id} > ${decoded.id}`,
+                ),
+              ),
+            ),
+          )
+          .orderBy(sql`${messages.created_at} ASC, ${messages.id} ASC`)
+          .limit(safeLimit + 1);
+      }
+    } else {
+      rows = await db
+        .select()
+        .from(messages)
+        .where(and(eq(messages.thread_parent_id, parentId), eq(messages.is_deleted, false)))
+        .orderBy(sql`${messages.created_at} ASC, ${messages.id} ASC`)
+        .limit(safeLimit + 1);
+    }
+
+    const hasMore = rows.length > safeLimit;
+    if (hasMore) rows.pop();
+
+    const lastRow = rows[rows.length - 1];
+    const nextCursor =
+      hasMore && lastRow !== undefined ? encodeCursor(lastRow.created_at, lastRow.id) : null;
+
+    // Batch-load reactions for the reply page (no N+1)
+    const messageIds = rows.map((r) => r.id);
+    let reactionRows: ReactionRow[] = [];
+    if (messageIds.length > 0) {
+      reactionRows = await db
+        .select({
+          message_id: message_reactions.message_id,
+          user_id: message_reactions.user_id,
+          emoji: message_reactions.emoji,
+        })
+        .from(message_reactions)
+        .where(inArray(message_reactions.message_id, messageIds));
+    }
+
+    // Batch-load mentions for the reply page
+    const mentionRows = await fetchMentionRows(messageIds);
+
+    return {
+      items: rows.map((row) => rowToDto(row, reactionRows, viewerUserId, mentionRows)),
+      nextCursor,
+    };
   }
 
   // -------------------------------------------------------------------------

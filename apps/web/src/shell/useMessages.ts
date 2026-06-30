@@ -30,6 +30,8 @@ import {
   onMessageUpdated,
   onReactionAdded,
   onReactionRemoved,
+  onThreadReplyCreated,
+  onThreadReplyDeleted,
 } from './messagingSocket';
 
 type UseMessagesResult = {
@@ -181,6 +183,56 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
         prev.map((m) =>
           m.id === payload.messageId
             ? { ...m, reactions: applyReactionEvent(m.reactions, payload) }
+            : m,
+        ),
+      );
+    });
+    return unsub;
+  }, [channelId]);
+
+  // ── Socket listener — thread:reply:created ────────────────────────────────
+  // Updates the parent message's replyCount and lastReplyAt in the channel list
+  // so the affordance chip live-updates even when the thread panel is closed.
+  // The reply itself is NOT added to the channel message list (it only lives in
+  // the thread panel — handled by useThread).
+  useEffect(() => {
+    if (!channelId) return;
+    const unsub = onThreadReplyCreated((event) => {
+      if (!mountedRef.current) return;
+      if (event.channelId !== channelId) return;
+      setRealMessages((prev) =>
+        prev.map((m) =>
+          m.id === event.parentId
+            ? {
+                ...m,
+                replyCount: (m.replyCount ?? 0) + 1,
+                lastReplyAt: event.reply.createdAt,
+              }
+            : m,
+        ),
+      );
+    });
+    return unsub;
+  }, [channelId]);
+
+  // ── Socket listener — thread:reply:deleted ───────────────────────────────
+  // Updates the parent message's replyCount and lastReplyAt with the server's
+  // authoritative post-decrement values. When replyCount hits 0 the affordance
+  // chip hides automatically because MessageList conditionally renders it only
+  // when replyCount > 0.
+  useEffect(() => {
+    if (!channelId) return;
+    const unsub = onThreadReplyDeleted((event) => {
+      if (!mountedRef.current) return;
+      if (event.channelId !== channelId) return;
+      setRealMessages((prev) =>
+        prev.map((m) =>
+          m.id === event.parentId
+            ? {
+                ...m,
+                replyCount: event.replyCount,
+                lastReplyAt: event.lastReplyAt,
+              }
             : m,
         ),
       );

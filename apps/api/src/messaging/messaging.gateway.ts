@@ -22,7 +22,12 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import type { MentionEvent, MessageResponse } from '@studyhall/shared';
+import type {
+  MentionEvent,
+  MessageResponse,
+  ThreadReplyDeletedEvent,
+  ThreadReplyEvent,
+} from '@studyhall/shared';
 import type { Server, Socket } from 'socket.io';
 import { installWsAuthMiddleware } from '../common/ws-auth';
 // biome-ignore lint/style/useImportType: value import required — emitDecoratorMetadata needs the runtime symbol for NestJS DI
@@ -216,6 +221,48 @@ export class MessagingGateway implements OnGatewayInit, OnGatewayConnection {
     this.server.to(`channel:${payload.channelId}`).emit('reaction:removed', payload);
     this.logger.debug(
       `Fanned out reaction.removed emoji=${payload.emoji} msg=${payload.messageId} channel=${payload.channelId}`,
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // thread.reply.created → fan-out to channel room (wave-18 thread replies)
+  //
+  // Emitted by MessagesService.createReply() after the transactional insert.
+  // Fan-out to 'channel:<channelId>' room — same room as top-level messages
+  // but under a DISTINCT event name ('thread:reply:created') so clients do NOT
+  // add this reply to the top-level message stream. Only the open ThreadPanel
+  // for the matching parentId should consume this event.
+  //
+  // Author-excluded: NOT excluded here (unlike mention events) — thread panels
+  // for the current user should also live-append their own replies.
+  // -------------------------------------------------------------------------
+
+  @OnEvent('thread.reply.created')
+  handleThreadReplyCreated(payload: ThreadReplyEvent): void {
+    this.server.to(`channel:${payload.channelId}`).emit('thread:reply:created', payload);
+    this.logger.debug(
+      `Fanned out thread.reply.created parentId=${payload.parentId} reply=${payload.reply.id} channel=${payload.channelId}`,
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // thread.reply.deleted → fan-out to channel room (wave-18 B-6 fix)
+  //
+  // Emitted by MessagesService.deleteMessage() when a reply (threadParentId set)
+  // is soft-deleted. Carries the parent's post-decrement replyCount + lastReplyAt
+  // so clients can update both the open thread panel (remove replyId) and the
+  // thread affordance on the parent message simultaneously.
+  //
+  // Fan-out is to 'channel:<channelId>' — same room as all other messaging
+  // events for this channel, under a DISTINCT event name so clients can handle
+  // it independently from 'message:deleted'.
+  // -------------------------------------------------------------------------
+
+  @OnEvent('thread.reply.deleted')
+  handleThreadReplyDeleted(payload: ThreadReplyDeletedEvent): void {
+    this.server.to(`channel:${payload.channelId}`).emit('thread:reply:deleted', payload);
+    this.logger.debug(
+      `Fanned out thread.reply.deleted parentId=${payload.parentId} replyId=${payload.replyId} channel=${payload.channelId}`,
     );
   }
 

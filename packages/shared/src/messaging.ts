@@ -31,6 +31,10 @@ export type MentionRef = z.infer<typeof MentionRefSchema>;
 //   - reactions — aggregated [{emoji, count, reactedByMe}]
 //   Extended for wave-15 (task 3d238446):
 //   - mentions — [{userId, username}] users @mentioned in this message
+//   Extended for wave-18 (task 497c2ae6):
+//   - threadParentId — non-null on reply rows; null/absent on top-level messages
+//   - replyCount — denormalized count of live replies (top-level messages only)
+//   - lastReplyAt — ISO timestamp of the most-recent live reply (top-level only)
 // ---------------------------------------------------------------------------
 
 export const MessageResponseSchema = z.object({
@@ -47,8 +51,86 @@ export const MessageResponseSchema = z.object({
   reactions: z.array(ReactionSummarySchema),
   // wave-15 mentions
   mentions: z.array(MentionRefSchema),
+  // wave-18 thread reply fields
+  threadParentId: z.string().nullable().optional(),
+  replyCount: z.number().int().nonnegative().optional(),
+  lastReplyAt: z.string().nullable().optional(),
 });
 export type MessageResponse = z.infer<typeof MessageResponseSchema>;
+
+// ---------------------------------------------------------------------------
+// ThreadRepliesResponse — paginated list of replies for a thread parent
+// wave-18 task 497c2ae6
+//
+// Mirrors the MessageList shape but scoped to a single thread (no top-level
+// channel stream). Items are ordered oldest-first (ASC created_at) so clients
+// can render the reply chain chronologically.
+// ---------------------------------------------------------------------------
+
+export const ThreadRepliesResponseSchema = z.object({
+  items: z.array(MessageResponseSchema),
+  nextCursor: z.string().nullable().optional(),
+});
+export type ThreadRepliesResponse = z.infer<typeof ThreadRepliesResponseSchema>;
+
+// ---------------------------------------------------------------------------
+// ThreadReplyEvent — Socket.IO 'message.reply.created' event payload
+// wave-18 task 497c2ae6
+//
+// Emitted to the channel room 'channel:<channelId>' over the /messaging
+// namespace when a reply is created. DISTINCT from 'message:new' (top-level
+// message.created) — clients must NOT add this reply to the top-level channel
+// stream; only the thread panel for parentId should be updated.
+//
+// Shape rationale:
+//   - parentId: identifies which thread parent to update (reply_count + last_reply_at
+//     affordance + open panel append).
+//   - channelId: lets the client scope the event to the correct channel room.
+//   - reply: the full MessageResponse DTO so the client can render immediately
+//     without a follow-up fetch.
+// ---------------------------------------------------------------------------
+
+export const ThreadReplyEventSchema = z.object({
+  parentId: z.string(),
+  channelId: z.string(),
+  reply: MessageResponseSchema,
+});
+export type ThreadReplyEvent = z.infer<typeof ThreadReplyEventSchema>;
+
+/** Socket.IO event name for a new thread reply — distinct from 'message:new'. */
+export const THREAD_REPLY_CREATED_EVENT = 'thread:reply:created' as const;
+
+// ---------------------------------------------------------------------------
+// ThreadReplyDeletedEvent — Socket.IO 'thread:reply:deleted' event payload
+// wave-18 B-6 fix
+//
+// Emitted to 'channel:<channelId>' when a reply is soft-deleted. Clients use
+// this to:
+//   (a) remove the reply from an open thread panel (replyId match), AND
+//   (b) update the thread affordance on the parent message (replyCount + lastReplyAt).
+//
+// Both signals ride in one event so the client can update both surfaces
+// atomically from the server's post-decrement values (no race with stale GET).
+//
+// Shape rationale:
+//   - parentId: identifies the thread parent whose affordance must be updated.
+//   - channelId: lets the client scope the event to the correct channel room.
+//   - replyId: the soft-deleted reply's id — used to remove it from the open panel.
+//   - replyCount: the parent's NEW reply_count (post-decrement, already committed).
+//   - lastReplyAt: the parent's NEW last_reply_at (null when no live replies remain).
+// ---------------------------------------------------------------------------
+
+export const ThreadReplyDeletedEventSchema = z.object({
+  parentId: z.string(),
+  channelId: z.string(),
+  replyId: z.string(),
+  replyCount: z.number().int().nonnegative(),
+  lastReplyAt: z.string().nullable(),
+});
+export type ThreadReplyDeletedEvent = z.infer<typeof ThreadReplyDeletedEventSchema>;
+
+/** Socket.IO event name for a deleted thread reply. */
+export const THREAD_REPLY_DELETED_EVENT = 'thread:reply:deleted' as const;
 
 // ---------------------------------------------------------------------------
 // SendMessage — request body for POST /channels/:channelId/messages

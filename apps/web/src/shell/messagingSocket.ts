@@ -20,9 +20,32 @@
  * Wave-15 events (mentions):
  *   mention — { MentionEvent } — pushed to per-user room ('user:<userId>');
  *             server excludes the author so callers never receive self-mentions.
+ *
+ * Wave-18 events (thread replies):
+ *   thread:reply:created — { parentId, channelId, reply: MessageResponse }
+ *     Emitted to channel room for the channel that hosts the parent.
+ *     DISTINCT from 'message:new' — the reply must NOT appear in the top-level
+ *     channel list; only in the open ThreadPanel for parentId.
+ *     Local event-name literal: 'thread:reply:created' (matches the THREAD_REPLY_CREATED_EVENT
+ *     const in @studyhall/shared — referenced as a local string to avoid CJS
+ *     runtime-import of shared dist).
+ *   thread:reply:deleted — { parentId, channelId, replyId, replyCount, lastReplyAt }
+ *     Emitted to channel room when a reply is soft-deleted.
+ *     Clients use this to remove the reply from an open ThreadPanel AND update
+ *     the parent message's affordance chip (replyCount/lastReplyAt from
+ *     authoritative post-decrement values).
+ *     Local event-name literal: 'thread:reply:deleted' (matches the
+ *     THREAD_REPLY_DELETED_EVENT const in @studyhall/shared — same CJS
+ *     avoidance pattern as thread:reply:created).
  */
 
-import type { MentionEvent, MessageResponse, ReactionSummary } from '@studyhall/shared';
+import type {
+  MentionEvent,
+  MessageResponse,
+  ReactionSummary,
+  ThreadReplyDeletedEvent,
+  ThreadReplyEvent,
+} from '@studyhall/shared';
 import { type Socket, io } from 'socket.io-client';
 
 // ---------------------------------------------------------------------------
@@ -154,6 +177,50 @@ export function onMention(handler: (event: MentionEvent) => void): () => void {
   socket.on('mention', handler);
   return () => {
     socket.off('mention', handler);
+  };
+}
+
+/**
+ * Subscribe to thread:reply:created events.
+ * Emitted to the channel room when a new reply is posted inside any thread.
+ * The handler receives { parentId, channelId, reply } so callers can:
+ *   - Append the reply to the open ThreadPanel if parentId matches.
+ *   - Update the parent message's replyCount/lastReplyAt in the channel list.
+ * Returns unsubscribe fn.
+ *
+ * NOTE: event name is the local literal 'thread:reply:created' — matches
+ * THREAD_REPLY_CREATED_EVENT in @studyhall/shared but imported type-only to
+ * avoid CJS runtime-import of shared dist.
+ */
+export function onThreadReplyCreated(handler: (event: ThreadReplyEvent) => void): () => void {
+  const socket = getMessagingSocket();
+  socket.on('thread:reply:created', handler);
+  return () => {
+    socket.off('thread:reply:created', handler);
+  };
+}
+
+/**
+ * Subscribe to thread:reply:deleted events.
+ * Emitted to the channel room when a reply is soft-deleted.
+ * The handler receives { parentId, channelId, replyId, replyCount, lastReplyAt }
+ * so callers can:
+ *   - Remove the reply from the open ThreadPanel if parentId matches (by replyId).
+ *   - Update the parent message's replyCount/lastReplyAt in the channel list
+ *     (authoritative post-decrement values — use directly, not a local decrement).
+ * Returns unsubscribe fn.
+ *
+ * NOTE: event name is the local literal 'thread:reply:deleted' — matches
+ * THREAD_REPLY_DELETED_EVENT in @studyhall/shared but imported type-only to
+ * avoid CJS runtime-import of shared dist.
+ */
+export function onThreadReplyDeleted(
+  handler: (event: ThreadReplyDeletedEvent) => void,
+): () => void {
+  const socket = getMessagingSocket();
+  socket.on('thread:reply:deleted', handler);
+  return () => {
+    socket.off('thread:reply:deleted', handler);
   };
 }
 

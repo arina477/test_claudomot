@@ -72,6 +72,11 @@ export {
   MessageListSchema,
   MyMentionsResponseSchema,
   MentionEventSchema,
+  ThreadRepliesResponseSchema,
+  ThreadReplyEventSchema,
+  THREAD_REPLY_CREATED_EVENT,
+  ThreadReplyDeletedEventSchema,
+  THREAD_REPLY_DELETED_EVENT,
 } from './messaging.js';
 export type {
   ReactionSummary,
@@ -84,6 +89,9 @@ export type {
   MessageList,
   MyMentionsResponse,
   MentionEvent,
+  ThreadRepliesResponse,
+  ThreadReplyEvent,
+  ThreadReplyDeletedEvent,
 } from './messaging.js';
 
 export {

@@ -76,6 +76,23 @@ type Props = {
   viewerUsername?: string | null;
   /** Label for the composer hint, e.g. "general" */
   channelName?: string;
+  /**
+   * Called when user clicks the thread affordance chip.
+   * Passes the parent MessageResponse + the affordance button element (for
+   * focus-restore on panel close — D-carry 2).
+   * D-carry 3: the affordance chip is only rendered when replyCount > 0 (hidden at 0).
+   */
+  onOpenThread?:
+    | ((
+        parentMessage: import('@studyhall/shared').MessageResponse,
+        triggerEl: HTMLButtonElement,
+      ) => void)
+    | null;
+  /**
+   * The parentId of the currently open thread (if any).
+   * Used to set aria-expanded on the affordance button of the open thread.
+   */
+  openThreadParentId?: string | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -86,6 +103,28 @@ function formatTime(isoString: string): string {
   try {
     const d = new Date(isoString);
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Relative timestamp for the thread affordance chip ("last reply Xm ago").
+ * Keeps the label short: seconds → "just now", minutes → "Nm ago",
+ * hours → "Nh ago", days → "Nd ago", else the full locale date.
+ */
+function formatRelativeTime(isoString: string): string {
+  try {
+    const diff = Date.now() - new Date(isoString).getTime();
+    const s = Math.floor(diff / 1000);
+    if (s < 60) return 'just now';
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    const d = Math.floor(h / 24);
+    if (d < 30) return `${d}d ago`;
+    return new Date(isoString).toLocaleDateString();
   } catch {
     return '';
   }
@@ -549,6 +588,10 @@ type SentRowProps = {
   onEdit: ((messageId: string, content: string) => void) | null;
   onDelete: ((messageId: string) => void) | null;
   onReaction: ((messageId: string, emoji: string) => void) | null;
+  /** Opens the ThreadPanel for this parent row (D-carry 3: hidden when replyCount===0). */
+  onOpenThread: ((msg: MessageResponse, triggerEl: HTMLButtonElement) => void) | null;
+  /** Whether this message's thread panel is currently open (for aria-expanded). */
+  isThreadOpen: boolean;
 };
 
 function SentRow({
@@ -558,12 +601,16 @@ function SentRow({
   onEdit,
   onDelete,
   onReaction,
+  onOpenThread,
+  isThreadOpen,
 }: SentRowProps) {
   const abbr = initials(msg.authorId);
   const isOwn = !!currentUserId && msg.authorId === currentUserId;
   const [rowState, setRowState] = useState<'normal' | 'editing' | 'deleting'>('normal');
   const [popoverOpen, setPopoverOpen] = useState(false);
   const reactBtnRef = useRef<HTMLButtonElement>(null);
+  // Ref forwarded to ThreadPanel triggerRef so Esc restores focus here (D-carry 2)
+  const threadBtnRef = useRef<HTMLButtonElement>(null);
 
   // Tombstone — isDeleted
   if (msg.isDeleted) {
@@ -736,6 +783,54 @@ function SentRow({
                 )}
               </div>
             )}
+
+            {/* Thread affordance chip — D-carry 3: HIDDEN when replyCount === 0 */}
+            {onOpenThread !== null &&
+              !msg.isDeleted &&
+              !msg.threadParentId &&
+              (msg.replyCount ?? 0) > 0 && (
+                <div className="mt-2 text-left">
+                  <button
+                    ref={threadBtnRef}
+                    type="button"
+                    aria-haspopup="dialog"
+                    aria-expanded={isThreadOpen}
+                    aria-controls="thread-panel"
+                    aria-label={`Open thread: ${msg.replyCount === 1 ? '1 reply' : `${msg.replyCount} replies`}${msg.lastReplyAt ? `, last reply ${formatRelativeTime(msg.lastReplyAt)}` : ''}`}
+                    data-testid={`thread-affordance-${msg.id}`}
+                    onClick={(e) => onOpenThread(msg, e.currentTarget)}
+                    className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70"
+                    style={{
+                      height: 28,
+                      backgroundColor: '#27272a',
+                      color: 'rgba(255,255,255,0.92)',
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#3f3f46';
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#27272a';
+                    }}
+                  >
+                    <ChatsCircleIcon size={15} style={{ color: '#10b981' }} />
+                    <span className="text-xs font-semibold" style={{ color: '#10b981' }}>
+                      {msg.replyCount === 1 ? '1 reply' : `${msg.replyCount} replies`}
+                    </span>
+                    <span
+                      className="text-[10px] font-bold uppercase tracking-widest px-0.5"
+                      style={{ color: 'rgba(255,255,255,0.40)' }}
+                    >
+                      ·
+                    </span>
+                    <span
+                      className="text-xs font-medium"
+                      style={{ color: 'rgba(255,255,255,0.40)' }}
+                    >
+                      {msg.lastReplyAt ? `last reply ${formatRelativeTime(msg.lastReplyAt)}` : ''}
+                    </span>
+                  </button>
+                </div>
+              )}
           </>
         )}
       </div>
@@ -928,6 +1023,8 @@ export function MessageList({
   currentUserId,
   viewerUsername,
   channelName,
+  onOpenThread,
+  openThreadParentId,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -1045,6 +1142,8 @@ export function MessageList({
               onEdit={onEdit ?? null}
               onDelete={onDelete ?? null}
               onReaction={onReaction ?? null}
+              onOpenThread={onOpenThread ?? null}
+              isThreadOpen={openThreadParentId === msg.id}
             />
           );
         }

@@ -1,11 +1,22 @@
 import type { InferInsertModel, InferSelectModel } from 'drizzle-orm';
-import { boolean, index, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  index,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+  unique,
+  uuid,
+} from 'drizzle-orm/pg-core';
 import { channels } from './servers';
 import { users } from './users';
 
 // ---------------------------------------------------------------------------
 // messages table — wave-12 M3 messaging (task a0c322b4)
 //                 + wave-13 soft-delete + edit columns (task e12886d7)
+//                 + wave-18 thread replies (task 497c2ae6)
 // ---------------------------------------------------------------------------
 
 export const messages = pgTable(
@@ -27,12 +38,20 @@ export const messages = pgTable(
     // wave-13: soft-delete (content cleared/tombstoned on delete)
     is_deleted: boolean('is_deleted').notNull().default(false),
     deleted_at: timestamp('deleted_at', { withTimezone: true }),
+    // wave-18: thread replies — self-FK (NULL = top-level; non-NULL = reply)
+    thread_parent_id: uuid('thread_parent_id').references((): AnyPgColumn => messages.id),
+    // wave-18: denormalized reply count on the parent message (replies = 0)
+    reply_count: integer('reply_count').notNull().default(0),
+    // wave-18: timestamp of most-recent live reply on the parent (replies = NULL)
+    last_reply_at: timestamp('last_reply_at', { withTimezone: true }),
   },
   (table) => [
     // UNIQUE(channel_id, idempotency_key) — deduplication constraint
     unique('messages_channel_idempotency_key').on(table.channel_id, table.idempotency_key),
     // INDEX(channel_id, created_at) — efficient cursor pagination
     index('messages_channel_created_at_idx').on(table.channel_id, table.created_at),
+    // INDEX(thread_parent_id, created_at) — listThreadReplies + thread affordance
+    index('messages_thread_parent_created_idx').on(table.thread_parent_id, table.created_at),
   ],
 );
 

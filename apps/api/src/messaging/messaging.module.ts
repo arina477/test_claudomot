@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { RbacModule } from '../rbac/rbac.module';
-import { MentionsController, MessagesController } from './messages.controller';
+import { MentionsController, MessagesController, ThreadsController } from './messages.controller';
 import { MessagesService } from './messages.service';
 import { MessagingGateway } from './messaging.gateway';
 
@@ -9,7 +9,7 @@ import { MessagingGateway } from './messaging.gateway';
     // RbacModule exports RbacService (for canViewChannelById) + ChannelMessageGuard
     RbacModule,
   ],
-  controllers: [MessagesController, MentionsController],
+  controllers: [MessagesController, MentionsController, ThreadsController],
   providers: [MessagesService, MessagingGateway],
   exports: [MessagesService],
 })
