@@ -78,3 +78,6 @@ Promoted at L-2 Distill from `process/waves/wave-<N>/blocks/L/observations.md` b
 
 4. Reproduce one negative path per authz or injection boundary at B-6 Phase-2; a Phase-1 code-read APPROVE is not sufficient.
    Why: An absent guard or dead fault-injection passes code-read; only adversarial reproduction proves it.
+
+5. Guard every reconnect-triggered async loop with an in-flight coalescing flag or promise-mutex at authoring time.
+   Why: Socket-connect and window-online can fire together; an unguarded loop runs twice, doubling requests.

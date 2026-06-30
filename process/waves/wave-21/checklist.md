@@ -57,7 +57,7 @@ VERIFY:
 
 LEARN:
 - [x] L-1 Docs (COMPLETE — CHANGELOG #33 1 bullet Added; M4 delta RECORD-only [7 done/6 open], closure-eligible→N-1; floor-exemption precedent extended)
-- [ ] L-2 Distill
+[x] - [ ] L-2 Distill
 
 NEXT:
 - [ ] N-1 Survey & triggers
