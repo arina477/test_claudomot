@@ -23,11 +23,12 @@
             --border-hover: rgba(255,255,255,0.12);
             --text-primary: rgba(255,255,255,0.92);
             --text-secondary: rgba(255,255,255,0.60);
-            --text-muted: rgba(255,255,255,0.40);
+            --text-muted: rgba(255,255,255,0.55); /* raised 0.40→0.55 for WCAG AA on near-black (was 4.17:1) */
             --accent-emerald: #10b981;
             --accent-emerald-dim: rgba(16,185,129,0.1);
             --accent-amber: #f59e0b;
-            --danger: #ef4444;
+            --danger: #ef4444; /* fill/border use only */
+            --danger-text: #f87171; /* on-dark-tint text: AA over danger/10 (base #ef4444 computed 3.93:1) */
             
             /* Shapes & Motion */
             --radius-md: 6px;
@@ -361,7 +362,7 @@
                         <!-- Metadata / Top-Left -->
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center gap-3 mb-1">
-                                <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-[var(--danger)]/10 text-[var(--danger)] border border-[var(--danger)]/20 uppercase tracking-wide">
+                                <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-[var(--danger)]/10 text-[var(--danger-text)] border border-[var(--danger)]/20 uppercase tracking-wide">
                                     Overdue: Yesterday
                                 </span>
                                 <span class="text-xs text-muted flex items-center gap-1"><i class="ph ph-user text-[14px]"></i> Prof. Ada Woods</span>
