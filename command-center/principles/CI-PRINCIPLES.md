@@ -131,3 +131,9 @@ pr_conventions:
 
 1. Verify a deploy via the platform deployment-state endpoint reading status SUCCESS, never via /health alone.
    Why: /health can return 200 from the prior revision and hide a crashed or wrong-revision deploy.
+
+2. Deploy Railway via the CLI `up` source-upload, never via GraphQL serviceInstanceDeploy on repo-less services.
+   Why: serviceInstanceDeploy re-runs the existing image, shipping a stale revision under a SUCCESS status.
+
+3. Confirm a deployment-state SUCCESS with a route probe that 404 flips to 401 on a new-only route before passing.
+   Why: SUCCESS plus a 404 on a newly merged route proves the old revision still serves, catching the false-green.

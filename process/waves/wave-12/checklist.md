@@ -40,8 +40,8 @@ BUILD:
 - [ ] B-6 Review
 
 CI/CD:
-- [ ] C-1 PR, CI & merge
-- [ ] C-2 Deploy & verify (canary armed when real users > 1000)
+- [x] C-1 PR, CI & merge (PR #23 merged @168c45f; boot-probe fix 006235b, all 7 checks green)
+- [ ] C-2 Deploy & verify — HOLD: migration 0005 applied + verified; deploy BLOCKED (false-green / stale-revision; no GitHub-connected source + Railway CLI absent + no GraphQL source-upload)
 
 TEST:
 - [ ] T-1 Static
