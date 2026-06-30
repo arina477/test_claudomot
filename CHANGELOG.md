@@ -34,7 +34,10 @@ All notable changes to StudyHall are documented here. Format follows
 - Live presence in your study servers: see who's online or offline at a glance, with presence updating instantly as people come and go across all their open tabs. (#26)
 - A member list in the channel view, grouped into Online and Offline with live status dots, so you always know who's around. (#26)
 - Typing indicators show when someone in the channel is typing, naming who it is, so a reply never catches you by surprise. (#26)
-- Presence and typing are shared only with people in your server, so who's online never leaks to anyone outside it. (#26)
+- Mention people in a message by typing @ and their username — only fellow server members can be mentioned, and the person you mention gets a live notification the moment you send. (#27)
+- An @-autocomplete picker pops up as you type a name in the composer, so you can pick the right member with the keyboard and never misspell a handle. (#27)
+- Mentions render as pills in the message — your own mentions stand out in green — and an unread-mention badge tells you when someone has pinged you, clearing once you've looked. (#27)
+- A "my mentions" view collects every message that mentions you in one place, and it only ever shows your own — no one can peek at anyone else's. (#27)
 
 ### Fixed
 
