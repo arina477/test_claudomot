@@ -16,9 +16,13 @@
  *   message:deleted  — { messageId, channelId } — soft-delete, render tombstone
  *   reaction:added   — { messageId, channelId, emoji, count, reactedByMe }
  *   reaction:removed — { messageId, channelId, emoji, count, reactedByMe }
+ *
+ * Wave-15 events (mentions):
+ *   mention — { MentionEvent } — pushed to per-user room ('user:<userId>');
+ *             server excludes the author so callers never receive self-mentions.
  */
 
-import type { MessageResponse, ReactionSummary } from '@studyhall/shared';
+import type { MentionEvent, MessageResponse, ReactionSummary } from '@studyhall/shared';
 import { type Socket, io } from 'socket.io-client';
 
 // ---------------------------------------------------------------------------
@@ -136,6 +140,20 @@ export function onReactionRemoved(handler: (payload: ReactionEventPayload) => vo
   socket.on('reaction:removed', handler);
   return () => {
     socket.off('reaction:removed', handler);
+  };
+}
+
+/**
+ * Subscribe to mention events pushed to the current user's per-user room
+ * ('user:<userId>') by the /messaging gateway.  The server excludes the
+ * author so callers never receive self-mention events.
+ * Returns unsubscribe fn.
+ */
+export function onMention(handler: (event: MentionEvent) => void): () => void {
+  const socket = getMessagingSocket();
+  socket.on('mention', handler);
+  return () => {
+    socket.off('mention', handler);
   };
 }
 
