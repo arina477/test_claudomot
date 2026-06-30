@@ -3,7 +3,7 @@
 **Block:** P (Product)
 **Wave topic:** M3 @mentions — parse/resolve/persist + realtime fan-out + my-mentions endpoint + composer autocomplete + mention pills
 **Block exit gate:** P-4
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
@@ -12,7 +12,7 @@
 | P-1 | process/waves/wave-15/stages/P-1-decompose.md | done | PROCEED multi-spec (~2600 LOC, above floor); design_gap TRUE |
 | P-2 | tasks.description of 3d238446 (+pointer) | done | multi-spec 3 blocks; security-scoped |
 | P-3 | process/waves/wave-15/stages/P-3-plan.md | done | message_mentions 0007 + parser/persist/my-mentions + autocomplete/pills/unread |
-| P-4 | process/waves/wave-15/stages/P-4-gemini-review.md | pending | |
+| P-4 | process/waves/wave-15/blocks/P/gate-verdict.md | done | PASSED — head-product+karen+jenny APPROVE; Gemini UNAVAILABLE |
 
 ## Block-specific context
 - **Wave topic:** @mention parse/resolve/persist (message_mentions) + realtime fan-out (reuse /messaging) + GET my-mentions (authz) + composer @autocomplete member-picker + mention pills + unread-mention affordance
