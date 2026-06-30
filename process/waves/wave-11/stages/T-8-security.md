@@ -1,0 +1,2 @@
+# Wave 11 — T-8-security
+secret-grep CLEAN — test-accounts.md gitignored (not in diff); re-verify-fixture.sh reads key at runtime (no hardcoded); project.yaml label+email only (doctor valid). gitleaks user-id false-positive → scoped .gitleaks.toml allowlist (triple-constrained, configured-not-bypassed; security-engineer-adjudicated). secret-scan false-green caught at C-1 via authoritative gh pr checks. PASS.

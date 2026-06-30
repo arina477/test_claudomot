@@ -38,8 +38,8 @@ BUILD:
 - [ ] B-6 Review
 
 CI/CD:
-- [ ] C-1 PR, CI & merge
-- [ ] C-2 Deploy & verify (canary armed when real users > 1000)
+- [x] C-1 PR, CI & merge — PR #22 MERGED (squash, 57927b1); 7/7 CI green; 2 fix-up cycles cleared a gitleaks false positive via scoped .gitleaks.toml
+- [x] C-2 Deploy & verify — deploy NOT NEEDED (config/docs/script-only diff); fixture proven live at provision-time (POST /servers 201); canary skipped
 
 TEST:
 - [ ] T-1 Static
