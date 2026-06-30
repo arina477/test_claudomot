@@ -57,5 +57,21 @@ export type {
   UpsertChannelOverrideInput,
 } from './rbac.js';
 
-export { MessageResponseSchema, SendMessageSchema, MessageListSchema } from './messaging.js';
-export type { MessageResponse, SendMessageInput, MessageList } from './messaging.js';
+export {
+  ReactionSummarySchema,
+  MessageResponseSchema,
+  SendMessageSchema,
+  EditMessageSchema,
+  ReactionToggleSchema,
+  ReactionToggleResponseSchema,
+  MessageListSchema,
+} from './messaging.js';
+export type {
+  ReactionSummary,
+  MessageResponse,
+  SendMessageInput,
+  EditMessageInput,
+  ReactionToggleInput,
+  ReactionToggleResponse,
+  MessageList,
+} from './messaging.js';

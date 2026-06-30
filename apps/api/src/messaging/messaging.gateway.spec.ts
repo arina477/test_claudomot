@@ -284,6 +284,27 @@ describe('MessagingGateway — leave_channel', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Helper: build a full MessageResponse fixture with wave-13 fields
+// ---------------------------------------------------------------------------
+
+function makeMessageFixture(
+  overrides: Partial<import('@studyhall/shared').MessageResponse> = {},
+): import('@studyhall/shared').MessageResponse {
+  return {
+    id: 'msg-001',
+    channelId: 'ch-999',
+    authorId: 'user-abc',
+    content: 'Hello',
+    createdAt: '2026-06-30T00:00:00.000Z',
+    isEdited: false,
+    editedAt: null,
+    isDeleted: false,
+    reactions: [],
+    ...overrides,
+  };
+}
+
 describe('MessagingGateway — message.created fan-out', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -298,13 +319,7 @@ describe('MessagingGateway — message.created fan-out', () => {
     // biome-ignore lint/suspicious/noExplicitAny: test server mock
     (gateway as any).server = { to: mockTo, emit: vi.fn() };
 
-    const message = {
-      id: 'msg-001',
-      channelId: 'ch-999',
-      authorId: 'user-abc',
-      content: 'Hello',
-      createdAt: '2026-06-30T00:00:00.000Z',
-    };
+    const message = makeMessageFixture({ channelId: 'ch-999' });
 
     gateway.handleMessageCreated(message);
 
@@ -325,17 +340,106 @@ describe('MessagingGateway — message.created fan-out', () => {
     // biome-ignore lint/suspicious/noExplicitAny: test server mock
     (gateway as any).server = { to: mockTo };
 
-    const message = {
+    const message = makeMessageFixture({
       id: 'msg-002',
       channelId: 'ch-abc-123',
       authorId: 'user-xyz',
       content: 'Test message',
       createdAt: '2026-06-30T00:01:00.000Z',
-    };
+    });
 
     gateway.handleMessageCreated(message);
 
     expect(mockTo).toHaveBeenCalledWith('channel:ch-abc-123');
     expect(mockTo).not.toHaveBeenCalledWith('channel:ch-999');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// wave-13 gateway event tests — message.updated / message.deleted /
+// reaction.added / reaction.removed (all room-only, no broadcast-all)
+// ---------------------------------------------------------------------------
+
+describe('MessagingGateway — wave-13 event fan-outs (room-only)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('message.updated → emits message:updated to channel room only', () => {
+    const gateway = new MessagingGateway(makeRbacService());
+    const mockEmit = vi.fn();
+    const mockTo = vi.fn().mockReturnValue({ emit: mockEmit });
+    // biome-ignore lint/suspicious/noExplicitAny: test server mock
+    (gateway as any).server = { to: mockTo, emit: vi.fn() };
+
+    const message = makeMessageFixture({
+      channelId: 'ch-edit',
+      isEdited: true,
+      editedAt: '2026-06-30T10:00:00.000Z',
+      content: 'edited',
+    });
+
+    gateway.handleMessageUpdated(message);
+
+    expect(mockTo).toHaveBeenCalledWith('channel:ch-edit');
+    expect(mockEmit).toHaveBeenCalledWith('message:updated', message);
+    // biome-ignore lint/suspicious/noExplicitAny: test server mock
+    expect((gateway as any).server.emit).not.toHaveBeenCalled();
+  });
+
+  it('message.deleted → emits message:deleted to channel room only', () => {
+    const gateway = new MessagingGateway(makeRbacService());
+    const mockEmit = vi.fn();
+    const mockTo = vi.fn().mockReturnValue({ emit: mockEmit });
+    // biome-ignore lint/suspicious/noExplicitAny: test server mock
+    (gateway as any).server = { to: mockTo, emit: vi.fn() };
+
+    const message = makeMessageFixture({ channelId: 'ch-del', isDeleted: true, content: null });
+
+    gateway.handleMessageDeleted(message);
+
+    expect(mockTo).toHaveBeenCalledWith('channel:ch-del');
+    expect(mockEmit).toHaveBeenCalledWith('message:deleted', message);
+    // biome-ignore lint/suspicious/noExplicitAny: test server mock
+    expect((gateway as any).server.emit).not.toHaveBeenCalled();
+  });
+
+  it('reaction.added → emits reaction:added to channel room only', () => {
+    const gateway = new MessagingGateway(makeRbacService());
+    const mockEmit = vi.fn();
+    const mockTo = vi.fn().mockReturnValue({ emit: mockEmit });
+    // biome-ignore lint/suspicious/noExplicitAny: test server mock
+    (gateway as any).server = { to: mockTo, emit: vi.fn() };
+
+    const payload = {
+      messageId: 'msg-001',
+      channelId: 'ch-react',
+      userId: 'user-abc',
+      emoji: '👍',
+    };
+
+    gateway.handleReactionAdded(payload);
+
+    expect(mockTo).toHaveBeenCalledWith('channel:ch-react');
+    expect(mockEmit).toHaveBeenCalledWith('reaction:added', payload);
+    // biome-ignore lint/suspicious/noExplicitAny: test server mock
+    expect((gateway as any).server.emit).not.toHaveBeenCalled();
+  });
+
+  it('reaction.removed → emits reaction:removed to channel room only', () => {
+    const gateway = new MessagingGateway(makeRbacService());
+    const mockEmit = vi.fn();
+    const mockTo = vi.fn().mockReturnValue({ emit: mockEmit });
+    // biome-ignore lint/suspicious/noExplicitAny: test server mock
+    (gateway as any).server = { to: mockTo, emit: vi.fn() };
+
+    const payload = { messageId: 'msg-002', channelId: 'ch-react', userId: 'user-xyz', emoji: '❤️' };
+
+    gateway.handleReactionRemoved(payload);
+
+    expect(mockTo).toHaveBeenCalledWith('channel:ch-react');
+    expect(mockEmit).toHaveBeenCalledWith('reaction:removed', payload);
+    // biome-ignore lint/suspicious/noExplicitAny: test server mock
+    expect((gateway as any).server.emit).not.toHaveBeenCalled();
   });
 });

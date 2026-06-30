@@ -1,13 +1,5 @@
 import type { InferInsertModel, InferSelectModel } from 'drizzle-orm';
-import {
-  boolean,
-  index,
-  pgTable,
-  text,
-  timestamp,
-  unique,
-  uuid,
-} from 'drizzle-orm/pg-core';
+import { boolean, index, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
 import { channels } from './servers';
 import { users } from './users';
 
@@ -74,11 +66,7 @@ export const message_reactions = pgTable(
   },
   (table) => [
     // UNIQUE(message_id, user_id, emoji) — one reaction per user per emoji per message
-    unique('message_reactions_message_user_emoji').on(
-      table.message_id,
-      table.user_id,
-      table.emoji,
-    ),
+    unique('message_reactions_message_user_emoji').on(table.message_id, table.user_id, table.emoji),
     // INDEX(message_id) — fast aggregation per message
     index('message_reactions_message_id_idx').on(table.message_id),
   ],
