@@ -53,8 +53,10 @@ interface SessionAugmentedRequest {
  *
  * Security:
  *   - @UseGuards(AuthGuard, ChannelMessageGuard) — all MessagesController routes.
- *   - @UseGuards(AuthGuard) — ThreadsController routes (no ChannelMessageGuard; the
- *     service validates the parent exists and belongs to the channel supplied in body).
+ *   - @UseGuards(AuthGuard) — ThreadsController routes. ChannelMessageGuard cannot
+ *     be applied here because the route has no :channelId path param. Instead,
+ *     the service calls rbacService.canViewChannelById() using the channelId derived
+ *     from the PARENT message row — never from the query param directly (IDOR-safe).
  *   - author_id derived from req.session.getUserId() — NEVER from body.
  *   - channelId from route param — IDOR-safe.
  *   - Delete authz (author || manage_channels) resolved in service after
@@ -229,19 +231,20 @@ export class MentionsController {
 //
 // Security:
 //   - @UseGuards(AuthGuard) — session required.
-//   - channelId is supplied as a query param on POST (not in the path) so the
-//     service can validate that the parent belongs to that channel.
+//   - channelId is supplied as a query param on POST for cross-channel validation
+//     only; it is validated against the parent row, NOT used as the authz source.
+//   - Channel membership is enforced in the service via canViewChannelById()
+//     using the channelId from the PARENT message row (wave-18 B-6 IDOR fix).
 //   - author_id is ALWAYS from req.session.getUserId() — never from body.
 //
 // Design rationale for channelId as query param on POST:
 //   The spec allows either a nested route under /channels/:channelId or a
 //   standalone /messages/:parentId/replies route. We chose the standalone form
 //   (/messages/:parentId/replies) with channelId as a required query param so
-//   the service can enforce the cross-channel invariant without requiring the
-//   client to know the channel upfront (parentId is globally unique by UUID).
-//   The ChannelMessageGuard is not applied here because the guard operates on
-//   the :channelId path param which is absent in this route shape; instead the
-//   service loads the parent message and verifies channel membership transitively.
+//   the service can enforce the cross-channel invariant. ChannelMessageGuard
+//   cannot be applied (it keys off :channelId route param, absent here); the
+//   service enforces membership via rbacService.canViewChannelById() on the
+//   parent's channel_id — the query param cannot bypass it (B-6 IDOR fix).
 // ---------------------------------------------------------------------------
 
 @Controller('messages')

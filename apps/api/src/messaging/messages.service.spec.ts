@@ -161,9 +161,13 @@ function makeEventEmitter() {
 // Mock RbacService
 // ---------------------------------------------------------------------------
 
-function makeRbacService(canResult = false) {
+function makeRbacService(canResult = false, canViewChannelResult = true) {
   return {
     can: vi.fn().mockResolvedValue(canResult),
+    // canViewChannelById is used by createReply + listThreadReplies for the
+    // channel membership guard (wave-18 B-6 IDOR fix). Default: true (member)
+    // so existing tests that don't test the non-member path pass through.
+    canViewChannelById: vi.fn().mockResolvedValue(canViewChannelResult),
   };
 }
 
@@ -1339,5 +1343,192 @@ describe('MessagesService.listThreadReplies — wave-18', () => {
     await expect(service.listThreadReplies('nonexistent-parent', AUTHOR_ID)).rejects.toThrow(
       NotFoundException,
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: wave-18 B-6 — thread-route IDOR fix (C-1 security)
+//
+// Non-members must receive 403 on both POST /messages/:parentId/replies and
+// GET /messages/:parentId/replies. Members must be allowed through (200/201).
+//
+// The authz check in the service calls rbacService.canViewChannelById()
+// using the channelId from the parent message row — NOT from the query param.
+// ---------------------------------------------------------------------------
+
+const NON_MEMBER_ID = 'user-not-a-member';
+const MEMBER_ID = 'user-channel-member';
+
+// Shared mock RbacService factory for thread IDOR tests
+function makeRbacServiceWithViewChannel(canViewResult: boolean) {
+  return {
+    can: vi.fn().mockResolvedValue(false),
+    canViewChannelById: vi.fn().mockResolvedValue(canViewResult),
+  };
+}
+
+describe('MessagesService thread IDOR — wave-18 B-6 (C-1)', () => {
+  let eventEmitter: ReturnType<typeof makeEventEmitter>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    eventEmitter = makeEventEmitter();
+  });
+
+  // -------------------------------------------------------------------------
+  // createReply — non-member 403
+  // -------------------------------------------------------------------------
+
+  it('createReply: non-member → ForbiddenException (403)', async () => {
+    // Parent exists, belongs to CHANNEL_ID, is a top-level message
+    const rbac = makeRbacServiceWithViewChannel(false);
+    // biome-ignore lint/suspicious/noExplicitAny: test mock
+    const service = new MessagesService(eventEmitter as any, rbac as any);
+
+    mockSelect.mockReturnValue(makeSelectChain([mockParentMessage]));
+
+    await expect(
+      service.createReply(CHANNEL_ID, PARENT_ID, NON_MEMBER_ID, { content: 'sneaky reply' }),
+    ).rejects.toThrow(ForbiddenException);
+
+    // canViewChannelById must have been called with the parent's channelId
+    // (CHANNEL_ID from the parent row), not the caller-supplied param.
+    expect(rbac.canViewChannelById).toHaveBeenCalledWith(NON_MEMBER_ID, CHANNEL_ID);
+  });
+
+  // -------------------------------------------------------------------------
+  // listThreadReplies — non-member 403
+  // -------------------------------------------------------------------------
+
+  it('listThreadReplies: non-member → ForbiddenException (403)', async () => {
+    const rbac = makeRbacServiceWithViewChannel(false);
+    // biome-ignore lint/suspicious/noExplicitAny: test mock
+    const service = new MessagesService(eventEmitter as any, rbac as any);
+
+    // Parent exists — select returns a row with channel_id
+    mockSelect.mockReturnValue(
+      makeSelectChain([{ id: PARENT_ID, is_deleted: false, channel_id: CHANNEL_ID }]),
+    );
+
+    await expect(service.listThreadReplies(PARENT_ID, NON_MEMBER_ID)).rejects.toThrow(
+      ForbiddenException,
+    );
+
+    // canViewChannelById must have been called with channel derived from parent
+    expect(rbac.canViewChannelById).toHaveBeenCalledWith(NON_MEMBER_ID, CHANNEL_ID);
+  });
+
+  // -------------------------------------------------------------------------
+  // listThreadReplies — member 200 (allowed through)
+  // -------------------------------------------------------------------------
+
+  it('listThreadReplies: member is allowed through (returns items)', async () => {
+    const rbac = makeRbacServiceWithViewChannel(true);
+    // biome-ignore lint/suspicious/noExplicitAny: test mock
+    const service = new MessagesService(eventEmitter as any, rbac as any);
+
+    let selectCallCount = 0;
+    mockSelect.mockImplementation(() => {
+      selectCallCount++;
+      if (selectCallCount === 1) {
+        // Parent fetch (now includes channel_id)
+        return makeSelectChain([{ id: PARENT_ID, is_deleted: false, channel_id: CHANNEL_ID }]);
+      }
+      if (selectCallCount === 2) {
+        // Replies page (empty — no replies yet)
+        return makeSelectChain([]);
+      }
+      return makeSelectChain([]);
+    });
+
+    const result = await service.listThreadReplies(PARENT_ID, MEMBER_ID);
+
+    expect(result.items).toHaveLength(0);
+    expect(rbac.canViewChannelById).toHaveBeenCalledWith(MEMBER_ID, CHANNEL_ID);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: wave-18 B-6 — thread:reply:deleted event emission (H-1)
+//
+// When a reply is soft-deleted, the service must emit 'thread.reply.deleted'
+// carrying parentId, channelId, replyId, and the parent's post-decrement
+// replyCount + lastReplyAt.
+// ---------------------------------------------------------------------------
+
+describe('MessagesService.deleteMessage — wave-18 B-6 thread:reply:deleted (H-1)', () => {
+  let service: MessagesService;
+  let eventEmitter: ReturnType<typeof makeEventEmitter>;
+  let rbacService: ReturnType<typeof makeRbacService>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    eventEmitter = makeEventEmitter();
+    rbacService = makeRbacService(false);
+    // biome-ignore lint/suspicious/noExplicitAny: test mock
+    service = new MessagesService(eventEmitter as any, rbacService as any);
+  });
+
+  it('emits thread.reply.deleted with post-decrement parent counters when a reply is soft-deleted', async () => {
+    const replyCreatedAt = new Date('2026-06-30T12:00:00Z'); // the tail reply
+    const replyMessage = {
+      ...mockMessage,
+      id: REPLY_ID,
+      channel_id: CHANNEL_ID,
+      thread_parent_id: PARENT_ID,
+      created_at: replyCreatedAt,
+      author_id: AUTHOR_ID,
+    };
+
+    // Pre-flight selects outside transaction: reply fetch + channel fetch
+    let outerSelectCount = 0;
+    mockSelect.mockImplementation(() => {
+      outerSelectCount++;
+      if (outerSelectCount === 1) return makeSelectChain([replyMessage]); // the reply
+      if (outerSelectCount === 2) return makeSelectChain([mockChannelWithServer]); // channel
+      // Post-txn parent fetch for thread:reply:deleted payload
+      return makeSelectChain([
+        {
+          reply_count: 1,
+          last_reply_at: new Date('2026-06-30T11:00:00Z'),
+          channel_id: CHANNEL_ID,
+        },
+      ]);
+    });
+
+    // Transaction: soft-delete reply + decrement parent
+    mockTransaction.mockImplementation(async (cb: Parameters<typeof mockTransaction>[0]) => {
+      const softDeletedReply = { ...replyMessage, is_deleted: true, content: '' };
+      let txCallCount = 0;
+      const txUpdate = vi.fn().mockImplementation(() => {
+        txCallCount++;
+        if (txCallCount === 1) return makeUpdateChain([softDeletedReply]);
+        return makeUpdateChain([]);
+      });
+      const txSelect = vi
+        .fn()
+        .mockReturnValue(makeSelectChain([{ last_reply_at: replyCreatedAt }]));
+      const tx = { update: txUpdate, select: txSelect, insert: vi.fn(), delete: vi.fn() };
+      return cb(tx);
+    });
+
+    await service.deleteMessage(CHANNEL_ID, REPLY_ID, AUTHOR_ID);
+
+    // 1. The generic message.deleted event must still be emitted
+    const deletedEmit = eventEmitter.emit.mock.calls.find((c) => c[0] === 'message.deleted');
+    expect(deletedEmit).toBeDefined();
+
+    // 2. thread.reply.deleted must be emitted with the correct payload
+    const threadDeleteEmit = eventEmitter.emit.mock.calls.find(
+      (c) => c[0] === 'thread.reply.deleted',
+    );
+    expect(threadDeleteEmit).toBeDefined();
+    expect(threadDeleteEmit?.[1]).toMatchObject({
+      parentId: PARENT_ID,
+      channelId: CHANNEL_ID,
+      replyId: REPLY_ID,
+      replyCount: 1,
+      lastReplyAt: '2026-06-30T11:00:00.000Z',
+    });
   });
 });

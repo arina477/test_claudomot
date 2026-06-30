@@ -15,6 +15,7 @@ import type {
   ReactionToggleResponse,
   SendMessageInput,
   ThreadRepliesResponse,
+  ThreadReplyDeletedEvent,
   ThreadReplyEvent,
 } from '@studyhall/shared';
 import { and, eq, inArray, lt, max, or, sql } from 'drizzle-orm';
@@ -648,6 +649,36 @@ export class MessagesService {
 
       const dto = rowToDto(updated, [], userId);
       this.eventEmitter.emit('message.deleted', dto);
+
+      // H-1 fix (wave-18 B-6): emit thread-scoped delete event so open thread
+      // panels remove the deleted reply and the affordance replyCount decrements.
+      //
+      // Fetch the parent's post-commit reply_count + last_reply_at — the txn
+      // already applied the decrement, so this read reflects the committed values.
+      const replyParentId = message.thread_parent_id as string;
+      const [updatedParent] = await db
+        .select({
+          reply_count: messages.reply_count,
+          last_reply_at: messages.last_reply_at,
+          channel_id: messages.channel_id,
+        })
+        .from(messages)
+        .where(eq(messages.id, replyParentId))
+        .limit(1);
+
+      if (updatedParent) {
+        const threadDeleteEvent: ThreadReplyDeletedEvent = {
+          parentId: replyParentId,
+          channelId: updatedParent.channel_id,
+          replyId: messageId,
+          replyCount: updatedParent.reply_count,
+          lastReplyAt: updatedParent.last_reply_at
+            ? updatedParent.last_reply_at.toISOString()
+            : null,
+        };
+        this.eventEmitter.emit('thread.reply.deleted', threadDeleteEvent);
+      }
+
       return;
     }
 
@@ -706,8 +737,20 @@ export class MessagesService {
     }
 
     // (b) cross-channel guard
+    // Validate the query param matches the parent's actual channel — the param
+    // is NOT trusted as the authoritative source; the parent row is.
     if (parent.channel_id !== channelId) {
       throw new BadRequestException('Parent message does not belong to this channel');
+    }
+
+    // (b2) channel membership guard — IDOR fix (wave-18 B-6)
+    // Derive the authoritative channelId from the parent row (already validated
+    // above). The query param cannot bypass this check even if forged because
+    // we already confirmed parent.channel_id === channelId, so the authoritative
+    // channel is parent.channel_id regardless.
+    const canView = await this.rbacService.canViewChannelById(authorId, parent.channel_id);
+    if (!canView) {
+      throw new ForbiddenException('Insufficient permissions to access this channel');
     }
 
     // (c) one-level-only guard: reject reply-of-reply
@@ -816,15 +859,24 @@ export class MessagesService {
     cursor?: string,
     limit = 50,
   ): Promise<ThreadRepliesResponse> {
-    // Verify the parent exists
+    // Verify the parent exists — fetch channel_id so we can enforce membership.
+    // We select channel_id here (not just id) to drive the authz check below
+    // without a second DB round-trip.
     const [parent] = await db
-      .select({ id: messages.id, is_deleted: messages.is_deleted })
+      .select({ id: messages.id, is_deleted: messages.is_deleted, channel_id: messages.channel_id })
       .from(messages)
       .where(eq(messages.id, parentId))
       .limit(1);
 
     if (!parent) {
       throw new NotFoundException('Parent message not found');
+    }
+
+    // Channel membership guard — IDOR fix (wave-18 B-6)
+    // Channel is derived from the parent row — never from a request param.
+    const canView = await this.rbacService.canViewChannelById(viewerUserId, parent.channel_id);
+    if (!canView) {
+      throw new ForbiddenException('Insufficient permissions to access this channel');
     }
 
     const safeLimit = Math.min(Math.max(1, limit), 100);

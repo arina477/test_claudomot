@@ -75,6 +75,8 @@ export {
   ThreadRepliesResponseSchema,
   ThreadReplyEventSchema,
   THREAD_REPLY_CREATED_EVENT,
+  ThreadReplyDeletedEventSchema,
+  THREAD_REPLY_DELETED_EVENT,
 } from './messaging.js';
 export type {
   ReactionSummary,
@@ -89,6 +91,7 @@ export type {
   MentionEvent,
   ThreadRepliesResponse,
   ThreadReplyEvent,
+  ThreadReplyDeletedEvent,
 } from './messaging.js';
 
 export {

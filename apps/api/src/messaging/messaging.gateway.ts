@@ -22,7 +22,12 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import type { MentionEvent, MessageResponse, ThreadReplyEvent } from '@studyhall/shared';
+import type {
+  MentionEvent,
+  MessageResponse,
+  ThreadReplyDeletedEvent,
+  ThreadReplyEvent,
+} from '@studyhall/shared';
 import type { Server, Socket } from 'socket.io';
 import { installWsAuthMiddleware } from '../common/ws-auth';
 // biome-ignore lint/style/useImportType: value import required — emitDecoratorMetadata needs the runtime symbol for NestJS DI
@@ -237,6 +242,27 @@ export class MessagingGateway implements OnGatewayInit, OnGatewayConnection {
     this.server.to(`channel:${payload.channelId}`).emit('thread:reply:created', payload);
     this.logger.debug(
       `Fanned out thread.reply.created parentId=${payload.parentId} reply=${payload.reply.id} channel=${payload.channelId}`,
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // thread.reply.deleted → fan-out to channel room (wave-18 B-6 fix)
+  //
+  // Emitted by MessagesService.deleteMessage() when a reply (threadParentId set)
+  // is soft-deleted. Carries the parent's post-decrement replyCount + lastReplyAt
+  // so clients can update both the open thread panel (remove replyId) and the
+  // thread affordance on the parent message simultaneously.
+  //
+  // Fan-out is to 'channel:<channelId>' — same room as all other messaging
+  // events for this channel, under a DISTINCT event name so clients can handle
+  // it independently from 'message:deleted'.
+  // -------------------------------------------------------------------------
+
+  @OnEvent('thread.reply.deleted')
+  handleThreadReplyDeleted(payload: ThreadReplyDeletedEvent): void {
+    this.server.to(`channel:${payload.channelId}`).emit('thread:reply:deleted', payload);
+    this.logger.debug(
+      `Fanned out thread.reply.deleted parentId=${payload.parentId} replyId=${payload.replyId} channel=${payload.channelId}`,
     );
   }
 
