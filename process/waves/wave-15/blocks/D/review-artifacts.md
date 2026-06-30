@@ -9,7 +9,7 @@
 | Stage | Deliverable file(s) | Status | Notes |
 |---|---|---|---|
 | D-1 | stages/D-1-brief/{mention-autocomplete,mention-pill,unread-mention}-brief.md | done | 3 briefs, mask PASS |
-| D-2 | stages/D-2-variants/*-variants.md + *-iterate.md | pending | /aidesigner compose onto server-channel-view |
+| D-2 | stages/D-2-variants/* | done | 3 surfaces composed onto staging; checkpoint skipped (automatic) |
 | D-3 | stages/D-3-review-and-adopt/* | pending | dual-reviewer + head-designer gate + canonicalize |
 
 ## Block-specific context
