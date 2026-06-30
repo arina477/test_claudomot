@@ -3,7 +3,7 @@
 **Block:** V (Verify)
 **Wave topic:** Browser E2E for the authed create-server flow (test-infra) — MERGED (PR#28 6982ffe), E2E green in CI
 **Block exit gate:** V-3
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file(s) | Status | Notes |
@@ -23,3 +23,12 @@ none
 
 ## Gate verdict log
 <appended by head-verifier at V-3>
+
+## Block exit handoff
+```yaml
+verify_block_status: complete
+karen_verdict: APPROVE
+jenny_verdict: APPROVE
+fast_fix_cycles: 0
+ready_for_learn: true
+```
