@@ -1,5 +1,5 @@
-# D-3 Phase 1 Reconciliation — wave-14 (member-list + typing)
-- Reviewer A (ui-designer, /plan-design-review sub): **REVISE** — R-1 typing aria-live; R-2 member rows color-only presence (need sr-only Online/Offline text); R-3 aside aria-label="Members"; R-4 render commented skeleton/empty/multi-typer states. Advisory: offline names → --text-muted token; remove typing drop-shadow-md.
-- Reviewer B (accessibility-tester, /ui-ux-pro-max sub): **APPROVE** — 13/13 success criteria; contrast 8.05/8.5:1; same aria-live + semantic-list items noted as medium.
-- **Matrix: REVISE + APPROVE → aggregate A's concerns → D-2 refine (iteration 1).**
-- Next: /aidesigner refine_design on staging with R-1..R-4 + advisories → re-run D-3 Phase 1.
+# D-3 Phase 1 Reconciliation — wave-14 (running log)
+- iter0 review: A REVISE (R-1..R-4 a11y) + B APPROVE → D-2 refine iter1.
+- iter1 review: A APPROVE (95%) + B REVISE (avatar aria-label, token doc) → D-2 refine iter2.
+- iter2 review: A REVISE + B REVISE — BOTH caught a real WCAG AA fail: offline names text-white/40 = 3.83:1 < 4.5:1 (regression from iter2). → D-2 refine iter3.
+- iter3: offline names text-white/40 → text-white/50 (5.32:1 AA-pass, stays muted vs online). Both reviewers' exact specified fix; applied directly (deterministic, final cap iteration). → re-run D-3 Phase 1 (final).

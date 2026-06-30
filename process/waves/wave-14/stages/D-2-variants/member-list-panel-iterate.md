@@ -10,3 +10,7 @@ checkpoint_outcome: skipped-mode-automatic
 iteration_counter: 2
 refine_prompt: "avatar-initials aria-label; offline names → text-white/40 (--text-muted); MEMBERS panel header"
 checkpoint_outcome: skipped-mode-automatic
+---
+iteration_counter: 3 (final, cap)
+refine_prompt: "WCAG AA contrast fix — offline names text-white/40 (3.83:1, FAIL) → text-white/50 (5.32:1, PASS). Deterministic reviewer-specified class swap applied directly to staging (both reviewers agreed exact fix)."
+checkpoint_outcome: skipped-mode-automatic
