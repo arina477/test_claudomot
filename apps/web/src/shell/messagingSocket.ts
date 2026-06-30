@@ -10,10 +10,49 @@
  * because the REST layer and socket share the same origin / cookie. If the
  * cookie crosses origins the handshake auth token can be set via
  * socket.auth.accessToken but that is not wired here (same-origin deploy).
+ *
+ * Wave-13 events (message lifecycle):
+ *   message:updated  — { MessageResponse }  — edit or any field change
+ *   message:deleted  — { messageId, channelId } — soft-delete, render tombstone
+ *   reaction:added   — { messageId, channelId, emoji, count, reactedByMe }
+ *   reaction:removed — { messageId, channelId, emoji, count, reactedByMe }
  */
 
-import type { MessageResponse } from '@studyhall/shared';
+import type { MessageResponse, ReactionSummary } from '@studyhall/shared';
 import { type Socket, io } from 'socket.io-client';
+
+// ---------------------------------------------------------------------------
+// Wave-13 socket payload types
+// ---------------------------------------------------------------------------
+
+export type MessageDeletedPayload = {
+  messageId: string;
+  channelId: string;
+};
+
+export type ReactionEventPayload = {
+  messageId: string;
+  channelId: string;
+  emoji: string;
+  count: number;
+  reactedByMe: boolean;
+};
+
+// Internal helper — reconstruct reactions array from a reaction event
+export function applyReactionEvent(
+  existing: ReactionSummary[],
+  payload: ReactionEventPayload,
+): ReactionSummary[] {
+  const { emoji, count, reactedByMe } = payload;
+  if (count === 0) {
+    return existing.filter((r) => r.emoji !== emoji);
+  }
+  const idx = existing.findIndex((r) => r.emoji === emoji);
+  if (idx === -1) {
+    return [...existing, { emoji, count, reactedByMe }];
+  }
+  return existing.map((r, i) => (i === idx ? { emoji, count, reactedByMe } : r));
+}
 
 const BASE = (import.meta.env.VITE_API_ORIGIN as string | undefined) ?? '';
 
@@ -49,6 +88,54 @@ export function onMessageNew(handler: (msg: MessageResponse) => void): () => voi
   socket.on('message:new', handler);
   return () => {
     socket.off('message:new', handler);
+  };
+}
+
+/**
+ * Subscribe to message:updated events (edit or any field change).
+ * Returns unsubscribe fn.
+ */
+export function onMessageUpdated(handler: (msg: MessageResponse) => void): () => void {
+  const socket = getMessagingSocket();
+  socket.on('message:updated', handler);
+  return () => {
+    socket.off('message:updated', handler);
+  };
+}
+
+/**
+ * Subscribe to message:deleted events.
+ * Returns unsubscribe fn.
+ */
+export function onMessageDeleted(handler: (payload: MessageDeletedPayload) => void): () => void {
+  const socket = getMessagingSocket();
+  socket.on('message:deleted', handler);
+  return () => {
+    socket.off('message:deleted', handler);
+  };
+}
+
+/**
+ * Subscribe to reaction:added events.
+ * Returns unsubscribe fn.
+ */
+export function onReactionAdded(handler: (payload: ReactionEventPayload) => void): () => void {
+  const socket = getMessagingSocket();
+  socket.on('reaction:added', handler);
+  return () => {
+    socket.off('reaction:added', handler);
+  };
+}
+
+/**
+ * Subscribe to reaction:removed events.
+ * Returns unsubscribe fn.
+ */
+export function onReactionRemoved(handler: (payload: ReactionEventPayload) => void): () => void {
+  const socket = getMessagingSocket();
+  socket.on('reaction:removed', handler);
+  return () => {
+    socket.off('reaction:removed', handler);
   };
 }
 

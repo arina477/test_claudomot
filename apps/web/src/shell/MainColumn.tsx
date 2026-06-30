@@ -12,9 +12,11 @@
  * Design system §8 spec: ChannelHeader + MessageRow (3 states) + Composer.
  */
 
+import { useContext } from 'react';
 import { type ConnectionState, ConnectionStateIndicator } from './ConnectionStateIndicator';
 import { MessageComposer } from './MessageComposer';
 import { MessageList } from './MessageList';
+import { ProfileContext } from './ProfileContext';
 import { useServers } from './ServerContext';
 import { HashIcon, MagnifyingGlassIcon, MenuIcon, PushPinIcon } from './icons';
 import { useMessagesWithRetry } from './useMessages';
@@ -26,6 +28,7 @@ type Props = {
 
 export function MainColumn({ connectionState = 'online', onToggleSidebar }: Props) {
   const { selectedChannelId, selectedChannelName } = useServers();
+  const { profile } = useContext(ProfileContext);
 
   const {
     messages,
@@ -36,6 +39,9 @@ export function MainColumn({ connectionState = 'online', onToggleSidebar }: Prop
     loadOlder,
     sendMessage,
     retryMessage,
+    editMessage,
+    deleteMessage,
+    toggleReaction,
   } = useMessagesWithRetry(selectedChannelId);
 
   const displayName = selectedChannelName ?? 'channel';
@@ -161,6 +167,10 @@ export function MainColumn({ connectionState = 'online', onToggleSidebar }: Prop
           hasOlderMessages={hasOlderMessages}
           onLoadOlder={loadOlder}
           onRetry={retryMessage}
+          onEdit={editMessage}
+          onDelete={deleteMessage}
+          onReaction={toggleReaction}
+          currentUserId={profile?.username ?? null}
           {...(selectedChannelName ? { channelName: selectedChannelName } : {})}
         />
       )}

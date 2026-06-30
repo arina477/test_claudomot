@@ -7,6 +7,7 @@
 import type {
   AvatarPresignResponse,
   CreateServerInput,
+  EditMessageInput,
   InvitePreview,
   InviteResponse,
   JoinResult,
@@ -14,6 +15,8 @@ import type {
   MessageList,
   MessageResponse,
   ProfileResponse,
+  ReactionToggleInput,
+  ReactionToggleResponse,
   SendMessageInput,
   ServerDetail,
   ServerResponse,
@@ -218,4 +221,31 @@ export const api = {
     const qs = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
     return request<MessageList>(`/channels/${channelId}/messages${qs}`);
   },
+
+  /**
+   * PATCH /channels/:channelId/messages/:messageId {content} → 200 updated MessageResponse.
+   * Throws: 401 unauthed, 403 not author, 409 if deleted.
+   */
+  editMessage: (channelId: string, messageId: string, body: EditMessageInput) =>
+    request<MessageResponse>(`/channels/${channelId}/messages/${messageId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+
+  /**
+   * DELETE /channels/:channelId/messages/:messageId → 200/204 (soft-delete).
+   * Throws: 401 unauthed, 403 not author/moderator.
+   */
+  deleteMessage: (channelId: string, messageId: string) =>
+    requestNoContent(`/channels/${channelId}/messages/${messageId}`, { method: 'DELETE' }),
+
+  /**
+   * POST /channels/:channelId/messages/:messageId/reactions {emoji} → 200 {reacted: bool}.
+   * Toggles reaction (add if absent, remove if present).
+   */
+  toggleReaction: (channelId: string, messageId: string, body: ReactionToggleInput) =>
+    request<ReactionToggleResponse>(`/channels/${channelId}/messages/${messageId}/reactions`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
 };
