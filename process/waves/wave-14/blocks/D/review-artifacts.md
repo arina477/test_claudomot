@@ -10,7 +10,7 @@
 | Stage | Deliverable file(s) | Status | Notes |
 |---|---|---|---|
 | D-1 | process/waves/wave-14/stages/D-1-brief/{member-list-panel,typing-indicator}-brief.md | done | 2 briefs, mask_mode PASS |
-| D-2 | process/waves/wave-14/stages/D-2-variants/*-variants.md + *-iterate.md | pending | /aidesigner generate → staging |
+| D-2 | process/waves/wave-14/stages/D-2-variants/*-variants.md + *-iterate.md | done | composed onto staging server-channel-view.html; checkpoint skipped (automatic) |
 | D-3 | process/waves/wave-14/stages/D-3-review-and-adopt/*-{plan-design-review,ui-ux-pro-max,reconciliation,adopt}.md | pending | dual-reviewer + head-designer gate + canonicalize |
 
 ## Block-specific context
