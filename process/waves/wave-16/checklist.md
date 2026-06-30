@@ -49,7 +49,7 @@ VERIFY:
 - [x] V-3 Fast-fix loop (or close)
 
 LEARN:
-- [ ] L-1 Docs
+- [x] L-1 Docs — CHANGELOG SKIP (test-infra, no user-facing change); M3 (6198650e) census 14 done / 7 open → stays in_progress, no UPDATE; README skip; commit docs: L-1 wave-16 closeout
 - [ ] L-2 Distill
 
 NEXT:
