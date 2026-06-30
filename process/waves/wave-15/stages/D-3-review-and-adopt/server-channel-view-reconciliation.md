@@ -4,3 +4,4 @@
 - **Matrix: REVISE + APPROVE → aggregate A's concerns → D-2 refine (iteration 1).**
 - iter1 review: A APPROVE + B REVISE (NEW: iter1 demo states introduced muted-text-below-AA — empty-state zinc-600/500 2.8/1.9:1, skeleton study-700/80 1.4:1; rule-1 catch). → D-2 refine iter2.
 - iter2: empty-state icon/text → zinc-400 (5.2:1); skeleton bars → study-600/70. Applied directly (deterministic reviewer-specified). → re-review.
+- iter2 review: **A APPROVE + B APPROVE** → matrix → Phase 2 head-designer gate. All contrast ≥4.5:1 (empty-state zinc-400 7.02:1, skeleton decorative; self-pill 5.8:1, other 15.2:1, badge 8.1:1); 9 rows + 3 surfaces intact. aria-activedescendant carried to B-block (non-blocking).
