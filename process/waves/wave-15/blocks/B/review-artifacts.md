@@ -3,7 +3,7 @@
 **Block:** B (Build)
 **Wave topic:** M3 @mentions — parse/resolve/persist + my-mentions + autocomplete/pills/unread
 **Block exit gate:** B-6
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
@@ -14,7 +14,7 @@
 | B-3 | stages/B-3-frontend.md | done | autocomplete+pills+unread; username-drift fix at B-4 |
 | B-4 | stages/B-4-wiring.md | done | typecheck 4/4; username drift RESOLVED (chain closes) |
 | B-5 | stages/B-5-verify.md | done | lint+build+452 tests green (4 fix-forward, incl username-drift) |
-| B-6 | stages/B-6-review.md | pending | |
+| B-6 | stages/B-6-review.md | done | head-builder APPROVED + /review clean (H-1/H-2 fixed) |
 
 ## Block-specific context
 - **Spec contract:** tasks row 3d238446 (DB); spec process/waves/wave-15/stages/P-2-spec.md
@@ -32,3 +32,13 @@
 
 ## Gate verdict log
 <appended by head-builder at B-6>
+
+## Block exit handoff
+```yaml
+build_block_status: complete
+branch: wave-15-m3-mentions
+stages_run: [B-0,B-1,B-2,B-3,B-4,B-5,B-6]
+review_verdict: APPROVE
+last_commit_sha: 1f4bc30
+ready_for_ci: true
+```
