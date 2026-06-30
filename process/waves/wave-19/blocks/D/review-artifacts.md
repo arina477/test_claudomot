@@ -4,7 +4,7 @@
 | Stage | Deliverable | Status |
 |---|---|---|
 | D-1 | stages/D-1-brief/{composer-attachment,message-row-attachment}-brief.md | done (2 briefs, mask PASS) |
-| D-2 | stages/D-2-variants/* | pending |
+| D-2 | stages/D-2-variants/* | done (attachment surfaces composed; checkpoint skipped automatic) |
 | D-3 | stages/D-3-review-and-adopt/* | pending |
 ## Context
 - 2 gaps, both compose onto design/server-channel-view.html (canonical; now has threads + all prior surfaces).
