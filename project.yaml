@@ -80,5 +80,4 @@ test_users:
     - label: "studyhall-e2e-fixture"
       email: "studyhall-e2e-fixture@example.com"
       # password: in command-center/testing/test-accounts.md (gitignored)
-      # supertokens_user_id: 21984eb2-8029-4c1b-9e73-bc586a0be4d2
       # email_verified: true (verified 2026-06-29 via Core admin API)
