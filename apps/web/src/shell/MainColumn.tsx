@@ -17,6 +17,7 @@
 
 import type { MessageResponse, ValidatedAttachment } from '@studyhall/shared';
 import { useCallback, useContext, useRef, useState } from 'react';
+import { AssignmentsPanel } from './AssignmentsPanel';
 import { type ConnectionState, ConnectionStateIndicator } from './ConnectionStateIndicator';
 import { MessageComposer } from './MessageComposer';
 import { MessageList } from './MessageList';
@@ -34,7 +35,8 @@ type Props = {
 };
 
 export function MainColumn({ connectionState = 'online', onToggleSidebar }: Props) {
-  const { selectedChannelId, selectedChannelName, selectedId } = useServers();
+  const { selectedChannelId, selectedChannelName, selectedId, assignmentsOpen, closeAssignments } =
+    useServers();
   const { profile } = useContext(ProfileContext);
 
   // ── Thread panel state ─────────────────────────────────────────────────────
@@ -110,6 +112,19 @@ export function MainColumn({ connectionState = 'online', onToggleSidebar }: Prop
       threadTriggerRef.current = v;
     },
   } as React.RefObject<HTMLButtonElement | null>;
+
+  // When assignments panel is open, render it instead of the messaging view
+  if (assignmentsOpen) {
+    return (
+      <main
+        data-testid="main-column"
+        className="relative flex min-w-0 flex-1"
+        style={{ backgroundColor: '#1c1c1f' }}
+      >
+        <AssignmentsPanel onClose={closeAssignments} />
+      </main>
+    );
+  }
 
   return (
     <main

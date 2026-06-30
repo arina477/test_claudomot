@@ -19,6 +19,7 @@ import { useServers } from './ServerContext';
 import { ServerRolesPage } from './ServerRolesPage';
 import {
   CaretDownIcon,
+  ClipboardTextIcon,
   GearIcon,
   HashIcon,
   MicrophoneIcon,
@@ -154,8 +155,16 @@ function ChannelIcon({ type }: { type: string }) {
 
 export function ChannelSidebar() {
   const { profile } = useProfile();
-  const { selectedId, selectedDetail, detailStatus, servers, selectedChannelId, selectChannel } =
-    useServers();
+  const {
+    selectedId,
+    selectedDetail,
+    detailStatus,
+    servers,
+    selectedChannelId,
+    selectChannel,
+    assignmentsOpen,
+    openAssignments,
+  } = useServers();
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [rolesPageOpen, setRolesPageOpen] = useState(false);
   const inviteBtnRef = useRef<HTMLButtonElement>(null);
@@ -325,9 +334,34 @@ export function ChannelSidebar() {
           </div>
         )}
 
-        {/* Loaded — categories + channels */}
+        {/* Loaded — workspace + categories + channels */}
         {selectedId && detailStatus === 'loaded' && selectedDetail && (
           <div className="space-y-5">
+            {/* Workspace section — Assignments entry */}
+            <div>
+              <button
+                type="button"
+                className="flex w-full items-center gap-1 px-1 mb-1 cursor-pointer focus-visible:outline-none group transition-colors duration-150"
+                style={{ color: 'rgba(255,255,255,0.40)' }}
+                aria-expanded="true"
+              >
+                <CaretDownIcon size={10} className="group-hover:text-white/60 transition-colors" />
+                <span className="text-[11px] font-semibold uppercase tracking-widest group-hover:text-white/60 transition-colors">
+                  Workspace
+                </span>
+              </button>
+              <ul className="space-y-[2px]" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                <li>
+                  <ChannelItem
+                    icon={<ClipboardTextIcon size={16} />}
+                    name="Assignments"
+                    active={assignmentsOpen}
+                    onClick={openAssignments}
+                  />
+                </li>
+              </ul>
+            </div>
+
             {selectedDetail.categories.length === 0 && (
               <p
                 className="text-center text-[13px] py-4"

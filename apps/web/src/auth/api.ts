@@ -5,8 +5,13 @@
  */
 
 import type {
+  Assignment,
+  AssignmentListResponse,
+  AssignmentPresignResponse,
+  AssignmentStatusInput,
   AttachmentPresignResponse,
   AvatarPresignResponse,
+  CreateAssignmentInput,
   CreateServerInput,
   EditMessageInput,
   InvitePreview,
@@ -25,6 +30,7 @@ import type {
   ServerMember,
   ServerResponse,
   ServerSummary,
+  UpdateAssignmentInput,
   UpdateProfileInput,
   ValidatedAttachment,
 } from '@studyhall/shared';
@@ -349,4 +355,81 @@ export const api = {
       `/messages/${parentId}/replies${qs}`,
     );
   },
+
+  // ── Assignment endpoints (wave-22 M5) ────────────────────────────────────
+
+  /**
+   * POST /servers/:serverId/assignments → 201 Assignment.
+   * Organizer-only (owner OR manage_channels permission).
+   * Throws: 401 unauthed, 403 non-organizer, 400 bad input.
+   */
+  createAssignment: (serverId: string, data: CreateAssignmentInput) =>
+    request<Assignment>(`/servers/${serverId}/assignments`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  /**
+   * GET /servers/:serverId/assignments → AssignmentListResponse.
+   * Ordered by due_date ASC. Includes myStatus per authenticated user.
+   * Throws: 401 unauthed, 403 non-member.
+   */
+  listAssignments: (serverId: string) =>
+    request<AssignmentListResponse>(`/servers/${serverId}/assignments`),
+
+  /**
+   * GET /assignments/:id → Assignment.
+   * Throws: 401 unauthed, 403 non-member, 404 not found.
+   */
+  getAssignment: (id: string) => request<Assignment>(`/assignments/${id}`),
+
+  /**
+   * PATCH /assignments/:id → updated Assignment.
+   * Organizer-only partial update. Throws: 401, 403, 404.
+   */
+  updateAssignment: (id: string, data: UpdateAssignmentInput) =>
+    request<Assignment>(`/assignments/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  /**
+   * DELETE /assignments/:id → 204 void (soft-delete).
+   * Organizer-only. Throws: 401, 403, 404.
+   */
+  deleteAssignment: (id: string) => requestNoContent(`/assignments/${id}`, { method: 'DELETE' }),
+
+  /**
+   * PUT /assignments/:id/status {state} → updated Assignment.
+   * Member toggle (todo ↔ done). Throws: 401 unauthed, 403 non-member, 404.
+   */
+  setAssignmentStatus: (id: string, data: AssignmentStatusInput) =>
+    request<Assignment>(`/assignments/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  /**
+   * POST /servers/:serverId/assignments/attachments/presign {contentType, filename}
+   * → AssignmentPresignResponse {uploadUrl, key}.
+   * Organizer-only. Throws: 401, 403, 400 bad content-type.
+   */
+  presignAssignmentAttachment: (serverId: string, contentType: string, filename: string) =>
+    request<AssignmentPresignResponse>(`/servers/${serverId}/assignments/attachments/presign`, {
+      method: 'POST',
+      body: JSON.stringify({ contentType, filename }),
+    }),
+
+  /**
+   * PUT the assignment attachment file directly to object storage.
+   * NOTE: no credentials:include — goes to the S3-compatible endpoint.
+   */
+  putAssignmentAttachmentToStorage: (uploadUrl: string, file: File): Promise<void> =>
+    fetch(uploadUrl, {
+      method: 'PUT',
+      body: file,
+      headers: { 'Content-Type': file.type },
+    }).then((res) => {
+      if (!res.ok) throw new Error(`Storage PUT failed: ${res.status}`);
+    }),
 };

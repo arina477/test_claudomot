@@ -32,7 +32,8 @@ Referenced from: `claudomat-brain/blocks/design/stages/D-3-review-and-adopt.md` 
 |-------|-----|---------|
 | `--accent-emerald` | `#10b981` | **Primary accent** — academic/focus; active channel, primary buttons, online presence, success |
 | `--accent-amber` | `#f59e0b` | **Secondary accent** — assignments / due-soon, reconnecting state, warnings |
-| `--danger` | `#ef4444` | Destructive (ban, delete), error, offline state |
+| `--danger` | `#ef4444` | Destructive (ban, delete), error, offline state — **fill/border use only** |
+| `--danger-text` | `#f87171` | On-dark-tint danger text (`--danger-on-tint`). Use when danger text sits on a danger/10 tint — `#ef4444` computes 3.93:1 there (WCAG AA FAIL); `#f87171` computes 6.30:1 (PASS). Overdue chip, error text on tinted backgrounds. |
 | `--info` | `#10b981` | (reuse emerald — keep palette tight) |
 
 ### Semantic mappings

@@ -39,6 +39,10 @@ export type ServerContextValue = {
   /** Name of the currently active channel. */
   selectedChannelName: string | null;
   selectChannel: (channelId: string, channelName: string) => void;
+  /** Whether the assignments panel is the active main-column view. */
+  assignmentsOpen: boolean;
+  openAssignments: () => void;
+  closeAssignments: () => void;
 };
 
 export const ServerContext = createContext<ServerContextValue>({
@@ -56,6 +60,9 @@ export const ServerContext = createContext<ServerContextValue>({
   selectedChannelId: null,
   selectedChannelName: null,
   selectChannel: () => {},
+  assignmentsOpen: false,
+  openAssignments: () => {},
+  closeAssignments: () => {},
 });
 
 export function useServers(): ServerContextValue {
@@ -73,6 +80,7 @@ export function ServerProvider({ children }: Props) {
   const [detailStatus, setDetailStatus] = useState<DetailStatus>('idle');
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
   const [selectedChannelName, setSelectedChannelName] = useState<string | null>(null);
+  const [assignmentsOpen, setAssignmentsOpen] = useState(false);
 
   // Prevent state updates after unmount
   const mounted = useRef(true);
@@ -137,11 +145,24 @@ export function ServerProvider({ children }: Props) {
     // Reset channel selection when switching servers
     setSelectedChannelId(null);
     setSelectedChannelName(null);
+    setAssignmentsOpen(false);
   }, []);
 
   const selectChannel = useCallback((channelId: string, channelName: string) => {
     setSelectedChannelId(channelId);
     setSelectedChannelName(channelName);
+    setAssignmentsOpen(false);
+  }, []);
+
+  const openAssignments = useCallback(() => {
+    setAssignmentsOpen(true);
+    // Clear channel selection when entering the assignments view
+    setSelectedChannelId(null);
+    setSelectedChannelName(null);
+  }, []);
+
+  const closeAssignments = useCallback(() => {
+    setAssignmentsOpen(false);
   }, []);
 
   const appendServer = useCallback((s: ServerResponse) => {
@@ -181,6 +202,9 @@ export function ServerProvider({ children }: Props) {
         selectedChannelId,
         selectedChannelName,
         selectChannel,
+        assignmentsOpen,
+        openAssignments,
+        closeAssignments,
       }}
     >
       {children}

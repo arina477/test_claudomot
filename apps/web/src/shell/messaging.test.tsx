@@ -219,6 +219,9 @@ function makeCtx(override: Partial<ServerContextValue> = {}): ServerContextValue
     selectedChannelId: null,
     selectedChannelName: null,
     selectChannel: vi.fn(),
+    assignmentsOpen: false,
+    openAssignments: vi.fn(),
+    closeAssignments: vi.fn(),
     ...override,
   };
 }
