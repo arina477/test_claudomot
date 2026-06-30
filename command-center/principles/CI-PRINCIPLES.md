@@ -134,3 +134,6 @@ pr_conventions:
 
 2. Probe a new-only route for a 404-to-auth-gated-status flip after deploy-state SUCCESS before passing.
    Why: A SUCCESS with the new route still 404ing proves the prior revision serves, a false-green.
+
+3. Gate merge on per-job conclusions from `gh run view --json jobs`; never on `gh run watch --exit-status` alone.
+   Why: The watch tool reflects the last-streamed job state, not the aggregate required-job result.

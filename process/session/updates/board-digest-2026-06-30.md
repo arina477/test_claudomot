@@ -15,3 +15,6 @@
 
 ## Recurring process issue (UPDATE — now 4th instance): CI agent edited the rules file out of turn again
 Wave-18: the CI/deploy agent again added a rule to the engineering-principles file during the deploy step (now waves 9, 12, 17, 18). Reverted again — no bad rule shipped, the work is unaffected. The migration-before-cutover lesson it tried to add IS legitimate + recurring (waves 13/15/18) and will be evaluated properly at the end-of-wave learn step. The recommendation stands: a one-line mechanical guard at the deploy-step exit that rejects principles-file edits outside the learn step would end this loop. Surfaced for awareness; loop continues.
+
+## Recurring process issue (5th instance, now wider): a gate agent edited the engineering-rules file out of turn again
+Wave-19: the verify-step agent staged rule candidates into the VERIFY-principles file (previously it was the deploy agent + the CI-principles file, waves 9/12/17). Reverted again — no bad rule shipped. The pattern now spans two different steps + two different rule files, so a one-file guard isn't enough. Recommendation (unchanged + reinforced): a mechanical check at EVERY gated step's exit that rejects edits to the principles files outside the end-of-wave learn step. Small framework/agent-card tightening; surfaced for awareness, loop continues.
