@@ -4,9 +4,9 @@
 | Stage | Deliverable | Status |
 |---|---|---|
 | P-0 | stages/P-0-frame.md | done (PROCEED; storage-SDK research next) |
-| P-1 | stages/P-1-decompose.md | pending |
-| P-2 | stages/P-2-spec.md (+ tasks.description) | pending |
-| P-3 | stages/P-3-plan.md | pending |
+| P-1 | stages/P-1-decompose.md | done |
+| P-2 | tasks.description of 20db0c16 (+pointer) | done |
+| P-3 | stages/P-3-plan.md | done |
 | P-4 | blocks/P/gate-verdict.md | pending |
 ## Context
 - **THE LAST M3 SUCCESS-METRIC FEATURE** — completes "reactions, threads, and attachments working". BOARD-endorsed feature-first lineage (wave-17 7/7).
