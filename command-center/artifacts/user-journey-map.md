@@ -7,7 +7,8 @@ last_updated_wave17: 2026-06-30 (T-9 wave-17 — TEST-INFRA, no UI/schema/produc
 last_updated_wave18: 2026-07-01
 last_updated_wave19: 2026-07-01
 last_updated_wave20: 2026-07-01
-version: 0.16
+last_updated_wave21: 2026-06-30
+version: 0.17
 status_legend:
   - "✅ Live: page renders correctly with real content in production"
   - "🟡 Live but degraded: renders but missing data, broken interaction, or minor known issue"
@@ -203,8 +204,10 @@ Live: web https://web-production-bce1a8.up.railway.app · api https://api-produc
 - Entry: server view → click voice channel → `/servers/:id/voice/:channelId` → mic/cam → screen share → leave
 - Features: 13
 
-### F5 — Offline-first (P1) — the wedge
-- Entry: any authed surface on connection drop → read cache → compose → outbox → reconnect → sync
+### F5 — Offline-first (P1) — the wedge — LIVE (wave-20 spine; wave-21 live connection-state + multi-page catch-up)
+- Entry: any authed surface on connection drop → read cache (Dexie read-through) → compose → durable outbox (Dexie) → reconnect → outbox drains exactly-once + in-order → catch-up loops forward via `?after=` cursor until null (recovers ALL missed messages, no data loss past page 1)
+- **Live connection-state (wave-21):** the app-shell ConnectionStateIndicator reflects REAL socket state (online / reconnecting / offline) via source-priority (socket-authoritative); state in text not color alone, `role=status` + `aria-live`. Replaces wave-20's hardcoded "online".
+- Live: web deployed; invariants (honest signal + no-data-loss multi-page catch-up) proven deterministically via fake-indexeddb + CI (live two-client offline round-trip deferred — Playwright chrome-absent KI). M4 multi-wave (re-homed tech-debt remains).
 - Features: 12
 
 ### F6 — View & track assignments (P1)
@@ -250,3 +253,16 @@ Web/api live (T-9-verified). Migration 0009 (attachments table: message_id NOT N
 
 ## Wave-20 — M4 offline-first SPINE (the wedge — first slice, LIVE)
 Web/api live (T-9-verified: api /health 200, web / 200, GET ?after= unauthed 401-not-404). NO migration (Dexie client-side IndexedDB; forward cursor = keyset query; drizzle ledger unchanged, highest 0009). PR#32 merge bff9f12; api d26fe078 + web 2aac8438 deployed SUCCESS (new revisions distinct from baselines). **No new page route** — extends page-9 / F5: the existing composer is now offline-enabled (durable Dexie outbox BACKS the M3 optimistic pending/failed states, no separate path); reads served read-through from a Dexie cache when offline; on reconnect the outbox drains EXACTLY-ONCE + IN-ORDER then catches up via the forward cursor. NEW REST: GET /channels/:id/messages?after=<cursor>&limit= (ASC forward keyset; malformed→400; non-member 403; ?after= precedence over ?cursor=). NEW client: StudyHallDB (messages [channelId+createdAt] / channels / outbox [state+createdAt]; lazy/guarded singleton + injectable IDBFactory) + read-through cache + durable outbox (enqueue stable-key-once / drain sequential oldest-first stop-on-failure / retry). **WEDGE PROVEN (exactly-once + in-order) via fake-indexeddb (per-test IDBFactory, no real timers):** stable idempotencyKey once-at-enqueue replayed verbatim; sequential oldest-first drain; stop-on-failure (a later message NEVER sends ahead of an earlier un-sent one — key2PostCount=0 across 3 drains); concurrent-drain re-entrancy guard; id-tiebreak; server ON CONFLICT(channel_id,idempotency_key) dedup (idempotency-lock). 10 outbox + 15 db-unit + 6 forward-cursor + 2 idempotency-lock + wave-17 real-PG harness. api 346 + web 176 green. **Access-control (T-8):** ?after= shares the single @Get @UseGuards(AuthGuard, ChannelMessageGuard) — route-agnostic default-deny, channelId from route params only (IDOR-safe); genuine guard.spec non-member 403 + body-vs-param IDOR-closed; tautological test deleted; live 401. Dexie store client-local (no new server authz surface). **M4 MULTI-WAVE — this is wave 1 (spine).** OUT (2nd M4 wave): connection-state indicator, pending/failed UI polish, catch-up UI + pagination loop. Gaps → V-2 (non-blocking): M1 (POST-succeeds-delete-fails window untested — server dedups), M3 (catch-up one-page no-loop — 2nd-wave scope). Carries: L1-L4, 9 biome warnings, 6 re-homed M3 tech-debt (M4 backlog), Playwright chrome-absent. Fixtures: studyhallfixturea + studyhallfixtureb.
+
+
+## Wave-21 — M4 offline UX wave-2 (live connection-state + multi-page catch-up loop, LIVE)
+Web live (T-9-verified via CI + C-2: web deploy 032dc384 SUCCESS, baseline 2aac8438 advanced, web root 200; api NOT redeployed — no api diff; NO migration, drizzle ledger unchanged at 0009). PR#33 merge 9c48007 (squash; 7/7 CI jobs success). FRONTEND-ONLY (apps/web). Canary SKIPPED (DAU<1000). **No new page route, no new REST/realtime surface** — annotation-only regen extending page-9 / F5 (the wave-20 "OUT" items now shipped). Two user-observable changes:
+
+1. **Connection-state indicator now reflects REAL socket state** (was hardcoded `"online"` in wave-20). The ConnectionStateIndicator on the app shell now derives online / reconnecting / offline from a live hook (`useConnectionState`) using SOURCE-PRIORITY (socket-authoritative over navigator); state is carried in TEXT not color alone — `online` (sr-only) / `reconnecting` (amber spinner + "Reconnecting…") / `offline` (danger dot + "Offline — messages will send when you're back"), `role=status` + `aria-live`, no `getByTestId`.
+2. **Reconnect catch-up now LOOPS** (was single-page in wave-20) — a multi-page offline window now fully drains via the `?after=` forward cursor: on reconnect the outbox drains exactly-once + in-order, then catch-up pages forward until the server returns null, recovering ALL missed messages past page 1 (no data loss).
+
+**LOAD-BEARING INVARIANTS PROVEN (mutation-sanity met, not theater):**
+- **Honest connectivity signal** — `useConnectionState.test.tsx` D1/D2 exercise source-priority + socket-authoritative as transition cases; the AppHome wiring test asserts "Reconnecting…"/"Offline" render from the LIVE hook (would fail if still hardcoded "online").
+- **No-data-loss multi-page catch-up** — `multiPageCatchup.test.ts` against fake-indexeddb (real Dexie, per-test IDBFactory, no real timers): 3-page in-order recovery, dedup-by-id exactly-once, terminate-on-null, MAX_ITERS bound preserves all 100 pages. T-4 RATIFIED real (consumes the wave-20 `?after=` cursor, no mocked SUT).
+
+Tests: CI run 28475903958 lint+typecheck+test+secret-scan all success on merge SHA; web 193 EXECUTED (incl multiPageCatchup.test.ts + useConnectionState.test.tsx, confirmed not skipped-but-green), api 346 unchanged. **T-9 gate APPROVED — 0 Critical, 0 High.** Gaps → V-2 (non-blocking): M1 (concurrent double catch-up loop on overlapping reconnect — dedup-safe, perf-only 2x round-trips), M2 (fire-and-forget cache write-through — happy-path masked, reload re-seeds), M3 (online-while-reconnecting — subsumed by M1), L1 (SSR default-online — inert, client-only), L2 (resume-after-mid-loop-failure proven by code+server-contract reasoning, not an executing test — test-completeness gap, shipped no-loss IS executing-test-proven via MAX_ITERS), L3 (socket.io v4 manager-event listeners may not fire — no leak, intent served by disconnect + getSocketState().active). Carries: 9 pre-existing biome warnings, 6 re-homed M3 tech-debt (M4 backlog), Playwright chrome-absent (live two-client offline round-trip deferred — invariants proven deterministically via fake-indexeddb + CI e2e). **M4 stays multi-wave** (re-homed tech-debt remains). Fixtures: studyhallfixturea + studyhallfixtureb.

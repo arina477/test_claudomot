@@ -36,19 +36,19 @@ BUILD:
 - [x] B-6 Review
 
 CI/CD:
-- [ ] C-1 PR, CI & merge
-- [ ] C-2 Deploy & verify (canary armed when real users > 1000)
+- [x] C-1 PR, CI & merge
+- [x] C-2 Deploy & verify (canary armed when real users > 1000)
 
 TEST:
-- [ ] T-1 Static
-- [ ] T-2 Unit
-- [ ] T-3 Contract
-- [ ] T-4 Integration
-- [ ] T-5 E2E
-- [ ] T-6 Layout
-- [ ] T-7 Perf
-- [ ] T-8 Security
-- [ ] T-9 Journey
+- [x] T-1 Static (PASS — CI lint+typecheck green on merge SHA)
+- [x] T-2 Unit (PASS — web 193 EXECUTED, api 346)
+- [x] T-3 Contract (RECORD — no new schema/route)
+- [x] T-4 Integration (PASS — no-data-loss multi-page catch-up RATIFIED)
+- [x] T-5 E2E (RECORD — live deferred, chrome-absent KI; CI e2e + fake-indexeddb authoritative)
+- [x] T-6 Layout (PASS — connection-state indicator LIVE, a11y-as-contract)
+- [x] T-7 Perf (PASS — M1 carried, dedup-safe)
+- [x] T-8 Security (RECORD — frontend-only, no new server surface, gitleaks green)
+- [x] T-9 Journey (APPROVED — 0 Critical/0 High; journey map regen v0.16→0.17)
 
 VERIFY:
 - [ ] V-1 Independent reviews (Karen + jenny, parallel)
