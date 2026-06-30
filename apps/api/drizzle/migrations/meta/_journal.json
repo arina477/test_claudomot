@@ -57,6 +57,13 @@
       "when": 1782805688451,
       "tag": "0007_massive_chamber",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1782826758566,
+      "tag": "0008_dazzling_bushwacker",
+      "breakpoints": true
     }
   ]
 }
