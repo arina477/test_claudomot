@@ -11,7 +11,10 @@ import type {
   InviteResponse,
   JoinResult,
   MeResponse,
+  MessageList,
+  MessageResponse,
   ProfileResponse,
+  SendMessageInput,
   ServerDetail,
   ServerResponse,
   ServerSummary,
@@ -194,4 +197,25 @@ export const api = {
     requestNoContent(`/servers/${serverId}/channels/${channelId}/overrides/${roleId}`, {
       method: 'DELETE',
     }),
+
+  // ── Messaging endpoints (wave-12 M3) ─────────────────────────────────────
+
+  /**
+   * POST /channels/:channelId/messages {content, idempotencyKey} → 201 MessageResponse.
+   * Throws: 401 unauthed, 403 non-permitted, 400 bad content.
+   */
+  sendMessage: (channelId: string, body: SendMessageInput) =>
+    request<MessageResponse>(`/channels/${channelId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  /**
+   * GET /channels/:channelId/messages?cursor=&limit= → {messages, nextCursor}.
+   * Cursor-based pagination (pass cursor from previous response for older messages).
+   */
+  listMessages: (channelId: string, cursor?: string) => {
+    const qs = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
+    return request<MessageList>(`/channels/${channelId}/messages${qs}`);
+  },
 };

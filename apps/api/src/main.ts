@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 import supertokens from 'supertokens-node';
 import { AppModule } from './app.module';
 import { SupertokensExceptionFilter } from './auth/auth.exception.filter';
@@ -82,6 +83,13 @@ async function bootstrap(): Promise<void> {
   initSuperTokens(new UsersService(), new EmailService());
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Wire the Socket.IO adapter so that @WebSocketGateway() decorators are
+  // handled by Socket.IO rather than the default ws adapter. Required when
+  // using @nestjs/platform-express (the default HTTP adapter) + Socket.IO
+  // gateways — NestJS does not auto-discover the Socket.IO adapter in that
+  // combination.
+  app.useWebSocketAdapter(new IoAdapter(app));
 
   // Tell Express to trust the Railway edge proxy. Railway injects two hops:
   // the public edge and an internal load-balancer, so XFF arrives as:

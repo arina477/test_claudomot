@@ -330,6 +330,30 @@ export class RbacService {
   }
 
   // -------------------------------------------------------------------------
+  // canViewChannelById — channel-id-only visibility check (wave-12)
+  //
+  // Used by ChannelMessageGuard where the route has NO :serverId param
+  // (e.g. POST/GET /channels/:channelId/messages).
+  //
+  // Resolves server_id from channels.server_id (notNull — always present),
+  // then delegates to the existing canViewChannel() logic.
+  // Returns false (default-deny) when the channel does not exist → caller
+  // should throw 404 for missing channel or 403 for permission failure.
+  // -------------------------------------------------------------------------
+
+  async canViewChannelById(userId: string, channelId: string): Promise<boolean> {
+    const [channel] = await db
+      .select({ server_id: channels.server_id })
+      .from(channels)
+      .where(eq(channels.id, channelId))
+      .limit(1);
+
+    if (!channel) return false; // channel missing → default-deny (guard → 403/404)
+
+    return this.canViewChannel(userId, channel.server_id, channelId);
+  }
+
+  // -------------------------------------------------------------------------
   // getVisibleChannelIds — return the set of channel IDs visible to the user
   // Used by findServerDetail to filter channels server-side.
   //

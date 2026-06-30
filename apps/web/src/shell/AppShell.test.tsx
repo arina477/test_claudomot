@@ -16,6 +16,32 @@ import { ConnectionStateIndicator } from './ConnectionStateIndicator';
 import { ServerContext } from './ServerContext';
 import type { ServerContextValue } from './ServerContext';
 
+// Mock api so MainColumn/useMessages don't trigger real fetch
+vi.mock('../auth/api', () => ({
+  api: {
+    listMessages: vi.fn().mockReturnValue(new Promise(() => {})),
+    sendMessage: vi.fn(),
+    getProfile: vi.fn().mockReturnValue(new Promise(() => {})),
+    getServers: vi.fn().mockReturnValue(new Promise(() => {})),
+    getServerDetail: vi.fn().mockReturnValue(new Promise(() => {})),
+  },
+}));
+
+// Mock socket singleton to avoid real socket connections in tests
+vi.mock('./messagingSocket', () => ({
+  getMessagingSocket: vi.fn(() => ({
+    connected: false,
+    active: false,
+    on: vi.fn(),
+    off: vi.fn(),
+    emit: vi.fn(),
+  })),
+  joinChannel: vi.fn(),
+  leaveChannel: vi.fn(),
+  onMessageNew: vi.fn(() => () => {}),
+  getSocketState: vi.fn(() => 'offline'),
+}));
+
 // Default context value for tests (no servers, modal closed)
 const defaultCtx: ServerContextValue = {
   servers: [],
@@ -29,6 +55,9 @@ const defaultCtx: ServerContextValue = {
   closeCreateModal: vi.fn(),
   selectedDetail: null,
   detailStatus: 'idle',
+  selectedChannelId: null,
+  selectedChannelName: null,
+  selectChannel: vi.fn(),
 };
 
 function renderShell(ctxOverride: Partial<ServerContextValue> = {}) {

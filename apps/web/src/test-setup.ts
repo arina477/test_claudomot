@@ -6,3 +6,9 @@ if (typeof URL.createObjectURL === 'undefined') {
   URL.createObjectURL = () => 'blob:mock-object-url';
   URL.revokeObjectURL = () => {};
 }
+
+// jsdom does not implement scrollIntoView — stub it so MessageList scroll
+// effects don't throw.
+if (typeof Element.prototype.scrollIntoView === 'undefined') {
+  Element.prototype.scrollIntoView = () => {};
+}

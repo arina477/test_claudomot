@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './auth/auth.module';
 import { FilesModule } from './files/files.module';
 import { HealthModule } from './health/health.module';
 import { MeModule } from './me/me.module';
+import { MessagingModule } from './messaging/messaging.module';
 import { ProfileModule } from './profile/profile.module';
 import { ServersModule } from './servers/servers.module';
 
@@ -21,12 +23,15 @@ import { ServersModule } from './servers/servers.module';
         limit: 10,
       },
     ]),
+    // EventEmitter for domain events (message.created → Socket.IO gateway)
+    EventEmitterModule.forRoot(),
     HealthModule,
     AuthModule,
     MeModule,
     ProfileModule,
     FilesModule,
     ServersModule,
+    MessagingModule,
   ],
   providers: [
     // ThrottlerGuard as APP_GUARD covers all NestJS-handled routes.

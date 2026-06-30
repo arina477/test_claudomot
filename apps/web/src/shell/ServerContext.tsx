@@ -34,6 +34,11 @@ export type ServerContextValue = {
   /** Detail for the currently selected server (categories + channels). */
   selectedDetail: ServerDetail | null;
   detailStatus: DetailStatus;
+  /** Currently active channel id (selected in the sidebar). */
+  selectedChannelId: string | null;
+  /** Name of the currently active channel. */
+  selectedChannelName: string | null;
+  selectChannel: (channelId: string, channelName: string) => void;
 };
 
 export const ServerContext = createContext<ServerContextValue>({
@@ -48,6 +53,9 @@ export const ServerContext = createContext<ServerContextValue>({
   closeCreateModal: () => {},
   selectedDetail: null,
   detailStatus: 'idle',
+  selectedChannelId: null,
+  selectedChannelName: null,
+  selectChannel: () => {},
 });
 
 export function useServers(): ServerContextValue {
@@ -63,6 +71,8 @@ export function ServerProvider({ children }: Props) {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [selectedDetail, setSelectedDetail] = useState<ServerDetail | null>(null);
   const [detailStatus, setDetailStatus] = useState<DetailStatus>('idle');
+  const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
+  const [selectedChannelName, setSelectedChannelName] = useState<string | null>(null);
 
   // Prevent state updates after unmount
   const mounted = useRef(true);
@@ -124,6 +134,14 @@ export function ServerProvider({ children }: Props) {
 
   const selectServer = useCallback((id: string) => {
     setSelectedId(id);
+    // Reset channel selection when switching servers
+    setSelectedChannelId(null);
+    setSelectedChannelName(null);
+  }, []);
+
+  const selectChannel = useCallback((channelId: string, channelName: string) => {
+    setSelectedChannelId(channelId);
+    setSelectedChannelName(channelName);
   }, []);
 
   const appendServer = useCallback((s: ServerResponse) => {
@@ -160,6 +178,9 @@ export function ServerProvider({ children }: Props) {
         closeCreateModal,
         selectedDetail,
         detailStatus,
+        selectedChannelId,
+        selectedChannelName,
+        selectChannel,
       }}
     >
       {children}
