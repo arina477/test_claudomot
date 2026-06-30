@@ -1,0 +1,575 @@
+/**
+ * PresenceGateway unit tests — wave-14 presence layer (T-2 coverage)
+ *
+ * Gateway unit-testability assessment:
+ *   handleConnection() calls `db` directly (displayName lookup) in addition to
+ *   PresenceService and RbacService. This makes it integration-shaped and is NOT
+ *   unit-tested here — mocking the db inline inside handleConnection would require
+ *   a full module-boundary mock of '../db/index' alongside the supertokens mocks,
+ *   which the messaging.gateway.spec.ts pattern does not cover (that gateway has no
+ *   direct db access). A separate integration test covers handleConnection.
+ *
+ *   All other event handlers (handleJoinChannel, handleTypingStart, handleTypingStop,
+ *   handleDisconnect typing-cleanup path, handleLeaveChannel, emitTypingActive fan-out)
+ *   delegate cleanly to PresenceService + RbacService and ARE unit-tested here,
+ *   following the messaging.gateway.spec.ts pattern exactly.
+ *
+ * Covers:
+ *   WS-upgrade auth (via installWsAuthMiddleware — same pattern as messaging.gateway.spec):
+ *    1. Rejects unauthenticated socket (Session throws → next(Error))
+ *    2. Accepts authenticated socket (attaches userId)
+ *
+ *   handleJoinChannel:
+ *    3. Valid access → socket.join called with presence:channel:<channelId>
+ *    4. Denied access → socket.join NOT called, error emitted
+ *    5. canViewChannelById throws → error emitted, join not called
+ *    6. Invalid payload → error emitted immediately, no RBAC call
+ *
+ *   handleLeaveChannel:
+ *    7. Leaves presence:channel:<channelId>, calls stopTyping, removes from typingChannels
+ *    8. Invalid payload → error emitted, no leave
+ *
+ *   handleTypingStart:
+ *    9. Valid access → presenceService.startTyping called, emitTypingActive fan-out fires
+ *   10. Denied access → error emitted, startTyping NOT called
+ *   11. Invalid payload → error emitted, no RBAC call
+ *
+ *   handleTypingStop:
+ *   12. stopTyping called, emitTypingActive fan-out fires
+ *   13. Invalid payload → error emitted, no stopTyping
+ *
+ *   handleDisconnect typing-cleanup:
+ *   14. On disconnect with active typingChannels: stopTyping called for each channel,
+ *       emitTypingActive fires, then presenceService.disconnect called
+ */
+
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+// ---------------------------------------------------------------------------
+// vi.hoisted() — define mock functions BEFORE vi.mock() factories run.
+// (Same pattern as messaging.gateway.spec.ts)
+// ---------------------------------------------------------------------------
+
+const { mockGetSessionWithoutRequestResponse } = vi.hoisted(() => ({
+  mockGetSessionWithoutRequestResponse: vi.fn(),
+}));
+
+// ---------------------------------------------------------------------------
+// Mock supertokens-node/recipe/session
+// ---------------------------------------------------------------------------
+
+vi.mock('supertokens-node/recipe/session', () => ({
+  default: {
+    getSessionWithoutRequestResponse: mockGetSessionWithoutRequestResponse,
+  },
+}));
+
+// ---------------------------------------------------------------------------
+// Mock supertokens-node/recipe/emailverification
+// ---------------------------------------------------------------------------
+
+vi.mock('supertokens-node/recipe/emailverification', () => ({
+  default: {
+    EmailVerificationClaim: {
+      validators: {
+        isVerified: vi.fn().mockReturnValue({ id: 'mock-ev-validator' }),
+      },
+    },
+  },
+}));
+
+// ---------------------------------------------------------------------------
+// Mock db module (needed because PresenceGateway imports db directly for
+// handleConnection's displayName lookup — db mock prevents DATABASE_URL errors
+// even when handleConnection itself is not unit-tested here)
+// ---------------------------------------------------------------------------
+
+vi.mock('../db/index', () => ({
+  db: {
+    select: vi.fn(),
+    insert: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
+}));
+
+// ---------------------------------------------------------------------------
+// Import gateway AFTER mocks are declared
+// ---------------------------------------------------------------------------
+
+import type { RbacService } from '../rbac/rbac.service';
+import { PresenceGateway } from './presence.gateway';
+import type { PresenceService } from './presence.service';
+
+// ---------------------------------------------------------------------------
+// Socket mock builder
+// ---------------------------------------------------------------------------
+
+function makeSocket(cookieHeader?: string, authAccessToken?: string) {
+  return {
+    id: 'test-socket-id',
+    handshake: {
+      headers: {
+        cookie: cookieHeader,
+      },
+      auth: authAccessToken !== undefined ? { accessToken: authAccessToken } : {},
+    },
+    data: {} as Record<string, unknown>,
+    join: vi.fn().mockResolvedValue(undefined),
+    leave: vi.fn().mockResolvedValue(undefined),
+    emit: vi.fn(),
+    to: vi.fn(),
+    disconnect: vi.fn(),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// PresenceService mock builder
+// ---------------------------------------------------------------------------
+
+function makePresenceService(
+  overrides: Partial<{
+    connect: () => { wentOnline: boolean };
+    disconnect: () => { wentOffline: boolean };
+    isOnline: () => boolean;
+    startTyping: () => void;
+    stopTyping: () => void;
+    getTypers: () => Array<{ userId: string; displayName: string }>;
+    getServerIdsForUser: () => Promise<string[]>;
+    getCoMemberUserIds: () => Promise<string[]>;
+  }> = {},
+): PresenceService {
+  return {
+    connect: vi.fn().mockReturnValue({ wentOnline: false }),
+    disconnect: vi.fn().mockReturnValue({ wentOffline: false }),
+    isOnline: vi.fn().mockReturnValue(false),
+    startTyping: vi.fn(),
+    stopTyping: vi.fn(),
+    getTypers: vi.fn().mockReturnValue([]),
+    getServerIdsForUser: vi.fn().mockResolvedValue([]),
+    getCoMemberUserIds: vi.fn().mockResolvedValue([]),
+    ...overrides,
+  } as unknown as PresenceService;
+}
+
+// ---------------------------------------------------------------------------
+// RbacService mock builder
+// ---------------------------------------------------------------------------
+
+function makeRbacService(canView = true): RbacService {
+  return {
+    canViewChannelById: vi.fn().mockResolvedValue(canView),
+  } as unknown as RbacService;
+}
+
+// ---------------------------------------------------------------------------
+// Helper: run afterInit middleware and capture next result
+// (Same pattern as messaging.gateway.spec.ts)
+// ---------------------------------------------------------------------------
+
+async function runMiddleware(
+  gateway: PresenceGateway,
+  socket: ReturnType<typeof makeSocket>,
+): Promise<Error | null> {
+  let capturedMiddleware: ((socket: unknown, next: (err?: Error) => void) => void) | null = null;
+  const mockServer = {
+    use: vi.fn().mockImplementation((mw) => {
+      capturedMiddleware = mw;
+    }),
+    // biome-ignore lint/suspicious/noExplicitAny: test mock
+  } as any;
+
+  gateway.afterInit(mockServer);
+
+  if (!capturedMiddleware) throw new Error('afterInit did not register middleware');
+
+  return new Promise((resolve) => {
+    (capturedMiddleware as NonNullable<typeof capturedMiddleware>)(socket, (err?: Error) => {
+      resolve(err ?? null);
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+// Must be valid UUIDs — TypingStartSchema / TypingStopSchema use z.string().uuid()
+const CHANNEL_ID = 'a1b2c3d4-0000-0000-0000-000000000001';
+const USER_ID = 'a1b2c3d4-0000-0000-0000-000000000002';
+
+// ---------------------------------------------------------------------------
+// Tests: WS-upgrade auth (installWsAuthMiddleware — shared with MessagingGateway)
+// ---------------------------------------------------------------------------
+
+describe('PresenceGateway — WS-upgrade auth', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('rejects socket when Session.getSessionWithoutRequestResponse throws', async () => {
+    mockGetSessionWithoutRequestResponse.mockRejectedValue(new Error('Invalid token'));
+
+    const gateway = new PresenceGateway(makePresenceService(), makeRbacService());
+    const socket = makeSocket('sAccessToken=bad-token');
+
+    const err = await runMiddleware(gateway, socket);
+
+    expect(err).toBeInstanceOf(Error);
+    expect(err?.message).toBe('Unauthorized');
+    expect(socket.data.userId).toBeUndefined();
+  });
+
+  it('accepts socket with valid cookie token and attaches userId to socket.data', async () => {
+    const mockSession = {
+      getUserId: vi.fn().mockReturnValue(USER_ID),
+      assertClaims: vi.fn().mockResolvedValue(undefined),
+    };
+    mockGetSessionWithoutRequestResponse.mockResolvedValue(mockSession);
+
+    const gateway = new PresenceGateway(makePresenceService(), makeRbacService());
+    const socket = makeSocket(`sAccessToken=valid-token; other=x`);
+
+    const err = await runMiddleware(gateway, socket);
+
+    expect(err).toBeNull();
+    expect(socket.data.userId).toBe(USER_ID);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: handleJoinChannel
+// ---------------------------------------------------------------------------
+
+describe('PresenceGateway — handleJoinChannel', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('joins presence:channel:<channelId> when canViewChannelById returns true', async () => {
+    const rbac = makeRbacService(true);
+    const gateway = new PresenceGateway(makePresenceService(), rbac);
+    const socket = makeSocket();
+    socket.data.userId = USER_ID;
+
+    await gateway.handleJoinChannel(socket as unknown as import('socket.io').Socket, {
+      channelId: CHANNEL_ID,
+    });
+
+    expect(rbac.canViewChannelById).toHaveBeenCalledWith(USER_ID, CHANNEL_ID);
+    expect(socket.join).toHaveBeenCalledWith(`presence:channel:${CHANNEL_ID}`);
+    expect(socket.emit).not.toHaveBeenCalled();
+  });
+
+  it('does NOT join the channel room and emits error when canViewChannelById returns false', async () => {
+    const rbac = makeRbacService(false);
+    const gateway = new PresenceGateway(makePresenceService(), rbac);
+    const socket = makeSocket();
+    socket.data.userId = USER_ID;
+
+    await gateway.handleJoinChannel(socket as unknown as import('socket.io').Socket, {
+      channelId: CHANNEL_ID,
+    });
+
+    expect(socket.join).not.toHaveBeenCalled();
+    expect(socket.emit).toHaveBeenCalledWith(
+      'error',
+      expect.objectContaining({ message: expect.any(String) }),
+    );
+  });
+
+  it('emits error when canViewChannelById throws and does not join', async () => {
+    const rbac = {
+      canViewChannelById: vi.fn().mockRejectedValue(new Error('DB error')),
+    } as unknown as RbacService;
+
+    const gateway = new PresenceGateway(makePresenceService(), rbac);
+    const socket = makeSocket();
+    socket.data.userId = USER_ID;
+
+    await gateway.handleJoinChannel(socket as unknown as import('socket.io').Socket, {
+      channelId: CHANNEL_ID,
+    });
+
+    expect(socket.join).not.toHaveBeenCalled();
+    expect(socket.emit).toHaveBeenCalledWith(
+      'error',
+      expect.objectContaining({ message: expect.any(String) }),
+    );
+  });
+
+  it('emits error immediately and makes no RBAC call when payload is invalid', async () => {
+    const rbac = makeRbacService(true);
+    const gateway = new PresenceGateway(makePresenceService(), rbac);
+    const socket = makeSocket();
+    socket.data.userId = USER_ID;
+
+    // Invalid: channelId is missing
+    await gateway.handleJoinChannel(socket as unknown as import('socket.io').Socket, {
+      channelId: 'not-a-uuid',
+    });
+
+    expect(rbac.canViewChannelById).not.toHaveBeenCalled();
+    expect(socket.join).not.toHaveBeenCalled();
+    expect(socket.emit).toHaveBeenCalledWith(
+      'error',
+      expect.objectContaining({ message: expect.any(String) }),
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: handleLeaveChannel
+// ---------------------------------------------------------------------------
+
+describe('PresenceGateway — handleLeaveChannel', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('leaves presence:channel:<channelId>, calls stopTyping, removes channelId from typingChannels', async () => {
+    const presenceService = makePresenceService();
+    const gateway = new PresenceGateway(presenceService, makeRbacService());
+    const socket = makeSocket();
+    socket.data.userId = USER_ID;
+    socket.data.typingChannels = new Set<string>([CHANNEL_ID]);
+
+    await gateway.handleLeaveChannel(socket as unknown as import('socket.io').Socket, {
+      channelId: CHANNEL_ID,
+    });
+
+    expect(socket.leave).toHaveBeenCalledWith(`presence:channel:${CHANNEL_ID}`);
+    expect(presenceService.stopTyping).toHaveBeenCalledWith(CHANNEL_ID, USER_ID);
+    // The channel must be removed from the per-socket typingChannels set
+    expect((socket.data.typingChannels as Set<string>).has(CHANNEL_ID)).toBe(false);
+  });
+
+  it('emits error and does not call leave when payload is invalid', async () => {
+    const gateway = new PresenceGateway(makePresenceService(), makeRbacService());
+    const socket = makeSocket();
+    socket.data.userId = USER_ID;
+
+    await gateway.handleLeaveChannel(socket as unknown as import('socket.io').Socket, {
+      channelId: 'not-a-uuid',
+    });
+
+    expect(socket.leave).not.toHaveBeenCalled();
+    expect(socket.emit).toHaveBeenCalledWith(
+      'error',
+      expect.objectContaining({ message: expect.any(String) }),
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: handleTypingStart
+// ---------------------------------------------------------------------------
+
+describe('PresenceGateway — handleTypingStart', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('calls startTyping and emits typing:active fan-out when access is granted', async () => {
+    const typers = [{ userId: USER_ID, displayName: 'Alice' }];
+    const presenceService = makePresenceService({
+      getTypers: vi.fn().mockReturnValue(typers),
+    });
+
+    const rbac = makeRbacService(true);
+    const gateway = new PresenceGateway(presenceService, rbac);
+    const socket = makeSocket();
+    socket.data.userId = USER_ID;
+    socket.data.displayName = 'Alice';
+    socket.data.typingChannels = new Set<string>();
+
+    // Set up server mock for emitTypingActive
+    const mockEmit = vi.fn();
+    const mockTo = vi.fn().mockReturnValue({ emit: mockEmit });
+    // biome-ignore lint/suspicious/noExplicitAny: test server mock
+    (gateway as any).server = { to: mockTo };
+
+    await gateway.handleTypingStart(socket as unknown as import('socket.io').Socket, {
+      channelId: CHANNEL_ID,
+    });
+
+    // presenceService.startTyping must have been called
+    expect(presenceService.startTyping).toHaveBeenCalledWith(
+      CHANNEL_ID,
+      USER_ID,
+      'Alice',
+      expect.any(Function),
+    );
+
+    // emitTypingActive must fan out to the channel room
+    expect(mockTo).toHaveBeenCalledWith(`presence:channel:${CHANNEL_ID}`);
+    expect(mockEmit).toHaveBeenCalledWith(
+      'typing:active',
+      expect.objectContaining({ channelId: CHANNEL_ID }),
+    );
+  });
+
+  it('emits error and does NOT call startTyping when access is denied', async () => {
+    const presenceService = makePresenceService();
+    const rbac = makeRbacService(false);
+    const gateway = new PresenceGateway(presenceService, rbac);
+    const socket = makeSocket();
+    socket.data.userId = USER_ID;
+    socket.data.typingChannels = new Set<string>();
+
+    await gateway.handleTypingStart(socket as unknown as import('socket.io').Socket, {
+      channelId: CHANNEL_ID,
+    });
+
+    expect(presenceService.startTyping).not.toHaveBeenCalled();
+    expect(socket.emit).toHaveBeenCalledWith(
+      'error',
+      expect.objectContaining({ message: expect.any(String) }),
+    );
+  });
+
+  it('emits error and makes no RBAC call when payload is invalid', async () => {
+    const presenceService = makePresenceService();
+    const rbac = makeRbacService(true);
+    const gateway = new PresenceGateway(presenceService, rbac);
+    const socket = makeSocket();
+    socket.data.userId = USER_ID;
+
+    await gateway.handleTypingStart(socket as unknown as import('socket.io').Socket, {
+      channelId: 'not-a-uuid',
+    });
+
+    expect(rbac.canViewChannelById).not.toHaveBeenCalled();
+    expect(presenceService.startTyping).not.toHaveBeenCalled();
+    expect(socket.emit).toHaveBeenCalledWith(
+      'error',
+      expect.objectContaining({ message: expect.any(String) }),
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: handleTypingStop
+// ---------------------------------------------------------------------------
+
+describe('PresenceGateway — handleTypingStop', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('calls stopTyping and emits typing:active fan-out on valid payload', () => {
+    const presenceService = makePresenceService({
+      getTypers: vi.fn().mockReturnValue([]),
+    });
+    const gateway = new PresenceGateway(presenceService, makeRbacService());
+    const socket = makeSocket();
+    socket.data.userId = USER_ID;
+    socket.data.typingChannels = new Set<string>([CHANNEL_ID]);
+
+    const mockEmit = vi.fn();
+    const mockTo = vi.fn().mockReturnValue({ emit: mockEmit });
+    // biome-ignore lint/suspicious/noExplicitAny: test server mock
+    (gateway as any).server = { to: mockTo };
+
+    gateway.handleTypingStop(socket as unknown as import('socket.io').Socket, {
+      channelId: CHANNEL_ID,
+    });
+
+    expect(presenceService.stopTyping).toHaveBeenCalledWith(CHANNEL_ID, USER_ID);
+    expect(mockTo).toHaveBeenCalledWith(`presence:channel:${CHANNEL_ID}`);
+    expect(mockEmit).toHaveBeenCalledWith(
+      'typing:active',
+      expect.objectContaining({ channelId: CHANNEL_ID, typers: [] }),
+    );
+  });
+
+  it('emits error and does not call stopTyping when payload is invalid', () => {
+    const presenceService = makePresenceService();
+    const gateway = new PresenceGateway(presenceService, makeRbacService());
+    const socket = makeSocket();
+    socket.data.userId = USER_ID;
+
+    gateway.handleTypingStop(socket as unknown as import('socket.io').Socket, {
+      channelId: 'not-a-uuid',
+    });
+
+    expect(presenceService.stopTyping).not.toHaveBeenCalled();
+    expect(socket.emit).toHaveBeenCalledWith(
+      'error',
+      expect.objectContaining({ message: expect.any(String) }),
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: handleDisconnect typing-cleanup path
+// ---------------------------------------------------------------------------
+
+describe('PresenceGateway — handleDisconnect typing cleanup', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('clears all active typing channels on disconnect: stopTyping + emitTypingActive per channel, then calls presenceService.disconnect', async () => {
+    const CH_2 = 'b2c3d4e5-0000-0000-0000-000000000002';
+    const presenceService = makePresenceService({
+      disconnect: vi.fn().mockReturnValue({ wentOffline: false }),
+      getTypers: vi.fn().mockReturnValue([]),
+    });
+    const gateway = new PresenceGateway(presenceService, makeRbacService());
+
+    const mockEmit = vi.fn();
+    const mockTo = vi.fn().mockReturnValue({ emit: mockEmit });
+    // biome-ignore lint/suspicious/noExplicitAny: test server mock
+    (gateway as any).server = { to: mockTo, emit: vi.fn() };
+
+    const socket = makeSocket();
+    socket.data.userId = USER_ID;
+    socket.data.serverIds = [];
+    socket.data.typingChannels = new Set<string>([CHANNEL_ID, CH_2]);
+
+    await gateway.handleDisconnect(socket as unknown as import('socket.io').Socket);
+
+    // stopTyping must have been called for each channel the socket was typing in
+    expect(presenceService.stopTyping).toHaveBeenCalledWith(CHANNEL_ID, USER_ID);
+    expect(presenceService.stopTyping).toHaveBeenCalledWith(CH_2, USER_ID);
+
+    // emitTypingActive (server.to) must have been called for each typing channel
+    expect(mockTo).toHaveBeenCalledWith(`presence:channel:${CHANNEL_ID}`);
+    expect(mockTo).toHaveBeenCalledWith(`presence:channel:${CH_2}`);
+
+    // presenceService.disconnect must be called for ref-count cleanup
+    expect(presenceService.disconnect).toHaveBeenCalledWith(USER_ID, 'test-socket-id');
+  });
+
+  it('does not call stopTyping when socket has no active typing channels on disconnect', async () => {
+    const presenceService = makePresenceService({
+      disconnect: vi.fn().mockReturnValue({ wentOffline: false }),
+    });
+    const gateway = new PresenceGateway(presenceService, makeRbacService());
+    // biome-ignore lint/suspicious/noExplicitAny: test server mock
+    (gateway as any).server = { to: vi.fn().mockReturnValue({ emit: vi.fn() }), emit: vi.fn() };
+
+    const socket = makeSocket();
+    socket.data.userId = USER_ID;
+    socket.data.serverIds = [];
+    socket.data.typingChannels = new Set<string>(); // empty — no active typing
+
+    await gateway.handleDisconnect(socket as unknown as import('socket.io').Socket);
+
+    expect(presenceService.stopTyping).not.toHaveBeenCalled();
+    expect(presenceService.disconnect).toHaveBeenCalledWith(USER_ID, 'test-socket-id');
+  });
+
+  it('returns early without calling disconnect when socket has no userId (auth-rejected socket)', async () => {
+    const presenceService = makePresenceService();
+    const gateway = new PresenceGateway(presenceService, makeRbacService());
+
+    const socket = makeSocket();
+    // userId is deliberately NOT set (auth-rejected path)
+
+    await gateway.handleDisconnect(socket as unknown as import('socket.io').Socket);
+
+    expect(presenceService.disconnect).not.toHaveBeenCalled();
+  });
+});
