@@ -3,7 +3,7 @@
 **Block:** P (Product)
 **Wave topic:** Browser E2E coverage for the authed create-server flow (parked tech-debt, now unblocked by verified fixtures)
 **Block exit gate:** P-4
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
@@ -12,7 +12,7 @@
 | P-1 | process/waves/wave-16/stages/P-1-decompose.md | done | PROCEED single-spec; floor overridden (test-infra exempt, logged); design_gap FALSE |
 | P-2 | tasks.description of 46f16288 (+pointer) | done | single-spec; anti-flake authed E2E |
 | P-3 | process/waves/wave-16/stages/P-3-plan.md | done | authed storageState harness + CI-secret creds + anti-flake; no schema/dep |
-| P-4 | process/waves/wave-16/stages/P-4-gemini-review.md | pending | |
+| P-4 | process/waves/wave-16/blocks/P/gate-verdict.md | done | PASSED — head-product+karen+jenny APPROVE; Gemini CONCERN triaged NOT-MATERIAL |
 
 ## Block-specific context
 - **Wave topic:** Playwright E2E — sign in as verified fixture → create server → assert server in rail + #general in sidebar. Closes the wave-7 carry (authed UI never had browser E2E).
