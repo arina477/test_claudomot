@@ -42,3 +42,8 @@
 - **Due-sort:** ASC by due_date (require due_date NOT NULL, or sort nulls-last).
 - **D-block PARTIAL:** design/assignments-panel.html ADOPTED → D-1 brief light/skip; D-block extracts the assignment-card primitive + token-fidelity/responsive check (not fresh variants).
 - **OUT:** reminders/cron/Resend (deferred M5 bundle, no cred-ask); grading/rubrics/submissions.
+
+## P-4 PHASE-2 ANNOTATIONS (carry to B-block)
+- **G3 (Gemini→head-product NOT-MATERIAL, authz):** organizer authz reuses `can(userId, serverId, 'manage_channels')` this wave — a SINGLE call site in assignments.controller. The dedicated `manage_assignments` flag is a documented follow-on (product-decision logged; backlog task seeded) — the future swap is one line + an additive roles migration, no data migration. Keep the authz a single, swappable call site.
+- **karen B-note 1 (attachment size gate):** the assign-attach path MUST call FilesService.headAttachment (server-derived size+type) BEFORE the assignment_attachments INSERT + reject >10MB (413) — the wave-19 send-time anti-spoof pattern (presigned-PUT can't block oversize; do NOT regress to confirm-time-only).
+- **karen B-note 2 (soft-delete is NOT cascade — CORRECTION):** soft-deleting an assignment (is_deleted=true) does NOT remove its assignment_status rows (FK CASCADE fires only on a HARD row DELETE). The status rows are HIDDEN via the is_deleted-excluding list query, not cascaded. B-3: do NOT claim "CASCADE handles status on soft-delete". Tests (a5f25f9b) MUST assert status rows are HIDDEN-not-removed on soft-delete. (The CASCADE FK is still correct for a real hard-delete path if any.)
