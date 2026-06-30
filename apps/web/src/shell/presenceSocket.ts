@@ -83,6 +83,14 @@ const BASE = (import.meta.env.VITE_API_ORIGIN as string | undefined) ?? '';
 
 let _socket: Socket | null = null;
 
+/**
+ * L-1: Track the channelId most recently passed to joinPresenceChannel().
+ * On reconnect the server drops all room memberships, so we re-emit join_channel
+ * for the still-active channel so typing:active events resume without requiring a
+ * full hook remount. Only one channel is active at a time (single-channel view).
+ */
+let _activeJoinedChannel: string | null = null;
+
 export function getPresenceSocket(): Socket {
   if (!_socket) {
     _socket = io(`${BASE}/presence`, {
@@ -118,10 +126,14 @@ export function getPresenceSocket(): Socket {
       notifyTyping(payload.channelId);
     });
 
-    // ── reconnect: re-subscribe to any active typing channel ─────────────────
-    // (The server re-emits snapshot on reconnect, but channel rooms need re-joining.)
+    // ── L-1: reconnect — re-join active channel typing room ──────────────────
+    // After a transient drop the server has lost all room memberships for this
+    // socket. Re-emit join_channel for the channel the hook last joined so
+    // typing:active events resume without waiting for a full hook remount.
     _socket.on('connect', () => {
-      // Re-join is handled at the hook level via join_channel emission on mount.
+      if (_activeJoinedChannel) {
+        _socket?.emit('join_channel', { channelId: _activeJoinedChannel });
+      }
     });
   }
 
@@ -184,8 +196,10 @@ export function subscribeTyping(handler: TypingSubscriber): () => void {
 /**
  * Join a channel's typing room.
  * Server-side canViewChannelById() is enforced — non-members are rejected.
+ * Tracks the joined channelId in _activeJoinedChannel for reconnect re-join (L-1).
  */
 export function joinPresenceChannel(channelId: string): void {
+  _activeJoinedChannel = channelId;
   getPresenceSocket().emit('join_channel', { channelId });
 }
 

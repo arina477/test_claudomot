@@ -33,6 +33,17 @@
  *   and cached on socket.data.displayName. Never client-provided — prevents
  *   fake display-name injection in typing indicators.
  *
+ * socket.data fields managed by this gateway:
+ *   userId       (string)      — set by installWsAuthMiddleware before handleConnection
+ *   displayName  (string)      — set in handleConnection from DB lookup
+ *   serverIds    (string[])    — captured at connect time; reused at disconnect for
+ *                                offline fan-out so membership changes mid-session do
+ *                                not cause stale "online" states for ex-co-members
+ *   typingChannels (Set<string>) — channels this socket currently has an active typing
+ *                                  entry in; populated by handleTypingStart, cleared by
+ *                                  handleTypingStop and handleDisconnect so ghost typers
+ *                                  are evicted immediately on tab-close
+ *
  * Fan-out invariant:
  *   ALL emits are room-scoped. No global broadcasts.
  */
@@ -120,7 +131,10 @@ export class PresenceGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     // 2. Ref-count up
     const { wentOnline } = this.presenceService.connect(userId, socket.id);
 
-    // 3. Resolve this user's servers and join presence:server:<serverId> rooms
+    // 3. Resolve this user's servers and join presence:server:<serverId> rooms.
+    //    Capture the resolved set on socket.data.serverIds so handleDisconnect
+    //    can fan-out offline to exactly the same audience without re-querying the
+    //    DB (H-1b: membership changes after connect should not affect offline reach).
     let serverIds: string[];
     try {
       serverIds = await this.presenceService.getServerIdsForUser(userId);
@@ -129,6 +143,10 @@ export class PresenceGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       socket.disconnect(true);
       return;
     }
+
+    socket.data.serverIds = serverIds;
+    // Initialise the per-socket typing channel tracker (H-1).
+    socket.data.typingChannels = new Set<string>();
 
     for (const serverId of serverIds) {
       await socket.join(`presence:server:${serverId}`);
@@ -174,18 +192,29 @@ export class PresenceGateway implements OnGatewayInit, OnGatewayConnection, OnGa
 
     this.logger.debug(`Disconnected: ${socket.id} userId=${userId}`);
 
+    // H-1: Clear all active typing entries for this socket immediately.
+    // socket.data.typingChannels is the set of channels this socket has called
+    // typing:start on (populated in handleTypingStart, cleared in handleTypingStop).
+    // Without this, a tab-close mid-type leaves a ghost typer for up to the 5s TTL.
+    const typingChannels = socket.data.typingChannels as Set<string> | undefined;
+    if (typingChannels && typingChannels.size > 0) {
+      for (const channelId of typingChannels) {
+        this.presenceService.stopTyping(channelId, userId);
+        // Emit updated typing:active immediately — don't wait for TTL to clear the ghost.
+        this.emitTypingActive(channelId, userId);
+      }
+      this.logger.debug(
+        `userId=${userId} disconnected mid-type — cleared ${typingChannels.size} channel(s)`,
+      );
+    }
+
     const { wentOffline } = this.presenceService.disconnect(userId, socket.id);
 
     if (wentOffline) {
-      // Resolve server rooms to fan-out offline event.
-      // The socket has already left its rooms on disconnect, so we query
-      // the DB rather than reading socket.rooms.
-      let serverIds: string[];
-      try {
-        serverIds = await this.presenceService.getServerIdsForUser(userId);
-      } catch {
-        serverIds = [];
-      }
+      // H-1b: Use the serverIds captured at connect time rather than re-querying the DB.
+      // If membership changed during the session, the offline event still reaches every
+      // co-member who received the online event — no stale "online" states.
+      const serverIds = (socket.data.serverIds as string[] | undefined) ?? [];
 
       const offlinePayload: PresenceOfflinePayload = { userId };
       for (const serverId of serverIds) {
@@ -251,7 +280,11 @@ export class PresenceGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     const { channelId } = parsed.data;
 
     await socket.leave(`presence:channel:${channelId}`);
-    // Clean up any lingering typing state for this user
+    // Clean up any lingering typing state for this user and remove from tracker.
+    const typingChannels = socket.data.typingChannels as Set<string> | undefined;
+    if (typingChannels) {
+      typingChannels.delete(channelId);
+    }
     this.presenceService.stopTyping(channelId, userId);
     this.logger.debug(`${socket.id} left presence:channel:${channelId}`);
   }
@@ -292,8 +325,19 @@ export class PresenceGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     // displayName is server-resolved at connect time (socket.data.displayName)
     const displayName = (socket.data.displayName as string | undefined) ?? userId;
 
+    // H-1: Track that this socket has an active typing entry in this channel.
+    // handleDisconnect reads typingChannels to clear ghost typers on tab-close.
+    const typingChannels = socket.data.typingChannels as Set<string> | undefined;
+    if (typingChannels) {
+      typingChannels.add(channelId);
+    }
+
     this.presenceService.startTyping(channelId, userId, displayName, (expiredChannelId) => {
-      // TTL expiry callback — re-emit the updated typers list to clear the expired user
+      // TTL expiry callback — re-emit the updated typers list to clear the expired user.
+      // Also remove from per-socket tracker since the entry has now expired.
+      if (typingChannels) {
+        typingChannels.delete(expiredChannelId);
+      }
       this.emitTypingActive(expiredChannelId, userId);
     });
 
@@ -314,6 +358,12 @@ export class PresenceGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       return;
     }
     const { channelId } = parsed.data;
+
+    // H-1: Remove from per-socket tracker when the user explicitly stops typing.
+    const typingChannels = socket.data.typingChannels as Set<string> | undefined;
+    if (typingChannels) {
+      typingChannels.delete(channelId);
+    }
 
     this.presenceService.stopTyping(channelId, userId);
     this.emitTypingActive(channelId, userId);
