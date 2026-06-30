@@ -25,3 +25,14 @@ triaged_findings:
 fast_fix_cycles:        1
 ready_for_learn:        true
 ```
+
+## Block exit handoff
+```yaml
+verify_block_status: complete
+karen_verdict: APPROVE
+jenny_verdict: APPROVE (after cursor-format fast-fix)
+fast_fix_cycles: 1   # cursor-format-drift fixed (f521f15, 9 LOC, encodeForwardCursor); Karen+jenny re-APPROVE
+ready_for_learn: true
+verify_principles_candidates: process/waves/wave-20/blocks/V/verify-principles-candidates-for-L2.md  # → L-2/karen (V-3 re-added to principles file → REVERTED by orchestrator, obs-4 6th instance)
+m4_wave1_complete: true
+```
