@@ -14,9 +14,19 @@ type Props = {
   channelName?: string;
   disabled?: boolean;
   onSend: (content: string) => void;
+  /** Called on every keypress (for typing indicator throttling). */
+  onKeyPress?: () => void;
+  /** Called when the textarea loses focus (to stop typing indicator). */
+  onBlur?: () => void;
 };
 
-export function MessageComposer({ channelName, disabled = false, onSend }: Props) {
+export function MessageComposer({
+  channelName,
+  disabled = false,
+  onSend,
+  onKeyPress,
+  onBlur,
+}: Props) {
   const [value, setValue] = useState('');
   const [sending, setSending] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -51,6 +61,11 @@ export function MessageComposer({ channelName, disabled = false, onSend }: Props
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       void handleSend();
+      return;
+    }
+    // Notify typing hook on every non-submit keypress
+    if (onKeyPress) {
+      onKeyPress();
     }
   }
 
@@ -84,6 +99,7 @@ export function MessageComposer({ channelName, disabled = false, onSend }: Props
             autoGrow();
           }}
           onKeyDown={handleKeyDown}
+          onBlur={onBlur}
           className="w-full bg-transparent text-[14px] outline-none resize-none overflow-y-auto"
           style={{
             color: 'rgba(255,255,255,0.92)',

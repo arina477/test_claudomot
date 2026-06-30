@@ -47,3 +47,19 @@ export const ServerDetailSchema = z.object({
   categories: z.array(CategoryWithChannelsSchema),
 });
 export type ServerDetail = z.infer<typeof ServerDetailSchema>;
+
+// ---------------------------------------------------------------------------
+// ServerMember — public member record for the member-list panel (wave-14)
+// ---------------------------------------------------------------------------
+
+export const ServerMemberSchema = z.object({
+  userId: z.string(),
+  displayName: z.string(),
+  avatarUrl: z.string().nullable(),
+});
+export type ServerMember = z.infer<typeof ServerMemberSchema>;
+
+export const ServerMembersResponseSchema = z.object({
+  members: z.array(ServerMemberSchema),
+});
+export type ServerMembersResponse = z.infer<typeof ServerMembersResponseSchema>;

@@ -10,12 +10,21 @@ import type {
   InviteResponse,
   JoinResult,
   ServerDetail,
+  ServerMember,
   ServerResponse,
   ServerSummary,
 } from '@studyhall/shared';
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../db/index';
-import { categories, channels, invites, roles, server_members, servers } from '../db/schema/index';
+import {
+  categories,
+  channels,
+  invites,
+  roles,
+  server_members,
+  servers,
+  users,
+} from '../db/schema/index';
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
 import { RbacService } from '../rbac/rbac.service';
 
@@ -199,6 +208,46 @@ export class ServersService {
           })),
       })),
     };
+  }
+
+  // -------------------------------------------------------------------------
+  // Member list — GET /servers/:id/members (wave-14)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Return the public member roster for a server.
+   * Caller must be a member of the server (403 otherwise).
+   * Returns [{userId, displayName, avatarUrl}] for all members.
+   * displayName falls back to email prefix if display_name is null.
+   */
+  async listServerMembers(userId: string, serverId: string): Promise<ServerMember[]> {
+    // Member gate: caller must belong to this server
+    const [callerMembership] = await db
+      .select({ id: server_members.id })
+      .from(server_members)
+      .where(and(eq(server_members.server_id, serverId), eq(server_members.user_id, userId)))
+      .limit(1);
+
+    if (!callerMembership) {
+      throw new ForbiddenException('Not a member of this server');
+    }
+
+    const rows = await db
+      .select({
+        userId: users.id,
+        displayName: users.display_name,
+        email: users.email,
+        avatarUrl: users.avatar_url,
+      })
+      .from(server_members)
+      .innerJoin(users, eq(users.id, server_members.user_id))
+      .where(eq(server_members.server_id, serverId));
+
+    return rows.map((r) => ({
+      userId: r.userId,
+      displayName: r.displayName ?? r.email.split('@')[0] ?? r.userId,
+      avatarUrl: r.avatarUrl ?? null,
+    }));
   }
 
   // -------------------------------------------------------------------------
