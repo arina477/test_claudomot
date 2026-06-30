@@ -45,3 +45,12 @@ Serial (one specialist): harness/spec → vitest config → CI confirm.
 ### Self-consistency sweep
 1. Every AC → step: real-txn-not-stub + migrate (spec setup); mid-txn-failure→no-orphans (rollback case); positive commit (success case); real schema applied (migrate); deterministic/CI-green (isolation + vitest/CI wiring). ✓
 2. Specialist on each step. ✓ 3. No file in two batches. ✓ 4. design_gap false → D skips. ✓ 5. Harness alternative named (PGlite/testcontainers vs CI-PG-service). ✓ 6. No data/API contract change. ✓ 7. No new dep. ✓ 8. SDK n/a. ✓
+
+## P-4 GEMINI-TRIAGE ANNOTATION (head-product MATERIAL — parallel-safe harness)
+The integration vitest project MUST be parallel-safe BY CONSTRUCTION (vitest parallelizes files across workers by default; the shared CI Postgres + truncate-between-cases would let file A's truncate wipe file B's rows mid-run once a 2nd integration spec lands — exactly the flake the AC forbids). **B-4 requirement:** put the integration specs in a dedicated vitest project with `fileParallelism: false` (run integration specs serially) — OR per-test transaction-rollback isolation — OR schema-per-worker. The setting lives in the harness/project config so the reusable tier (02fa8011) inherits parallel-safety. **B-6 verifies the integration PROJECT is parallel-safe, not just that the one spec is green.**
+
+## B-block mandatory annotations (from P-4 karen/jenny):
+- **CF-2 (load-bearing):** the test must redirect the SUT's OWN `db` singleton (apps/api/src/db/index.ts — lazy Proxy resolving Pool from process.env.DATABASE_URL) to the test DB by setting process.env.DATABASE_URL = the test DB BEFORE first Proxy resolution. Do NOT spin up a separate side drizzle instance pointed at DATABASE_URL_TEST — createServer imports the singleton and would ignore a side instance (green-but-meaningless). Map DATABASE_URL_TEST → DATABASE_URL in the harness setup.
+- db/index.spec.ts is NOT a real-connection precedent (it's the import-laziness guard, sets DATABASE_URL=undefined) — do NOT use it as a connection template; this wave establishes the first real-DB-connection test.
+- migrate must FAIL LOUD on error; two 0004_* migration tags both journaled (run by journal order).
+- CI-runs / local-skips: the integration spec RUNS in CI (DATABASE_URL_TEST present) and SKIPS-with-clear-reason locally when unset.

@@ -3,7 +3,7 @@
 **Block:** P (Product)
 **Wave topic:** Real-Postgres mid-transaction-failure rollback test for create-server (test-infra; builds the real-PG test harness)
 **Block exit gate:** P-4
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
@@ -12,7 +12,7 @@
 | P-1 | process/waves/wave-17/stages/P-1-decompose.md | done | PROCEED single-spec; floor-exempt (test-infra, wave-16 precedent); design_gap FALSE |
 | P-2 | tasks.description of 25523fb0 (+pointer) | done | single-spec; real-PG rollback test |
 | P-3 | process/waves/wave-17/stages/P-3-plan.md | done | reuse CI Postgres service + migrate + real txn; no new dep; forced mid-txn failure |
-| P-4 | process/waves/wave-17/stages/P-4-gemini-review.md | pending | |
+| P-4 | process/waves/wave-17/blocks/P/gate-verdict.md | done | PASSED — head-product+karen+jenny APPROVE; Gemini CONCERN→MATERIAL annotation |
 
 ## Block-specific context
 - **Wave topic:** real-Postgres integration test forcing a mid-txn failure in createServer → assert NO orphan rows (server/category/channel/membership). Replaces the always-invoke db.transaction stub.
