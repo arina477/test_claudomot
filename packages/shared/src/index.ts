@@ -103,6 +103,23 @@ export type {
 } from './messaging.js';
 
 export {
+  AssignmentSchema,
+  CreateAssignmentSchema,
+  UpdateAssignmentSchema,
+  AssignmentStatusSchema,
+  AssignmentListResponseSchema,
+  AssignmentPresignResponseSchema,
+} from './assignments.js';
+export type {
+  Assignment,
+  CreateAssignmentInput,
+  UpdateAssignmentInput,
+  AssignmentStatusInput,
+  AssignmentListResponse,
+  AssignmentPresignResponse,
+} from './assignments.js';
+
+export {
   PresenceStatusSchema,
   PresenceStateSchema,
   PresenceSnapshotSchema,

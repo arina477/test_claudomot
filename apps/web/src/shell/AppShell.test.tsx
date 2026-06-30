@@ -58,6 +58,9 @@ const defaultCtx: ServerContextValue = {
   selectedChannelId: null,
   selectedChannelName: null,
   selectChannel: vi.fn(),
+  assignmentsOpen: false,
+  openAssignments: vi.fn(),
+  closeAssignments: vi.fn(),
 };
 
 function renderShell(ctxOverride: Partial<ServerContextValue> = {}) {
