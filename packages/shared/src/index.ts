@@ -75,3 +75,25 @@ export type {
   ReactionToggleResponse,
   MessageList,
 } from './messaging.js';
+
+export {
+  PresenceStatusSchema,
+  PresenceStateSchema,
+  PresenceSnapshotSchema,
+  PresenceOnlinePayloadSchema,
+  PresenceOfflinePayloadSchema,
+  TypingStartSchema,
+  TypingStopSchema,
+  TypingActiveSchema,
+  PRESENCE_EVENTS,
+} from './presence.js';
+export type {
+  PresenceStatus,
+  PresenceState,
+  PresenceSnapshot,
+  PresenceOnlinePayload,
+  PresenceOfflinePayload,
+  TypingStartInput,
+  TypingStopInput,
+  TypingActive,
+} from './presence.js';
