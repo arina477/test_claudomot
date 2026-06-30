@@ -3,7 +3,7 @@
 **Block:** P (Product)
 **Wave topic:** M3 threads — thread-reply data plane + thread-view panel + outbox parity
 **Block exit gate:** P-4
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
@@ -12,7 +12,7 @@
 | P-1 | process/waves/wave-18/stages/P-1-decompose.md | done | PROCEED multi-spec (~2800 LOC > floor); design_gap TRUE (thread panel + affordance) |
 | P-2 | tasks.description of 497c2ae6 (+pointer) | done | multi-spec 3 blocks |
 | P-3 | process/waves/wave-18/stages/P-3-plan.md | done | schema 0008 + transactional thread data plane + panel + outbox; reuse wave-13/12 |
-| P-4 | process/waves/wave-18/stages/P-4-gemini-review.md | pending | |
+| P-4 | process/waves/wave-18/blocks/P/gate-verdict.md | done | PASSED (attempt 2) — head-product+karen+jenny APPROVE; Gemini concern→MATERIAL annotation |
 
 ## Block-specific context
 - **Wave topic:** thread replies (thread_parent_id, one-level) + reply-count/last-reply affordance + thread-view panel + outbox parity. The FIRST of the last 2 M3 features (per BOARD 7/7 N-1-ordering-wave-17).
