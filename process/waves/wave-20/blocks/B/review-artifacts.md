@@ -6,9 +6,9 @@
 | B-0 | stages/B-0-branch-and-schema.md | done | branch + claim; NO server schema (Dexie client schema in B-4) |
 | B-1 | stages/B-1-contracts.md | done | forward-list/after-cursor + OutboxItem/cached types |
 | B-2 | stages/B-2-backend.md | done | listMessagesAfter forward cursor + idempotency-lock test |
-| B-3 | stages/B-3-frontend.md | pending | Dexie store (cache+outbox) + outbox integration + composer offline + fake-indexeddb tests |
-| B-4 | stages/B-4-wiring.md | pending | deps dexie+fake-indexeddb + vitest fake-indexeddb setup |
-| B-5 | stages/B-5-verify.md | pending | |
+| B-3 | stages/B-3-frontend.md | done | Dexie store (cache+outbox) + outbox integration + composer offline + fake-indexeddb tests |
+| B-4 | stages/B-4-wiring.md | done | deps dexie+fake-indexeddb + vitest fake-indexeddb setup |
+| B-5 | stages/B-5-verify.md | done | |
 | B-6 | stages/B-6-review.md | pending | head-builder gate (rule-4 403 + exactly-once) |
 ## Context
 - Branch: wave-20-m4-offline-spine | claimed: [92d85e0e, 7332a4b8, 9a4ab31d, e29f6566]
