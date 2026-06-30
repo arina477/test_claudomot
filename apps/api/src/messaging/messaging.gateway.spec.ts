@@ -1,5 +1,5 @@
 /**
- * MessagingGateway unit tests — wave-12 M3 (task 723b5b6a)
+ * MessagingGateway unit tests — wave-12 M3 (task 723b5b6a) + wave-15 (task c3f3f62a)
  *
  * Covers:
  *   1. WS-upgrade rejects unauthenticated socket (Session throws → next(Error))
@@ -12,6 +12,9 @@
  *   8. join_channel when canViewChannelById throws → error emitted, join not called
  *   9. leave_channel → socket.leave called
  *  10. message.created → server.to(...).emit only to channel room (not broadcast-all)
+ *  11. handleConnection → socket.join('user:<userId>') called (wave-15 per-user room)
+ *  12. mention.created → server.to('user:<userId>').emit('mention', payload) to recipient only
+ *  13. mention.created → author-excluded: gateway emits to recipient, NOT to author's room
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -301,6 +304,7 @@ function makeMessageFixture(
     editedAt: null,
     isDeleted: false,
     reactions: [],
+    mentions: [],
     ...overrides,
   };
 }
@@ -441,5 +445,124 @@ describe('MessagingGateway — wave-13 event fan-outs (room-only)', () => {
     expect(mockEmit).toHaveBeenCalledWith('reaction:removed', payload);
     // biome-ignore lint/suspicious/noExplicitAny: test server mock
     expect((gateway as any).server.emit).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// wave-15 — per-user room join (task c3f3f62a)
+// ---------------------------------------------------------------------------
+
+describe('MessagingGateway — handleConnection per-user room (wave-15)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('joins the user:<userId> room immediately on connection (before any client action)', () => {
+    const gateway = new MessagingGateway(makeRbacService());
+    const socket = makeSocket();
+    socket.data.userId = 'user-abc';
+
+    gateway.handleConnection(socket as unknown as import('socket.io').Socket);
+
+    // socket.join must have been called with 'user:user-abc'
+    expect(socket.join).toHaveBeenCalledWith('user:user-abc');
+  });
+
+  it('joins the correct user room for a different userId', () => {
+    const gateway = new MessagingGateway(makeRbacService());
+    const socket = makeSocket();
+    socket.data.userId = 'user-xyz-789';
+
+    gateway.handleConnection(socket as unknown as import('socket.io').Socket);
+
+    expect(socket.join).toHaveBeenCalledWith('user:user-xyz-789');
+    expect(socket.join).not.toHaveBeenCalledWith('user:user-abc');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// wave-15 — mention.created fan-out to per-user room (task c3f3f62a)
+// ---------------------------------------------------------------------------
+
+describe('MessagingGateway — mention.created fan-out (wave-15)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('emits mention event to user:<mentionedUserId> room only (not a channel room)', () => {
+    const gateway = new MessagingGateway(makeRbacService());
+    const mockEmit = vi.fn();
+    const mockTo = vi.fn().mockReturnValue({ emit: mockEmit });
+    // biome-ignore lint/suspicious/noExplicitAny: test server mock
+    (gateway as any).server = { to: mockTo, emit: vi.fn() };
+
+    const payload: import('@studyhall/shared').MentionEvent = {
+      messageId: 'msg-mention-01',
+      channelId: 'ch-general',
+      channelName: 'general',
+      serverId: 'server-001',
+      mentionedUserId: 'user-mentioned',
+    };
+
+    gateway.handleMentionCreated(payload);
+
+    // Must route to the per-user room, NOT a channel room
+    expect(mockTo).toHaveBeenCalledWith('user:user-mentioned');
+    expect(mockTo).not.toHaveBeenCalledWith('channel:ch-general');
+    expect(mockEmit).toHaveBeenCalledWith('mention', payload);
+    // Must not broadcast-all
+    // biome-ignore lint/suspicious/noExplicitAny: test server mock
+    expect((gateway as any).server.emit).not.toHaveBeenCalled();
+  });
+
+  it('carries channelId and channelName in the mention event payload', () => {
+    const gateway = new MessagingGateway(makeRbacService());
+    const mockEmit = vi.fn();
+    const mockTo = vi.fn().mockReturnValue({ emit: mockEmit });
+    // biome-ignore lint/suspicious/noExplicitAny: test server mock
+    (gateway as any).server = { to: mockTo };
+
+    const payload: import('@studyhall/shared').MentionEvent = {
+      messageId: 'msg-002',
+      channelId: 'ch-announcements',
+      channelName: 'announcements',
+      serverId: 'server-002',
+      mentionedUserId: 'user-bob',
+    };
+
+    gateway.handleMentionCreated(payload);
+
+    expect(mockEmit).toHaveBeenCalledWith(
+      'mention',
+      expect.objectContaining({
+        channelId: 'ch-announcements',
+        channelName: 'announcements',
+        serverId: 'server-002',
+      }),
+    );
+  });
+
+  it('routes to the mentioned user room — not to the author room (author-exclusion is service-side)', () => {
+    // The gateway itself does not filter authors — that is done in MessagesService.
+    // This test verifies the gateway emits to exactly the mentionedUserId it receives.
+    const AUTHOR_ROOM = 'user:author-user';
+    const RECIPIENT_ROOM = 'user:recipient-user';
+
+    const gateway = new MessagingGateway(makeRbacService());
+    const mockEmit = vi.fn();
+    const mockTo = vi.fn().mockReturnValue({ emit: mockEmit });
+    // biome-ignore lint/suspicious/noExplicitAny: test server mock
+    (gateway as any).server = { to: mockTo, emit: vi.fn() };
+
+    const payload: import('@studyhall/shared').MentionEvent = {
+      messageId: 'msg-003',
+      channelId: 'ch-help',
+      mentionedUserId: 'recipient-user',
+    };
+
+    gateway.handleMentionCreated(payload);
+
+    expect(mockTo).toHaveBeenCalledWith(RECIPIENT_ROOM);
+    expect(mockTo).not.toHaveBeenCalledWith(AUTHOR_ROOM);
   });
 });

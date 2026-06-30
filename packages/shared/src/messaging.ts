@@ -13,11 +13,24 @@ export const ReactionSummarySchema = z.object({
 export type ReactionSummary = z.infer<typeof ReactionSummarySchema>;
 
 // ---------------------------------------------------------------------------
+// MentionRef — a single @mention reference embedded in a message
+// Included in MessageResponse.mentions — wave-15 task 3d238446
+// ---------------------------------------------------------------------------
+
+export const MentionRefSchema = z.object({
+  userId: z.string(),
+  username: z.string(),
+});
+export type MentionRef = z.infer<typeof MentionRefSchema>;
+
+// ---------------------------------------------------------------------------
 // MessageResponse — single message DTO (wave-12 task a0c322b4)
 //   Extended for wave-13 (task e12886d7 + d78df376):
 //   - isEdited / editedAt — populated after PATCH
 //   - isDeleted — true when soft-deleted; content becomes null (tombstone)
 //   - reactions — aggregated [{emoji, count, reactedByMe}]
+//   Extended for wave-15 (task 3d238446):
+//   - mentions — [{userId, username}] users @mentioned in this message
 // ---------------------------------------------------------------------------
 
 export const MessageResponseSchema = z.object({
@@ -32,6 +45,8 @@ export const MessageResponseSchema = z.object({
   isDeleted: z.boolean(),
   // wave-13 reactions
   reactions: z.array(ReactionSummarySchema),
+  // wave-15 mentions
+  mentions: z.array(MentionRefSchema),
 });
 export type MessageResponse = z.infer<typeof MessageResponseSchema>;
 
@@ -96,3 +111,44 @@ export const MessageListSchema = z.object({
   nextCursor: z.string().nullable(),
 });
 export type MessageList = z.infer<typeof MessageListSchema>;
+
+// ---------------------------------------------------------------------------
+// MyMentionsResponse — paginated response for GET /me/mentions
+// wave-15 task 3d238446
+// ---------------------------------------------------------------------------
+
+export const MyMentionsResponseSchema = z.object({
+  items: z.array(MessageResponseSchema),
+  nextCursor: z.string().nullish(),
+});
+export type MyMentionsResponse = z.infer<typeof MyMentionsResponseSchema>;
+
+// ---------------------------------------------------------------------------
+// MentionEvent — Socket.IO 'mention' event pushed to each mentioned user's
+// per-user room ('user:<userId>') by the /messaging gateway.
+//
+// wave-15 task c3f3f62a — cross-channel unread-mention realtime signal.
+//
+// Shape rationale:
+//   - messageId: lets the client deduplicate if the same event fires twice.
+//   - channelId: required so the client can attribute the badge to the correct
+//     channel; it is the minimum viable field for the unread-mention counter.
+//   - channelName: optional display label (populated when cheap to include).
+//   - serverId: optional; allows the client to scope the badge per-server.
+//   - mentionedUserId: the recipient's own userId — lets a shared handler
+//     verify the event is addressed to the current user (defensive).
+//
+// The server emits one MentionEvent per mentioned user (not a broadcast with
+// all mentionedUserIds in a single payload) so each user's 'user:<id>' room
+// receives only their own event.  The author is NEVER emitted a mention event
+// for their own message (excluded server-side).
+// ---------------------------------------------------------------------------
+
+export const MentionEventSchema = z.object({
+  messageId: z.string(),
+  channelId: z.string(),
+  channelName: z.string().optional(),
+  serverId: z.string().optional(),
+  mentionedUserId: z.string(),
+});
+export type MentionEvent = z.infer<typeof MentionEventSchema>;

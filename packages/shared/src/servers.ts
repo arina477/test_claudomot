@@ -50,12 +50,16 @@ export type ServerDetail = z.infer<typeof ServerDetailSchema>;
 
 // ---------------------------------------------------------------------------
 // ServerMember — public member record for the member-list panel (wave-14)
+// username added in wave-15 B-4: required by MentionAutocomplete so that
+// autocomplete-inserted @tokens match the users.username column in the
+// resolveMentions resolver. Nullable because username IS NULL is valid in DB.
 // ---------------------------------------------------------------------------
 
 export const ServerMemberSchema = z.object({
   userId: z.string(),
   displayName: z.string(),
   avatarUrl: z.string().nullable(),
+  username: z.string().nullable(),
 });
 export type ServerMember = z.infer<typeof ServerMemberSchema>;
 

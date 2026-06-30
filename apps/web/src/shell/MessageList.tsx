@@ -20,7 +20,7 @@
  * Receives the full message list (real + optimistic) from useMessages hook.
  */
 
-import type { MessageResponse, ReactionSummary } from '@studyhall/shared';
+import type { MentionRef, MessageResponse, ReactionSummary } from '@studyhall/shared';
 import { useEffect, useRef, useState } from 'react';
 import {
   ChatsCircleIcon,
@@ -68,6 +68,12 @@ type Props = {
   onReaction?: ((messageId: string, emoji: string) => void) | null;
   /** The current user's ID — used to decide if edit/delete is shown */
   currentUserId?: string | null;
+  /**
+   * The current viewer's username (from profile.username).
+   * Used to identify self-mentions and render them with emerald emphasis.
+   * Distinct from currentUserId which is also the username in MainColumn.
+   */
+  viewerUsername?: string | null;
   /** Label for the composer hint, e.g. "general" */
   channelName?: string;
 };
@@ -95,6 +101,99 @@ function initials(s: string): string {
 }
 
 const COMMON_EMOJI = ['👍', '❤️', '😂', '🎉', '🤔', '✅'];
+
+// ---------------------------------------------------------------------------
+// Mention pill rendering
+// ---------------------------------------------------------------------------
+
+/**
+ * MentionPill — renders a single @username chip.
+ *
+ * Design (design/server-channel-view.html §2 self-mention, §1 other-mention):
+ *   self  = bg-emerald-500/10 + text-emerald-300 + ring-1 ring-emerald-500/30
+ *   other = bg-surface-700 (#27272a) + text-zinc-100 (rgba 255,255,255,0.92)
+ *   Both: rounded-md, inline-flex, px-1.5 py-0.5, text-[14px] font-medium
+ *   DISTINCT from reaction pills (which are rounded-full / pill-shaped).
+ */
+function MentionPill({ username, isSelf }: { username: string; isSelf: boolean }) {
+  if (isSelf) {
+    return (
+      <span
+        className="inline-flex items-center px-1.5 py-0.5 mx-[1px] -my-[1px] align-baseline rounded-md text-[14px] font-medium"
+        style={{
+          backgroundColor: 'rgba(16,185,129,0.10)',
+          color: '#6ee7b7',
+          outline: '1px solid rgba(16,185,129,0.30)',
+          outlineOffset: '-1px',
+        }}
+        aria-label={`mention: @${username} (you)`}
+      >
+        @{username}
+      </span>
+    );
+  }
+  return (
+    <span
+      className="inline-flex items-center px-1.5 py-0.5 mx-[1px] -my-[1px] align-baseline rounded-md text-[14px] font-medium"
+      style={{
+        backgroundColor: '#27272a',
+        color: 'rgba(255,255,255,0.92)',
+      }}
+      aria-label={`mention: @${username}`}
+    >
+      @{username}
+    </span>
+  );
+}
+
+/**
+ * Tokenise a message body and replace @username tokens with MentionPill
+ * components.
+ *
+ * Strategy: find all @<word> tokens in the content. For each, check the
+ * mentions[] array (from the server) to see if it resolves to a real user.
+ * Unresolved @tokens (not in mentions[]) are rendered as plain text.
+ *
+ * Self-detection: compare the resolved MentionRef.username against
+ * viewerUsername (from profile.username). No UUID needed.
+ */
+function renderBodyWithMentions(
+  content: string,
+  mentions: MentionRef[],
+  viewerUsername: string | null,
+): React.ReactNode {
+  // Build a map: normalised username → MentionRef for O(1) lookup
+  const mentionMap = new Map<string, MentionRef>();
+  for (const m of mentions) {
+    mentionMap.set(m.username.toLowerCase(), m);
+  }
+
+  // Split on @word boundaries — keep the delimiter so we can inspect it
+  const parts = content.split(/(@\S+)/);
+
+  return parts.map((part, idx) => {
+    if (part.startsWith('@')) {
+      // Strip trailing punctuation that is not part of the username
+      const raw = part.slice(1).replace(/[.,!?;:)]+$/, '');
+      const ref = mentionMap.get(raw.toLowerCase());
+      if (ref) {
+        const isSelf =
+          viewerUsername !== null && ref.username.toLowerCase() === viewerUsername.toLowerCase();
+        return (
+          <MentionPill
+            // biome-ignore lint/suspicious/noArrayIndexKey: static split, stable
+            key={idx}
+            username={ref.username}
+            isSelf={isSelf}
+          />
+        );
+      }
+    }
+    // Plain text segment (or unresolved @token)
+    // biome-ignore lint/suspicious/noArrayIndexKey: static split, stable
+    return <span key={idx}>{part}</span>;
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Add-reaction popover
@@ -446,12 +545,20 @@ function InlineEdit({ initialContent, onSave, onCancel }: InlineEditProps) {
 type SentRowProps = {
   msg: { kind: 'real' } & MessageResponse;
   currentUserId: string | null;
+  viewerUsername: string | null;
   onEdit: ((messageId: string, content: string) => void) | null;
   onDelete: ((messageId: string) => void) | null;
   onReaction: ((messageId: string, emoji: string) => void) | null;
 };
 
-function SentRow({ msg, currentUserId, onEdit, onDelete, onReaction }: SentRowProps) {
+function SentRow({
+  msg,
+  currentUserId,
+  viewerUsername,
+  onEdit,
+  onDelete,
+  onReaction,
+}: SentRowProps) {
   const abbr = initials(msg.authorId);
   const isOwn = !!currentUserId && msg.authorId === currentUserId;
   const [rowState, setRowState] = useState<'normal' | 'editing' | 'deleting'>('normal');
@@ -553,7 +660,9 @@ function SentRow({ msg, currentUserId, onEdit, onDelete, onReaction }: SentRowPr
               className="mt-0.5 text-sm leading-relaxed"
               style={{ color: 'rgba(255,255,255,0.70)' }}
             >
-              {msg.content}
+              {msg.content
+                ? renderBodyWithMentions(msg.content, msg.mentions, viewerUsername)
+                : null}
             </p>
             <div className="mt-2 flex items-center gap-2.5">
               <span className="text-[12px] font-medium" style={{ color: 'rgba(255,255,255,0.70)' }}>
@@ -593,7 +702,9 @@ function SentRow({ msg, currentUserId, onEdit, onDelete, onReaction }: SentRowPr
               className="mt-0.5 text-sm leading-relaxed"
               style={{ color: 'rgba(255,255,255,0.80)' }}
             >
-              {msg.content}
+              {msg.content
+                ? renderBodyWithMentions(msg.content, msg.mentions, viewerUsername)
+                : null}
               {msg.isEdited && (
                 <span
                   className="ml-1 align-baseline text-xs font-normal"
@@ -815,6 +926,7 @@ export function MessageList({
   onDelete,
   onReaction,
   currentUserId,
+  viewerUsername,
   channelName,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -929,6 +1041,7 @@ export function MessageList({
               key={msg.id}
               msg={msg}
               currentUserId={currentUserId ?? null}
+              viewerUsername={viewerUsername ?? null}
               onEdit={onEdit ?? null}
               onDelete={onDelete ?? null}
               onReaction={onReaction ?? null}

@@ -7,20 +7,31 @@ import {
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import type {
+  MentionEvent,
   MessageList,
   MessageResponse,
+  MyMentionsResponse,
   ReactionToggleResponse,
   SendMessageInput,
 } from '@studyhall/shared';
 import { and, eq, inArray, lt, or, sql } from 'drizzle-orm';
 import { db } from '../db/index';
-import { channels, message_reactions, messages } from '../db/schema/index';
+import {
+  channels,
+  message_mentions,
+  message_reactions,
+  messages,
+  server_members,
+  users,
+} from '../db/schema/index';
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
 import { RbacService } from '../rbac/rbac.service';
+import { parseMentions } from './mentions';
 
 // ---------------------------------------------------------------------------
 // MessagesService — wave-12 M3 REST data plane (task a0c322b4)
 //                 + wave-13 M3 edit/delete/reactions (tasks e12886d7 + d78df376)
+//                 + wave-15 M3 @mention parse/resolve/persist (task 3d238446)
 // ---------------------------------------------------------------------------
 
 /** Opaque cursor encoding: base64(createdAt_iso|id) */
@@ -54,10 +65,23 @@ interface ReactionRow {
 }
 
 // ---------------------------------------------------------------------------
-// rowToDto — map a DB row + aggregated reactions to MessageResponse
+// MentionRow — raw DB row from message_mentions + joined username
+// ---------------------------------------------------------------------------
+
+interface MentionRow {
+  message_id: string;
+  mentioned_user_id: string;
+  username: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// rowToDto — map a DB row + aggregated reactions + mentions to MessageResponse
 //
 // Soft-deleted messages: content becomes null (tombstone), isDeleted=true.
 // Reactions are always included (may be empty array).
+// Mentions are always included (may be empty array); soft-deleted messages
+// still carry their mentions[] so the caller can reason about them, but
+// my-mentions excludes soft-deleted rows at the query level.
 // ---------------------------------------------------------------------------
 
 function rowToDto(
@@ -74,6 +98,7 @@ function rowToDto(
   },
   reactions: ReactionRow[],
   viewerUserId: string,
+  mentionRows: MentionRow[] = [],
 ): MessageResponse {
   // Aggregate reactions for this message
   const emojiMap = new Map<string, { count: number; reactedByMe: boolean }>();
@@ -99,6 +124,11 @@ function rowToDto(
     }),
   );
 
+  // Aggregate mentions for this message (filter to this row's id, skip null usernames)
+  const mentions = mentionRows
+    .filter((m) => m.message_id === row.id && m.username !== null)
+    .map((m) => ({ userId: m.mentioned_user_id, username: m.username as string }));
+
   return {
     id: row.id,
     channelId: row.channel_id,
@@ -110,7 +140,72 @@ function rowToDto(
     editedAt: row.edited_at ? row.edited_at.toISOString() : null,
     isDeleted: row.is_deleted,
     reactions: reactionSummaries,
+    mentions,
   };
+}
+
+// ---------------------------------------------------------------------------
+// resolveMentions — parse @username tokens, resolve to server members, return
+// rows ready for message_mentions INSERT.
+//
+// Security invariant:
+//   - Only users who are MEMBERS of the channel's server are resolved.
+//   - username IS NOT NULL guard applied — prevents NULL username from
+//     matching an unset-username user (P-4 carry-forward).
+//   - @everyone/@here/@role are out of scope (parseMentions only captures
+//     individual username tokens).
+//
+// Returns: array of { message_id, mentioned_user_id } ready for db.insert().
+// ---------------------------------------------------------------------------
+
+async function resolveMentions(
+  messageId: string,
+  body: string,
+  serverId: string,
+): Promise<Array<{ message_id: string; mentioned_user_id: string }>> {
+  const tokens = parseMentions(body);
+  if (tokens.length === 0) return [];
+
+  // JOIN server_members ⋈ users WHERE lower(username) = ANY(tokens)
+  // AND username IS NOT NULL AND server_id = serverId
+  // Returns only users who are actual members of this server.
+  const resolved = await db
+    .select({
+      user_id: server_members.user_id,
+    })
+    .from(server_members)
+    .innerJoin(users, eq(server_members.user_id, users.id))
+    .where(
+      and(
+        eq(server_members.server_id, serverId),
+        sql`${users.username} IS NOT NULL`,
+        inArray(sql`lower(${users.username})`, tokens),
+      ),
+    );
+
+  return resolved.map((r) => ({
+    message_id: messageId,
+    mentioned_user_id: r.user_id,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// fetchMentionRows — batch-load mention rows for a set of message IDs,
+// joined with username. Called once per page (no N+1).
+// ---------------------------------------------------------------------------
+
+async function fetchMentionRows(messageIds: string[]): Promise<MentionRow[]> {
+  if (messageIds.length === 0) return [];
+
+  return db
+    .select({
+      message_id: message_mentions.message_id,
+      mentioned_user_id: message_mentions.mentioned_user_id,
+      username: users.username,
+    })
+    .from(message_mentions)
+    .innerJoin(users, eq(message_mentions.mentioned_user_id, users.id))
+    .where(inArray(message_mentions.message_id, messageIds));
 }
 
 @Injectable()
@@ -140,8 +235,9 @@ export class MessagesService {
   ): Promise<MessageResponse> {
     // Verify channel exists (guard already verified permission, but service
     // provides a clean 404 for a missing channel as defence-in-depth).
+    // Fetch server_id (mention resolution) and name (mention event channelName).
     const [channel] = await db
-      .select({ id: channels.id })
+      .select({ id: channels.id, server_id: channels.server_id, name: channels.name })
       .from(channels)
       .where(eq(channels.id, channelId))
       .limit(1);
@@ -205,10 +301,50 @@ export class MessagesService {
       throw new Error('Message insert failed unexpectedly');
     }
 
-    const dto = rowToDto(message, [], authorId);
+    // Resolve @username tokens to server members and persist mention rows.
+    // ON CONFLICT DO NOTHING — idempotent if this path is replayed.
+    const mentionValues = await resolveMentions(message.id, input.content, channel.server_id);
+    if (mentionValues.length > 0) {
+      await db
+        .insert(message_mentions)
+        .values(mentionValues)
+        .onConflictDoNothing({
+          target: [message_mentions.message_id, message_mentions.mentioned_user_id],
+        });
+    }
+
+    // Fetch persisted mention rows (with username) for the DTO
+    const mentionRows = await fetchMentionRows([message.id]);
+
+    const dto = rowToDto(message, [], authorId, mentionRows);
 
     // Emit domain event for the Socket.IO gateway (@OnEvent('message.created'))
+    // mentions[] rides on the DTO — no new event needed (spec §contracts.api)
     this.eventEmitter.emit('message.created', dto);
+
+    // Emit per-user mention events for cross-channel unread-mention signal.
+    //
+    // One 'mention.created' event is emitted per mentioned user so each user's
+    // 'user:<id>' room receives only their own event.
+    //
+    // Author exclusion: if the author mentions themselves, no mention event is
+    // emitted (a user should not receive a badge for their own message).
+    //
+    // channelName and serverId are included so the client can attribute the
+    // unread badge to the correct channel and server without an additional fetch.
+    if (mentionValues.length > 0) {
+      for (const { mentioned_user_id } of mentionValues) {
+        if (mentioned_user_id === authorId) continue; // exclude self-mention
+        const mentionEvent: MentionEvent = {
+          messageId: message.id,
+          channelId,
+          channelName: channel.name,
+          serverId: channel.server_id,
+          mentionedUserId: mentioned_user_id,
+        };
+        this.eventEmitter.emit('mention.created', mentionEvent);
+      }
+    }
 
     return dto;
   }
@@ -251,6 +387,17 @@ export class MessagesService {
       throw new ConflictException('Cannot edit a deleted message');
     }
 
+    // Resolve the channel's server_id for mention resolution (and name for mention events)
+    const [channel] = await db
+      .select({ server_id: channels.server_id, name: channels.name })
+      .from(channels)
+      .where(eq(channels.id, channelId))
+      .limit(1);
+
+    if (!channel) {
+      throw new NotFoundException('Channel not found');
+    }
+
     const now = new Date();
     const [updated] = await db
       .update(messages)
@@ -262,6 +409,54 @@ export class MessagesService {
       throw new Error('Message update failed unexpectedly');
     }
 
+    // -----------------------------------------------------------------------
+    // Mention diff: compare previous mentions to new mentions from edited body.
+    //
+    // 1. Fetch existing mention rows for this message.
+    // 2. Resolve new @username tokens from the updated content.
+    // 3. Delete rows for users no longer mentioned.
+    // 4. Insert rows for newly mentioned users (ON CONFLICT DO NOTHING).
+    // -----------------------------------------------------------------------
+
+    // Existing mentioned user IDs
+    const existingMentions = await db
+      .select({ mentioned_user_id: message_mentions.mentioned_user_id })
+      .from(message_mentions)
+      .where(eq(message_mentions.message_id, messageId));
+
+    const existingIds = new Set(existingMentions.map((m) => m.mentioned_user_id));
+
+    // Newly resolved mention values
+    const newMentionValues = await resolveMentions(messageId, content, channel.server_id);
+    const newIds = new Set(newMentionValues.map((m) => m.mentioned_user_id));
+
+    // Removals: in existingIds but not in newIds
+    const toRemove = [...existingIds].filter((id) => !newIds.has(id));
+    if (toRemove.length > 0) {
+      await db
+        .delete(message_mentions)
+        .where(
+          and(
+            eq(message_mentions.message_id, messageId),
+            inArray(message_mentions.mentioned_user_id, toRemove),
+          ),
+        );
+    }
+
+    // Additions: in newIds but not in existingIds
+    const toInsert = newMentionValues.filter((m) => !existingIds.has(m.mentioned_user_id));
+    if (toInsert.length > 0) {
+      await db
+        .insert(message_mentions)
+        .values(toInsert)
+        .onConflictDoNothing({
+          target: [message_mentions.message_id, message_mentions.mentioned_user_id],
+        });
+    }
+
+    // Fetch updated mention rows (with username) for the DTO
+    const mentionRows = await fetchMentionRows([messageId]);
+
     // Fetch reactions for the updated message
     const reactions = await db
       .select({
@@ -272,10 +467,28 @@ export class MessagesService {
       .from(message_reactions)
       .where(eq(message_reactions.message_id, messageId));
 
-    const dto = rowToDto(updated, reactions, userId);
+    const dto = rowToDto(updated, reactions, userId, mentionRows);
 
-    // Emit event for gateway fan-out
+    // Emit event for gateway fan-out (mentions[] rides on the DTO)
     this.eventEmitter.emit('message.updated', dto);
+
+    // Emit per-user mention events for newly-added mentions on edit.
+    // Only users in `toInsert` (not previously mentioned) receive a mention
+    // event; removed or pre-existing mentions do not fire a new event.
+    // Author exclusion applies here too.
+    if (toInsert.length > 0) {
+      for (const { mentioned_user_id } of toInsert) {
+        if (mentioned_user_id === userId) continue; // exclude self-mention
+        const mentionEvent: MentionEvent = {
+          messageId,
+          channelId,
+          channelName: channel.name,
+          serverId: channel.server_id,
+          mentionedUserId: mentioned_user_id,
+        };
+        this.eventEmitter.emit('mention.created', mentionEvent);
+      }
+    }
 
     return dto;
   }
@@ -550,8 +763,129 @@ export class MessagesService {
         .where(inArray(message_reactions.message_id, messageIds));
     }
 
+    // Fetch mentions for all messages in the page (single query, not N+1)
+    const mentionRows = await fetchMentionRows(messageIds);
+
     return {
-      messages: chronological.map((row) => rowToDto(row, reactionRows, viewerUserId)),
+      messages: chronological.map((row) => rowToDto(row, reactionRows, viewerUserId, mentionRows)),
+      nextCursor,
+    };
+  }
+
+  // -------------------------------------------------------------------------
+  // getMyMentions — GET /me/mentions
+  //
+  // Returns the authed user's mentioned messages, most-recent-first, cursor-
+  // paginated. Only returns messages from servers the viewer is a member of.
+  // Excludes soft-deleted (is_deleted=true) messages.
+  //
+  // Security invariants:
+  //   - viewerUserId is ALWAYS from session (req.session.getUserId()) —
+  //     NEVER from a request param. The controller enforces this.
+  //   - Server-membership scoped: JOIN server_members via channels.server_id.
+  //     A user cannot see mentions in a server they have since left.
+  //   - No cross-user read: WHERE mentioned_user_id = viewerUserId only.
+  // -------------------------------------------------------------------------
+
+  async getMyMentions(
+    viewerUserId: string,
+    cursor?: string,
+    limit = 50,
+  ): Promise<MyMentionsResponse> {
+    const safeLimit = Math.min(Math.max(1, limit), 100);
+
+    // Cursor encodes (createdAt, id) of the last message_mentions row returned.
+    // We reuse the same opaque cursor scheme as listMessages.
+    let cursorDecoded: { createdAt: Date; id: string } | null = null;
+    if (cursor) {
+      cursorDecoded = decodeCursor(cursor);
+      // Invalid cursor: treat as no cursor (first page)
+    }
+
+    // Build the base WHERE clause for my-mentions:
+    //   - mentioned_user_id = viewerUserId (auth: session-derived)
+    //   - JOIN messages: is_deleted = false (exclude tombstones)
+    //   - JOIN channels → server_members: viewer is member of the channel's server
+    //
+    // We use message_mentions as the driving table, join messages and channels
+    // to filter and select, then join server_members to scope to servers the
+    // viewer belongs to.
+
+    // Base condition: this user's mention rows, scoped to server membership
+    const baseWhere = and(
+      eq(message_mentions.mentioned_user_id, viewerUserId),
+      eq(messages.is_deleted, false),
+      eq(server_members.user_id, viewerUserId),
+    );
+
+    // Cursor condition: fetch rows for message_mentions rows with message
+    // created_at strictly before the cursor (DESC ordering)
+    const whereClause = cursorDecoded
+      ? and(
+          baseWhere,
+          or(
+            lt(messages.created_at, cursorDecoded.createdAt),
+            and(
+              sql`${messages.created_at} = ${cursorDecoded.createdAt.toISOString()}`,
+              sql`${messages.id} < ${cursorDecoded.id}`,
+            ),
+          ),
+        )
+      : baseWhere;
+
+    // Fetch safeLimit + 1 rows to detect hasMore
+    const mentionedMessages = await db
+      .select({
+        id: messages.id,
+        channel_id: messages.channel_id,
+        author_id: messages.author_id,
+        content: messages.content,
+        created_at: messages.created_at,
+        is_edited: messages.is_edited,
+        edited_at: messages.edited_at,
+        is_deleted: messages.is_deleted,
+        deleted_at: messages.deleted_at,
+      })
+      .from(message_mentions)
+      .innerJoin(messages, eq(message_mentions.message_id, messages.id))
+      .innerJoin(channels, eq(messages.channel_id, channels.id))
+      .innerJoin(
+        server_members,
+        and(
+          eq(channels.server_id, server_members.server_id),
+          eq(server_members.user_id, viewerUserId),
+        ),
+      )
+      .where(whereClause)
+      .orderBy(sql`${messages.created_at} DESC, ${messages.id} DESC`)
+      .limit(safeLimit + 1);
+
+    const hasMore = mentionedMessages.length > safeLimit;
+    if (hasMore) mentionedMessages.pop();
+
+    const lastRow = mentionedMessages[mentionedMessages.length - 1];
+    const nextCursor =
+      hasMore && lastRow !== undefined ? encodeCursor(lastRow.created_at, lastRow.id) : null;
+
+    // Batch-load reactions and mentions for the page (no N+1)
+    const messageIds = mentionedMessages.map((r) => r.id);
+
+    let reactionRows: ReactionRow[] = [];
+    if (messageIds.length > 0) {
+      reactionRows = await db
+        .select({
+          message_id: message_reactions.message_id,
+          user_id: message_reactions.user_id,
+          emoji: message_reactions.emoji,
+        })
+        .from(message_reactions)
+        .where(inArray(message_reactions.message_id, messageIds));
+    }
+
+    const mentionRows = await fetchMentionRows(messageIds);
+
+    return {
+      items: mentionedMessages.map((row) => rowToDto(row, reactionRows, viewerUserId, mentionRows)),
       nextCursor,
     };
   }

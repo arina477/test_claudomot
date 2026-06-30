@@ -8,8 +8,9 @@
  */
 
 import type { ProfileResponse } from '@studyhall/shared';
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { api } from '../auth/api';
+import { resetMentionBadges } from './useMentionBadge';
 
 export type ProfileContextValue = {
   profile: ProfileResponse | null;
@@ -30,6 +31,7 @@ type Props = { children: React.ReactNode };
 
 export function ProfileProvider({ children }: Props) {
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
+  const prevUsernameRef = useRef<string | null | undefined>(undefined);
 
   const fetch_ = useCallback(() => {
     api
@@ -41,6 +43,17 @@ export function ProfileProvider({ children }: Props) {
   useEffect(() => {
     fetch_();
   }, [fetch_]);
+
+  // H-2 singleton reset: when the profile username changes (including going to
+  // null on logout), reset the mention-badge store so a subsequent user in the
+  // same tab doesn't inherit the prior user's unread counts.
+  useEffect(() => {
+    const username = profile?.username ?? null;
+    if (prevUsernameRef.current !== undefined && prevUsernameRef.current !== username) {
+      resetMentionBadges();
+    }
+    prevUsernameRef.current = username;
+  }, [profile]);
 
   return (
     <ProfileContext.Provider value={{ profile, refresh: fetch_ }}>

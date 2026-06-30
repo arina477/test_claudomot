@@ -63,21 +63,27 @@ export type {
 
 export {
   ReactionSummarySchema,
+  MentionRefSchema,
   MessageResponseSchema,
   SendMessageSchema,
   EditMessageSchema,
   ReactionToggleSchema,
   ReactionToggleResponseSchema,
   MessageListSchema,
+  MyMentionsResponseSchema,
+  MentionEventSchema,
 } from './messaging.js';
 export type {
   ReactionSummary,
+  MentionRef,
   MessageResponse,
   SendMessageInput,
   EditMessageInput,
   ReactionToggleInput,
   ReactionToggleResponse,
   MessageList,
+  MyMentionsResponse,
+  MentionEvent,
 } from './messaging.js';
 
 export {

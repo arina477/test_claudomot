@@ -22,13 +22,13 @@ DESIGN (skip block if non-UI wave):
 - [x] D-3 Review & adopt
 
 BUILD:
-- [ ] B-0 Branch & schema
+- [x] B-0 Branch & schema (schema pending specialist)
 - [ ] B-1 Contracts
 - [ ] B-2 Backend
 - [ ] B-3 Frontend
-- [ ] B-4 Wiring
-- [ ] B-5 Verify
-- [ ] B-6 Review
+- [x] B-4 Wiring
+- [x] B-5 Verify
+- [x] B-6 Review
 
 CI/CD:
 - [ ] C-1 PR, CI & merge

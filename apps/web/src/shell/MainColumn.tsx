@@ -31,7 +31,7 @@ type Props = {
 };
 
 export function MainColumn({ connectionState = 'online', onToggleSidebar }: Props) {
-  const { selectedChannelId, selectedChannelName } = useServers();
+  const { selectedChannelId, selectedChannelName, selectedId } = useServers();
   const { profile } = useContext(ProfileContext);
 
   const {
@@ -184,6 +184,7 @@ export function MainColumn({ connectionState = 'online', onToggleSidebar }: Prop
           onDelete={deleteMessage}
           onReaction={toggleReaction}
           currentUserId={profile?.username ?? null}
+          viewerUsername={profile?.username ?? null}
           {...(selectedChannelName ? { channelName: selectedChannelName } : {})}
         />
       )}
@@ -224,6 +225,7 @@ export function MainColumn({ connectionState = 'online', onToggleSidebar }: Prop
             onSend={handleSend}
             onKeyPress={onComposerKeyPress}
             onBlur={stopTyping}
+            serverId={selectedId}
           />
         </div>
       )}

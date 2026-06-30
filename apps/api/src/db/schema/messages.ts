@@ -74,3 +74,38 @@ export const message_reactions = pgTable(
 
 export type MessageReaction = InferSelectModel<typeof message_reactions>;
 export type NewMessageReaction = InferInsertModel<typeof message_reactions>;
+
+// ---------------------------------------------------------------------------
+// message_mentions table — wave-15 M3 @mentions (task 3d238446)
+//
+// Mirrors message_reactions exactly (same id/timestamp convention, same FK
+// pattern, same ON DELETE CASCADE on message_id).
+//
+// UNIQUE(message_id, mentioned_user_id) — one mention entry per user per
+// message; prevents duplicate notification rows from multi-insert paths.
+// INDEX(mentioned_user_id, created_at DESC) — efficient "my mentions" lookup
+// ordered by recency without a full table scan.
+// ---------------------------------------------------------------------------
+
+export const message_mentions = pgTable(
+  'message_mentions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    message_id: uuid('message_id')
+      .notNull()
+      .references(() => messages.id, { onDelete: 'cascade' }),
+    mentioned_user_id: text('mentioned_user_id')
+      .notNull()
+      .references(() => users.id),
+    created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    // UNIQUE(message_id, mentioned_user_id) — one mention per user per message
+    unique('message_mentions_message_user').on(table.message_id, table.mentioned_user_id),
+    // INDEX(mentioned_user_id, created_at DESC) — fast my-mentions lookup
+    index('message_mentions_user_created_at_idx').on(table.mentioned_user_id, table.created_at),
+  ],
+);
+
+export type MessageMention = InferSelectModel<typeof message_mentions>;
+export type NewMessageMention = InferInsertModel<typeof message_mentions>;
