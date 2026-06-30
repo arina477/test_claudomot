@@ -8,7 +8,7 @@
 > Pending ritual outcomes affecting P-0: M3 threads/attachments feature decomposition deferred to a future N-1 (fires once M3 top-level todo count reaches 0). Two more top-level tech-debt seeds queued (25523fb0 invite-code rotation note→d058283d, 25523fb0 real-PG rollback test).
 
 PRODUCT:
-- [ ] P-0 Frame (discover + reframe)
+- [x] P-0 Frame (discover + reframe)
 - [ ] P-1 Decompose
 - [ ] P-2 Spec
 - [ ] P-3 Plan
