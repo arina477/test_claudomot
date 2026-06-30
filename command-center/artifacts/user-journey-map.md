@@ -1,8 +1,8 @@
 ---
 name: User Journey Map
 description: Canonical inventory of every user flow, screen, route, API endpoint. Regenerated at T-9 from production state.
-last_updated: 2026-06-29 (T-9 wave-10 — M2 RBAC capstone LIVE; roles CRUD + can() + role assignment + per-role channel visibility (channel-list now role-gated server-side) + channel_permission_overrides + ChannelPermissionGuard + transactional owner-lockout; roles surface is a full-screen overlay opened from the channel-sidebar "Server settings — Roles" button within the existing /servers/:id shell — NO new route; HTTP/code-level + live 401-boundary probe re-confirmed at gate; M2 "channels per role" metric MET → M2 feature-complete; 403-non-permitted + authed crawl still deferred — verified-prod fixture 4a2ad286 ESCALATION-CRITICAL, 4 waves running)
-version: 0.7
+last_updated: 2026-06-30 (T-9 wave-12 — M3 real-time messaging LIVE; page 9 server channel view now renders REAL-TIME chat: messages REST (POST/GET /channels/:id/messages, ChannelMessageGuard-gated, idempotent) + /messaging Socket.IO gateway (WS-upgrade auth at connect + room-per-channel fan-out) + message-list/composer UI; the M3 success metric — two-client message delivery <1s — is MET LIVE (93ms/87ms, two real sockets A→B, non-joined client no-leak); WS-auth rejects unauth at connect; 401/403 REST boundary live-re-confirmed at gate; F3 real-time messaging now LIVE; authed full-browser click-through still deferred — verified-prod fixture 4a2ad286, recurring carry-forward)
+version: 0.8
 status_legend:
   - "✅ Live: page renders correctly with real content in production"
   - "🟡 Live but degraded: renders but missing data, broken interaction, or minor known issue"
@@ -122,6 +122,18 @@ Live: web https://web-production-bce1a8.up.railway.app · api https://api-produc
 
 **Access-control note (T-8 verified, RBAC = the access-control CORE):** `can()` is server-side and default-DENY (owner_id superuser; else explicit role flag; no membership / no role / null role_id / false flag → false). userId is always session-derived — IDOR via param/body substitution is closed. Channel enumeration is closed server-side (non-visible channels absent from the list, not merely hidden in the UI). Private channels are default-deny. Owner-lockout is transactional with a row-lock + last-owner-409 invariant. The boundary is enforced in NestJS, not the UI. The 401 door is live-verified on every new endpoint; the 403-non-permitted path is CI-tested (270 tests incl. 6 conditions) but NOT live-probed — gated on the verified-prod fixture (4a2ad286), the recurring M2 live-verification gap.
 
+## Deployment status — wave-12 (M3 real-time messaging — the conversational core, LIVE)
+Live: web https://web-production-bce1a8.up.railway.app · api https://api-production-b93e.up.railway.app/health (200, live-verified at T-9). Migration `0005` (messages table: UNIQUE(channel_id,idempotency_key); channel_id+created_at index; FKs channel cascade / author) applied to prod Postgres BEFORE new code served. PR#23 merge `168c45f`. Deployed via Railway CLI `up` source-upload (NEW image; the 404→401 route-probe proved the new revision serves M3). **M3 success metric "two-client message delivery <1s" now MET LIVE — message:new in 93ms/87ms across two runs.** 316 tests (200 api: WS-auth / channel-guard / idempotency / fan-out + 116 web: msg UI / optimistic / dedup) green in CI against real Postgres. Verification: HTTP/code-level + live two-client Socket.IO probe (C-2: A POST → B `message:new` 93ms/87ms; non-joined third client no-leak; WS-upgrade unauth → `connect_error Unauthorized`; 401 unauthed REST re-confirmed at gate). Authed full-browser click-through still deferred — no persistent verified-prod fixture (4a2ad286, recurring carry-forward, not a regression). Single-pod in-memory Socket.IO adapter (multi-pod fan-out → later milestone).
+
+| Surface | Status | Note |
+|---|---|---|
+| Server channel view — real-time chat (page 9, the 3-pane main) | ✅ Live | NEW. The main column now renders a real message list + composer with live delivery. Message-row 3 states (pending `[aria-busy]` optimistic / sent / failed `[role=alert]` + retry); composer (auto-grow, Enter-send); list (`role=log` `aria-live`, empty-state, load-older keyset pagination). Messages arrive in real time via the `/messaging` Socket.IO room for the active channel. 116 web RTL tests (optimistic send, dedup, 3-state rows). Replaces wave-7's hardcoded-`#general` placeholder main column. |
+| `POST /channels/:id/messages` (api, send) | ✅ Live | AuthGuard + ChannelMessageGuard (channelId-only `@Param` — IDOR-safe; private channel default-DENY via canViewChannelById). author_id = session getUserId (no authorId in SendMessageSchema — no spoof). Idempotent: UNIQUE(channel_id,idempotency_key) ON CONFLICT return. Live: 401 unauthed (gate-re-confirmed), 403 non-permitted. On success, emits `message:new` to the channel room. |
+| `GET /channels/:id/messages` (api, list) | ✅ Live | AuthGuard + ChannelMessageGuard (same private default-DENY). Keyset pagination (load-older). Live: 401 unauthed (gate-re-confirmed). |
+| `/messaging` Socket.IO gateway (api, real-time) | ✅ Live | WS-upgrade auth at CONNECT: `io.use()` reads sAccessToken from handshake cookie (+ `auth.accessToken` fallback) → getSessionWithoutRequestResponse → assertClaims(isVerified) → reject unauth (socket.data.userId set fail-closed). `join_channel` re-derives canViewChannelById server-side; `@OnEvent` → `server.to('channel:id').emit` room-only (NEVER broadcast-all). LIVE: unauth socket → `connect_error Unauthorized`; non-joined socket receives NOTHING (no cross-channel leak); two-client delivery 93ms/87ms. Single-pod in-memory adapter. |
+
+**Access-control note (T-8 verified, messaging = the auth + channel-access + WS-auth core):** all four invariants are server-side and live-verified — (1) channel-gating via ChannelMessageGuard (channelId-only route param, IDOR-safe, private default-DENY), (2) WS-upgrade auth rejected at connect (real Socket.IO client, not a dead namespace), (3) no cross-channel leak (room-scoped emit, live non-joined client got nothing), (4) author no-spoof (author_id session-derived, no client authorId). Idempotency dedups duplicate sends. The boundary is enforced in NestJS + the gateway's `io.use()`, not the UI. 401 REST door live-re-confirmed at the gate; the two-client <1s + no-leak + WS-unauth-reject paths are live-probed (synthetic two-client Socket.IO fixture — the authoritative substitute below canary DAU). Live-socket eviction on RBAC revoke is out of M3 scope (join-time gate is correct → H2); the null-idempotency-key send race is unreachable on the prod path (client always sends a key → V cleanup).
+
 ## Flows cross-reference
 
 ### F1 — Sign up & create profile (P1)
@@ -134,8 +146,9 @@ Live: web https://web-production-bce1a8.up.railway.app · api https://api-produc
 - Live: public preview (`GET /invites/:code` 200-minimal / 404), verified join gate (401 unauthed / 403 unverified). Authed join success path covered by 179 tests + CI (authed browser flow deferred — fixture 4a2ad286; route e2e gap → V-2).
 - Features: 6
 
-### F3 — Real-time messaging (P1)
-- Entry: `/servers/:id/:channelId` → select channel → read → compose → send → react/thread
+### F3 — Real-time messaging (P1) — LIVE (wave-12, M3 conversational core)
+- Entry: `/servers/:id/:channelId` → select channel → read (`GET /channels/:id/messages`, keyset load-older) → compose (auto-grow composer, Enter-send, optimistic pending row) → send (`POST /channels/:id/messages`, idempotent) → message arrives in real time for every joined client via the `/messaging` Socket.IO room (`message:new`). React/thread NOT built (later milestone).
+- Live: send + list REST gated (ChannelMessageGuard, 401 unauthed / 403 non-permitted, private default-DENY); WS-upgrade auth rejects unauth at connect; room-scoped fan-out (no cross-channel leak). **M3 success metric MET LIVE: two-client message delivery 93ms/87ms (<1s); non-joined client no-leak.** Authed full-browser click-through deferred (fixture 4a2ad286, carry-forward).
 - Features: 7, 8, 9
 
 ### F4 — Voice/video study room (P1)
