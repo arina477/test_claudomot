@@ -9,7 +9,7 @@
 | Stage | Deliverable file(s) | Status | Notes |
 |---|---|---|---|
 | D-1 | stages/D-1-brief/{thread-panel,thread-affordance}-brief.md | done | 2 briefs, mask PASS |
-| D-2 | stages/D-2-variants/*-variants.md + *-iterate.md | pending | /aidesigner compose onto server-channel-view |
+| D-2 | stages/D-2-variants/* | done | thread panel + affordance composed; checkpoint skipped (automatic) |
 | D-3 | stages/D-3-review-and-adopt/* | pending | dual-reviewer + head-designer gate + canonicalize |
 
 ## Block-specific context
