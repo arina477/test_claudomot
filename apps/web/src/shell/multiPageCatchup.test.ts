@@ -421,4 +421,56 @@ describe('multi-page catch-up loop (runDrainAndCatchup)', () => {
 
     hook.unmount();
   });
+
+  // ── Test 6: no-data-loss RESUME invariant ────────────────────────────────
+  //
+  // Page-1 succeeds (cursor1 written to lastSeenCursorRef); page-2 rejects.
+  // A second reconnect resumes from cursor1 (not re-fetching page-1), and
+  // page-2 items land with no gaps and no duplicates.
+
+  it('RESUME invariant: page-2 reject → second reconnect resumes from page-1 cursor, no gap, no dup', async () => {
+    const page1 = [makeMsg(), makeMsg()];
+    const page2 = [makeMsg(), makeMsg()];
+    const p1Last = page1[page1.length - 1] as MessageResponse;
+    const cursor1 = encodeForwardCursor(p1Last.createdAt, p1Last.id);
+
+    vi.mocked(mockApiRef.listMessages).mockResolvedValueOnce({
+      messages: [makeMsg()],
+      nextCursor: null,
+    });
+    mockGetMessagesAfter
+      .mockResolvedValueOnce({ items: page1, nextCursor: cursor1 })
+      .mockRejectedValueOnce(new Error('network'))
+      .mockResolvedValueOnce({ items: page2, nextCursor: null });
+
+    const hook = renderHook(() => useMessagesWithRetry('ch-test'));
+    await waitFor(() => {
+      expect(hook.result.current.loadingInitial).toBe(false);
+    });
+
+    fireReconnect();
+    await waitFor(() => {
+      expect(mockGetMessagesAfter).toHaveBeenCalledTimes(2);
+    });
+
+    const afterFirst = hook.result.current.messages
+      .filter((m) => m.kind === 'real')
+      .map((m) => (m as { id: string }).id);
+    for (const m of page1) expect(afterFirst).toContain(m.id);
+
+    fireReconnect();
+    await waitFor(() => {
+      expect(mockGetMessagesAfter).toHaveBeenCalledTimes(3);
+    });
+
+    expect(mockGetMessagesAfter.mock.calls[2]?.[1]).toBe(cursor1);
+
+    const finalIds = hook.result.current.messages
+      .filter((m) => m.kind === 'real')
+      .map((m) => (m as { id: string }).id);
+    for (const m of page1) expect(finalIds.filter((id) => id === m.id)).toHaveLength(1);
+    for (const m of page2) expect(finalIds).toContain(m.id);
+
+    hook.unmount();
+  });
 });
