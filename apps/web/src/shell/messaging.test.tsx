@@ -115,6 +115,8 @@ vi.mock('./messagingSocket', () => ({
       return existing.map((r, i) => (i === idx ? { emoji, count, reactedByMe } : r));
     },
   ),
+  // wave-18 thread event — no-op stub (thread panel not rendered in these tests)
+  onThreadReplyCreated: vi.fn(() => () => {}),
   getSocketState: vi.fn(() => 'online'),
 }));
 
@@ -127,6 +129,9 @@ vi.mock('../auth/api', () => ({
     deleteMessage: vi.fn(),
     toggleReaction: vi.fn(),
     getServerMembers: vi.fn(),
+    // wave-18 thread endpoints — no-op stubs
+    getThreadReplies: vi.fn().mockResolvedValue({ items: [], nextCursor: null }),
+    postReply: vi.fn(),
     getMyMentions: vi.fn().mockResolvedValue({ items: [], nextCursor: null }),
     getProfile: vi.fn().mockReturnValue(new Promise(() => {})),
     getServers: vi.fn().mockReturnValue(new Promise(() => {})),

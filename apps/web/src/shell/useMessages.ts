@@ -30,6 +30,7 @@ import {
   onMessageUpdated,
   onReactionAdded,
   onReactionRemoved,
+  onThreadReplyCreated,
 } from './messagingSocket';
 
 type UseMessagesResult = {
@@ -181,6 +182,31 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
         prev.map((m) =>
           m.id === payload.messageId
             ? { ...m, reactions: applyReactionEvent(m.reactions, payload) }
+            : m,
+        ),
+      );
+    });
+    return unsub;
+  }, [channelId]);
+
+  // ── Socket listener — thread:reply:created ────────────────────────────────
+  // Updates the parent message's replyCount and lastReplyAt in the channel list
+  // so the affordance chip live-updates even when the thread panel is closed.
+  // The reply itself is NOT added to the channel message list (it only lives in
+  // the thread panel — handled by useThread).
+  useEffect(() => {
+    if (!channelId) return;
+    const unsub = onThreadReplyCreated((event) => {
+      if (!mountedRef.current) return;
+      if (event.channelId !== channelId) return;
+      setRealMessages((prev) =>
+        prev.map((m) =>
+          m.id === event.parentId
+            ? {
+                ...m,
+                replyCount: (m.replyCount ?? 0) + 1,
+                lastReplyAt: event.reply.createdAt,
+              }
             : m,
         ),
       );
