@@ -19,6 +19,8 @@ export {
   ChannelSummarySchema,
   CategoryWithChannelsSchema,
   ServerDetailSchema,
+  ServerMemberSchema,
+  ServerMembersResponseSchema,
 } from './servers.js';
 export type {
   CreateServerInput,
@@ -28,6 +30,8 @@ export type {
   ChannelSummary,
   CategoryWithChannels,
   ServerDetail,
+  ServerMember,
+  ServerMembersResponse,
 } from './servers.js';
 
 export {

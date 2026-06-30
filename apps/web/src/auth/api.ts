@@ -19,6 +19,7 @@ import type {
   ReactionToggleResponse,
   SendMessageInput,
   ServerDetail,
+  ServerMember,
   ServerResponse,
   ServerSummary,
   UpdateProfileInput,
@@ -112,6 +113,12 @@ export const api = {
 
   /** GET /servers/:id → {server, categories:[{id,name,position,channels:[...]}]}. */
   getServerDetail: (id: string) => request<ServerDetail>(`/servers/${id}`),
+
+  /**
+   * GET /servers/:id/members → [{userId, displayName, avatarUrl}].
+   * Caller must be a member; returns 403 otherwise.
+   */
+  getServerMembers: (id: string) => request<ServerMember[]>(`/servers/${id}/members`),
 
   // ── Invite endpoints (wave-8 M2) ──────────────────────────────────────────
 

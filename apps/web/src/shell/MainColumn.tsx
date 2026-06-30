@@ -2,12 +2,15 @@
  * MainColumn — bg-surface-800 channel view with real-time messaging.
  *
  * Wave 12 (M3): wired to the real message list + composer.
+ * Wave 14 (M3 presence): typing indicator above composer + typing hook wired to keypress.
  * - Uses useMessagesWithRetry for fetch, optimistic send, real-time socket,
  *   and retry on failure.
  * - Passes selectedChannelId / selectedChannelName from ServerContext.
  * - MessageList: role="log" aria-live="polite", newest at bottom, load-older.
  * - MessageComposer: auto-grow textarea, Enter-to-send + Shift+Enter newline.
  * - Empty-channel state replaces the list when messages=[].
+ * - Typing indicator: role="status" aria-live="polite", zero-height when empty,
+ *   pulsing dots animation.
  *
  * Design system §8 spec: ChannelHeader + MessageRow (3 states) + Composer.
  */
@@ -20,6 +23,7 @@ import { ProfileContext } from './ProfileContext';
 import { useServers } from './ServerContext';
 import { HashIcon, MagnifyingGlassIcon, MenuIcon, PushPinIcon } from './icons';
 import { useMessagesWithRetry } from './useMessages';
+import { useTyping } from './useTyping';
 
 type Props = {
   connectionState?: ConnectionState;
@@ -43,6 +47,19 @@ export function MainColumn({ connectionState = 'online', onToggleSidebar }: Prop
     deleteMessage,
     toggleReaction,
   } = useMessagesWithRetry(selectedChannelId);
+
+  // Typing presence — self userId comes from profile (excludes own name from indicator)
+  const currentUserId = profile?.username ?? null;
+  const { onComposerKeyPress, stopTyping, typingLabel } = useTyping(
+    selectedChannelId,
+    currentUserId,
+  );
+
+  // Wrap sendMessage to also stop typing
+  function handleSend(content: string) {
+    stopTyping();
+    sendMessage(content);
+  }
 
   const displayName = selectedChannelName ?? 'channel';
 
@@ -175,13 +192,63 @@ export function MainColumn({ connectionState = 'online', onToggleSidebar }: Prop
         />
       )}
 
-      {/* Composer — always visible when a channel is selected */}
+      {/* Typing indicator + Composer — always visible when a channel is selected */}
       {selectedChannelId && (
-        <MessageComposer
-          {...(selectedChannelName ? { channelName: selectedChannelName } : {})}
-          onSend={sendMessage}
-        />
+        <div className="shrink-0 relative">
+          {/* Typing indicator — zero-height container so it floats above the composer */}
+          <div
+            className="relative w-full pointer-events-none"
+            style={{ height: 0, zIndex: 10 }}
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            {typingLabel && (
+              <div
+                className="absolute bottom-2 left-6 flex items-center gap-1.5"
+                style={{ transition: 'opacity 150ms ease' }}
+              >
+                <span
+                  className="text-[12px] font-medium truncate"
+                  style={{ color: 'rgba(255,255,255,0.50)' }}
+                >
+                  {typingLabel}
+                </span>
+                {/* Pulsing dots */}
+                <span className="flex items-center gap-[3px]" style={{ marginBottom: 1 }}>
+                  <TypingDot delay={0} />
+                  <TypingDot delay={150} />
+                  <TypingDot delay={300} />
+                </span>
+              </div>
+            )}
+          </div>
+
+          <MessageComposer
+            {...(selectedChannelName ? { channelName: selectedChannelName } : {})}
+            onSend={handleSend}
+            onKeyPress={onComposerKeyPress}
+            onBlur={stopTyping}
+          />
+        </div>
       )}
     </main>
+  );
+}
+
+/** Single animated dot for the typing indicator. */
+function TypingDot({ delay }: { delay: number }) {
+  return (
+    <span
+      className="typing-dot"
+      style={{
+        display: 'inline-block',
+        width: 3,
+        height: 3,
+        borderRadius: '50%',
+        backgroundColor: 'rgba(255,255,255,0.40)',
+        animationDelay: `${delay}ms`,
+      }}
+    />
   );
 }

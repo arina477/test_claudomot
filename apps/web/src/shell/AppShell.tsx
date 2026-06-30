@@ -1,12 +1,13 @@
 /**
- * AppShell — 3-column dark layout.
+ * AppShell — 4-column dark layout.
  *
- * Column order: ServerRail (72px) | ChannelSidebar (260px) | MainColumn (flex-1).
+ * Column order: ServerRail (72px) | ChannelSidebar (260px) | MainColumn (flex-1) | MemberListPanel (240px).
  *
  * Responsive behaviour (design system §9, breakpoints 1024/1280/1440):
- *   ≥1024px  — all three columns visible, full layout.
- *   <1024px  — ServerRail persists; ChannelSidebar collapses to an overlay drawer
- *              with a toggle button in the MainColumn header.
+ *   >1024px  — all four columns visible, full layout.
+ *   ≤1024px  — MemberListPanel hidden (right-sidebar), ServerRail persists,
+ *              ChannelSidebar collapses to an overlay drawer.
+ *   ≤768px   — ChannelSidebar also collapses to overlay drawer.
  *
  * Mounts CreateServerModal when createModalOpen is true (driven by ServerContext).
  * Forwards a ref to the "Add a server" button so focus is restored on modal close.
@@ -19,6 +20,7 @@ import { ChannelSidebar } from './ChannelSidebar';
 import type { ConnectionState } from './ConnectionStateIndicator';
 import { CreateServerModal } from './CreateServerModal';
 import { MainColumn } from './MainColumn';
+import { MemberListPanel } from './MemberListPanel';
 import { useServers } from './ServerContext';
 import { ServerRail } from './ServerRail';
 import { XIcon } from './icons';
@@ -30,7 +32,7 @@ type Props = {
 
 export function AppShell({ connectionState = 'online' }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { createModalOpen, closeCreateModal, appendServer } = useServers();
+  const { createModalOpen, closeCreateModal, appendServer, selectedId } = useServers();
   const addServerBtnRef = useRef<HTMLButtonElement>(null);
 
   function toggleSidebar() {
@@ -98,6 +100,16 @@ export function AppShell({ connectionState = 'online' }: Props) {
 
       {/* ── Pane 3: Main Column (flex-1, always visible) ── */}
       <MainColumn connectionState={connectionState} onToggleSidebar={toggleSidebar} />
+
+      {/* ── Pane 4: Member List Panel (hidden ≤1024px per design §9) ── */}
+      {/*
+       * The right sidebar is absent from layout below 1024px.
+       * We hide it with CSS rather than unmounting so the socket subscription
+       * stays active when the user resizes their viewport.
+       */}
+      <div className="hidden xl:flex" style={{ flexShrink: 0 }}>
+        <MemberListPanel serverId={selectedId} />
+      </div>
 
       {/* ── Create Server Modal ── */}
       {createModalOpen && (

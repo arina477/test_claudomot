@@ -15,6 +15,7 @@ import type {
   InviteResponse,
   JoinResult,
   ServerDetail,
+  ServerMember,
   ServerResponse,
   ServerSummary,
 } from '@studyhall/shared';
@@ -65,6 +66,21 @@ export class ServersController {
   ): Promise<ServerDetail> {
     const userId = req.session.getUserId();
     return await this.serversService.findServerDetail(userId, id);
+  }
+
+  /**
+   * GET /servers/:id/members
+   * Returns the public member roster [{userId, displayName, avatarUrl}].
+   * Requires the caller to be a member of the server (403 otherwise).
+   */
+  @Get(':id/members')
+  @UseGuards(AuthGuard)
+  async listServerMembers(
+    @Req() req: SessionAugmentedRequest,
+    @Param('id') id: string,
+  ): Promise<ServerMember[]> {
+    const userId = req.session.getUserId();
+    return await this.serversService.listServerMembers(userId, id);
   }
 
   // -------------------------------------------------------------------------
