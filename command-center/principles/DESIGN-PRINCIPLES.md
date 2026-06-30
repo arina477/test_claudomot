@@ -67,4 +67,5 @@ Promoted at L-2 Distill from `process/waves/wave-<N>/blocks/L/observations.md` b
 
 ## Rules
 
-_(no rules yet — promoted from L-2 distill across waves)_
+1. Calculate contrast for muted text on dark surfaces; alpha or semantic muting often computes below WCAG AA 4.5:1.
+   Why: A muted token can read as fine yet compute under 4.5:1 on near-black backgrounds.
