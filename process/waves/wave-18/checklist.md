@@ -13,7 +13,7 @@
 >   - Unassigned queue (2): P-0 walks the unassigned queue and assigns what it can.
 
 PRODUCT:
-- [ ] P-0 Frame (discover + reframe)
+- [x] P-0 Frame (discover + reframe)
 - [ ] P-1 Decompose
 - [ ] P-2 Spec
 - [ ] P-3 Plan
