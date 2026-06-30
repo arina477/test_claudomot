@@ -45,7 +45,8 @@ import { parse as parseCookie } from 'cookie';
 import type { Server, Socket } from 'socket.io';
 import EmailVerification from 'supertokens-node/recipe/emailverification';
 import Session from 'supertokens-node/recipe/session';
-import type { RbacService } from '../rbac/rbac.service';
+// biome-ignore lint/style/useImportType: value import required — emitDecoratorMetadata needs the runtime symbol for NestJS DI
+import { RbacService } from '../rbac/rbac.service';
 
 // ---------------------------------------------------------------------------
 // Payload shapes for socket events
