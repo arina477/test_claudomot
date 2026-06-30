@@ -59,6 +59,6 @@ LEARN:
 - [x] L-2 Distill
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers (closure withheld; attachments decomposition fired)
+- [x] N-2 Seed (attachments seed 20db0c16 + 2 siblings; feature-first pick)
+- [x] N-3 Handoff (wave-18 to wave-19)
