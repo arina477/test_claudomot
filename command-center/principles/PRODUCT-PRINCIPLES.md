@@ -67,4 +67,5 @@ Promoted at L-2 Distill from `process/waves/wave-<N>/blocks/L/observations.md` b
 
 ## Rules
 
-_(no rules yet — promoted from L-2 distill across waves)_
+1. Verify every seed claim about what exists or is absent in the code at P-0; decomposer prose drifts both ways.
+   Why: A false-absent premise rebuilds existing work; a false-present one skips a needed addition.

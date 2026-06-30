@@ -59,7 +59,7 @@ l_stage_verdict: COMPLETE
 verdict_evidence:
   - "CHANGELOG.md:45"
   - "milestones row: NO UPDATE (M4 eb2a1688 stays in_progress; open_count=6)"
-  - "FS commit: <SHA-recorded-on-push>"
+  - "FS commit: dd358553e24bc41e1e00153957db97e0020bf8bb (pushed origin/main)"
 changelog_entry_added: true
 roadmap_milestones_progressed: []          # M4 census 4 done / 6 open → no transition; record-only
 roadmap_milestone_recorded:
