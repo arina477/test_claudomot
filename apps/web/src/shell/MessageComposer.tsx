@@ -52,21 +52,16 @@ const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 
 /**
  * Allowlisted content-types.
- * Must mirror the server-side attachment allowlist in apps/api.
+ * Must mirror the server-side attachment allowlist in apps/api
+ * (ATTACHMENT_ALLOWED_MIME in apps/api/src/files/files.service.ts).
  */
 const ALLOWED_CONTENT_TYPES = new Set([
-  'image/jpeg',
   'image/png',
-  'image/gif',
+  'image/jpeg',
   'image/webp',
-  'image/svg+xml',
+  'image/gif',
   'application/pdf',
   'text/plain',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/zip',
 ]);
 
 /** Accept attribute string for the file input (union of all allowed types). */
