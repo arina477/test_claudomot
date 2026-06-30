@@ -1,0 +1,20 @@
+# Wave 19 — P-0 Frame
+
+## Discover
+- **wave_db_id:** b6857713-2277-4951-a4b0-1b1a5b67bef8 (wave_number 19)
+- **Prior-work:** reuses MessagingModule + /messaging gateway (a0c322b4, 723b5b6a) + ChannelPermissionGuard authz template + the message-row/composer primitives (d999d29c, f323a71f) + the wave-18 thread fan-out pattern. Messages are text-only today; no upload/storage path exists.
+- **Roadmap milestone:** M3 (6198650e) in_progress; wave-19 backfilled. **THE LAST M3 success-metric feature** ("reactions, threads, and attachments working" — reactions + threads LIVE; attachments completes it → M3 done-eligible → unblocks M4 offline-first).
+- **Spec-contract short-circuit:** no-prior-spec (decomposer prose) → full P-1..P-3.
+
+## Reframe (trio)
+- **problem-framer: PROCEED** — cause-layer primitive (the one unmet M3 metric clause); ≤10MB + content-type allowlist + image-preview/file-chip = minimal Discord-parity MVP; OUT (transcoding/CDN/resizing/virus-scan/drag-drop-grids/versioning/PDF-render) already excluded; client+server double-validation = defense-in-depth at a real trust boundary (NOT validation theater); coherent indivisible slice (data plane + composer send + row render); storage-SDK/cred framing correct = highest P-block risk.
+- **ceo-reviewer: PROCEED / HOLD-SCOPE** — completes M3 conversational core + unblocks M4; traces to displace-Discord + academic-tools bet (slides/PDFs/screenshots = core coursework value); 8-9/10 coherent slice; multi-attachment (0-N) already in scope; video/CDN/transcoding/virus-scan/PDF-render correctly OUT. Flag: object-storage = money + account-cred commitment (rule 6 + 17) → P-block must surface the storage-cost/cred decision (precedent: wave-5 avatar-bucket cred-ask 84e09891, LiveKit-Cloud).
+- **mvp-thinner: OK** — every AC traces to the metric floor; no defensible THIN split (multi-attach is non-separable cardinality depth woven through FK/contract/composer/render — splitting it ADDS rework, peels zero specs; image-preview + file-chip both mvp-critical since screenshots dominate a study app); ~2800 LOC / 3 specs, above floor.
+- **Merge: PROCEED (all 3 tasks; no split).** design_gap likely TRUE (composer file picker + preview + message-row attachment render = new UI) → D-block expected.
+
+## THE load-bearing P-block dependency: object-storage SDK + credentials
+- The seed + all 3 reviewers flag this as the one item that can stall the wave. Resolution sequence (rule 10 BEFORE any founder-ask):
+  1. **SDK-research (P-0→P-2, per external-sdk-integration-rules.md):** determine the storage approach. PRIMARY question — is S3-compatible object storage **self-provisionable on the EXISTING Railway account** via `APP_RAILWAY_TOKEN` (Railway-native buckets/volumes, or a Railway-hosted S3-compatible add-on)? If YES → NO founder cred-ask (provision the bucket + retrieve/generate creds via the Railway API, set as platform env vars per rules 6+10; spend is on the already-founder-authorized Railway account). If NO → identify the cheapest S3-compatible option (e.g. Cloudflare R2 free-tier) + the exact account-issued creds needed.
+  2. **Only if self-provision is impossible** → the storage provider choice + spend greenlight + account-issued creds (bucket/region/access-key/secret) is a FOUNDER decision (rule 6 account-cred exception + rule 17 spend; automatic mode routes splits/hard-stops + money/cred to founder, NOT BOARD). That would be a measured hard-stop (infra-readiness: can't provision) → STATUS handling per rule 13.
+- **Disposition:** run the SDK-research next (before P-1/P-2 finalize the storage contract). The wave PROCEEDS into research; the founder-ask fires only if research proves external creds are unavoidable.
+- **Final framing:** wave-19 ships M3 attachments: server upload/storage data plane (S3-compatible, ≤10MB, content-type allowlist, 0-N metadata on the message contract, /messaging fan-out) + composer file picker/preview + message-row image-preview/file-chip render. claimed = [20db0c16, 7c39c9e3, cf1ae370].
