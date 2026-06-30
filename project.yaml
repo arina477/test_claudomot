@@ -76,4 +76,8 @@ test_users:
   # B-5 (one local-dev + one prod-fixture per v3 persona: Student Member,
   # Server Organizer). No credentials needed at handoff. Re-fire v13 step 2d to
   # provide accounts directly instead.
-  local_dev: []
+  local_dev:
+    - label: "studyhall-e2e-fixture"
+      email: "studyhall-e2e-fixture@example.com"
+      # password: in command-center/testing/test-accounts.md (gitignored)
+      # email_verified: true (verified 2026-06-29 via Core admin API)

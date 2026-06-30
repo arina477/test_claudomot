@@ -1,0 +1,34 @@
+# gitleaks configuration — StudyHall
+#
+# Extends the default gitleaks ruleset (every default rule stays active).
+# The single allowlist entry below clears ONE confirmed false positive.
+#
+# False positive details:
+#   The value 21984eb2-8029-4c1b-9e73-bc586a0be4d2 is a SuperTokens *user_id*
+#   — an internal database record identifier (a UUID), NOT a credential. It is
+#   not an API key, session token, password, or secret. Possessing it grants no
+#   access to anything. gitleaks' generic-api-key heuristic flags the UUID by
+#   entropy/shape only.
+#
+#   The value was committed as a YAML comment in project.yaml at commit
+#   ab6ce69a7d8b2ff9a2ab5628a7254545e8d1bdc8 (line 83). It has since been
+#   removed from the working tree, but gitleaks scans git HISTORY over the PR
+#   commit range, so the historical commit still trips the scanner. Rewriting
+#   shared branch history for a non-secret identifier is disproportionate, so
+#   the gitleaks-native remediation is this scoped allowlist.
+#
+# Scope guarantee (why this cannot mask a real secret):
+#   The entry is triple-constrained — it only suppresses a finding that is
+#   simultaneously (a) in commit ab6ce69…, (b) in file project.yaml, and
+#   (c) the exact literal UUID 21984eb2-8029-4c1b-9e73-bc586a0be4d2. No other
+#   commit, file, or value can match. No rule is disabled or weakened.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Confirmed false positive: SuperTokens user_id (DB record UUID, not a credential), pinned to the exact commit, path, and value."
+commits = ["ab6ce69a7d8b2ff9a2ab5628a7254545e8d1bdc8"]
+paths = ['''project\.yaml''']
+regexes = ['''21984eb2-8029-4c1b-9e73-bc586a0be4d2''']
+regexTarget = "match"
