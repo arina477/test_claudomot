@@ -13,11 +13,24 @@ export const ReactionSummarySchema = z.object({
 export type ReactionSummary = z.infer<typeof ReactionSummarySchema>;
 
 // ---------------------------------------------------------------------------
+// MentionRef — a single @mention reference embedded in a message
+// Included in MessageResponse.mentions — wave-15 task 3d238446
+// ---------------------------------------------------------------------------
+
+export const MentionRefSchema = z.object({
+  userId: z.string(),
+  username: z.string(),
+});
+export type MentionRef = z.infer<typeof MentionRefSchema>;
+
+// ---------------------------------------------------------------------------
 // MessageResponse — single message DTO (wave-12 task a0c322b4)
 //   Extended for wave-13 (task e12886d7 + d78df376):
 //   - isEdited / editedAt — populated after PATCH
 //   - isDeleted — true when soft-deleted; content becomes null (tombstone)
 //   - reactions — aggregated [{emoji, count, reactedByMe}]
+//   Extended for wave-15 (task 3d238446):
+//   - mentions — [{userId, username}] users @mentioned in this message
 // ---------------------------------------------------------------------------
 
 export const MessageResponseSchema = z.object({
@@ -32,6 +45,8 @@ export const MessageResponseSchema = z.object({
   isDeleted: z.boolean(),
   // wave-13 reactions
   reactions: z.array(ReactionSummarySchema),
+  // wave-15 mentions
+  mentions: z.array(MentionRefSchema),
 });
 export type MessageResponse = z.infer<typeof MessageResponseSchema>;
 
@@ -96,3 +111,14 @@ export const MessageListSchema = z.object({
   nextCursor: z.string().nullable(),
 });
 export type MessageList = z.infer<typeof MessageListSchema>;
+
+// ---------------------------------------------------------------------------
+// MyMentionsResponse — paginated response for GET /me/mentions
+// wave-15 task 3d238446
+// ---------------------------------------------------------------------------
+
+export const MyMentionsResponseSchema = z.object({
+  items: z.array(MessageResponseSchema),
+  nextCursor: z.string().nullish(),
+});
+export type MyMentionsResponse = z.infer<typeof MyMentionsResponseSchema>;
