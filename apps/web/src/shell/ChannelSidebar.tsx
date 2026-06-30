@@ -17,6 +17,7 @@ import { InviteShareModal } from './InviteShareModal';
 import { useProfile } from './ProfileContext';
 import { useServers } from './ServerContext';
 import { ServerRolesPage } from './ServerRolesPage';
+import { useMentionBadge } from './useMentionBadge';
 import {
   CaretDownIcon,
   GearIcon,
@@ -44,19 +45,32 @@ type ChannelItemProps = {
   icon: React.ReactNode;
   name: string;
   active?: boolean;
+  /** Unread @mention count — renders an emerald pill badge when > 0. */
+  mentionCount?: number;
   onClick?: () => void;
 };
 
-function ChannelItem({ icon, name, active = false, onClick }: ChannelItemProps) {
+function ChannelItem({ icon, name, active = false, mentionCount = 0, onClick }: ChannelItemProps) {
+  const hasUnreadMentions = mentionCount > 0 && !active;
+
   return (
     <button
       type="button"
       aria-current={active ? 'page' : undefined}
+      aria-label={
+        hasUnreadMentions
+          ? `${name} channel, ${mentionCount} unread mention${mentionCount !== 1 ? 's' : ''}`
+          : undefined
+      }
       onClick={onClick}
       className="flex w-full items-center gap-2 rounded px-2 py-1.5 cursor-pointer select-none transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2"
       style={{
         backgroundColor: active ? '#27272a' : 'transparent',
-        color: active ? '#10b981' : 'rgba(255,255,255,0.60)',
+        color: active
+          ? '#10b981'
+          : hasUnreadMentions
+            ? 'rgba(255,255,255,0.92)'
+            : 'rgba(255,255,255,0.60)',
       }}
       onMouseEnter={(e) => {
         if (!active) {
@@ -67,16 +81,42 @@ function ChannelItem({ icon, name, active = false, onClick }: ChannelItemProps) 
       onMouseLeave={(e) => {
         if (!active) {
           (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
-          (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.60)';
+          (e.currentTarget as HTMLButtonElement).style.color = hasUnreadMentions
+            ? 'rgba(255,255,255,0.92)'
+            : 'rgba(255,255,255,0.60)';
         }
       }}
     >
       <span className="shrink-0" style={{ color: active ? '#10b981' : 'rgba(255,255,255,0.40)' }}>
         {icon}
       </span>
-      <span className="text-[14px] truncate" style={{ fontWeight: active ? 500 : 400 }}>
+      <span
+        className="text-[14px] truncate"
+        style={{
+          fontWeight: active || hasUnreadMentions ? 500 : 400,
+        }}
+      >
         {name}
       </span>
+
+      {/* Unread mention badge — emerald rounded-full chip, design §3 */}
+      {hasUnreadMentions && (
+        <span
+          className="ml-auto inline-flex items-center justify-center rounded-full text-[11px] font-bold shrink-0"
+          style={{
+            minWidth: 18,
+            height: 18,
+            paddingLeft: 4,
+            paddingRight: 4,
+            backgroundColor: '#10b981',
+            color: '#0a0a0b',
+            boxShadow: 'inset 0 -1px 0 rgba(0,0,0,0.10)',
+          }}
+          aria-hidden="true"
+        >
+          {mentionCount > 99 ? '99+' : mentionCount}
+        </span>
+      )}
     </button>
   );
 }
@@ -119,6 +159,12 @@ export function ChannelSidebar() {
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [rolesPageOpen, setRolesPageOpen] = useState(false);
   const inviteBtnRef = useRef<HTMLButtonElement>(null);
+
+  // Unread mention badge counts — driven by realtime socket + bootstrap fetch
+  const { getCount, markChannelRead } = useMentionBadge(
+    profile?.username ?? null,
+    selectedChannelId,
+  );
 
   const accentColor = profile?.accentColor ?? '#10b981';
   const avatarUrl = profile?.avatarUrl ?? null;
@@ -298,7 +344,11 @@ export function ChannelSidebar() {
                       icon={<ChannelIcon type={ch.type} />}
                       name={ch.name}
                       active={ch.id === selectedChannelId}
-                      onClick={() => selectChannel(ch.id, ch.name)}
+                      mentionCount={getCount(ch.id)}
+                      onClick={() => {
+                        selectChannel(ch.id, ch.name);
+                        markChannelRead(ch.id);
+                      }}
                     />
                   </li>
                 ))}

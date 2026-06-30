@@ -14,6 +14,7 @@ import type {
   MeResponse,
   MessageList,
   MessageResponse,
+  MyMentionsResponse,
   ProfileResponse,
   ReactionToggleInput,
   ReactionToggleResponse,
@@ -255,4 +256,14 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+
+  /**
+   * GET /me/mentions?cursor= → {items: MessageResponse[], nextCursor}.
+   * Returns messages in which the authenticated user is @mentioned, newest first.
+   * Wave-15 task 3d238446.
+   */
+  getMyMentions: (cursor?: string) => {
+    const qs = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
+    return request<MyMentionsResponse>(`/me/mentions${qs}`);
+  },
 };

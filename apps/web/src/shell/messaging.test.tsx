@@ -164,6 +164,7 @@ function makeMsg(overrides: Partial<MessageResponse> = {}): MessageResponse {
     editedAt: null,
     isDeleted: false,
     reactions: [],
+    mentions: [],
     ...overrides,
   };
 }
