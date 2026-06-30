@@ -50,7 +50,7 @@ VERIFY:
 
 LEARN:
 - [x] L-1 Docs — CHANGELOG SKIP (test-infra, no user-facing change); M3 (6198650e) census 14 done / 7 open → stays in_progress, no UPDATE; README skip; commit docs: L-1 wave-16 closeout
-- [ ] L-2 Distill
+- [x] L-2 Distill
 
 NEXT:
 - [ ] N-1 Survey & triggers
