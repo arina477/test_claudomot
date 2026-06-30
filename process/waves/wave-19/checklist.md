@@ -27,7 +27,7 @@ PRODUCT:
 DESIGN (skip block if non-UI wave):
 - [ ] D-1 Brief
 - [ ] D-2 Variants (with bounded iteration)
-- [ ] D-3 Review & adopt
+- [x] D-3 Review & adopt (APPROVED)
 
 BUILD:
 - [ ] B-0 Branch & schema

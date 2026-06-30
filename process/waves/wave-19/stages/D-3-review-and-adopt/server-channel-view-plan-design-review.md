@@ -217,3 +217,107 @@ C-5 (MINOR — implementation annotation): Lightbox focus-trap and Esc handling 
 The attachment surfaces are architecturally sound, token-compliant, and well-structured. The image preview is correctly constrained. All attachment-specific contrast ratios pass. The overall visual quality is strong.
 
 The REVISE verdict is driven by two blocking items: (C-1) three pre-existing zinc-500 contrast failures that this review must surface per DESIGN-PRINCIPLES rule 1 and which must be corrected in this file, and (C-2/C-3) two success-criteria items from the briefs (upload/error/lightbox states visible; broken-image fallback) that are absent from the rendered output. These are mechanical fixes — no design concept changes are required. Once C-1 through C-3 are resolved (plus C-4/C-5 as accompanying cleanup), the file should be ready for APPROVE on the next pass.
+
+---
+
+## Iteration 2 Re-Review — 2026-06-30
+Reviewer: ui-designer (Reviewer A)
+Scope: Confirm C-1 through C-5 resolution in the updated design/staging/server-channel-view.html.
+
+### C-1 — Contrast failures (3 zinc-500 text sites) — RESOLVED
+
+All three cited text instances have been bumped from zinc-500 to zinc-400. Verified in source:
+
+| Location | Line | Class | Background | Computed ratio | Status |
+|---|---|---|---|---|---|
+| Sidebar "Coursework" `<h2>` | 149 | text-zinc-400 | study-900 (lum 0.006117) | (0.409691)/(0.056117) = 7.30:1 | PASS |
+| Right-sidebar "Members" `<h2>` | 676 | text-zinc-400 | study-900 (lum 0.006117) | 7.30:1 | PASS |
+| Right-sidebar "Online — 2" `<h3>` | 679 | text-zinc-400 | study-900 (lum 0.006117) | 7.30:1 | PASS |
+| Right-sidebar "Offline — 3" `<h3>` | 705 | text-zinc-400 | study-900 (lum 0.006117) | 7.30:1 | PASS |
+| Composer footer hint `<div>` | 568 | text-zinc-400 | study-950 (lum 0.003058) | (0.409691)/(0.053058) = 7.72:1 | PASS |
+
+Luminance values from the established table (zinc-400 = 0.359691). Formula: (L_text + 0.05) / (L_bg + 0.05). All results ≥ 4.5:1. The caret glyph icon on line 148 retains text-zinc-500 — that is a non-text glyph and qualifies for the 3:1 icon allowance (zinc-500 on study-900 = 3.87:1, above 3:1). No residual text failures found in any of the three cited zones.
+
+**C-1: CLOSED.**
+
+### C-2 — Upload-progress, error, and lightbox states now rendered live — RESOLVED
+
+All three states confirmed rendered (not commented):
+
+- **Uploading tile** (lines 517–527): Visible in the staged-preview strip. Shows "Uploading…" label with spinning `ph-spinner-gap` icon, and an `absolute bottom-0 left-0 h-[2px] bg-emerald-500 w-[60%]` emerald progress bar (`aria-hidden="true"`). State is live.
+
+- **Error tile** (lines 529–541): Visible in the staged-preview strip immediately after the uploading tile. Carries `role="alert"`, `border-danger/60` border, `bg-danger/10` background, `ph-warning-circle text-red-400` icon, and the exact required message "Too large (max 10MB)" in `text-red-400`. State is live.
+
+- **Lightbox overlay** (lines 745–751): Full-screen `role="dialog" aria-modal="true" aria-label="Image View"` rendered live at z-50 with `bg-black/90 backdrop-blur-sm`. Close button has `aria-label="Close image"`, `title="Close (Esc)"`, and `focus-visible:ring-2 focus-visible:ring-emerald-400/70`. Full-size image has descriptive alt text. State is live.
+
+**C-2: CLOSED.**
+
+### C-3 — Broken-image fallback chip — RESOLVED
+
+Present on Row 2 (David C.'s message), lines 291–298. Rendered alongside the constrained image preview as a sibling element in the same `flex-wrap gap-2` attachment block. The chip uses:
+- `ph-image-broken` icon in text-zinc-300 on bg-study-700 — computes ≥10:1 against study-700 background; well above 3:1 icon allowance.
+- Filename "diagram-v2.png" in text-zinc-100 — 13.40:1 on study-800 (PASS).
+- "Preview unavailable · 240 KB" in text-zinc-400 — 6.63:1 on study-800 (PASS).
+- `aria-label="Download diagram-v2.png (image failed to preview)"` on the `<a>` element — describes both the filename and the failure state for screen readers.
+- `focus-visible:ring-2 focus-visible:ring-emerald-400/70` — correct focus treatment.
+
+The accompanying comment explains the B-block JS mechanism (`img onerror` swap), which is correct. The fallback chip demonstrates the exact pattern the brief requires.
+
+**C-3: CLOSED.**
+
+### C-4 — Staged-tile remove buttons: focus-visible — RESOLVED
+
+All three remove buttons in the staged-preview strip verified:
+- Image tile remove (line 498): `focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70`
+- File tile remove (line 512): `focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70`
+- Error tile remove (line 538): `focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70`
+
+All three correctly use `focus-visible:` rather than `focus:` for the ring. `focus:outline-none` suppresses the UA default outline globally (which is the standard pattern paired with `focus-visible:ring`). No `focus:ring` instances remain in the attachment surfaces.
+
+**C-4: CLOSED.**
+
+### C-5 — Lightbox focus-trap/Esc annotation — RESOLVED
+
+The lightbox opening comment (line 745) reads:
+
+> B-BLOCK JS: focus-trap on open + Esc-to-close + restore focus to the originating image button + click-backdrop-to-close (not in static staging).
+
+The annotation is present and specifies all four required behaviors: focus-trap on open, Esc-to-close, focus restoration to the originating button, and click-backdrop dismiss. The close button also carries `title="Close (Esc)"` as an in-element disclosure. The handoff contract is clear.
+
+**C-5: CLOSED.**
+
+### Structural integrity re-check
+
+All 9 `<article>` rows confirmed intact:
+1. Mia Wong — file attachment + reactions + thread affordance (line 212) ✓
+2. David C. — image attachment + broken-image fallback chip + thread affordance (line 265) ✓
+3. Elias — standard + (edited) label (line 318) ✓
+4. Elias — inline editing state (line 338) ✓
+5. Elias — delete confirmation (line 361) ✓
+6. Tombstone (line 378) ✓
+7. David C. — react menu (line 388) ✓
+8. Elias — pending/sending (line 412) ✓
+9. Elias — failed to send (line 424) ✓
+
+Member-list panel (Pane 5, line 673) ✓
+Thread panel with thread composer (Pane 4, line 576) ✓
+Main composer with staged-preview strip and all four tiles live (lines 485–571) ✓
+
+### New-issue scan from iteration-2 edits
+
+No new issues introduced. Specific checks:
+- No new zinc-500 text instances appear anywhere outside the icon/glyph contexts where the 3:1 allowance applies.
+- The lightbox renders permanently visible in the static mockup (expected for a state demonstration in staging; B-block will gate visibility behind click interaction).
+- The lightbox close button uses `focus-visible:ring-2` — consistent with the rest of the file.
+- The uploading tile carries no explicit `aria-label` for its progress bar (`aria-hidden="true"`) — correct: the tile label "Uploading…" is the accessible description; hiding the decorative progress bar from the AT tree is the right call.
+- No invented hex values; all new surfaces use the established token aliases.
+
+---
+
+## Iteration 2 Verdict
+
+**APPROVE**
+
+All five concerns from the REVISE iteration are closed. C-1 zinc-400 text now clears 4.5:1 on every cited background (7.30–7.72:1). C-2 all three composite states (uploading, error, lightbox) render live with correct semantic markup. C-3 the broken-image fallback chip is present, accessible, and contrast-compliant. C-4 all staged-tile remove buttons use focus-visible ring. C-5 the lightbox focus-trap and Esc contract is annotated for B-block.
+
+The attachment surfaces are structurally sound, token-compliant, accessibility-annotated, and edge-case complete. The 9-row message list, member-list panel, thread panel, and composer are all intact. No new issues were introduced. The design is cleared for adoption and B-block handoff.
