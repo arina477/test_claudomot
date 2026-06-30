@@ -10,7 +10,7 @@
 > Pending ritual outcomes affecting P-0: none (decomposition completed inline; no founder deferral).
 
 PRODUCT:
-- [ ] P-0 Frame (discover + reframe)
+- [x] P-0 Frame (discover + reframe)
 - [ ] P-1 Decompose
 - [ ] P-2 Spec
 - [ ] P-3 Plan
