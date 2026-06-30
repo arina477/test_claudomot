@@ -4,9 +4,9 @@
 | Stage | Deliverable | Status |
 |---|---|---|
 | P-0 | stages/P-0-frame.md | done (PROCEED w/ seed REFRAME — idempotency exists, bind-key+forward-cursor) |
-| P-1 | stages/P-1-decompose.md | pending |
-| P-2 | stages/P-2-spec.md | pending |
-| P-3 | stages/P-3-plan.md | pending |
+| P-1 | stages/P-1-decompose.md | done |
+| P-2 | tasks.description of 92d85e0e (+pointer) | done |
+| P-3 | stages/P-3-plan.md | done |
 | P-4 | blocks/P/gate-verdict.md | pending |
 ## Context
 - FIRST M4 wave (offline-first reliability — the founder wedge). claimed: [92d85e0e (idempotent send), 7332a4b8 (IndexedDB store), 9a4ab31d (outbox/optimistic integration), e29f6566 (offline test harness)].

@@ -14,6 +14,7 @@ Each row points at the SDK doc at `command-center/dev/SDK-Docs/<Name>/<name>.md`
 | `livekit-server-sdk` · `@livekit/components-react` · `livekit-client` | [`command-center/dev/SDK-Docs/LiveKit/livekit.md`](LiveKit/livekit.md) | https://docs.livekit.io/ | server-sdk: 2.15.5 · components-react: 2.9.21 · livekit-client: 2.20.0 | 2026-06-26 |
 | `resend` | [`command-center/dev/SDK-Docs/Resend/resend.md`](Resend/resend.md) | https://resend.com/docs/send-with-nodejs | 6.15.0 | 2026-06-26 |
 | `@aws-sdk/client-s3` · `@aws-sdk/s3-request-presigner` (backend: Railway Buckets / Tigris) | [`command-center/dev/SDK-Docs/ObjectStorage/object-storage.md`](ObjectStorage/object-storage.md) | https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/client/s3/ | 3.1076.0 (installed: ^3.1075.0) | 2026-06-30 |
+| `dexie` · `fake-indexeddb` (client: IndexedDB store + test shim) | [`command-center/dev/SDK-Docs/Dexie/dexie.md`](Dexie/dexie.md) | https://dexie.org/docs/ | dexie 4.0.11 · fake-indexeddb 6.0.0 | 2026-06-30 |
 
 ---
 
