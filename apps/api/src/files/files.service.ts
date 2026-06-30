@@ -1,5 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import { HeadObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  GetObjectCommand,
+  HeadObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import {
   Injectable,
@@ -14,6 +19,33 @@ const AVATAR_ALLOWED_MIME: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/webp': 'webp',
 };
+
+// ---------------------------------------------------------------------------
+// ATTACHMENT_ALLOWED_MIME — allowlist for attachment uploads (wave-19 M3)
+//
+// Images: png / jpeg / webp / gif
+// Files:  application/pdf / text/plain
+//
+// Exported so the AttachmentsController can build the ALLOWED_MIME_SET without
+// duplicating the allowlist.
+// ---------------------------------------------------------------------------
+
+export const ATTACHMENT_ALLOWED_MIME: Record<string, string> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+  'application/pdf': 'pdf',
+  'text/plain': 'txt',
+};
+
+// Server-side size cap for attachments: 10 MB
+const ATTACHMENT_MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+
+// Presigned-GET TTL for attachment URLs returned in message DTOs.
+// 1 hour gives clients enough time to display/download without requiring
+// per-request re-signing.
+const ATTACHMENT_GET_EXPIRY_SECONDS = 3600; // 1 hour
 
 const PRESIGN_EXPIRY_SECONDS = 300; // 5 minutes
 
@@ -166,5 +198,124 @@ export class FilesService {
       return null;
     }
     return buildPublicUrl(endpoint, bucket, key);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Attachment helpers — wave-19 M3 (task 20db0c16)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Generate a presigned PUT URL for an attachment upload.
+   *
+   * Key format: attachments/<channelId>/<uuid>.<ext>
+   * Mirrors presignAvatarUpload; throws 503 when storage is unconfigured.
+   *
+   * @param channelId - the channel the attachment belongs to (route-param derived)
+   * @param userId    - uploader's user ID (session-derived — NOT from request body)
+   * @param contentType - MIME type from the request (validated against allowlist)
+   */
+  async presignAttachmentUpload(
+    channelId: string,
+    // _userId is accepted for API consistency but not used in the key path;
+    // the channel-scoped key is sufficient since authz is enforced at the controller.
+    _userId: string,
+    contentType: string,
+  ): Promise<{ uploadUrl: string; key: string }> {
+    const client = this.getS3Client();
+    if (!client) {
+      throw new ServiceUnavailableException({ code: 'STORAGE_NOT_CONFIGURED' });
+    }
+
+    const ext = ATTACHMENT_ALLOWED_MIME[contentType];
+    if (!ext) {
+      // Caller (controller) validates content-type before calling here.
+      throw new Error(`Unsupported content-type: ${contentType}`);
+    }
+
+    const bucket = process.env.STORAGE_BUCKET_NAME;
+    if (!bucket) {
+      throw new ServiceUnavailableException({ code: 'STORAGE_NOT_CONFIGURED' });
+    }
+
+    // Avoid userId in the key (channel-scoped is sufficient; userId provides no
+    // extra security here since the presign is already authz-gated at the controller).
+    const key = `attachments/${channelId}/${randomUUID()}.${ext}`;
+
+    const command = new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      ContentType: contentType,
+    });
+
+    const uploadUrl = await getSignedUrl(client, command, {
+      expiresIn: PRESIGN_EXPIRY_SECONDS,
+    });
+
+    return { uploadUrl, key };
+  }
+
+  /**
+   * Server-side 10MB attachment size enforcement (wave-19 M3).
+   *
+   * Issues a HeadObject against the uploaded key; throws 413 if the object
+   * exceeds ATTACHMENT_MAX_SIZE_BYTES (10MB). Returns sizeBytes on success.
+   *
+   * Called by the controller at /confirm BEFORE we pass the descriptor to the
+   * client (VALIDATION-ONLY — no DB INSERT at this stage; row-at-send).
+   *
+   * Throws:
+   *   - ServiceUnavailableException (503) if storage env is unconfigured.
+   *   - PayloadTooLargeException (413) if the uploaded file exceeds 10MB.
+   */
+  async checkAttachmentSize(key: string): Promise<number> {
+    const client = this.getS3Client();
+    if (!client) {
+      throw new ServiceUnavailableException({ code: 'STORAGE_NOT_CONFIGURED' });
+    }
+
+    const bucket = process.env.STORAGE_BUCKET_NAME;
+    if (!bucket) {
+      throw new ServiceUnavailableException({ code: 'STORAGE_NOT_CONFIGURED' });
+    }
+
+    const head = await client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
+
+    const contentLength = head.ContentLength ?? 0;
+    if (contentLength > ATTACHMENT_MAX_SIZE_BYTES) {
+      this.logger.warn(
+        `Attachment upload rejected — size ${contentLength} bytes exceeds ${ATTACHMENT_MAX_SIZE_BYTES} byte cap (key: ${key})`,
+      );
+      throw new PayloadTooLargeException({
+        code: 'ATTACHMENT_TOO_LARGE',
+        message: `Attachment must be ≤ 10 MB. Uploaded file is ${Math.ceil(contentLength / 1024)} KB.`,
+      });
+    }
+
+    return contentLength;
+  }
+
+  /**
+   * Resolve a presigned-GET URL for an attachment key.
+   *
+   * Railway Buckets are PRIVATE — static public URLs do not work. Every render
+   * URL must be a presigned GET (GetObjectCommand + getSignedUrl). This is
+   * distinct from resolvePublicUrl (which is used for avatar_url, a public URL).
+   *
+   * Called from MessagesService.rowToDto when building AttachmentRef.url.
+   * Returns null when storage is not configured (graceful — callers guard).
+   */
+  async resolveAttachmentUrl(key: string): Promise<string | null> {
+    const client = this.getS3Client();
+    if (!client) {
+      return null;
+    }
+
+    const bucket = process.env.STORAGE_BUCKET_NAME;
+    if (!bucket) {
+      return null;
+    }
+
+    const command = new GetObjectCommand({ Bucket: bucket, Key: key });
+    return getSignedUrl(client, command, { expiresIn: ATTACHMENT_GET_EXPIRY_SECONDS });
   }
 }

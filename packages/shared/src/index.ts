@@ -62,6 +62,9 @@ export type {
 } from './rbac.js';
 
 export {
+  AttachmentRefSchema,
+  AttachmentPresignResponseSchema,
+  ValidatedAttachmentSchema,
   ReactionSummarySchema,
   MentionRefSchema,
   MessageResponseSchema,
@@ -79,6 +82,9 @@ export {
   THREAD_REPLY_DELETED_EVENT,
 } from './messaging.js';
 export type {
+  AttachmentRef,
+  AttachmentPresignResponse,
+  ValidatedAttachment,
   ReactionSummary,
   MentionRef,
   MessageResponse,
