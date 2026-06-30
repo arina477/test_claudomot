@@ -31,6 +31,10 @@ All notable changes to StudyHall are documented here. Format follows
 - Edit and delete your own messages — edited messages show an "(edited)" mark and deleted ones leave a tombstone — with changes appearing live for everyone in the channel. (#24)
 - React to messages with emoji: tap to add or remove a reaction, see counts and who reacted, all updating live for the channel. (#24)
 - Reacting to a deleted message is now blocked, so reactions can't pile up on content that's no longer there. (#25)
+- Live presence in your study servers: see who's online or offline at a glance, with presence updating instantly as people come and go across all their open tabs. (#26)
+- A member list in the channel view, grouped into Online and Offline with live status dots, so you always know who's around. (#26)
+- Typing indicators show when someone in the channel is typing, naming who it is, so a reply never catches you by surprise. (#26)
+- Presence and typing are shared only with people in your server, so who's online never leaks to anyone outside it. (#26)
 
 ### Fixed
 

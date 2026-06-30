@@ -62,7 +62,7 @@ VERIFY:
 - [x] V-3 Fast-fix & gate
 
 LEARN:
-- [ ] L-1 Docs
+- [x] L-1 Docs
 - [ ] L-2 Distill
 
 NEXT:
