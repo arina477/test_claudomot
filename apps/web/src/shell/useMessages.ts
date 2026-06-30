@@ -131,30 +131,68 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
       );
     }
 
-    // 2. Catch-up: fetch messages produced while offline.
-    const cursor = lastSeenCursorRef.current;
+    // 2. Catch-up: multi-page forward cursor loop.
+    //    Advance cursor OUTSIDE setRealMessages to avoid stale-closure reads
+    //    across async page boundaries. Write through to Dexie PER PAGE so a
+    //    mid-loop disconnect leaves the cache consistent with lastSeenCursorRef.
+    //    MAX_ITERS guard prevents an infinite loop on a buggy server response.
+    const MAX_ITERS = 100;
+    let cursor = lastSeenCursorRef.current;
     if (cursor) {
       try {
-        const result = await api.getMessagesAfter(forChannelId, cursor);
-        if (!mountedRef.current) return;
-        if (result.items.length > 0) {
-          setRealMessages((prev) => {
-            const existingIds = new Set(prev.map((m) => m.id));
-            const newItems = result.items.filter((m) => !existingIds.has(m.id));
-            if (newItems.length === 0) return prev;
-            // Write through to cache.
+        let iters = 0;
+        while (cursor && iters < MAX_ITERS) {
+          iters++;
+          if (!mountedRef.current) return;
+
+          // Use the current cursor value captured outside the updater.
+          const pageCursor = cursor;
+          const result = await api.getMessagesAfter(forChannelId, pageCursor);
+          if (!mountedRef.current) return;
+
+          if (result.items.length > 0) {
+            // Dedup and append this page.
+            setRealMessages((prev) => {
+              const existingIds = new Set(prev.map((m) => m.id));
+              const newItems = result.items.filter((m) => !existingIds.has(m.id));
+              if (newItems.length === 0) return prev;
+              return [...prev, ...newItems];
+            });
+
+            // Write through to cache per-page (outside updater — avoids stale closure).
             if (db) {
               const cachedAt = new Date().toISOString();
               void putCachedMessages(
                 db,
-                newItems.map((m) => ({ ...m, cachedAt })),
+                result.items.map((m) => ({ ...m, cachedAt })),
               );
             }
-            // Update cursor to the last item.
-            const last = newItems[newItems.length - 1];
-            if (last) lastSeenCursorRef.current = encodeForwardCursor(last.createdAt, last.id);
-            return [...prev, ...newItems];
-          });
+          }
+
+          // Advance cursor from the server's nextCursor (opaque forward cursor).
+          // This MUST happen outside setRealMessages to avoid stale-closure reads
+          // when we await the next page.
+          if (result.nextCursor) {
+            cursor = result.nextCursor;
+            lastSeenCursorRef.current = result.nextCursor;
+          } else {
+            // No more pages — update lastSeenCursorRef to the last item seen
+            // so future catch-ups start from the correct position.
+            const last = result.items[result.items.length - 1];
+            if (last) {
+              const newCursor = encodeForwardCursor(last.createdAt, last.id);
+              lastSeenCursorRef.current = newCursor;
+            }
+            cursor = null; // terminate loop
+          }
+        }
+
+        if (iters >= MAX_ITERS) {
+          // Guard fired — log so it's detectable; no silent data loss (partial
+          // pages already written to state + cache above).
+          console.warn(
+            `[useMessages] catch-up loop hit MAX_ITERS (${MAX_ITERS}) for channel ${forChannelId}. Some messages may be deferred to the next reconnect.`,
+          );
         }
       } catch {
         // Catch-up fail is non-fatal — socket will deliver new messages.
