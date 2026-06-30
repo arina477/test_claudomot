@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en" class="antialiased dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyHall — CS-201 · #questions</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- 
+  aesthetic_dna: {"palette": "zinc-emerald", "radius": "md-lg", "vibe": "academic-calm"}
+  ui_paradigm: "multi-pane-workspace (5-column dynamic collapse)"
+  -->
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Geist', 'sans-serif'] },
+          colors: {
+            study: {
+              950: '#0a0a0b', 900: '#121214', 800: '#1c1c1f',
+              700: '#27272a', 600: '#3f3f46', 500: '#52525b',
+              border: 'rgba(255, 255, 255, 0.06)'
+            },
+            accent: { emerald: '#10b981', amber: '#f59e0b', danger: '#ef4444' }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Minimal dark scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+
+    .recessed-input {
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.02);
+    }
+
+    .pending-dim { opacity: 0.6; }
+    @keyframes pending-pulse { 0%,100% { opacity: .6; } 50% { opacity: .85; } }
+    .pending-dim { animation: pending-pulse 1.8s ease-in-out infinite; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin { animation: spin 1s linear infinite; }
+
+    @keyframes typing-pulse {
+      0%, 100% { opacity: 0.3; transform: translateY(0); }
+      50% { opacity: 1; transform: translateY(-1px); }
+    }
+    .typing-dot { animation: typing-pulse 1.4s infinite ease-in-out; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .pending-dim { animation: none !important; opacity: 0.6 !important; }
+      .spin { animation: none !important; }
+      .typing-dot { animation: none !important; opacity: 0.6 !important; }
+    }
+
+    .row-actions {
+      opacity: 0; pointer-events: none;
+      transition: opacity 150ms ease;
+    }
+    .msg-row:hover .row-actions,
+    .msg-row:focus-within .row-actions { opacity: 1; pointer-events: auto; }
+    @media (prefers-reduced-motion: reduce) { .row-actions { transition: none; } }
+
+    .reacted-by-me {
+      background: rgba(16,185,129,0.14) !important;
+      border-color: rgba(16,185,129,0.55) !important;
+      box-shadow: inset 0 0 0 1px rgba(16,185,129,0.35);
+    }
+
+    /* 5-Pane Adaptive Layout Grid */
+    .layout-grid {
+      display: grid;
+      grid-template-columns: 72px 260px minmax(0, 1fr) 360px 240px;
+    }
+
+    @media (max-width: 1440px) {
+      .layout-grid { grid-template-columns: 72px 240px minmax(0, 1fr) 360px; }
+      .right-sidebar { display: none !important; } /* Hide members when thread is open and width narrows */
+    }
+
+    @media (max-width: 1024px) {
+      .layout-grid { grid-template-columns: 72px 240px minmax(0, 1fr) !important; }
+      /* Thread becomes a drawer overlay */
+      .thread-panel {
+        position: fixed !important;
+        top: 0; right: 0; bottom: 0;
+        width: 100%; max-width: 360px;
+        z-index: 50;
+        box-shadow: -8px 0 24px rgba(0,0,0,0.5);
+      }
+      .right-sidebar { display: none !important; }
+    }
+
+    @media (max-width: 768px) {
+      .layout-grid { grid-template-columns: 72px minmax(0, 1fr) !important; }
+      .channel-sidebar {
+        position: fixed !important; top: 0; left: 72px; bottom: 0; width: 260px;
+        transform: translateX(-110%); transition: transform 200ms ease; z-index: 40;
+      }
+      .channel-sidebar.drawer-open { transform: translateX(0); }
+      .narrow-drawer-toggle { display: inline-flex !important; }
+    }
+  </style>
+</head>
+<body class="bg-study-950 text-zinc-300 min-h-[100dvh] w-full overflow-hidden select-none">
+
+  <div class="layout-grid h-[100dvh] w-full">
+
+    <!-- PANE 1: SERVER RAIL -->
+    <nav class="server-rail bg-study-950 border-r border-study-border flex flex-col items-center py-4 gap-3 z-30">
+      <button class="relative group w-12 h-12 flex justify-center items-center" aria-label="Home">
+        <div class="w-12 h-12 rounded-[24px] bg-study-800 flex items-center justify-center text-zinc-400 group-hover:rounded-[16px] group-hover:bg-zinc-700 transition-all duration-300">
+          <i class="ph ph-books text-xl"></i>
+        </div>
+      </button>
+      <div class="w-8 h-[2px] bg-study-700 rounded-full my-1"></div>
+      <button class="relative group w-12 h-12 flex justify-center items-center" aria-label="CS-201 (active)" aria-current="true">
+        <div class="absolute left-0 w-1 bg-white rounded-r-md h-full opacity-80"></div>
+        <div class="w-12 h-12 rounded-[16px] bg-study-700 flex items-center justify-center text-zinc-100 font-semibold border border-white/10">CS</div>
+      </button>
+      <button class="relative group w-12 h-12 flex justify-center items-center" aria-label="Lit-104">
+        <div class="w-12 h-12 rounded-[24px] bg-study-800 flex items-center justify-center text-zinc-400 font-medium tracking-wider group-hover:rounded-[16px] group-hover:bg-study-700 group-hover:text-zinc-100 transition-all duration-300">LIT</div>
+      </button>
+      <div class="mt-auto w-12 h-12 rounded-full border border-study-700 flex items-center justify-center hover:bg-study-800 transition-colors cursor-pointer" aria-label="Add server">
+        <i class="ph ph-plus text-zinc-400"></i>
+      </div>
+    </nav>
+
+    <!-- PANE 2: CHANNEL SIDEBAR -->
+    <aside class="channel-sidebar bg-study-900 border-r border-study-border flex flex-col z-20">
+      <header class="h-14 flex items-center justify-between px-4 border-b border-study-border hover:bg-zinc-800/50 cursor-pointer transition-colors z-10">
+        <h1 class="font-semibold text-zinc-100 truncate pr-2 tracking-tight">CS-201 Data Structures</h1>
+        <i class="ph ph-caret-down text-zinc-400 text-sm"></i>
+      </header>
+      <div class="flex-1 overflow-y-auto px-2 py-4 space-y-5">
+        <div>
+          <div class="flex items-center group px-1 mb-1 cursor-pointer">
+            <i class="ph ph-caret-down text-[10px] text-zinc-500 mr-1"></i>
+            <h2 class="text-xs font-semibold text-zinc-500 uppercase tracking-widest">Coursework</h2>
+          </div>
+          <div class="space-y-[2px]">
+            <a href="#" class="flex items-center px-2 py-1.5 rounded text-zinc-100 font-medium hover:bg-study-800 transition-all" aria-label="general channel, 2 unread mentions">
+              <i class="ph ph-hash text-zinc-300 mr-2 text-lg"></i><span class="text-[14px]">general (unread)</span>
+              <span class="ml-auto inline-flex items-center justify-center h-[18px] min-w-[18px] px-1 bg-emerald-500 rounded-full text-[11px] font-bold text-study-950 shadow-[inset_0_-1px_0_rgba(0,0,0,0.1)]">2</span>
+            </a>
+            <a href="#" class="flex items-center px-2 py-1.5 rounded text-zinc-400 hover:bg-study-800 transition-all hover:text-zinc-200" aria-label="general channel, read state">
+              <i class="ph ph-hash text-zinc-500 mr-2 text-lg"></i><span class="text-[14px]">general (read)</span>
+            </a>
+            <a href="#" class="flex items-center px-2 py-1.5 rounded bg-study-700/50 text-zinc-100 border border-white/5" aria-current="page">
+              <i class="ph ph-hash text-zinc-300 mr-2 text-lg"></i><span class="text-[14px] font-medium">questions</span>
+            </a>
+            <a href="#" class="flex items-center px-2 py-1.5 rounded text-zinc-400 hover:bg-study-800 hover:text-zinc-200 transition-all">
+              <i class="ph ph-file-text text-zinc-500 mr-2 text-lg"></i><span class="text-[14px]">syllabus</span>
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="h-[60px] bg-study-950/80 px-2 flex items-center border-t border-study-border mt-auto">
+        <div class="flex items-center p-1.5 rounded-md hover:bg-study-800 transition-colors cursor-pointer w-full">
+          <div class="w-8 h-8 rounded-full bg-study-600 flex items-center justify-center text-xs font-semibold text-zinc-100" aria-label="Elias">EL</div>
+          <div class="flex flex-col ml-2 overflow-hidden">
+            <span class="text-[13px] font-medium text-zinc-200 truncate">Elias (You)</span>
+            <span class="text-[11px] text-zinc-400 truncate flex items-center gap-1"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>Online</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- PANE 3: MAIN CHAT CANVAS -->
+    <main class="main-chat bg-study-800 flex flex-col min-w-0 z-10 relative">
+
+      <header class="h-14 flex items-center px-5 border-b border-study-border shadow-[0_4px_24px_-8px_rgba(0,0,0,0.5)] z-10 bg-study-800/95 backdrop-blur-sm shrink-0">
+        <button class="narrow-drawer-toggle hidden mr-3 w-8 h-8 items-center justify-center rounded-md text-zinc-400 hover:bg-study-700 hover:text-zinc-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60" aria-label="Open channel list" onclick="document.querySelector('.channel-sidebar').classList.toggle('drawer-open')">
+          <i class="ph ph-list text-xl"></i>
+        </button>
+        <i class="ph ph-hash text-zinc-400 text-2xl mr-2"></i>
+        <h2 class="font-semibold text-zinc-100 text-[15px] tracking-tight">questions</h2>
+        <div class="mx-3 w-[1px] h-4 bg-study-600"></div>
+        <p class="text-[13px] text-zinc-400 font-medium truncate">Discussion about lectures, concepts, and Psets.</p>
+        <div class="ml-auto flex items-center gap-2">
+          <span role="status" class="flex items-center gap-1.5 text-[12px] text-zinc-400 font-medium px-2 py-1 rounded-md">
+            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>Connected
+          </span>
+        </div>
+      </header>
+
+      <!-- ============ MESSAGE LIST ============ -->
+      <div id="messageList" role="log" aria-live="polite" aria-label="Messages in #questions" class="flex-1 overflow-y-auto px-1 py-4 flex flex-col gap-1 select-text">
+
+        <div role="status" aria-live="polite" class="flex items-center justify-center py-2 text-zinc-400">
+          <i class="ph ph-circle-notch spin text-[14px] mr-2"></i>
+          <span class="text-xs tracking-wide">Loading older messages…</span>
+        </div>
+
+        <div class="flex items-center px-4 py-2">
+          <div class="flex-1 h-[1px] bg-study-700"></div>
+          <span class="text-[11px] font-semibold text-zinc-400 mx-3 tracking-widest uppercase">Today</span>
+          <div class="flex-1 h-[1px] bg-study-700"></div>
+        </div>
+
+        <!-- 1. Row: Mia Wong / Other-mention pill + THREAD AFFORDANCE -->
+        <article role="article" class="msg-row group relative px-4 py-2 flex gap-3.5 hover:bg-study-700/30 transition-colors rounded-md">
+          <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=64&q=80" alt="Mia Wong" class="w-10 h-10 rounded-full object-cover shrink-0 mt-0.5">
+          <div class="flex flex-col w-full min-w-0">
+            <div class="flex items-baseline gap-2">
+              <span class="font-medium text-zinc-100 text-sm">Mia Wong</span>
+              <span class="text-xs text-zinc-400 font-medium tracking-wide">10:42 AM</span>
+            </div>
+            <p class="text-sm leading-relaxed text-zinc-200 mt-0.5">
+              Did <span class="inline-flex items-center px-1.5 py-0.5 mx-[1px] -my-[1px] align-baseline rounded-md bg-study-700 text-zinc-100 font-medium text-[14px]">@David C.</span> mention if red-black trees are on the midterm? The syllabus is vague on how deep we go into balancing.
+            </p>
+            <div class="flex flex-wrap items-center gap-1.5 mt-2">
+              <button type="button" aria-pressed="true" aria-label="👍 reaction, 4, you reacted — click to remove"
+                class="reacted-by-me inline-flex items-center gap-1.5 h-7 pl-2 pr-2.5 rounded-full bg-study-700 border border-study-600/70 text-zinc-200 hover:border-study-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70">
+                <span class="text-[13px] leading-none">👍</span><span class="text-xs font-semibold text-emerald-200">4</span>
+              </button>
+              <button type="button" aria-pressed="false" aria-label="🤔 reaction, 1 — click to react"
+                class="inline-flex items-center gap-1.5 h-7 pl-2 pr-2.5 rounded-full bg-study-700 border border-study-600/70 text-zinc-200 hover:border-study-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70">
+                <span class="text-[13px] leading-none">🤔</span><span class="text-xs font-semibold text-zinc-400">1</span>
+              </button>
+            </div>
+            
+            <!-- SURFACE 1 ADDITION: Thread Affordance -->
+            <div class="mt-2 text-left">
+              <button type="button" aria-haspopup="dialog" aria-expanded="true" aria-controls="thread-panel" aria-label="Open thread: 4 replies, last reply 10m ago"
+                 class="inline-flex items-center gap-1.5 h-[28px] pl-2.5 pr-3 rounded-md bg-study-700 hover:bg-study-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70 group/thread">
+                 <i class="ph ph-chats-circle text-emerald-500 text-[15px]"></i>
+                 <span class="text-xs font-semibold text-emerald-500 group-hover/thread:text-emerald-400 transition-colors">4 replies</span>
+                 <span class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest px-0.5">·</span>
+                 <span class="text-xs text-zinc-400 font-medium group-hover/thread:text-zinc-300 transition-colors">last reply 10m ago</span>
+              </button>
+            </div>
+
+          </div>
+          <div class="row-actions absolute -top-3 right-3 flex items-center bg-study-700 border border-study-border rounded-md shadow-[0_8px_24px_rgba(0,0,0,0.5)] overflow-hidden">
+            <button type="button" aria-label="Add reaction to Mia Wong's message" aria-haspopup="true" class="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-study-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70"><i class="ph ph-smiley text-[16px]"></i></button>
+          </div>
+        </article>
+
+        <!-- 2. Row: David C. / Self-mention pill + THREAD AFFORDANCE -->
+        <article role="article" class="msg-row group relative px-4 py-2 flex gap-3.5 hover:bg-study-700/30 transition-colors rounded-md">
+          <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=64&q=80" alt="David C." class="w-10 h-10 rounded-full object-cover shrink-0 mt-0.5">
+          <div class="flex flex-col w-full min-w-0">
+            <div class="flex items-baseline gap-2">
+              <span class="font-medium text-zinc-100 text-sm">David C.</span>
+              <span class="text-xs text-zinc-400 font-medium tracking-wide">10:50 AM</span>
+            </div>
+            <p class="text-sm leading-relaxed text-zinc-200 mt-0.5">
+              <span class="inline-flex items-center px-1.5 py-0.5 mx-[1px] -my-[1px] align-baseline rounded-md bg-emerald-500/10 text-emerald-300 font-medium text-[14px] ring-1 ring-emerald-500/30">@Elias</span>
+              have you started Pset 4? Stuck on problem 2 — the graph traversal keeps giving me memory-limit-exceeded.
+            </p>
+            
+            <!-- SURFACE 1 ADDITION: Thread Affordance -->
+            <div class="mt-2.5 text-left">
+              <button type="button" aria-haspopup="dialog" aria-expanded="false" aria-label="Open thread: 1 reply, last reply 2m ago"
+                 class="inline-flex items-center gap-1.5 h-[28px] pl-2.5 pr-3 rounded-md bg-study-700 hover:bg-study-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70 group/thread">
+                 <i class="ph ph-chats-circle text-emerald-500 text-[15px]"></i>
+                 <span class="text-xs font-semibold text-emerald-500 group-hover/thread:text-emerald-400 transition-colors">1 reply</span>
+                 <span class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest px-0.5">·</span>
+                 <span class="text-xs text-zinc-400 font-medium group-hover/thread:text-zinc-300 transition-colors">last reply 2m ago</span>
+              </button>
+            </div>
+
+          </div>
+          <div class="row-actions absolute -top-3 right-3 flex items-center bg-study-700 border border-study-border rounded-md shadow-[0_8px_24px_rgba(0,0,0,0.5)] overflow-hidden">
+            <button type="button" aria-label="Add reaction to David C's message" aria-haspopup="true" class="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-study-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70"><i class="ph ph-smiley text-[16px]"></i></button>
+          </div>
+        </article>
+
+        <!-- 3. Row: Elias (You) / standard -->
+        <article role="article" class="msg-row group relative px-4 py-2 flex gap-3.5 hover:bg-study-700/30 transition-colors rounded-md">
+          <div class="w-10 h-10 rounded-full bg-study-600 flex items-center justify-center text-xs font-semibold text-zinc-100 shrink-0 mt-0.5" aria-label="Elias">EL</div>
+          <div class="flex flex-col w-full min-w-0">
+            <div class="flex items-baseline gap-2">
+              <span class="font-medium text-zinc-100 text-sm">Elias (You)</span>
+              <span class="text-xs text-zinc-400 font-medium tracking-wide">10:52 AM</span>
+            </div>
+            <p class="text-sm leading-relaxed text-zinc-200 mt-0.5">
+              Use a Set for visited nodes instead of an Array — the lookup cost is what's blowing the limit.
+              <span class="text-xs text-zinc-300 font-normal ml-1 align-baseline" title="Edited">(edited)</span>
+            </p>
+          </div>
+          <div class="row-actions absolute -top-3 right-3 flex items-center bg-study-700 border border-study-border rounded-md shadow-[0_8px_24px_rgba(0,0,0,0.5)] overflow-hidden">
+            <button type="button" aria-label="Add reaction" aria-haspopup="true" class="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-study-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70"><i class="ph ph-smiley text-[16px]"></i></button>
+            <button type="button" aria-label="Edit your message" class="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-study-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70"><i class="ph ph-pencil-simple text-[16px]"></i></button>
+            <button type="button" aria-label="Delete your message" class="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-red-300 hover:bg-study-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60"><i class="ph ph-trash text-[16px]"></i></button>
+          </div>
+        </article>
+
+        <!-- 4. Row: Elias / Inline Editing -->
+        <article role="article" class="msg-row group relative px-4 py-2 flex gap-3.5 bg-study-700/20 rounded-md">
+          <div class="w-10 h-10 rounded-full bg-study-600 flex items-center justify-center text-xs font-semibold text-zinc-100 shrink-0 mt-0.5" aria-label="Elias">EL</div>
+          <div class="flex flex-col w-full min-w-0">
+            <div class="flex items-baseline gap-2">
+              <span class="font-medium text-zinc-100 text-sm">Elias (You)</span>
+              <span class="text-xs text-zinc-400 font-medium tracking-wide">10:53 AM</span>
+              <span class="text-[11px] text-emerald-300 font-semibold tracking-wide flex items-center gap-1">
+                <i class="ph ph-pencil-simple text-[12px]"></i> Editing
+              </span>
+            </div>
+            <div class="mt-2 bg-study-900 recessed-input border border-study-600/60 rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500/40 focus-within:border-emerald-500/60 transition-shadow">
+              <label for="editArea" class="sr-only">Edit your message</label>
+              <textarea id="editArea" rows="2" class="w-full bg-transparent text-sm leading-relaxed text-zinc-100 py-2.5 px-3 outline-none resize-none">Also — does the test suite count toward the grade or just for self-check?</textarea>
+            </div>
+            <div class="mt-2 flex items-center gap-2">
+              <button type="button" class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-study-950 bg-emerald-500 hover:bg-emerald-400 rounded-md px-3 py-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70"><i class="ph ph-check text-[14px]"></i> Save</button>
+              <button type="button" class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-zinc-300 bg-study-700 hover:bg-study-600 border border-study-600/60 rounded-md px-3 py-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"><i class="ph ph-x text-[14px]"></i> Cancel</button>
+              <span class="text-[11px] text-zinc-500 ml-1 tracking-wide"><kbd class="font-sans text-zinc-400">Enter</kbd> to save &nbsp;·&nbsp; <kbd class="font-sans text-zinc-400">Esc</kbd> to cancel</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- 5. Row: Elias / Delete confirmation -->
+        <article role="article" class="msg-row group relative px-4 py-2 flex gap-3.5 rounded-md border border-danger/30 bg-danger/5">
+          <div class="w-10 h-10 rounded-full bg-study-600 flex items-center justify-center text-xs font-semibold text-zinc-100 shrink-0 mt-0.5" aria-label="Elias">EL</div>
+          <div class="flex flex-col w-full min-w-0">
+            <div class="flex items-baseline gap-2">
+              <span class="font-medium text-zinc-100 text-sm">Elias (You)</span>
+              <span class="text-xs text-zinc-400 font-medium tracking-wide">10:55 AM</span>
+            </div>
+            <p class="text-sm leading-relaxed text-zinc-300 mt-0.5">Wait, ignore the last part — I figured out the off-by-one.</p>
+            <div class="mt-2 flex items-center gap-2.5">
+              <span class="text-[12px] text-zinc-300 font-medium">Delete this message?</span>
+              <button type="button" class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-study-950 bg-red-500 hover:bg-red-400 rounded-md px-2.5 py-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60"><i class="ph ph-trash text-[13px]"></i> Delete</button>
+              <button type="button" class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-zinc-300 bg-study-700 hover:bg-study-600 border border-study-600/60 rounded-md px-2.5 py-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">Cancel</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- 6. Row: Tombstone -->
+        <article role="article" aria-label="Deleted message" class="px-4 py-2 flex gap-3.5 rounded-md">
+          <div class="w-10 h-10 rounded-full bg-study-800 border border-study-700 flex items-center justify-center shrink-0 mt-0.5">
+            <i class="ph ph-prohibit text-zinc-600 text-[16px]"></i>
+          </div>
+          <div class="flex items-center min-w-0">
+            <span class="text-sm italic text-zinc-400 flex items-center gap-2"><i class="ph ph-trash text-[14px] text-zinc-500"></i> This message was deleted</span>
+          </div>
+        </article>
+
+        <!-- 7. Row: David C. / React Menu -->
+        <article role="article" class="msg-row group relative px-4 py-2 flex gap-3.5 hover:bg-study-700/30 transition-colors rounded-md">
+          <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=64&q=80" alt="David C." class="w-10 h-10 rounded-full object-cover shrink-0 mt-0.5">
+          <div class="flex flex-col w-full min-w-0">
+            <div class="flex items-baseline gap-2">
+              <span class="font-medium text-zinc-100 text-sm">David C.</span>
+              <span class="text-xs text-zinc-400 font-medium tracking-wide">10:58 AM</span>
+            </div>
+            <p class="text-sm leading-relaxed text-zinc-200 mt-0.5">Reminder: office hours moved to Thursday 3pm this week.</p>
+            <div role="menu" aria-label="Add a reaction" class="mt-2 inline-flex items-center gap-1 w-max bg-study-700 border border-study-border rounded-md p-1 shadow-[0_8px_24px_rgba(0,0,0,0.5)]">
+              <button type="button" role="menuitem" aria-label="React 👍" class="w-8 h-8 rounded-md hover:bg-study-600 transition-colors text-[16px] leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70">👍</button>
+              <button type="button" role="menuitem" aria-label="React ❤️" class="w-8 h-8 rounded-md hover:bg-study-600 transition-colors text-[16px] leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70">❤️</button>
+              <button type="button" role="menuitem" aria-label="React 😂" class="w-8 h-8 rounded-md hover:bg-study-600 transition-colors text-[16px] leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70">😂</button>
+              <button type="button" role="menuitem" aria-label="React 🎉" class="w-8 h-8 rounded-md hover:bg-study-600 transition-colors text-[16px] leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70">🎉</button>
+              <button type="button" role="menuitem" aria-label="React 🤔" class="w-8 h-8 rounded-md hover:bg-study-600 transition-colors text-[16px] leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70">🤔</button>
+              <button type="button" role="menuitem" aria-label="React ✅" class="w-8 h-8 rounded-md hover:bg-study-600 transition-colors text-[16px] leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70">✅</button>
+            </div>
+          </div>
+          <div class="row-actions absolute -top-3 right-3 flex items-center bg-study-700 border border-study-border rounded-md shadow-[0_8px_24px_rgba(0,0,0,0.5)] overflow-hidden">
+            <button type="button" aria-label="Add reaction" aria-haspopup="true" class="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-study-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70"><i class="ph ph-smiley text-[16px]"></i></button>
+            <button type="button" aria-label="Delete message (moderator)" title="Delete (moderator)" class="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-red-300 hover:bg-study-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60"><i class="ph ph-trash text-[16px]"></i></button>
+          </div>
+        </article>
+
+        <!-- 8. Row: Elias / Pending message -->
+        <article role="article" aria-busy="true" class="group px-4 py-2 flex gap-3.5 rounded-md border-l-2 border-amber-500/50">
+          <div class="pending-dim w-10 h-10 rounded-full bg-study-600 flex items-center justify-center text-xs font-semibold text-zinc-100 shrink-0 mt-0.5" aria-label="Elias">EL</div>
+          <div class="flex flex-col w-full min-w-0">
+            <div class="flex items-baseline gap-2">
+              <span class="pending-dim font-medium text-zinc-100 text-sm">Elias (You)</span>
+              <span class="text-xs text-amber-500 font-semibold tracking-wide flex items-center gap-1"><i class="ph ph-clock text-[13px]"></i> Sending…</span>
+            </div>
+            <p class="pending-dim text-sm leading-relaxed text-zinc-300 mt-0.5">I can screenshare my approach in the Study Room if that helps.</p>
+          </div>
+        </article>
+
+        <!-- 9. Row: Elias / Failed to send -->
+        <article role="alert" class="group px-4 py-2 flex gap-3.5 rounded-md border border-danger/30 bg-danger/5">
+          <div class="w-10 h-10 rounded-full bg-study-600 flex items-center justify-center text-xs font-semibold text-zinc-100 shrink-0 mt-0.5" aria-label="Elias">EL</div>
+          <div class="flex flex-col w-full min-w-0">
+            <div class="flex items-baseline gap-2">
+              <span class="font-medium text-zinc-100 text-sm">Elias (You)</span>
+              <span class="text-xs text-red-300 font-semibold tracking-wide flex items-center gap-1"><i class="ph ph-warning-circle text-[13px]"></i> Failed to send</span>
+            </div>
+            <p class="text-sm leading-relaxed text-zinc-300 mt-0.5">Also — does the test suite count toward the grade or just for self-check?</p>
+            <div class="mt-1.5 flex items-center gap-3">
+              <button type="button" class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-red-300 bg-danger/10 hover:bg-danger/20 border border-danger/40 rounded-md px-2.5 py-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60"><i class="ph ph-arrow-clockwise text-[13px]"></i> Retry</button>
+            </div>
+          </div>
+        </article>
+
+        <div class="h-2" id="scrollAnchor"></div>
+      </div>
+
+      <!-- ============ COMPOSER ============ -->
+      <div class="px-5 pb-5 pt-2 shrink-0 relative flex flex-col justify-end">
+        
+        <!-- MENTION AUTOCOMPLETE DEMO POPOVERS -->
+        <div class="absolute bottom-[calc(100%+4px)] left-5 flex gap-4 z-20 pointer-events-none w-[calc(100%-40px)] flex-wrap lg:flex-nowrap">
+          <div class="w-[280px] max-h-[240px] flex flex-col bg-study-800 border border-white/10 shadow-[0_8px_24px_rgba(0,0,0,0.5)] rounded-lg overflow-hidden shrink-0 pointer-events-auto">
+            <div class="px-3 py-2 border-b border-study-border text-[11px] font-semibold text-zinc-400 bg-study-900 shadow-sm shrink-0 uppercase tracking-widest">
+              Members matching "@dav"
+            </div>
+            <ul class="overflow-y-auto w-full flex-1 p-1.5 space-y-0.5" role="listbox">
+              <li role="option" aria-selected="true" class="flex items-center gap-2.5 px-2 py-1.5 rounded-md bg-study-700 ring-2 ring-emerald-500/50 cursor-pointer">
+                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=64&q=80" alt="David C." class="w-6 h-6 rounded-full object-cover">
+                <div class="flex flex-col justify-center overflow-hidden">
+                  <span class="text-sm font-medium text-zinc-100 truncate leading-tight">David C.</span>
+                  <span class="text-[11px] text-zinc-400 truncate leading-tight">@davidc</span>
+                </div>
+              </li>
+              <li role="option" aria-selected="false" class="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-study-700/50 cursor-pointer transition-colors">
+                <div class="relative shrink-0">
+                  <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=64&q=80" alt="Davis Lee" class="w-6 h-6 rounded-full object-cover">
+                  <div class="absolute -bottom-[1px] -right-[1px] w-2.5 h-2.5 bg-study-800 rounded-full flex items-center justify-center pointer-events-none">
+                    <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
+                  </div>
+                </div>
+                <div class="flex flex-col justify-center overflow-hidden">
+                  <span class="text-sm font-medium text-zinc-200 truncate leading-tight">Davis Lee</span>
+                  <span class="text-[11px] text-zinc-400 truncate leading-tight">@davislee</span>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="relative w-full h-0 z-10 pointer-events-none" role="status" aria-live="polite">
+          <div class="absolute bottom-2 left-1 flex items-center gap-1.5 transition-opacity duration-150">
+            <span class="text-[12px] text-zinc-400 font-medium truncate">Mia Wong is typing</span>
+            <span class="flex items-center gap-[3px] mb-[1px]">
+              <span class="w-[3px] h-[3px] rounded-full bg-zinc-500 typing-dot" style="animation-delay: 0ms"></span>
+              <span class="w-[3px] h-[3px] rounded-full bg-zinc-500 typing-dot" style="animation-delay: 150ms"></span>
+              <span class="w-[3px] h-[3px] rounded-full bg-zinc-500 typing-dot" style="animation-delay: 300ms"></span>
+            </span>
+          </div>
+        </div>
+
+        <form id="composerForm" class="relative flex items-end bg-study-900 recessed-input border border-study-600/60 rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500/40 focus-within:border-emerald-500/60 transition-shadow">
+          <label for="composerInput" class="sr-only">Message #questions</label>
+          <textarea id="composerInput" rows="1"
+            class="w-full bg-transparent text-base text-zinc-100 placeholder-zinc-300 py-3.5 px-4 outline-none resize-none max-h-[40dvh] overflow-y-auto min-h-[48px]"
+          >Yes @dav</textarea>
+          <div class="p-2.5 flex items-center shrink-0 self-stretch">
+            <button id="sendBtn" type="submit" aria-label="Send message"
+              class="w-9 h-9 flex items-center justify-center rounded-md bg-emerald-500 text-study-950 hover:bg-emerald-400 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70 disabled:bg-study-700 disabled:text-zinc-500 disabled:cursor-not-allowed">
+              <i id="sendIcon" class="ph ph-paper-plane-right text-[18px]"></i>
+            </button>
+          </div>
+        </form>
+        <div class="text-[11px] text-zinc-500 mt-2 px-1 flex justify-between tracking-wide">
+          <span><kbd class="font-sans text-zinc-400">Enter</kbd> to insert &nbsp;·&nbsp; <kbd class="font-sans text-zinc-400">↑↓</kbd> to navigate</span>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- PANE 3.5 / 4 (Dynamic overlay below 1024px): THREAD PANEL -->
+    <aside id="thread-panel" aria-label="Thread" class="thread-panel bg-study-900 border-l border-study-border flex flex-col h-[100dvh]">
+      
+      <!-- Thread Header -->
+      <header class="h-14 flex items-center justify-between px-4 border-b border-study-border bg-study-900 shrink-0 z-10 w-full">
+        <h2 class="text-[11px] font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+            Thread <span class="bg-study-700 text-zinc-300 px-1.5 py-0.5 rounded text-[10px] tracking-normal capitalize">#questions</span>
+        </h2>
+        <button class="w-8 h-8 flex items-center justify-center rounded-md text-zinc-400 hover:bg-study-800 hover:text-zinc-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70" aria-label="Close thread">
+          <i class="ph ph-x text-[16px]"></i>
+        </button>
+      </header>
+
+      <!-- Scroll container for thread messages -->
+      <div class="flex-1 overflow-y-auto px-4 py-5 flex flex-col gap-6 relative hide-scrollbars shrink min-h-0">
+
+        <!-- Pinned Parent -->
+        <div class="relative w-full">
+            <h3 class="text-[11px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Thread on:</h3>
+            <div class="bg-study-800 rounded-lg p-3.5 shadow-sm border border-white/5 flex gap-3 relative">
+                <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=64&q=80" alt="Mia Wong" class="w-8 h-8 rounded-full object-cover shrink-0">
+                <div class="flex flex-col min-w-0 w-full">
+                    <div class="flex items-baseline gap-2">
+                        <span class="font-medium text-zinc-100 text-[14px]">Mia Wong</span>
+                        <span class="text-[11px] text-zinc-400 font-medium">10:42 AM</span>
+                    </div>
+                    <p class="text-[13px] leading-relaxed text-zinc-200 mt-0.5">
+                        Did <span class="inline-flex items-center px-1.5 py-0.5 align-baseline rounded bg-study-700 text-zinc-100 font-medium text-[12px]">@David C.</span> mention if red-black trees are on the midterm? The syllabus is vague on how deep we go into balancing.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center w-full px-1">
+            <div class="flex-1 h-[1px] bg-study-border"></div>
+            <span class="text-[10px] font-semibold text-zinc-500 mx-3 tracking-widest uppercase">4 Replies</span>
+            <div class="flex-1 h-[1px] bg-study-border"></div>
+        </div>
+
+        <!-- Thread Replies (Oldest First) -->
+        <div class="flex flex-col gap-1 w-full flex-1">
+            
+            <!-- Thread Reply 1 -->
+            <div class="group relative px-2 py-2 flex gap-3 hover:bg-study-700/30 transition-colors rounded-md w-[calc(100%+1rem)] -ml-2">
+                <div class="w-8 h-8 rounded-full bg-study-600 flex items-center justify-center text-[11px] font-semibold text-zinc-100 shrink-0 mt-0.5">EL</div>
+                <div class="flex flex-col w-full min-w-0">
+                    <div class="flex items-baseline gap-2">
+                      <span class="font-medium text-zinc-100 text-[14px]">Elias (You)</span>
+                      <span class="text-[11px] text-zinc-400 font-medium tracking-wide">10:45 AM</span>
+                    </div>
+                    <p class="text-[13px] leading-relaxed text-zinc-200 mt-0.5">Yeah, he said properties only, no implementation needed.</p>
+                </div>
+            </div>
+
+            <!-- Thread Reply 2 (Tombstone Demo) -->
+            <div aria-label="Deleted reply" class="px-2 py-2 flex gap-3 rounded-md w-[calc(100%+1rem)] -ml-2">
+                <div class="w-8 h-8 rounded-full bg-study-800 border border-study-700 flex items-center justify-center shrink-0 mt-0.5">
+                  <i class="ph ph-prohibit text-zinc-600 text-[14px]"></i>
+                </div>
+                <div class="flex items-center min-w-0 mt-1">
+                  <span class="text-[13px] italic text-zinc-400 flex items-center gap-1.5"><i class="ph ph-trash text-[13px] text-zinc-500"></i> This reply was deleted</span>
+                </div>
+            </div>
+
+            <!-- Thread Reply 3 -->
+            <div class="group relative px-2 py-2 flex gap-3 hover:bg-study-700/30 transition-colors rounded-md w-[calc(100%+1rem)] -ml-2">
+                <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=64&q=80" alt="Davis Lee" class="w-8 h-8 rounded-full object-cover shrink-0 mt-0.5">
+                <div class="flex flex-col w-full min-w-0">
+                    <div class="flex items-baseline gap-2">
+                      <span class="font-medium text-zinc-100 text-[14px]">Davis Lee</span>
+                      <span class="text-[11px] text-zinc-400 font-medium tracking-wide">10:51 AM</span>
+                    </div>
+                    <p class="text-[13px] leading-relaxed text-zinc-200 mt-0.5">Just memorize the 4 rules and you'll be fine. He focused entirely on the insertion cases during review.</p>
+                </div>
+            </div>
+
+            <!-- Thread Reply Demo: Optimistic Pending Reply (Commented) -->
+            <!--
+            <div aria-busy="true" class="group px-2 py-2 flex gap-3 rounded-md border-l-2 border-amber-500/50 bg-study-700/10 w-[calc(100%+1rem)] -ml-2">
+              <div class="pending-dim w-8 h-8 rounded-full bg-study-600 flex items-center justify-center text-[11px] font-semibold text-zinc-100 shrink-0 mt-0.5">EL</div>
+              <div class="flex flex-col w-full min-w-0">
+                <div class="flex items-baseline gap-2">
+                  <span class="pending-dim font-medium text-zinc-100 text-[14px]">Elias (You)</span>
+                  <span class="text-[11px] text-amber-500 font-semibold tracking-wide flex items-center gap-1"><i class="ph ph-clock text-[12px]"></i> Sending…</span>
+                </div>
+                <p class="pending-dim text-[13px] leading-relaxed text-zinc-300 mt-0.5">Thanks! Putting together a study guide for that specifically right now.</p>
+              </div>
+            </div>
+            -->
+
+            <!-- Thread Demo: Loading Skeleton (Commented) -->
+            <!--
+            <div class="px-2 py-4 flex gap-3 animate-pulse w-[calc(100%+1rem)] -ml-2">
+              <div class="w-8 h-8 rounded-full bg-study-700 shrink-0"></div>
+              <div class="flex flex-col gap-2 w-full pt-1">
+                <div class="h-[10px] bg-study-700 rounded w-1/4"></div>
+                <div class="h-[10px] bg-study-700 rounded w-full"></div>
+                <div class="h-[10px] bg-study-700 rounded w-2/3"></div>
+              </div>
+            </div>
+            -->
+
+            <!-- Thread Demo: Empty State (Commented) -->
+            <!--
+            <div class="flex flex-col items-center justify-center py-12 px-4 text-center">
+              <div class="w-12 h-12 rounded-full bg-study-800 flex items-center justify-center mb-3">
+                 <i class="ph ph-chats-circle text-[24px] text-zinc-500"></i>
+              </div>
+              <p class="text-[14px] font-medium text-zinc-200">No replies yet</p>
+              <p class="text-[13px] text-zinc-500 mt-1">Start the conversation below.</p>
+            </div>
+            -->
+
+        </div>
+      </div>
+
+      <!-- Thread Composer -->
+      <div class="p-4 bg-study-900 border-t border-study-border shrink-0 z-10 w-full mb-0 relative">
+        <form class="relative flex items-end bg-study-800 recessed-input border border-study-600/60 rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500/40 focus-within:border-emerald-500/60 transition-shadow">
+          <label class="sr-only">Reply to thread</label>
+          <textarea rows="1"
+            class="w-full bg-transparent text-[14px] text-zinc-100 placeholder-zinc-400 py-3 px-3 outline-none resize-none min-h-[44px] max-h-[30vh] leading-relaxed"
+            placeholder="Reply to Mia Wong..."
+          ></textarea>
+          <div class="px-2 py-2 flex items-center shrink-0 self-stretch">
+            <button type="button" aria-label="Send reply"
+              class="w-7 h-7 flex items-center justify-center rounded-md bg-emerald-500 text-study-950 hover:bg-emerald-400 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70">
+              <i class="ph ph-paper-plane-right text-[15px]"></i>
+            </button>
+          </div>
+        </form>
+      </div>
+
+    </aside>
+
+    <!-- PANE 5: RIGHT SIDEBAR MEMBER LIST -->
+    <aside aria-label="Members" class="right-sidebar bg-study-900 border-l border-study-border flex flex-col z-20 overflow-hidden">
+      <div class="flex-1 overflow-y-auto px-4 py-5 space-y-6 select-none">
+        
+        <h2 class="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Members</h2>
+
+        <div>
+          <h3 class="text-[11px] font-bold text-zinc-500 uppercase tracking-widest mb-3" id="online-group">Online — 2</h3>
+          <ul class="space-y-0.5" aria-labelledby="online-group">
+            <li class="group flex items-center gap-3 p-1.5 rounded-md hover:bg-study-700 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70" tabindex="0">
+              <div class="relative shrink-0">
+                <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=64&q=80" alt="Mia Wong" class="w-8 h-8 rounded-full object-cover">
+                <div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-study-900 rounded-full flex items-center justify-center pointer-events-none">
+                  <span class="sr-only">Online</span>
+                  <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
+                </div>
+              </div>
+              <span class="text-[14px] font-medium text-zinc-200 truncate group-hover:text-zinc-100 transition-colors">Mia Wong</span>
+            </li>
+            <li class="group flex items-center gap-3 p-1.5 rounded-md hover:bg-study-700 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70" tabindex="0">
+              <div class="relative shrink-0">
+                <div class="w-8 h-8 rounded-full bg-study-600 flex items-center justify-center text-xs font-semibold text-zinc-100 shrink-0" aria-label="Elias">EL</div>
+                <div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-study-900 rounded-full flex items-center justify-center pointer-events-none">
+                  <span class="sr-only">Online</span>
+                  <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
+                </div>
+              </div>
+              <span class="text-[14px] font-medium text-zinc-200 truncate group-hover:text-zinc-100 transition-colors">Elias (You)</span>
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 class="text-[11px] font-bold text-zinc-500 uppercase tracking-widest mb-3" id="offline-group">Offline — 3</h3>
+          <ul class="space-y-0.5" aria-labelledby="offline-group">
+            <li class="group flex items-center gap-3 p-1.5 rounded-md hover:bg-study-700 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70" tabindex="0">
+              <div class="relative shrink-0">
+                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=64&q=80" alt="David C." class="w-8 h-8 rounded-full object-cover opacity-70 group-hover:opacity-100 transition-opacity">
+                <div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-study-900 rounded-full flex items-center justify-center pointer-events-none">
+                  <span class="sr-only">Offline</span>
+                  <div class="w-1.5 h-1.5 bg-study-500 rounded-full"></div>
+                </div>
+              </div>
+              <span class="text-[14px] font-medium text-white/50 truncate group-hover:text-zinc-300 transition-colors">David C.</span>
+            </li>
+
+            <li class="group flex items-center gap-3 p-1.5 rounded-md hover:bg-study-700 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70" tabindex="0">
+              <div class="relative shrink-0">
+                <img src="https://images.unsplash.com/photo-1502685104226-ee32379fefbe?auto=format&fit=crop&w=64&q=80" alt="Sarah J." class="w-8 h-8 rounded-full object-cover opacity-70 group-hover:opacity-100 transition-opacity">
+                <div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-study-900 rounded-full flex items-center justify-center pointer-events-none">
+                  <span class="sr-only">Offline</span>
+                  <div class="w-1.5 h-1.5 bg-study-500 rounded-full"></div>
+                </div>
+              </div>
+              <span class="text-[14px] font-medium text-white/50 truncate group-hover:text-zinc-300 transition-colors">Sarah J.</span>
+            </li>
+
+            <li class="group flex items-center gap-3 p-1.5 rounded-md hover:bg-study-700 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70" tabindex="0">
+              <div class="relative shrink-0">
+                <div class="w-8 h-8 rounded-full bg-study-700/60 flex items-center justify-center text-xs font-semibold text-zinc-400 shrink-0 group-hover:text-zinc-300 transition-colors" aria-label="Michael K.">MK</div>
+                <div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-study-900 rounded-full flex items-center justify-center pointer-events-none">
+                  <span class="sr-only">Offline</span>
+                  <div class="w-1.5 h-1.5 bg-study-500 rounded-full"></div>
+                </div>
+              </div>
+              <span class="text-[14px] font-medium text-white/50 truncate group-hover:text-zinc-300 transition-colors">Michael K.</span>
+            </li>
+          </ul>
+        </div>
+
+      </div>
+    </aside>
+
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const ta = document.getElementById('composerInput');
+      const sendBtn = document.getElementById('sendBtn');
+      const sendIcon = document.getElementById('sendIcon');
+      const form = document.getElementById('composerForm');
+
+      const sync = () => {
+        const empty = ta.value.trim().length === 0;
+        sendBtn.disabled = empty;
+        ta.style.height = 'auto';
+        ta.style.height = ta.scrollHeight + 'px';
+      };
+      sync();
+
+      ta.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); }
+      });
+      ta.addEventListener('input', sync);
+
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (sendBtn.disabled) return;
+        sendIcon.className = 'ph ph-circle-notch spin text-[18px]';
+        setTimeout(() => { sendIcon.className = 'ph ph-paper-plane-right text-[18px]'; }, 600);
+      });
+    });
+  </script>
+</body>
+</html>
