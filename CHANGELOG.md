@@ -40,6 +40,8 @@ All notable changes to StudyHall are documented here. Format follows
 - A "my mentions" view collects every message that mentions you in one place, and it only ever shows your own — no one can peek at anyone else's. (#27)
 - Thread replies: reply in a thread off any message, with a reply-count affordance on the original and a thread panel that shows the parent message and its replies. (#30)
 - Replies appear and disappear live for everyone viewing the thread, and a reply you send while offline is queued and sent once you're back online. (#30)
+- Attach files and images to a message: pick from the composer (up to 10MB each), with an image thumbnail or file chip preview and a progress-and-retry indicator while it uploads. (#31)
+- Images render inline in the message and open full-size on click; other files show as a chip with name and size, so attachments are always there to grab. (#31)
 
 ### Fixed
 
