@@ -12,8 +12,8 @@
 | B-1 | stages/B-1-contracts.md | done | mention DTO (shared typecheck clean) |
 | B-2 | stages/B-2-backend.md | done | parser+resolve/persist+edit-diff+my-mentions(authz)+realtime; 276 tests |
 | B-3 | stages/B-3-frontend.md | done | autocomplete+pills+unread; username-drift fix at B-4 |
-| B-4 | stages/B-4-wiring.md | pending | |
-| B-5 | stages/B-5-verify.md | pending | |
+| B-4 | stages/B-4-wiring.md | done | typecheck 4/4; username drift RESOLVED (chain closes) |
+| B-5 | stages/B-5-verify.md | done | lint+build+452 tests green (4 fix-forward, incl username-drift) |
 | B-6 | stages/B-6-review.md | pending | |
 
 ## Block-specific context

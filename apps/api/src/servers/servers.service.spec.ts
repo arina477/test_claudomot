@@ -1140,7 +1140,7 @@ describe('ServersService.listServerMembers', () => {
     });
     expect(result[1]).toEqual({
       userId: 'user-2',
-      displayName: 'jane',   // falls back to email prefix when display_name is null
+      displayName: 'jane', // falls back to email prefix when display_name is null
       avatarUrl: 'https://example.com/avatar.png',
       username: 'jane99',
     });

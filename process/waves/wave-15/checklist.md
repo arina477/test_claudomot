@@ -26,8 +26,8 @@ BUILD:
 - [ ] B-1 Contracts
 - [ ] B-2 Backend
 - [ ] B-3 Frontend
-- [ ] B-4 Wiring
-- [ ] B-5 Verify
+- [x] B-4 Wiring
+- [x] B-5 Verify
 - [ ] B-6 Review
 
 CI/CD:
