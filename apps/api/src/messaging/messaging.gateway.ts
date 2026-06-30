@@ -22,7 +22,7 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import type { MentionEvent, MessageResponse } from '@studyhall/shared';
+import type { MentionEvent, MessageResponse, ThreadReplyEvent } from '@studyhall/shared';
 import type { Server, Socket } from 'socket.io';
 import { installWsAuthMiddleware } from '../common/ws-auth';
 // biome-ignore lint/style/useImportType: value import required — emitDecoratorMetadata needs the runtime symbol for NestJS DI
@@ -216,6 +216,27 @@ export class MessagingGateway implements OnGatewayInit, OnGatewayConnection {
     this.server.to(`channel:${payload.channelId}`).emit('reaction:removed', payload);
     this.logger.debug(
       `Fanned out reaction.removed emoji=${payload.emoji} msg=${payload.messageId} channel=${payload.channelId}`,
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // thread.reply.created → fan-out to channel room (wave-18 thread replies)
+  //
+  // Emitted by MessagesService.createReply() after the transactional insert.
+  // Fan-out to 'channel:<channelId>' room — same room as top-level messages
+  // but under a DISTINCT event name ('thread:reply:created') so clients do NOT
+  // add this reply to the top-level message stream. Only the open ThreadPanel
+  // for the matching parentId should consume this event.
+  //
+  // Author-excluded: NOT excluded here (unlike mention events) — thread panels
+  // for the current user should also live-append their own replies.
+  // -------------------------------------------------------------------------
+
+  @OnEvent('thread.reply.created')
+  handleThreadReplyCreated(payload: ThreadReplyEvent): void {
+    this.server.to(`channel:${payload.channelId}`).emit('thread:reply:created', payload);
+    this.logger.debug(
+      `Fanned out thread.reply.created parentId=${payload.parentId} reply=${payload.reply.id} channel=${payload.channelId}`,
     );
   }
 

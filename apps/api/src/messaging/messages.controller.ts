@@ -20,6 +20,7 @@ import type {
   MessageResponse,
   MyMentionsResponse,
   ReactionToggleResponse,
+  ThreadRepliesResponse,
 } from '@studyhall/shared';
 import { EditMessageSchema, ReactionToggleSchema, SendMessageSchema } from '@studyhall/shared';
 import { AuthGuard } from '../auth/auth.guard';
@@ -37,6 +38,7 @@ interface SessionAugmentedRequest {
 /**
  * MessagesController — wave-12 M3 REST data plane (task a0c322b4)
  *                    + wave-13 edit/delete/reactions (tasks e12886d7 + d78df376)
+ *                    + wave-18 thread replies (task 497c2ae6)
  *
  * Routes (bare-path, no /api/v1 prefix):
  *   POST   /channels/:channelId/messages                          — send a message
@@ -45,8 +47,14 @@ interface SessionAugmentedRequest {
  *   DELETE /channels/:channelId/messages/:messageId               — delete a message (author || manage_channels)
  *   POST   /channels/:channelId/messages/:messageId/reactions      — toggle a reaction
  *
+ * ThreadsController routes (separate controller, /messages prefix):
+ *   POST   /messages/:parentId/replies                            — create a reply in a thread
+ *   GET    /messages/:parentId/replies                            — list replies (cursor, ASC)
+ *
  * Security:
- *   - @UseGuards(AuthGuard, ChannelMessageGuard) — all routes.
+ *   - @UseGuards(AuthGuard, ChannelMessageGuard) — all MessagesController routes.
+ *   - @UseGuards(AuthGuard) — ThreadsController routes (no ChannelMessageGuard; the
+ *     service validates the parent exists and belongs to the channel supplied in body).
  *   - author_id derived from req.session.getUserId() — NEVER from body.
  *   - channelId from route param — IDOR-safe.
  *   - Delete authz (author || manage_channels) resolved in service after
@@ -209,5 +217,91 @@ export class MentionsController {
     // userId derived from session ONLY — never a request param
     const viewerUserId = req.session.getUserId();
     return await this.messagesService.getMyMentions(viewerUserId, cursor, limit);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// ThreadsController — /messages/:parentId/replies
+//
+// Routes:
+//   POST   /messages/:parentId/replies?channelId=   — create a reply
+//   GET    /messages/:parentId/replies?cursor=&limit= — list replies (ASC)
+//
+// Security:
+//   - @UseGuards(AuthGuard) — session required.
+//   - channelId is supplied as a query param on POST (not in the path) so the
+//     service can validate that the parent belongs to that channel.
+//   - author_id is ALWAYS from req.session.getUserId() — never from body.
+//
+// Design rationale for channelId as query param on POST:
+//   The spec allows either a nested route under /channels/:channelId or a
+//   standalone /messages/:parentId/replies route. We chose the standalone form
+//   (/messages/:parentId/replies) with channelId as a required query param so
+//   the service can enforce the cross-channel invariant without requiring the
+//   client to know the channel upfront (parentId is globally unique by UUID).
+//   The ChannelMessageGuard is not applied here because the guard operates on
+//   the :channelId path param which is absent in this route shape; instead the
+//   service loads the parent message and verifies channel membership transitively.
+// ---------------------------------------------------------------------------
+
+@Controller('messages')
+export class ThreadsController {
+  constructor(private readonly messagesService: MessagesService) {}
+
+  /**
+   * POST /messages/:parentId/replies?channelId=<channelId>
+   *
+   * Body: { content: string, idempotencyKey?: string }
+   * Query: channelId (required — used for cross-channel validation)
+   *
+   * Returns: MessageResponse (the reply DTO, 201 Created)
+   * Errors: 400 (validation), 401 (unauthed), 404 (parent not found),
+   *         400 (cross-channel / reply-of-reply), 409 (parent deleted)
+   */
+  @Post(':parentId/replies')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.CREATED)
+  async createReply(
+    @Param('parentId') parentId: string,
+    @Query('channelId') channelId: string,
+    @Req() req: SessionAugmentedRequest,
+    @Body() body: unknown,
+  ): Promise<MessageResponse> {
+    if (!channelId) {
+      throw new BadRequestException('channelId query param is required');
+    }
+
+    const parsed = SendMessageSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.flatten());
+    }
+
+    // authorId ALWAYS from session — never from body (no sender spoofing)
+    const authorId = req.session.getUserId();
+
+    return await this.messagesService.createReply(channelId, parentId, authorId, parsed.data);
+  }
+
+  /**
+   * GET /messages/:parentId/replies?cursor=&limit=
+   *
+   * Returns replies for the thread, oldest-first, cursor-paginated.
+   * Excludes soft-deleted (tombstoned) replies.
+   *
+   * Returns: ThreadRepliesResponse { items: MessageResponse[], nextCursor?: string | null }
+   * Status: 200 OK
+   * Errors: 401 (unauthed), 404 (parent not found)
+   */
+  @Get(':parentId/replies')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async listThreadReplies(
+    @Param('parentId') parentId: string,
+    @Req() req: SessionAugmentedRequest,
+    @Query('cursor') cursor?: string,
+    @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit = 50,
+  ): Promise<ThreadRepliesResponse> {
+    const viewerUserId = req.session.getUserId();
+    return await this.messagesService.listThreadReplies(parentId, viewerUserId, cursor, limit);
   }
 }
