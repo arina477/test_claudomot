@@ -201,7 +201,7 @@ export class PresenceGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       for (const channelId of typingChannels) {
         this.presenceService.stopTyping(channelId, userId);
         // Emit updated typing:active immediately — don't wait for TTL to clear the ghost.
-        this.emitTypingActive(channelId, userId);
+        void this.emitTypingActive(channelId);
       }
       this.logger.debug(
         `userId=${userId} disconnected mid-type — cleared ${typingChannels.size} channel(s)`,
@@ -338,10 +338,10 @@ export class PresenceGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       if (typingChannels) {
         typingChannels.delete(expiredChannelId);
       }
-      this.emitTypingActive(expiredChannelId, userId);
+      void this.emitTypingActive(expiredChannelId);
     });
 
-    this.emitTypingActive(channelId, userId);
+    void this.emitTypingActive(channelId);
   }
 
   // -------------------------------------------------------------------------
@@ -366,22 +366,28 @@ export class PresenceGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     }
 
     this.presenceService.stopTyping(channelId, userId);
-    this.emitTypingActive(channelId, userId);
+    void this.emitTypingActive(channelId);
   }
 
   // -------------------------------------------------------------------------
-  // emitTypingActive — emit typing:active to the channel room
+  // emitTypingActive — emit typing:active to each socket in the channel room
   //
   // Fan-out target: presence:channel:<channelId>
   // Only sockets that passed canViewChannelById() in join_channel are in this
   // room, so all receivers are guaranteed to have channel visibility.
-  // Self (selfUserId) is excluded from the typers list by PresenceService.getTypers().
+  // Per-recipient exclusion: each socket receives a typers list that excludes
+  // only that socket's own userId (read from socket.data.userId), so the actor
+  // IS visible to every other viewer while each viewer still self-excludes.
   // -------------------------------------------------------------------------
 
-  private emitTypingActive(channelId: string, selfUserId: string): void {
-    const typers = this.presenceService.getTypers(channelId, selfUserId);
-    this.server
-      .to(`presence:channel:${channelId}`)
-      .emit(PRESENCE_EVENTS.TYPING_ACTIVE, { channelId, typers });
+  private async emitTypingActive(channelId: string): Promise<void> {
+    const sockets = await this.server.in(`presence:channel:${channelId}`).fetchSockets();
+    for (const s of sockets) {
+      const uid = s.data.userId as string;
+      s.emit(PRESENCE_EVENTS.TYPING_ACTIVE, {
+        channelId,
+        typers: this.presenceService.getTypers(channelId, uid),
+      });
+    }
   }
 }

@@ -99,7 +99,7 @@ vi.mock('../db/index', () => ({
 
 import type { RbacService } from '../rbac/rbac.service';
 import { PresenceGateway } from './presence.gateway';
-import type { PresenceService } from './presence.service';
+import { PresenceService } from './presence.service';
 
 // ---------------------------------------------------------------------------
 // Socket mock builder
@@ -228,7 +228,7 @@ describe('PresenceGateway — WS-upgrade auth', () => {
     mockGetSessionWithoutRequestResponse.mockResolvedValue(mockSession);
 
     const gateway = new PresenceGateway(makePresenceService(), makeRbacService());
-    const socket = makeSocket(`sAccessToken=valid-token; other=x`);
+    const socket = makeSocket('sAccessToken=valid-token; other=x');
 
     const err = await runMiddleware(gateway, socket);
 
@@ -371,9 +371,9 @@ describe('PresenceGateway — handleTypingStart', () => {
   });
 
   it('calls startTyping and emits typing:active fan-out when access is granted', async () => {
-    const typers = [{ userId: USER_ID, displayName: 'Alice' }];
+    const actorTyper = { userId: USER_ID, displayName: 'Alice' };
     const presenceService = makePresenceService({
-      getTypers: vi.fn().mockReturnValue(typers),
+      getTypers: vi.fn().mockReturnValue([actorTyper]),
     });
 
     const rbac = makeRbacService(true);
@@ -383,11 +383,13 @@ describe('PresenceGateway — handleTypingStart', () => {
     socket.data.displayName = 'Alice';
     socket.data.typingChannels = new Set<string>();
 
-    // Set up server mock for emitTypingActive
-    const mockEmit = vi.fn();
-    const mockTo = vi.fn().mockReturnValue({ emit: mockEmit });
+    // Set up server mock for emitTypingActive (now uses in().fetchSockets())
+    const mockSocketEmit = vi.fn();
+    const fakeSocket = { data: { userId: USER_ID }, emit: mockSocketEmit };
+    const mockFetchSockets = vi.fn().mockResolvedValue([fakeSocket]);
+    const mockIn = vi.fn().mockReturnValue({ fetchSockets: mockFetchSockets });
     // biome-ignore lint/suspicious/noExplicitAny: test server mock
-    (gateway as any).server = { to: mockTo };
+    (gateway as any).server = { in: mockIn };
 
     await gateway.handleTypingStart(socket as unknown as import('socket.io').Socket, {
       channelId: CHANNEL_ID,
@@ -401,9 +403,9 @@ describe('PresenceGateway — handleTypingStart', () => {
       expect.any(Function),
     );
 
-    // emitTypingActive must fan out to the channel room
-    expect(mockTo).toHaveBeenCalledWith(`presence:channel:${CHANNEL_ID}`);
-    expect(mockEmit).toHaveBeenCalledWith(
+    // emitTypingActive must fan out via in().fetchSockets() to the channel room
+    expect(mockIn).toHaveBeenCalledWith(`presence:channel:${CHANNEL_ID}`);
+    expect(mockSocketEmit).toHaveBeenCalledWith(
       'typing:active',
       expect.objectContaining({ channelId: CHANNEL_ID }),
     );
@@ -457,7 +459,7 @@ describe('PresenceGateway — handleTypingStop', () => {
     vi.clearAllMocks();
   });
 
-  it('calls stopTyping and emits typing:active fan-out on valid payload', () => {
+  it('calls stopTyping and emits typing:active fan-out on valid payload', async () => {
     const presenceService = makePresenceService({
       getTypers: vi.fn().mockReturnValue([]),
     });
@@ -466,18 +468,23 @@ describe('PresenceGateway — handleTypingStop', () => {
     socket.data.userId = USER_ID;
     socket.data.typingChannels = new Set<string>([CHANNEL_ID]);
 
-    const mockEmit = vi.fn();
-    const mockTo = vi.fn().mockReturnValue({ emit: mockEmit });
+    const mockSocketEmit = vi.fn();
+    const fakeSocket = { data: { userId: USER_ID }, emit: mockSocketEmit };
+    const mockFetchSockets = vi.fn().mockResolvedValue([fakeSocket]);
+    const mockIn = vi.fn().mockReturnValue({ fetchSockets: mockFetchSockets });
     // biome-ignore lint/suspicious/noExplicitAny: test server mock
-    (gateway as any).server = { to: mockTo };
+    (gateway as any).server = { in: mockIn };
 
+    // handleTypingStop is synchronous but emitTypingActive is now async (fire-and-forget via void)
+    // We flush microtasks so the promise resolves before asserting
     gateway.handleTypingStop(socket as unknown as import('socket.io').Socket, {
       channelId: CHANNEL_ID,
     });
+    await Promise.resolve(); // flush the void promise
 
     expect(presenceService.stopTyping).toHaveBeenCalledWith(CHANNEL_ID, USER_ID);
-    expect(mockTo).toHaveBeenCalledWith(`presence:channel:${CHANNEL_ID}`);
-    expect(mockEmit).toHaveBeenCalledWith(
+    expect(mockIn).toHaveBeenCalledWith(`presence:channel:${CHANNEL_ID}`);
+    expect(mockSocketEmit).toHaveBeenCalledWith(
       'typing:active',
       expect.objectContaining({ channelId: CHANNEL_ID, typers: [] }),
     );
@@ -518,10 +525,11 @@ describe('PresenceGateway — handleDisconnect typing cleanup', () => {
     });
     const gateway = new PresenceGateway(presenceService, makeRbacService());
 
-    const mockEmit = vi.fn();
-    const mockTo = vi.fn().mockReturnValue({ emit: mockEmit });
+    const mockFetchSockets = vi.fn().mockResolvedValue([]);
+    const mockIn = vi.fn().mockReturnValue({ fetchSockets: mockFetchSockets });
+    const mockTo = vi.fn().mockReturnValue({ emit: vi.fn() });
     // biome-ignore lint/suspicious/noExplicitAny: test server mock
-    (gateway as any).server = { to: mockTo, emit: vi.fn() };
+    (gateway as any).server = { in: mockIn, to: mockTo };
 
     const socket = makeSocket();
     socket.data.userId = USER_ID;
@@ -534,9 +542,9 @@ describe('PresenceGateway — handleDisconnect typing cleanup', () => {
     expect(presenceService.stopTyping).toHaveBeenCalledWith(CHANNEL_ID, USER_ID);
     expect(presenceService.stopTyping).toHaveBeenCalledWith(CH_2, USER_ID);
 
-    // emitTypingActive (server.to) must have been called for each typing channel
-    expect(mockTo).toHaveBeenCalledWith(`presence:channel:${CHANNEL_ID}`);
-    expect(mockTo).toHaveBeenCalledWith(`presence:channel:${CH_2}`);
+    // emitTypingActive (server.in) must have been called for each typing channel
+    expect(mockIn).toHaveBeenCalledWith(`presence:channel:${CHANNEL_ID}`);
+    expect(mockIn).toHaveBeenCalledWith(`presence:channel:${CH_2}`);
 
     // presenceService.disconnect must be called for ref-count cleanup
     expect(presenceService.disconnect).toHaveBeenCalledWith(USER_ID, 'test-socket-id');
@@ -548,7 +556,10 @@ describe('PresenceGateway — handleDisconnect typing cleanup', () => {
     });
     const gateway = new PresenceGateway(presenceService, makeRbacService());
     // biome-ignore lint/suspicious/noExplicitAny: test server mock
-    (gateway as any).server = { to: vi.fn().mockReturnValue({ emit: vi.fn() }), emit: vi.fn() };
+    (gateway as any).server = {
+      in: vi.fn().mockReturnValue({ fetchSockets: vi.fn().mockResolvedValue([]) }),
+      to: vi.fn().mockReturnValue({ emit: vi.fn() }),
+    };
 
     const socket = makeSocket();
     socket.data.userId = USER_ID;
@@ -571,5 +582,66 @@ describe('PresenceGateway — handleDisconnect typing cleanup', () => {
     await gateway.handleDisconnect(socket as unknown as import('socket.io').Socket);
 
     expect(presenceService.disconnect).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: emitTypingActive — per-recipient fan-out (F-4 regression)
+//
+// Uses the REAL PresenceService (no getTypers mock) to verify that after
+// startTyping is called for an actor, a RECIPIENT socket receives the actor
+// in its typing:active payload, while the actor's OWN socket does NOT.
+// ---------------------------------------------------------------------------
+
+const ACTOR_ID = 'c3d4e5f6-0000-0000-0000-000000000003';
+const ACTOR_DISPLAY = 'Bob';
+const RECIPIENT_ID = 'd4e5f6a7-0000-0000-0000-000000000004';
+
+describe('PresenceGateway — emitTypingActive per-recipient fan-out (F-4 regression)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('recipient socket receives the actor in typers; actor socket does NOT receive itself', async () => {
+    // Use the real PresenceService so the typing map is genuinely populated
+    const realPresenceService = new PresenceService();
+    realPresenceService.startTyping(CHANNEL_ID, ACTOR_ID, ACTOR_DISPLAY, () => {});
+
+    const gateway = new PresenceGateway(realPresenceService, makeRbacService());
+
+    // Two fake sockets in the channel room: actor and recipient
+    const actorEmit = vi.fn();
+    const recipientEmit = vi.fn();
+    const actorFakeSocket = { data: { userId: ACTOR_ID }, emit: actorEmit };
+    const recipientFakeSocket = { data: { userId: RECIPIENT_ID }, emit: recipientEmit };
+
+    const mockFetchSockets = vi.fn().mockResolvedValue([actorFakeSocket, recipientFakeSocket]);
+    const mockIn = vi.fn().mockReturnValue({ fetchSockets: mockFetchSockets });
+    // biome-ignore lint/suspicious/noExplicitAny: test server mock
+    (gateway as any).server = { in: mockIn };
+
+    // Invoke emitTypingActive via the private accessor
+    // biome-ignore lint/suspicious/noExplicitAny: accessing private method for test
+    await (gateway as any).emitTypingActive(CHANNEL_ID);
+
+    // Recipient should see the actor in typers
+    expect(recipientEmit).toHaveBeenCalledWith(
+      'typing:active',
+      expect.objectContaining({
+        channelId: CHANNEL_ID,
+        typers: expect.arrayContaining([
+          expect.objectContaining({ userId: ACTOR_ID, displayName: ACTOR_DISPLAY }),
+        ]),
+      }),
+    );
+
+    // Actor's own socket should NOT see itself in typers (self-exclusion)
+    expect(actorEmit).toHaveBeenCalledWith(
+      'typing:active',
+      expect.objectContaining({
+        channelId: CHANNEL_ID,
+        typers: expect.not.arrayContaining([expect.objectContaining({ userId: ACTOR_ID })]),
+      }),
+    );
   });
 });
