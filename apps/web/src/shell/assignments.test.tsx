@@ -144,9 +144,7 @@ describe('AssignmentCard chip states', () => {
     const a = makeAssignment({
       dueDate: new Date(NOW.getTime() - 3600_000).toISOString(), // 1h ago
     });
-    render(
-      <AssignmentCard assignment={a} onStatusChange={onStatusChange} onClick={onClick} />,
-    );
+    render(<AssignmentCard assignment={a} onStatusChange={onStatusChange} onClick={onClick} />);
     const chip = screen.getByTestId('chip-overdue');
     expect(chip).toBeInTheDocument();
     // Verify the --danger-text color (#f87171) is applied inline
@@ -159,9 +157,7 @@ describe('AssignmentCard chip states', () => {
     const a = makeAssignment({
       dueDate: new Date(NOW.getTime() + 24 * 3600_000).toISOString(), // 24h
     });
-    render(
-      <AssignmentCard assignment={a} onStatusChange={onStatusChange} onClick={onClick} />,
-    );
+    render(<AssignmentCard assignment={a} onStatusChange={onStatusChange} onClick={onClick} />);
     const chip = screen.getByTestId('chip-due-soon');
     expect(chip).toBeInTheDocument();
     expect(chip).toHaveStyle({ color: '#f59e0b' }); // --accent-amber
@@ -171,9 +167,7 @@ describe('AssignmentCard chip states', () => {
     const a = makeAssignment({
       dueDate: new Date(NOW.getTime() + 72 * 3600_000).toISOString(), // 72h
     });
-    render(
-      <AssignmentCard assignment={a} onStatusChange={onStatusChange} onClick={onClick} />,
-    );
+    render(<AssignmentCard assignment={a} onStatusChange={onStatusChange} onClick={onClick} />);
     // Normal state: chip-normal present, no overdue/dueSoon chips
     expect(screen.getByTestId('chip-normal')).toBeInTheDocument();
     expect(screen.queryByTestId('chip-overdue')).not.toBeInTheDocument();
@@ -185,9 +179,7 @@ describe('AssignmentCard chip states', () => {
       dueDate: new Date(NOW.getTime() - 3600_000).toISOString(), // overdue
       myStatus: 'done',
     });
-    render(
-      <AssignmentCard assignment={a} onStatusChange={onStatusChange} onClick={onClick} />,
-    );
+    render(<AssignmentCard assignment={a} onStatusChange={onStatusChange} onClick={onClick} />);
     // done overrides urgency — no overdue/dueSoon chip
     expect(screen.queryByTestId('chip-overdue')).not.toBeInTheDocument();
     expect(screen.queryByTestId('chip-due-soon')).not.toBeInTheDocument();
@@ -195,9 +187,7 @@ describe('AssignmentCard chip states', () => {
 
   it('renders card-done modifier class on completed assignments', () => {
     const a = makeAssignment({ myStatus: 'done' });
-    render(
-      <AssignmentCard assignment={a} onStatusChange={onStatusChange} onClick={onClick} />,
-    );
+    render(<AssignmentCard assignment={a} onStatusChange={onStatusChange} onClick={onClick} />);
     const card = screen.getByTestId('assignment-card');
     // card-done modifier applies emerald-dim background
     expect(card).toHaveStyle({ backgroundColor: 'rgba(16,185,129,0.1)' });
@@ -217,9 +207,7 @@ describe('AssignmentCard per-member toggle', () => {
 
   it('fires onStatusChange("done") and calls PUT when checkbox is checked', async () => {
     const a = makeAssignment({ myStatus: 'todo' });
-    render(
-      <AssignmentCard assignment={a} onStatusChange={onStatusChange} onClick={onClick} />,
-    );
+    render(<AssignmentCard assignment={a} onStatusChange={onStatusChange} onClick={onClick} />);
     const checkbox = screen.getByTestId('status-toggle');
     expect(checkbox).not.toBeChecked();
 
@@ -236,9 +224,7 @@ describe('AssignmentCard per-member toggle', () => {
   it('fires onStatusChange("todo") when unchecking a done assignment', async () => {
     mockApi.setAssignmentStatus.mockResolvedValue({ myStatus: 'todo' });
     const a = makeAssignment({ myStatus: 'done' });
-    render(
-      <AssignmentCard assignment={a} onStatusChange={onStatusChange} onClick={onClick} />,
-    );
+    render(<AssignmentCard assignment={a} onStatusChange={onStatusChange} onClick={onClick} />);
     const checkbox = screen.getByTestId('status-toggle');
 
     await act(async () => {
@@ -250,9 +236,7 @@ describe('AssignmentCard per-member toggle', () => {
 
   it('stopPropagation on toggle wrapper — does not call onClick when toggle is clicked', async () => {
     const a = makeAssignment({ myStatus: 'todo' });
-    render(
-      <AssignmentCard assignment={a} onStatusChange={onStatusChange} onClick={onClick} />,
-    );
+    render(<AssignmentCard assignment={a} onStatusChange={onStatusChange} onClick={onClick} />);
     const wrapper = screen.getByTestId('toggle-wrapper');
 
     await act(async () => {
@@ -266,9 +250,7 @@ describe('AssignmentCard per-member toggle', () => {
   it('reverts optimistic update if PUT fails', async () => {
     mockApi.setAssignmentStatus.mockRejectedValue(new Error('Network error'));
     const a = makeAssignment({ myStatus: 'todo' });
-    render(
-      <AssignmentCard assignment={a} onStatusChange={onStatusChange} onClick={onClick} />,
-    );
+    render(<AssignmentCard assignment={a} onStatusChange={onStatusChange} onClick={onClick} />);
     const checkbox = screen.getByTestId('status-toggle');
 
     await act(async () => {
@@ -289,7 +271,11 @@ describe('AssignmentCard per-member toggle', () => {
 describe('AssignmentsPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockApi.getMe.mockResolvedValue({ userId: 'owner-1', email: 'owner@test.com', emailVerified: true });
+    mockApi.getMe.mockResolvedValue({
+      userId: 'owner-1',
+      email: 'owner@test.com',
+      emailVerified: true,
+    });
     mockApi.getServerMembers.mockResolvedValue([]);
     mockApi.listRoles.mockResolvedValue([]);
     mockApi.getProfile.mockResolvedValue(null);
@@ -329,7 +315,11 @@ describe('AssignmentsPanel', () => {
   it('hides "New Assignment" button for non-organizer', async () => {
     mockApi.listAssignments.mockResolvedValue({ assignments: [] });
     // getMe returns a user who is NOT the server owner
-    mockApi.getMe.mockResolvedValue({ userId: 'member-99', email: 'member@test.com', emailVerified: true });
+    mockApi.getMe.mockResolvedValue({
+      userId: 'member-99',
+      email: 'member@test.com',
+      emailVerified: true,
+    });
 
     renderPanel();
 
