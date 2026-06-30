@@ -54,15 +54,15 @@ TEST:
 [x] - [ ] T-9 Journey
 
 VERIFY:
-- [ ] V-1 Independent reviews (Karen + jenny, parallel)
-- [ ] V-2 Triage
-- [ ] V-3 Fast-fix loop (or close)
+- [x] V-1 Independent reviews (Karen + jenny both APPROVE)
+- [x] V-2 Triage (0 blocking; 4 non-blocking→M5: 4b397de0/edbdea8f/6f257c82/3ad35a42; 2 noise)
+- [x] V-3 Fast-fix loop (queue empty; head-verifier APPROVED Phase-1)
 
 LEARN:
 - [x] L-1 Docs (CHANGELOG.md:47-50 #34; M5 a5232e16 stays in_progress done=3/open=11; README skipped; no backlog-stockout)
-- [ ] L-2 Distill
+- [x] L-2 Distill (3 tasks done; 4 observations; CI-PRINCIPLES rule 4 promoted — formatter-check-before-commit)
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers (no closure/promotion/decomp; seed 8aa67564 recommended; Resend cred-ask→digest)
+- [x] N-2 Seed (8aa67564 manage_assignments split; 0 siblings; validated)
+- [x] N-3 Handoff (wave-23 opened; wave-22 archived + closed)
