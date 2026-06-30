@@ -75,3 +75,6 @@ Promoted at L-2 Distill from `process/waves/wave-<N>/blocks/L/observations.md` b
 
 3. Any seed applied by a backfill must also appear in the create transaction, column-for-column.
    Why: A backfill-only seed leaves the forward create path producing a different initial state.
+
+4. Reproduce one negative path per authz or injection boundary at B-6 Phase-2; a Phase-1 code-read APPROVE is not sufficient.
+   Why: An absent guard or dead fault-injection passes code-read; only adversarial reproduction proves it.
