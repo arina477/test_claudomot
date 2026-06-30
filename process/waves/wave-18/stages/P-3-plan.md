@@ -19,7 +19,7 @@
 - **Outbox parity** (0b728319): the panel composer's reply send goes through the SAME optimistic outbox as top-level (reuse useMessages/messagingSocket's pending/failed/idempotency machinery) — optimistic pending row → reconcile on ack via idempotency_key → retryable failed. No separate reply-send path.
 
 ### Data model
-**migration 0008 (additive):** `messages += reply_count integer NOT NULL DEFAULT 0`, `last_reply_at timestamptz NULL`; index `(thread_parent_id, created_at)` for listThreadReplies + the affordance. `thread_parent_id` self-FK already declared (no FK change). Backfill: existing messages get reply_count=0 / last_reply_at=NULL (defaults — no data backfill needed). Drizzle schema in apps/api/src/db/schema/messages.ts.
+**migration 0008 (additive, THREE-PART — thread_parent_id was VERIFIED ABSENT, not previously migrated despite _library prose):** `messages += thread_parent_id uuid NULL self-FK REFERENCES messages.id` (the column the whole feature depends on), `+ reply_count integer NOT NULL DEFAULT 0`, `+ last_reply_at timestamptz NULL`; index `(thread_parent_id, created_at)` for listThreadReplies + the affordance. Backfill: existing messages get reply_count=0 / last_reply_at=NULL (defaults — no data backfill needed). Drizzle schema in apps/api/src/db/schema/messages.ts.
 
 ### API / deps
 - POST reply (thread_parent_id on the message create, OR a /messages/:parentId/replies route — implementer picks, document), GET /messages/:parentId/replies, realtime thread event. No new dep (Drizzle + Socket.IO + React existing). No new SDK.
@@ -28,8 +28,8 @@
 
 ### File-level steps (by B-stage)
 **B-1 Schema** (postgres-pro / database-administrator)
-| apps/api/drizzle/migrations/0008_*.sql | create (drizzle-generate) | messages += reply_count, last_reply_at + index(thread_parent_id, created_at) |
-| apps/api/src/db/schema/messages.ts | modify | reply_count, last_reply_at columns |
+| apps/api/drizzle/migrations/0008_*.sql | create (drizzle-generate) | messages += thread_parent_id uuid NULL self-FK (ABSENT — add it) + reply_count + last_reply_at + index(thread_parent_id, created_at) |
+| apps/api/src/db/schema/messages.ts | modify | thread_parent_id self-FK + reply_count + last_reply_at columns |
 
 **B-2 Contracts** (typescript-pro)
 | packages/shared/src/messaging.ts | modify | MessageResponse += threadParentId/replyCount/lastReplyAt; ThreadRepliesResponse; thread realtime event payload |
@@ -60,3 +60,6 @@ postgres-pro/database-administrator, typescript-pro, backend-developer, node-spe
 ### Self-consistency sweep
 1. Every AC → step: one-level/same-channel/transactional-count (service+migration); realtime (gateway); GET replies (controller); panel+affordance (ThreadPanel+MessageList); outbox parity (useMessages). ✓
 2. Specialist on each step. ✓ 3. No file in two parallel batches. ✓ 4. design_gap=true → B-4 surfaces depend on D-block-adopted thread panel/affordance. ✓ 5. Architecture alt named (denormalized count vs count-on-read). ✓ 6. Contracts concrete (no TBD). ✓ 7. No new dep. ✓ 8. SDK n/a. ✓
+
+## P-4 REWORK CORRECTION (head-product attempt 1)
+Load-bearing fix: `thread_parent_id` is NOT previously declared (verified absent in apps/api/src/db/schema/messages.ts + all migrations 0000-0007 + packages/ — despite _library.md prose claiming the self-FK). Migration 0008 is therefore THREE-PART: it MUST add `thread_parent_id uuid NULL REFERENCES messages.id` (the column the feature depends on) + reply_count + last_reply_at + the index. The drizzle schema (messages.ts) adds all three columns + the self-relation. Build-breaking if the column is omitted. (Cascade: P-3 only; the P-2 spec data-contract line was corrected to match.)
