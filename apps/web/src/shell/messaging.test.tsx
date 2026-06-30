@@ -411,7 +411,9 @@ describe('MessageList', () => {
       />,
     );
     // Inline img element with the attachment URL
-    const img = document.querySelector('img[src="https://example.com/diagram.png"]') as HTMLImageElement;
+    const img = document.querySelector(
+      'img[src="https://example.com/diagram.png"]',
+    ) as HTMLImageElement;
     expect(img).toBeTruthy();
     expect(img.alt).toBe('diagram.png');
   });

@@ -206,6 +206,12 @@ describe('ServerRolesPage', () => {
     await waitFor(() => expect(screen.getByTestId('role-name-input')).toBeInTheDocument());
 
     fireEvent.change(screen.getByTestId('role-name-input'), { target: { value: 'New Name' } });
+
+    // Wait for the dirty-state flush so the Save button is enabled before clicking.
+    // fireEvent does not wrap in act(), so React 18 may not flush setDirty(true)
+    // before the next fireEvent.click — leaving the button disabled and onClick
+    // never invoked under CI's slower parallel runner.
+    await waitFor(() => expect(screen.getByTestId('save-role-btn')).not.toBeDisabled());
     fireEvent.click(screen.getByTestId('save-role-btn'));
 
     await waitFor(() => {
@@ -245,6 +251,9 @@ describe('ServerRolesPage', () => {
     fireEvent.change(screen.getByTestId('role-name-input'), { target: { value: 'Edited' } });
     expect(screen.getByTestId('role-name-input')).toHaveValue('Edited');
 
+    // Wait for dirty-state flush (same race as the Save test: fireEvent does not
+    // wrap in act(), so discard-btn may still be disabled={!dirty} at click time).
+    await waitFor(() => expect(screen.getByTestId('discard-btn')).not.toBeDisabled());
     fireEvent.click(screen.getByTestId('discard-btn'));
     await waitFor(() => expect(screen.getByTestId('role-name-input')).toHaveValue('TA (Admin)'));
   });
