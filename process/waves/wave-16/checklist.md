@@ -53,6 +53,6 @@ LEARN:
 - [x] L-2 Distill
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers — M3 in_progress (no close: threads+attachments unshipped); no promotion; decomposition NO-OP (seed_candidates=2); daily-checkpoint NOT fired; 0 rituals
+- [x] N-2 Seed — seed 25523fb0 (real-PG create-server rollback test, oldest seedable); 0 siblings; validation PASS; claimed_task_ids=[25523fb0]
+- [x] N-3 Handoff — wave-17 opened; wave-16 archived; waves row closed status=ok; loop_state ready
