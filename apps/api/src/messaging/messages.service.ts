@@ -383,6 +383,10 @@ export class MessagesService {
       throw new NotFoundException('Message not found');
     }
 
+    if (message.is_deleted) {
+      throw new ConflictException('Cannot react to a deleted message');
+    }
+
     // Check if this reaction already exists
     const [existing] = await db
       .select({ id: message_reactions.id })
