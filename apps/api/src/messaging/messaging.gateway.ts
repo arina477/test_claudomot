@@ -22,7 +22,7 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import type { MessageResponse } from '@studyhall/shared';
+import type { MentionEvent, MessageResponse } from '@studyhall/shared';
 import type { Server, Socket } from 'socket.io';
 import { installWsAuthMiddleware } from '../common/ws-auth';
 // biome-ignore lint/style/useImportType: value import required — emitDecoratorMetadata needs the runtime symbol for NestJS DI
@@ -91,7 +91,20 @@ export class MessagingGateway implements OnGatewayInit, OnGatewayConnection {
   // -------------------------------------------------------------------------
 
   handleConnection(socket: Socket): void {
-    this.logger.debug(`Client connected: ${socket.id} userId=${socket.data.userId as string}`);
+    const userId = socket.data.userId as string;
+    this.logger.debug(`Client connected: ${socket.id} userId=${userId}`);
+
+    // Per-user room — every authenticated socket joins 'user:<userId>' immediately
+    // after the auth middleware passes.  This room is used exclusively for
+    // targeted server-to-client pushes (e.g. mention events) that must reach
+    // the user regardless of which channel they are currently viewing.
+    //
+    // This is a room, NOT a namespace — honors the spec constraint "no new
+    // namespace".  Room membership requires no client action; the server joins
+    // the socket automatically on connection.  Clients cannot spoof other users'
+    // rooms because userId is derived from the verified SuperTokens session
+    // (socket.data.userId set by installWsAuthMiddleware).
+    void socket.join(`user:${userId}`);
   }
 
   // -------------------------------------------------------------------------
@@ -203,6 +216,30 @@ export class MessagingGateway implements OnGatewayInit, OnGatewayConnection {
     this.server.to(`channel:${payload.channelId}`).emit('reaction:removed', payload);
     this.logger.debug(
       `Fanned out reaction.removed emoji=${payload.emoji} msg=${payload.messageId} channel=${payload.channelId}`,
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // mention.created → fan-out to each mentioned user's per-user room
+  //
+  // @OnEvent fires from EventEmitter2 (MessagesService emits after persisting
+  // mention rows in createMessage).  One event is emitted per mentioned user
+  // (not one broadcast with all recipients) so each user's 'user:<id>' room
+  // receives only their own MentionEvent.
+  //
+  // The author is excluded server-side — MessagesService does NOT emit a
+  // mention.created event when the sole mentioned user is the author.
+  //
+  // This handler is intentionally separate from handleMessageCreated so the
+  // cross-channel signal is decoupled from the in-channel fan-out and the
+  // client can handle them independently.
+  // -------------------------------------------------------------------------
+
+  @OnEvent('mention.created')
+  handleMentionCreated(payload: MentionEvent): void {
+    this.server.to(`user:${payload.mentionedUserId}`).emit('mention', payload);
+    this.logger.debug(
+      `Pushed mention event to user:${payload.mentionedUserId} for msg=${payload.messageId} channel=${payload.channelId}`,
     );
   }
 }

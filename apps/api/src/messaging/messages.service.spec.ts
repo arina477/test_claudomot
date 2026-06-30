@@ -1,5 +1,6 @@
 /**
  * MessagesService unit tests — wave-12 M3 (task a0c322b4) + wave-13 M3 (tasks e12886d7 + d78df376)
+ *                             + wave-15 (task c3f3f62a — per-user mention events)
  *
  * Covers (wave-12):
  *   - createMessage: basic creation
@@ -21,6 +22,13 @@
  *   - toggleReaction: toggle on → reacted: true
  *   - toggleReaction: double toggle → off (idempotent)
  *   - listMessages: aggregated reactions with reactedByMe
+ *
+ * Covers (wave-15 task c3f3f62a — mention realtime):
+ *   - createMessage: mention.created emitted per mentioned user (not author)
+ *   - createMessage: self-mention (author mentions themselves) → NO mention.created emitted
+ *   - createMessage: multiple mentions → one mention.created per non-author mentioned user
+ *   - editMessage: newly-added mention on edit → mention.created emitted for new recipients
+ *   - editMessage: pre-existing mention on edit → mention.created NOT re-emitted
  */
 
 import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
@@ -685,5 +693,236 @@ describe('MessagesService.listMessages', () => {
     await expect(service.listMessages('nonexistent-ch', AUTHOR_ID)).rejects.toThrow(
       NotFoundException,
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: createMessage — wave-15 mention.created events (task c3f3f62a)
+// ---------------------------------------------------------------------------
+
+const MENTIONED_USER_ID = 'user-mentioned-001';
+const SECOND_MENTIONED_USER_ID = 'user-mentioned-002';
+const CHANNEL_NAME = 'general';
+
+// Mock mockMessage with channel that has name for mention events
+const mockChannelWithName = { id: CHANNEL_ID, server_id: SERVER_ID, name: CHANNEL_NAME };
+
+// Shared helper: set up a createMessage with resolved mention users
+function setupCreateWithMentions(mentionedUserIds: string[]) {
+  let callCount = 0;
+
+  // The service calls:
+  //   1. SELECT channel (with server_id + name)
+  //   2. SELECT message after insert
+  //   3. SELECT in resolveMentions (for @username → user_id lookup)
+  //   4. SELECT fetchMentionRows (username join)
+  mockSelect.mockImplementation(() => {
+    callCount++;
+    if (callCount === 1) return makeSelectChain([mockChannelWithName]);
+    if (callCount === 2) return makeSelectChain([mockMessage]);
+    // resolveMentions result — return one row per mentioned user
+    if (callCount === 3) return makeSelectChain(mentionedUserIds.map((id) => ({ user_id: id })));
+    // fetchMentionRows — return mention rows with usernames
+    return makeSelectChain(
+      mentionedUserIds.map((id) => ({
+        message_id: MESSAGE_ID,
+        mentioned_user_id: id,
+        username: `user_${id}`,
+      })),
+    );
+  });
+  mockInsert.mockReturnValue(makeInsertChain());
+}
+
+describe('MessagesService.createMessage — wave-15 mention.created events', () => {
+  let service: MessagesService;
+  let eventEmitter: ReturnType<typeof makeEventEmitter>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    eventEmitter = makeEventEmitter();
+    // biome-ignore lint/suspicious/noExplicitAny: test mock
+    service = new MessagesService(eventEmitter as any, makeRbacService() as any);
+  });
+
+  it('emits mention.created for the mentioned user (non-author) with correct shape', async () => {
+    setupCreateWithMentions([MENTIONED_USER_ID]);
+
+    await service.createMessage(CHANNEL_ID, AUTHOR_ID, {
+      content: `Hello @user_${MENTIONED_USER_ID}`,
+      idempotencyKey: 'key-mention-1',
+    });
+
+    // Must have emitted message.created AND mention.created
+    const emitCalls = eventEmitter.emit.mock.calls;
+
+    const mentionEmit = emitCalls.find((c) => c[0] === 'mention.created');
+    expect(mentionEmit).toBeDefined();
+    expect(mentionEmit?.[1]).toMatchObject({
+      messageId: MESSAGE_ID,
+      channelId: CHANNEL_ID,
+      channelName: CHANNEL_NAME,
+      serverId: SERVER_ID,
+      mentionedUserId: MENTIONED_USER_ID,
+    });
+  });
+
+  it('does NOT emit mention.created when the author mentions themselves (self-mention excluded)', async () => {
+    // The mentioned user IS the author — self-mention must be suppressed
+    setupCreateWithMentions([AUTHOR_ID]);
+
+    await service.createMessage(CHANNEL_ID, AUTHOR_ID, {
+      content: 'Hey @me',
+      idempotencyKey: 'key-self-mention',
+    });
+
+    const emitCalls = eventEmitter.emit.mock.calls;
+    const mentionEmits = emitCalls.filter((c) => c[0] === 'mention.created');
+    expect(mentionEmits).toHaveLength(0);
+  });
+
+  it('emits one mention.created per non-author mentioned user (multiple mentions)', async () => {
+    setupCreateWithMentions([MENTIONED_USER_ID, SECOND_MENTIONED_USER_ID]);
+
+    await service.createMessage(CHANNEL_ID, AUTHOR_ID, {
+      content: 'Hey @user1 and @user2',
+      idempotencyKey: 'key-multi-mention',
+    });
+
+    const emitCalls = eventEmitter.emit.mock.calls;
+    const mentionEmits = emitCalls.filter((c) => c[0] === 'mention.created');
+
+    expect(mentionEmits).toHaveLength(2);
+    const recipientIds = mentionEmits.map(
+      (c) => (c[1] as { mentionedUserId: string }).mentionedUserId,
+    );
+    expect(recipientIds).toContain(MENTIONED_USER_ID);
+    expect(recipientIds).toContain(SECOND_MENTIONED_USER_ID);
+    // Author must not appear in recipients
+    expect(recipientIds).not.toContain(AUTHOR_ID);
+  });
+
+  it('emits mention.created for non-author mentions but NOT for self when mixed', async () => {
+    // Author mentions themselves AND another user
+    setupCreateWithMentions([AUTHOR_ID, MENTIONED_USER_ID]);
+
+    await service.createMessage(CHANNEL_ID, AUTHOR_ID, {
+      content: '@me and @other',
+      idempotencyKey: 'key-mixed-mention',
+    });
+
+    const emitCalls = eventEmitter.emit.mock.calls;
+    const mentionEmits = emitCalls.filter((c) => c[0] === 'mention.created');
+
+    // Only the non-author mention should emit
+    expect(mentionEmits).toHaveLength(1);
+    expect(mentionEmits[0]?.[1]).toMatchObject({ mentionedUserId: MENTIONED_USER_ID });
+  });
+
+  it('does NOT emit mention.created when there are no mentions in the message', async () => {
+    // No @username tokens → resolveMentions returns []
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return makeSelectChain([mockChannelWithName]);
+      if (callCount === 2) return makeSelectChain([mockMessage]);
+      return makeSelectChain([]); // no mentions
+    });
+    mockInsert.mockReturnValue(makeInsertChain());
+
+    await service.createMessage(CHANNEL_ID, AUTHOR_ID, {
+      content: 'No mentions here',
+      idempotencyKey: 'key-no-mention',
+    });
+
+    const emitCalls = eventEmitter.emit.mock.calls;
+    const mentionEmits = emitCalls.filter((c) => c[0] === 'mention.created');
+    expect(mentionEmits).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: editMessage — wave-15 mention.created events for newly-added mentions
+// ---------------------------------------------------------------------------
+
+describe('MessagesService.editMessage — wave-15 mention.created for new mentions', () => {
+  let service: MessagesService;
+  let eventEmitter: ReturnType<typeof makeEventEmitter>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    eventEmitter = makeEventEmitter();
+    // biome-ignore lint/suspicious/noExplicitAny: test mock
+    service = new MessagesService(eventEmitter as any, makeRbacService() as any);
+  });
+
+  it('emits mention.created for a newly-added mention on edit (not present before edit)', async () => {
+    const updatedMessage = {
+      ...mockMessage,
+      content: 'edited with @new_user',
+      is_edited: true,
+      edited_at: new Date('2026-06-30T11:00:00Z'),
+    };
+
+    let selectCallCount = 0;
+    mockSelect.mockImplementation(() => {
+      selectCallCount++;
+      if (selectCallCount === 1) return makeSelectChain([mockMessage]); // fetch message
+      if (selectCallCount === 2)
+        return makeSelectChain([{ server_id: SERVER_ID, name: CHANNEL_NAME }]); // channel
+      if (selectCallCount === 3) return makeSelectChain([]); // existing mentions (none before edit)
+      // resolveMentions for new content — returns the newly-mentioned user
+      if (selectCallCount === 4) return makeSelectChain([{ user_id: MENTIONED_USER_ID }]);
+      if (selectCallCount === 5) return makeSelectChain([]); // fetchMentionRows
+      return makeSelectChain([]); // reactions
+    });
+    mockUpdate.mockReturnValue(makeUpdateChain([updatedMessage]));
+    mockInsert.mockReturnValue(makeInsertChain());
+
+    await service.editMessage(CHANNEL_ID, MESSAGE_ID, AUTHOR_ID, 'edited with @new_user');
+
+    const emitCalls = eventEmitter.emit.mock.calls;
+    const mentionEmits = emitCalls.filter((c) => c[0] === 'mention.created');
+
+    expect(mentionEmits).toHaveLength(1);
+    expect(mentionEmits[0]?.[1]).toMatchObject({
+      messageId: MESSAGE_ID,
+      channelId: CHANNEL_ID,
+      channelName: CHANNEL_NAME,
+      serverId: SERVER_ID,
+      mentionedUserId: MENTIONED_USER_ID,
+    });
+  });
+
+  it('does NOT emit mention.created for a pre-existing mention (already mentioned before edit)', async () => {
+    // Pre-existing mention — the user was already in existingIds, so they are in toInsert=[]
+    const updatedMessage = {
+      ...mockMessage,
+      content: 'still mentioning @old_user',
+      is_edited: true,
+      edited_at: new Date(),
+    };
+
+    let selectCallCount = 0;
+    mockSelect.mockImplementation(() => {
+      selectCallCount++;
+      if (selectCallCount === 1) return makeSelectChain([mockMessage]); // fetch message
+      if (selectCallCount === 2)
+        return makeSelectChain([{ server_id: SERVER_ID, name: CHANNEL_NAME }]);
+      // existing mentions — user is already there
+      if (selectCallCount === 3) return makeSelectChain([{ mentioned_user_id: MENTIONED_USER_ID }]);
+      // resolveMentions — same user still mentioned
+      if (selectCallCount === 4) return makeSelectChain([{ user_id: MENTIONED_USER_ID }]);
+      if (selectCallCount === 5) return makeSelectChain([]); // fetchMentionRows
+      return makeSelectChain([]); // reactions
+    });
+    mockUpdate.mockReturnValue(makeUpdateChain([updatedMessage]));
+
+    await service.editMessage(CHANNEL_ID, MESSAGE_ID, AUTHOR_ID, 'still mentioning @old_user');
+
+    const emitCalls = eventEmitter.emit.mock.calls;
+    const mentionEmits = emitCalls.filter((c) => c[0] === 'mention.created');
+    // Pre-existing mention → toInsert is empty → no mention.created emitted
+    expect(mentionEmits).toHaveLength(0);
   });
 });

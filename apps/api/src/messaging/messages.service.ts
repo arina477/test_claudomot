@@ -7,6 +7,7 @@ import {
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import type {
+  MentionEvent,
   MessageList,
   MessageResponse,
   MyMentionsResponse,
@@ -234,9 +235,9 @@ export class MessagesService {
   ): Promise<MessageResponse> {
     // Verify channel exists (guard already verified permission, but service
     // provides a clean 404 for a missing channel as defence-in-depth).
-    // Also fetch server_id here — needed for mention resolution.
+    // Fetch server_id (mention resolution) and name (mention event channelName).
     const [channel] = await db
-      .select({ id: channels.id, server_id: channels.server_id })
+      .select({ id: channels.id, server_id: channels.server_id, name: channels.name })
       .from(channels)
       .where(eq(channels.id, channelId))
       .limit(1);
@@ -321,6 +322,30 @@ export class MessagesService {
     // mentions[] rides on the DTO — no new event needed (spec §contracts.api)
     this.eventEmitter.emit('message.created', dto);
 
+    // Emit per-user mention events for cross-channel unread-mention signal.
+    //
+    // One 'mention.created' event is emitted per mentioned user so each user's
+    // 'user:<id>' room receives only their own event.
+    //
+    // Author exclusion: if the author mentions themselves, no mention event is
+    // emitted (a user should not receive a badge for their own message).
+    //
+    // channelName and serverId are included so the client can attribute the
+    // unread badge to the correct channel and server without an additional fetch.
+    if (mentionValues.length > 0) {
+      for (const { mentioned_user_id } of mentionValues) {
+        if (mentioned_user_id === authorId) continue; // exclude self-mention
+        const mentionEvent: MentionEvent = {
+          messageId: message.id,
+          channelId,
+          channelName: channel.name,
+          serverId: channel.server_id,
+          mentionedUserId: mentioned_user_id,
+        };
+        this.eventEmitter.emit('mention.created', mentionEvent);
+      }
+    }
+
     return dto;
   }
 
@@ -362,9 +387,9 @@ export class MessagesService {
       throw new ConflictException('Cannot edit a deleted message');
     }
 
-    // Resolve the channel's server_id for mention resolution
+    // Resolve the channel's server_id for mention resolution (and name for mention events)
     const [channel] = await db
-      .select({ server_id: channels.server_id })
+      .select({ server_id: channels.server_id, name: channels.name })
       .from(channels)
       .where(eq(channels.id, channelId))
       .limit(1);
@@ -446,6 +471,24 @@ export class MessagesService {
 
     // Emit event for gateway fan-out (mentions[] rides on the DTO)
     this.eventEmitter.emit('message.updated', dto);
+
+    // Emit per-user mention events for newly-added mentions on edit.
+    // Only users in `toInsert` (not previously mentioned) receive a mention
+    // event; removed or pre-existing mentions do not fire a new event.
+    // Author exclusion applies here too.
+    if (toInsert.length > 0) {
+      for (const { mentioned_user_id } of toInsert) {
+        if (mentioned_user_id === userId) continue; // exclude self-mention
+        const mentionEvent: MentionEvent = {
+          messageId,
+          channelId,
+          channelName: channel.name,
+          serverId: channel.server_id,
+          mentionedUserId: mentioned_user_id,
+        };
+        this.eventEmitter.emit('mention.created', mentionEvent);
+      }
+    }
 
     return dto;
   }

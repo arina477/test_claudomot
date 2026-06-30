@@ -71,6 +71,7 @@ export {
   ReactionToggleResponseSchema,
   MessageListSchema,
   MyMentionsResponseSchema,
+  MentionEventSchema,
 } from './messaging.js';
 export type {
   ReactionSummary,
@@ -82,6 +83,7 @@ export type {
   ReactionToggleResponse,
   MessageList,
   MyMentionsResponse,
+  MentionEvent,
 } from './messaging.js';
 
 export {
