@@ -134,6 +134,3 @@ pr_conventions:
 
 2. Probe a new-only route for a 404-to-auth-gated-status flip after deploy-state SUCCESS before passing.
    Why: A SUCCESS with the new route still 404ing proves the prior revision serves, a false-green.
-
-3. Apply pending DB migrations explicitly before app cutover, then verify the schema by direct query.
-   Why: Auto-migrate-on-boot races the serving revision and a CLI exit-0 does not prove the schema changed.
