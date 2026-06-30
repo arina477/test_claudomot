@@ -21,6 +21,9 @@
       },
       "performance": {
         "noDelete": "warn"
+      },
+      "a11y": {
+        "useSemanticElements": "off"
       }
     }
   },

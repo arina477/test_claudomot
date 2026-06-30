@@ -17,9 +17,15 @@
  *   the popover.
  * - Escape closes the popover without inserting.
  * - Popover positioned above the composer form (absolute, bottom-full).
+ *
+ * A11y (combobox pattern — WAI-ARIA 1.2 §combo-with-list):
+ * - The textarea carries role=combobox + aria-expanded + aria-controls
+ *   (pointing at the listbox id) + aria-activedescendant (the focused option id).
+ * - The listbox div + option divs live in MentionAutocomplete; they do NOT
+ *   carry aria-activedescendant and do NOT need to be focusable.
  */
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useId, useRef, useState } from 'react';
 import type { MentionInsertPayload } from './MentionAutocomplete';
 import { MentionAutocomplete } from './MentionAutocomplete';
 import { PaperPlaneIcon, SpinnerIcon } from './icons';
@@ -89,7 +95,14 @@ export function MessageComposer({
   const [value, setValue] = useState('');
   const [sending, setSending] = useState(false);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  // Tracks the aria-activedescendant id reported by MentionAutocomplete.
+  const [activeDescendantId, setActiveDescendantId] = useState<string | undefined>(undefined);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Stable id for the listbox — shared with MentionAutocomplete so aria-controls
+  // on the textarea points at the exact same element.
+  const rawId = useId();
+  const listboxId = `mention-listbox-${rawId.replace(/:/g, '')}`;
 
   const autocompleteOpen = mentionQuery !== null;
   const canSend = value.trim().length > 0 && !disabled && !sending;
@@ -98,12 +111,12 @@ export function MessageComposer({
   // Helpers
   // ---------------------------------------------------------------------------
 
-  function autoGrow() {
+  const autoGrow = useCallback(() => {
     const ta = textareaRef.current;
     if (!ta) return;
     ta.style.height = 'auto';
     ta.style.height = `${ta.scrollHeight}px`;
-  }
+  }, []);
 
   function updateMentionState(newValue: string, cursorPos: number) {
     const query = getMentionQuery(newValue, cursorPos);
@@ -159,7 +172,7 @@ export function MessageComposer({
         autoGrow();
       });
     },
-    [value],
+    [value, autoGrow],
   );
 
   const handleMentionDismiss = useCallback(() => {
@@ -240,6 +253,8 @@ export function MessageComposer({
             query={mentionQuery ?? ''}
             onSelect={handleMentionSelect}
             onDismiss={handleMentionDismiss}
+            listboxId={listboxId}
+            onActiveIdChange={setActiveDescendantId}
           />
         </div>
       )}
@@ -271,9 +286,15 @@ export function MessageComposer({
           onKeyDown={handleKeyDown}
           onSelect={handleSelect}
           onBlur={handleBlur}
+          // --- Combobox ARIA (WAI-ARIA 1.2 §combo-with-list) ---
+          // Focus stays on this textarea at all times while the popover is open.
+          // aria-activedescendant + aria-controls + role=combobox all live here
+          // (on the focusable element), NOT on the listbox.
+          role={serverId ? 'combobox' : undefined}
           aria-autocomplete={serverId ? 'list' : undefined}
           aria-expanded={autocompleteOpen || undefined}
-          aria-controls={autocompleteOpen ? `mention-listbox-${serverId ?? ''}` : undefined}
+          aria-controls={autocompleteOpen ? listboxId : undefined}
+          aria-activedescendant={autocompleteOpen ? activeDescendantId : undefined}
           className="w-full bg-transparent text-[14px] outline-none resize-none overflow-y-auto"
           style={{
             color: 'rgba(255,255,255,0.92)',

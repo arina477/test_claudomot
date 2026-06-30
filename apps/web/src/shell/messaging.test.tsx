@@ -948,6 +948,8 @@ describe('MessageList — delete message UI', () => {
 describe('MentionAutocomplete — username threading (wave-15 B-4)', () => {
   const onSelect = vi.fn();
   const onDismiss = vi.fn();
+  const onActiveIdChange = vi.fn();
+  const testListboxId = 'test-mention-listbox';
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -965,6 +967,8 @@ describe('MentionAutocomplete — username threading (wave-15 B-4)', () => {
         query=""
         onSelect={onSelect}
         onDismiss={onDismiss}
+        listboxId={testListboxId}
+        onActiveIdChange={onActiveIdChange}
       />,
     );
 
@@ -989,6 +993,8 @@ describe('MentionAutocomplete — username threading (wave-15 B-4)', () => {
         query=""
         onSelect={onSelect}
         onDismiss={onDismiss}
+        listboxId={testListboxId}
+        onActiveIdChange={onActiveIdChange}
       />,
     );
 
@@ -1010,6 +1016,8 @@ describe('MentionAutocomplete — username threading (wave-15 B-4)', () => {
         query="mia"
         onSelect={onSelect}
         onDismiss={onDismiss}
+        listboxId={testListboxId}
+        onActiveIdChange={onActiveIdChange}
       />,
     );
 
@@ -1030,6 +1038,8 @@ describe('MentionAutocomplete — username threading (wave-15 B-4)', () => {
         query=""
         onSelect={onSelect}
         onDismiss={onDismiss}
+        listboxId={testListboxId}
+        onActiveIdChange={onActiveIdChange}
       />,
     );
 

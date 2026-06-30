@@ -11,16 +11,18 @@
  * Keyboard nav: ↑↓ to move active row, Enter to select (does NOT send the
  * message), Escape to dismiss. Click also selects.
  *
- * A11y: role=listbox on the list, role=option on each item, unique option
- * ids derived from userId, aria-activedescendant wired to the listbox so
- * screen readers announce the focused option on every ↑↓ key.
+ * A11y: combobox pattern — aria-activedescendant + aria-controls + role=combobox
+ * live on the focusable textarea in MessageComposer (the element that actually
+ * holds focus while the popover is open). The listbox div + option divs carry
+ * their roles and ids; the listbox does NOT carry aria-activedescendant and
+ * does NOT need to be focusable.
  *
  * @-trigger semantics: only fires after whitespace (or at the very start of
  * the input) — never inside a@b style tokens (email-safe rule).
  */
 
 import type { ServerMember } from '@studyhall/shared';
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../auth/api';
 import { MagnifyingGlassIcon, SpinnerIcon } from './icons';
 
@@ -42,6 +44,16 @@ type Props = {
   onSelect: (payload: MentionInsertPayload) => void;
   /** Called when the user presses Escape or clicks outside. */
   onDismiss: () => void;
+  /**
+   * Stable id for the listbox element — provided by MessageComposer so it can
+   * wire aria-controls on the textarea to the same id.
+   */
+  listboxId: string;
+  /**
+   * Called whenever the active-descendant option id changes so MessageComposer
+   * can set aria-activedescendant on the focused textarea.
+   */
+  onActiveIdChange: (id: string | undefined) => void;
 };
 
 // ---------------------------------------------------------------------------
@@ -55,9 +67,15 @@ function SkeletonRow({ delay }: { delay: number }) {
       style={{ animationDelay: `${delay}ms` }}
     >
       {/* Avatar placeholder */}
-      <div className="w-6 h-6 rounded-full shrink-0" style={{ backgroundColor: 'rgba(63,63,70,0.70)' }} />
+      <div
+        className="w-6 h-6 rounded-full shrink-0"
+        style={{ backgroundColor: 'rgba(63,63,70,0.70)' }}
+      />
       <div className="flex flex-col gap-1.5 flex-1">
-        <div className="h-[10px] rounded w-1/2" style={{ backgroundColor: 'rgba(63,63,70,0.70)' }} />
+        <div
+          className="h-[10px] rounded w-1/2"
+          style={{ backgroundColor: 'rgba(63,63,70,0.70)' }}
+        />
         <div className="h-[8px] rounded w-1/3" style={{ backgroundColor: 'rgba(63,63,70,0.70)' }} />
       </div>
     </div>
@@ -68,9 +86,14 @@ function SkeletonRow({ delay }: { delay: number }) {
 // MentionAutocomplete
 // ---------------------------------------------------------------------------
 
-export function MentionAutocomplete({ serverId, query, onSelect, onDismiss }: Props) {
-  const instanceId = useId();
-
+export function MentionAutocomplete({
+  serverId,
+  query,
+  onSelect,
+  onDismiss,
+  listboxId,
+  onActiveIdChange,
+}: Props) {
   const [allMembers, setAllMembers] = useState<ServerMember[]>([]);
   const [loadStatus, setLoadStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const [activeIndex, setActiveIndex] = useState(0);
@@ -88,6 +111,10 @@ export function MentionAutocomplete({ serverId, query, onSelect, onDismiss }: Pr
 
   // Fetch members when serverId changes (reuse the same api.getServerMembers
   // that MemberListPanel uses — share the pattern, no extra endpoint needed).
+  // loadStatus is intentionally excluded from the dep array: the prevServerIdRef
+  // guard prevents double-fetching without it, and including it would cause an
+  // infinite loop via setLoadStatus('loading') → setLoadStatus('loaded') → re-run.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: loadStatus intentionally excluded — see comment above
   useEffect(() => {
     if (!serverId) {
       setAllMembers([]);
@@ -112,15 +139,13 @@ export function MentionAutocomplete({ serverId, query, onSelect, onDismiss }: Pr
         if (!mountedRef.current) return;
         setLoadStatus('error');
       });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serverId]);
 
   // Only members with a non-null username are mentionable — the resolver
   // matches users.username (IS NOT NULL guard). Members without a username
   // are excluded so the autocomplete never produces an unresolvable @token.
-  const mentionableMembers: ServerMember[] = loadStatus === 'loaded'
-    ? allMembers.filter((m) => m.username !== null)
-    : [];
+  const mentionableMembers: ServerMember[] =
+    loadStatus === 'loaded' ? allMembers.filter((m) => m.username !== null) : [];
 
   // Filter by query — prefix match on username (canonical) OR displayName, case-insensitive.
   const filtered: ServerMember[] = mentionableMembers.filter((m) => {
@@ -128,13 +153,29 @@ export function MentionAutocomplete({ serverId, query, onSelect, onDismiss }: Pr
     const q = query.toLowerCase();
     // m.username is non-null here (filtered above)
     return (
-      (m.username as string).toLowerCase().startsWith(q) ||
-      m.displayName.toLowerCase().includes(q)
+      (m.username as string).toLowerCase().startsWith(q) || m.displayName.toLowerCase().includes(q)
     );
   });
 
   // Clamp activeIndex when filtered list shrinks
   const safeActive = filtered.length > 0 ? Math.min(activeIndex, filtered.length - 1) : 0;
+
+  // Derive the active option id and notify the parent (MessageComposer sets
+  // aria-activedescendant on the textarea using this id).
+  const optionId = (userId: string) => `mention-option-${listboxId}-${userId}`;
+  const activeOptionId =
+    filtered[safeActive] != null ? optionId(filtered[safeActive]?.userId ?? '') : undefined;
+
+  useEffect(() => {
+    onActiveIdChange(activeOptionId);
+  }, [activeOptionId, onActiveIdChange]);
+
+  // Notify parent when popover unmounts (activeId → undefined)
+  useEffect(() => {
+    return () => {
+      onActiveIdChange(undefined);
+    };
+  }, [onActiveIdChange]);
 
   // Reset active index when query changes
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentional reset on query change
@@ -200,10 +241,6 @@ export function MentionAutocomplete({ serverId, query, onSelect, onDismiss }: Pr
 
   if (!serverId) return null;
 
-  // Stable listbox id for aria-activedescendant
-  const listboxId = `mention-listbox-${instanceId.replace(/:/g, '')}`;
-  const optionId = (userId: string) => `mention-option-${instanceId.replace(/:/g, '')}-${userId}`;
-
   return (
     <div
       ref={containerRef}
@@ -252,35 +289,34 @@ export function MentionAutocomplete({ serverId, query, onSelect, onDismiss }: Pr
           style={{ backgroundColor: '#1c1c1f' }}
         >
           <MagnifyingGlassIcon size={24} style={{ color: 'rgba(255,255,255,0.40)' }} />
-          <p
-            className="text-[13px] font-medium mt-2"
-            style={{ color: 'rgba(255,255,255,0.40)' }}
-          >
+          <p className="text-[13px] font-medium mt-2" style={{ color: 'rgba(255,255,255,0.40)' }}>
             No members match
           </p>
         </div>
       )}
 
       {loadStatus === 'loaded' && filtered.length > 0 && (
-        <ul
+        // biome-ignore lint/a11y/useSemanticElements lint/a11y/useFocusableInteractive: popup listbox div per WAI-ARIA combobox pattern (WAI-ARIA 1.2 §combo-with-list); focus stays on textarea, not listbox
+        <div
           id={listboxId}
           role="listbox"
           aria-label="Matching members"
-          aria-activedescendant={
-            filtered[safeActive] ? optionId(filtered[safeActive]!.userId) : undefined
-          }
-          className="overflow-y-auto flex-1 p-1.5 space-y-0.5"
+          className="overflow-y-auto flex-1"
           style={{ listStyle: 'none', padding: '6px', margin: 0 }}
         >
           {filtered.map((member, idx) => {
             const isActive = idx === safeActive;
             return (
-              <li
+              // biome-ignore lint/a11y/useSemanticElements lint/a11y/useFocusableInteractive: option div per WAI-ARIA combobox pattern; <option> requires select parent; keyboard nav via aria-activedescendant on textarea
+              <div
                 key={member.userId}
                 id={optionId(member.userId)}
                 role="option"
                 aria-selected={isActive}
                 onClick={() => handleSelect(member)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') handleSelect(member);
+                }}
                 className="flex items-center gap-2.5 px-2 py-1.5 rounded-md cursor-pointer transition-colors"
                 style={{
                   backgroundColor: isActive ? '#27272a' : 'transparent',
@@ -299,7 +335,10 @@ export function MentionAutocomplete({ serverId, query, onSelect, onDismiss }: Pr
                 ) : (
                   <div
                     className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0"
-                    style={{ backgroundColor: '#3f3f46', color: 'rgba(255,255,255,0.92)' }}
+                    style={{
+                      backgroundColor: '#3f3f46',
+                      color: 'rgba(255,255,255,0.92)',
+                    }}
                     aria-hidden="true"
                   >
                     {member.displayName.slice(0, 2).toUpperCase()}
@@ -310,7 +349,9 @@ export function MentionAutocomplete({ serverId, query, onSelect, onDismiss }: Pr
                 <div className="flex flex-col justify-center overflow-hidden">
                   <span
                     className="text-sm font-medium truncate leading-tight"
-                    style={{ color: isActive ? 'rgba(255,255,255,0.92)' : 'rgba(212,212,216,0.92)' }}
+                    style={{
+                      color: isActive ? 'rgba(255,255,255,0.92)' : 'rgba(212,212,216,0.92)',
+                    }}
                   >
                     {member.displayName}
                   </span>
@@ -321,10 +362,10 @@ export function MentionAutocomplete({ serverId, query, onSelect, onDismiss }: Pr
                     @{member.username}
                   </span>
                 </div>
-              </li>
+              </div>
             );
           })}
-        </ul>
+        </div>
       )}
 
       {loadStatus === 'error' && (

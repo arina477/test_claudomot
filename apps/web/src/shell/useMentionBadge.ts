@@ -77,9 +77,7 @@ function bootstrap(viewerUsername: string | null) {
       // Accumulate per-channel counts from the bootstrap page.
       const accumulated: UnreadCounts = {};
       for (const msg of res.items) {
-        const isSelf = msg.mentions.some(
-          (m) => m.username === viewerUsername,
-        );
+        const isSelf = msg.mentions.some((m) => m.username === viewerUsername);
         if (isSelf) {
           accumulated[msg.channelId] = (accumulated[msg.channelId] ?? 0) + 1;
         }
@@ -146,10 +144,7 @@ export function useMentionBadge(
     }
   }, [activeChannelId]);
 
-  const getCount = useCallback(
-    (channelId: string) => counts[channelId] ?? 0,
-    [counts],
-  );
+  const getCount = useCallback((channelId: string) => counts[channelId] ?? 0, [counts]);
 
   const markChannelRead = useCallback((channelId: string) => {
     clearChannel(channelId);
