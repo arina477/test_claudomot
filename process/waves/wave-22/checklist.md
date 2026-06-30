@@ -39,19 +39,19 @@ BUILD:
 - [ ] B-6 Review
 
 CI/CD:
-- [ ] C-1 PR, CI & merge
-- [ ] C-2 Deploy & verify (canary armed when real users > 1000)
+- [x] C-1 PR, CI & merge (PR #34 merged → 108f4a3; 7/7 CI green on e0b24ee; 1 fix-up cycle: biome format drift routed to react-specialist)
+- [x] C-2 Deploy & verify (api 7ffaeaea + web 66f4c715 SUCCESS, distinct from baseline; migration 0010 applied 10→11; assignments route serves 401-not-404; canary skipped DAU<1000)
 
 TEST:
-- [ ] T-1 Static
-- [ ] T-2 Unit
-- [ ] T-3 Contract
-- [ ] T-4 Integration
-- [ ] T-5 E2E
-- [ ] T-6 Layout
-- [ ] T-7 Perf
-- [ ] T-8 Security
-- [ ] T-9 Journey
+[x] - [ ] T-1 Static
+[x] - [ ] T-2 Unit
+[x] - [ ] T-3 Contract
+[x] - [ ] T-4 Integration
+[x] - [ ] T-5 E2E
+[x] - [ ] T-6 Layout
+[x] - [ ] T-7 Perf
+[x] - [ ] T-8 Security
+[x] - [ ] T-9 Journey
 
 VERIFY:
 - [ ] V-1 Independent reviews (Karen + jenny, parallel)
