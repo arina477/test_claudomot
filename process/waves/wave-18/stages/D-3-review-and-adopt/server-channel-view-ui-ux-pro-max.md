@@ -511,3 +511,148 @@ For each RGB value:
 **Date Signed**: 2026-06-30  
 **Status**: READY FOR BUILD PHASE
 
+
+---
+
+## RE-REVIEW PASS (Iteration 2) — 2026-06-30
+
+**Reviewer (B)**: UI/UX Pro Max  
+**Audit Scope**: Verification of refinement pass (Reviewer A contrast fixes + new ARIA semantics)  
+**Read-Only Status**: YES
+
+### Refinement Changes Verified
+
+#### 1. Contrast Fix: text-zinc-500 → text-zinc-400 Swap
+
+**Elements updated** (per A's feedback on muted text below 4.5:1):
+- Thread panel header "Thread on:" (line 486)
+- "4 Replies" divider label (line 503)
+- Affordance separator dot "·" (line 240)
+- Empty-state icon (line 579, commented demo)
+
+**Recalculated Ratios (WCAG Relative Luminance)**:
+
+| Element | Foreground | Background | RGB Calc | Ratio | Status |
+|---------|-----------|-----------|----------|-------|--------|
+| "Thread on:" label | text-zinc-400 | study-900 | (161,161,165) on (18,18,20) | **7.27:1** | ✓ PASS (+2.77:1 margin) |
+| "4 Replies" divider | text-zinc-400 | study-900 | (161,161,165) on (18,18,20) | **7.27:1** | ✓ PASS (+2.77:1 margin) |
+| Affordance separator | text-zinc-400 | study-700 | (161,161,165) on (39,39,42) | **5.79:1** | ✓ PASS (+1.29:1 margin) |
+| Empty-state icon | text-zinc-400 | study-900 | (161,161,165) on (18,18,20) | **7.27:1** | ✓ PASS (+2.77:1 margin) |
+
+**Previous violations (BEFORE refinement)**:
+- text-zinc-500 on study-900: 3.87:1 (failed by -0.63:1)
+- text-zinc-500 on study-700: 3.08:1 (failed by -1.42:1)
+
+**Verdict**: All four swapped elements now exceed 4.5:1 by substantial margins (5.79–7.27:1). No residual contrast violations. ✓
+
+---
+
+#### 2. ARIA Dialog Semantics
+
+**Change**: `<aside id="thread-panel">` now includes `role="dialog" aria-modal="true"` (line 469)
+
+**Verification**:
+- ✓ `role="dialog"` correctly declares panel as modal dialog
+- ✓ `aria-modal="true"` tells screen readers this is a modal overlay (focus should be managed)
+- ✓ `aria-label="Thread"` describes the dialog purpose (already present)
+- ✓ Close button has `aria-label="Close thread"` (semantic close affordance)
+- ✓ `id="thread-panel"` paired with affordance's `aria-controls="thread-panel"` (relationship explicit)
+
+**Accessibility impact**: Screen reader users (NVDA, JAWS, VoiceOver) will now announce the panel as "dialog, Thread, modal" rather than a generic complementary aside. Correct semantic for ≤1024px overlay pattern.
+
+**Minor note (non-blocking)**: Focus trap and Esc handler remain B-block tasks (JS), but CSS/ARIA semantics are now ready.
+
+**Verdict**: Appropriate `role="dialog" aria-modal="true"` for modal overlay. ✓
+
+---
+
+#### 3. Failed-Reply State Presence
+
+**Location**: Lines 554–558 (commented demo within pending-reply section)
+
+**Markup**:
+```html
+<!-- PANEL FAILED-REPLY STATE (demo; mirrors main-canvas failed row) -->
+<div role="alert" class="mt-1 flex items-center gap-2 rounded-md border border-danger/40 bg-danger/10 px-2.5 py-1.5">
+  <span class="text-[12px] text-red-300 font-medium flex items-center gap-1.5">
+    <i class="ph ph-warning-circle text-[13px]"></i> Failed to send
+  </span>
+  <button type="button" class="ml-auto inline-flex items-center gap-1 text-[12px] font-semibold text-red-300 hover:text-red-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60 rounded">
+    <i class="ph ph-arrow-clockwise text-[12px]"></i> Retry
+  </button>
+</div>
+```
+
+**Audit**:
+- ✓ `role="alert"` correctly indicates error state
+- ✓ Danger color scheme (red-300, danger/10, danger/40) matches main-canvas failed row (line 388)
+- ✓ Icon + text + retry button pattern mirrors line 397 (consistency verified)
+- ✓ Focus-visible ring on retry button (red-500/60, accessible)
+- ✓ Semantic parity with main-canvas pattern
+
+**Verdict**: Failed-reply state fully designed, ready for B-block integration. ✓
+
+---
+
+#### 4. No Regression Check
+
+**Affordance semantics** (lines 235–243):
+- ✓ `aria-haspopup="dialog"` — intact
+- ✓ `aria-expanded="true|false"` — intact, toggles state correctly
+- ✓ `aria-controls="thread-panel"` — intact, links to panel id
+- ✓ `aria-label="Open thread: 4 replies, last reply 10m ago"` — intact, fully descriptive
+- ✓ Focus-visible ring: `ring-emerald-400/70` — intact, high contrast
+- ✓ Icon (chats-circle) + text (4 replies) — not color-only ✓
+
+**Panel structure**:
+- ✓ Semantic `<header>` with `<h2>` — intact
+- ✓ Semantic `<h3>` for "Thread on:" — intact
+- ✓ Tombstone with `aria-label="Deleted reply"` — intact
+- ✓ Composer form with `sr-only` label — intact
+- ✓ All 9 message article rows intact (rows 1–8 + loading skeleton/empty state comments)
+
+**Responsive breakpoints**:
+- ✓ Desktop (≥1280): Panel fixed 360px on right
+- ✓ Tablet (1024–1440): Panel fixed on right; members hidden
+- ✓ Mobile (≤1024): Panel becomes `fixed` overlay with shadow
+- ✓ Very narrow (≤768): Drawer behavior preserved
+
+**Focus indicators**:
+- ✓ Affordance button: `focus-visible:ring-emerald-400/70` — preserved
+- ✓ Close button: `focus-visible:ring-emerald-400/70` — preserved
+- ✓ Send button: `focus-visible:ring-emerald-400/70` — preserved
+- ✓ Retry button (failed state): `focus-visible:ring-red-500/60` — preserved
+
+**Verdict**: Zero regressions detected. All existing accessibility features remain intact. ✓
+
+---
+
+## Final Verdict
+
+**APPROVE**
+
+The refinement pass successfully addresses the contrast violations flagged by Reviewer A while maintaining full WCAG 2.1 Level AA compliance. The addition of `role="dialog" aria-modal="true"` correctly semanticizes the panel's modal overlay behavior on mobile breakpoints.
+
+**Refined ratios verified**:
+- "Thread on:" label: **7.27:1** ✓
+- "4 Replies" divider: **7.27:1** ✓
+- Affordance separator dot: **5.79:1** ✓
+- Empty-state icon: **7.27:1** ✓
+
+**New ARIA semantics verified**:
+- Panel correctly declared as `role="dialog" aria-modal="true"` ✓
+
+**Failed-reply state**: Present and properly designed ✓
+
+**No regressions**: All affordance, panel, and accessibility features intact ✓
+
+Advance to B-block for implementation with confidence. The design is sound and ready for build.
+
+---
+
+**Re-Review Completed**  
+**Reviewer**: UI/UX Pro Max (B, Re-verification Pass)  
+**Date**: 2026-06-30  
+**Iteration**: 2 (post-refinement)  
+**Status**: APPROVED FOR BUILD
+

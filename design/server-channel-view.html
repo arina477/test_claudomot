@@ -10,6 +10,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
+  <!-- 
+  aesthetic_dna: {"palette": "zinc-emerald", "radius": "md-lg", "vibe": "academic-calm"}
+  ui_paradigm: "multi-pane-workspace (5-column dynamic collapse)"
+  -->
+
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -73,13 +78,32 @@
       box-shadow: inset 0 0 0 1px rgba(16,185,129,0.35);
     }
 
-    /* Screen resizing constraints */
+    /* 5-Pane Adaptive Layout Grid */
+    .layout-grid {
+      display: grid;
+      grid-template-columns: 72px 260px minmax(0, 1fr) 360px 240px;
+    }
+
+    @media (max-width: 1440px) {
+      .layout-grid { grid-template-columns: 72px 240px minmax(0, 1fr) 360px; }
+      .right-sidebar { display: none !important; } /* Hide members when thread is open and width narrows */
+    }
+
     @media (max-width: 1024px) {
-      .three-pane-grid { grid-template-columns: 72px 240px 1fr !important; }
+      .layout-grid { grid-template-columns: 72px 240px minmax(0, 1fr) !important; }
+      /* Thread becomes a drawer overlay */
+      .thread-panel {
+        position: fixed !important;
+        top: 0; right: 0; bottom: 0;
+        width: 100%; max-width: 360px;
+        z-index: 50;
+        box-shadow: -8px 0 24px rgba(0,0,0,0.5);
+      }
       .right-sidebar { display: none !important; }
     }
+
     @media (max-width: 768px) {
-      .three-pane-grid { grid-template-columns: 72px 1fr !important; }
+      .layout-grid { grid-template-columns: 72px minmax(0, 1fr) !important; }
       .channel-sidebar {
         position: fixed !important; top: 0; left: 72px; bottom: 0; width: 260px;
         transform: translateX(-110%); transition: transform 200ms ease; z-index: 40;
@@ -91,7 +115,7 @@
 </head>
 <body class="bg-study-950 text-zinc-300 min-h-[100dvh] w-full overflow-hidden select-none">
 
-  <div class="three-pane-grid grid h-full w-full" style="grid-template-columns: 72px 260px 1fr 240px;">
+  <div class="layout-grid h-[100dvh] w-full">
 
     <!-- PANE 1: SERVER RAIL -->
     <nav class="server-rail bg-study-950 border-r border-study-border flex flex-col items-center py-4 gap-3 z-30">
@@ -126,12 +150,10 @@
             <h2 class="text-xs font-semibold text-zinc-500 uppercase tracking-widest">Coursework</h2>
           </div>
           <div class="space-y-[2px]">
-            <!-- ADDITION/FIX 3: UNREAD-MENTION BADGE ON A CHANNEL (BEFORE VIEW) -->
             <a href="#" class="flex items-center px-2 py-1.5 rounded text-zinc-100 font-medium hover:bg-study-800 transition-all" aria-label="general channel, 2 unread mentions">
               <i class="ph ph-hash text-zinc-300 mr-2 text-lg"></i><span class="text-[14px]">general (unread)</span>
               <span class="ml-auto inline-flex items-center justify-center h-[18px] min-w-[18px] px-1 bg-emerald-500 rounded-full text-[11px] font-bold text-study-950 shadow-[inset_0_-1px_0_rgba(0,0,0,0.1)]">2</span>
             </a>
-            <!-- FIX 3: POST-VIEW STATE (BADGE CLEARED) -->
             <a href="#" class="flex items-center px-2 py-1.5 rounded text-zinc-400 hover:bg-study-800 transition-all hover:text-zinc-200" aria-label="general channel, read state">
               <i class="ph ph-hash text-zinc-500 mr-2 text-lg"></i><span class="text-[14px]">general (read)</span>
             </a>
@@ -187,7 +209,7 @@
           <div class="flex-1 h-[1px] bg-study-700"></div>
         </div>
 
-        <!-- 1. Row: Mia Wong / Other-mention pill -->
+        <!-- 1. Row: Mia Wong / Other-mention pill + THREAD AFFORDANCE -->
         <article role="article" class="msg-row group relative px-4 py-2 flex gap-3.5 hover:bg-study-700/30 transition-colors rounded-md">
           <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=64&q=80" alt="Mia Wong" class="w-10 h-10 rounded-full object-cover shrink-0 mt-0.5">
           <div class="flex flex-col w-full min-w-0">
@@ -207,18 +229,26 @@
                 class="inline-flex items-center gap-1.5 h-7 pl-2 pr-2.5 rounded-full bg-study-700 border border-study-600/70 text-zinc-200 hover:border-study-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70">
                 <span class="text-[13px] leading-none">🤔</span><span class="text-xs font-semibold text-zinc-400">1</span>
               </button>
-              <button type="button" aria-label="Add reaction" aria-haspopup="true"
-                class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-study-700/60 border border-study-600/50 text-zinc-400 hover:text-zinc-200 hover:bg-study-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70">
-                <i class="ph ph-smiley text-[15px]"></i>
+            </div>
+            
+            <!-- SURFACE 1 ADDITION: Thread Affordance -->
+            <div class="mt-2 text-left">
+              <button type="button" aria-haspopup="dialog" aria-expanded="true" aria-controls="thread-panel" aria-label="Open thread: 4 replies, last reply 10m ago"
+                 class="inline-flex items-center gap-1.5 h-[28px] pl-2.5 pr-3 rounded-md bg-study-700 hover:bg-study-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70 group/thread">
+                 <i class="ph ph-chats-circle text-emerald-500 text-[15px]"></i>
+                 <span class="text-xs font-semibold text-emerald-500 group-hover/thread:text-emerald-400 transition-colors">4 replies</span>
+                 <span class="text-[10px] text-zinc-400 font-bold uppercase tracking-widest px-0.5">·</span>
+                 <span class="text-xs text-zinc-400 font-medium group-hover/thread:text-zinc-300 transition-colors">last reply 10m ago</span>
               </button>
             </div>
+
           </div>
           <div class="row-actions absolute -top-3 right-3 flex items-center bg-study-700 border border-study-border rounded-md shadow-[0_8px_24px_rgba(0,0,0,0.5)] overflow-hidden">
             <button type="button" aria-label="Add reaction to Mia Wong's message" aria-haspopup="true" class="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-study-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70"><i class="ph ph-smiley text-[16px]"></i></button>
           </div>
         </article>
 
-        <!-- 2. Row: David C. / Self-mention pill (FIX 4: Added msg-row, relative, and row-actions) -->
+        <!-- 2. Row: David C. / Self-mention pill + THREAD AFFORDANCE -->
         <article role="article" class="msg-row group relative px-4 py-2 flex gap-3.5 hover:bg-study-700/30 transition-colors rounded-md">
           <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=64&q=80" alt="David C." class="w-10 h-10 rounded-full object-cover shrink-0 mt-0.5">
           <div class="flex flex-col w-full min-w-0">
@@ -226,11 +256,22 @@
               <span class="font-medium text-zinc-100 text-sm">David C.</span>
               <span class="text-xs text-zinc-400 font-medium tracking-wide">10:50 AM</span>
             </div>
-            <!-- ADDITION 2: SELF-MENTION PILL (Emerald emphasis) -->
             <p class="text-sm leading-relaxed text-zinc-200 mt-0.5">
               <span class="inline-flex items-center px-1.5 py-0.5 mx-[1px] -my-[1px] align-baseline rounded-md bg-emerald-500/10 text-emerald-300 font-medium text-[14px] ring-1 ring-emerald-500/30">@Elias</span>
               have you started Pset 4? Stuck on problem 2 — the graph traversal keeps giving me memory-limit-exceeded.
             </p>
+            
+            <!-- SURFACE 1 ADDITION: Thread Affordance -->
+            <div class="mt-2.5 text-left">
+              <button type="button" aria-haspopup="dialog" aria-expanded="false" aria-label="Open thread: 1 reply, last reply 2m ago"
+                 class="inline-flex items-center gap-1.5 h-[28px] pl-2.5 pr-3 rounded-md bg-study-700 hover:bg-study-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70 group/thread">
+                 <i class="ph ph-chats-circle text-emerald-500 text-[15px]"></i>
+                 <span class="text-xs font-semibold text-emerald-500 group-hover/thread:text-emerald-400 transition-colors">1 reply</span>
+                 <span class="text-[10px] text-zinc-400 font-bold uppercase tracking-widest px-0.5">·</span>
+                 <span class="text-xs text-zinc-400 font-medium group-hover/thread:text-zinc-300 transition-colors">last reply 2m ago</span>
+              </button>
+            </div>
+
           </div>
           <div class="row-actions absolute -top-3 right-3 flex items-center bg-study-700 border border-study-border rounded-md shadow-[0_8px_24px_rgba(0,0,0,0.5)] overflow-hidden">
             <button type="button" aria-label="Add reaction to David C's message" aria-haspopup="true" class="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-study-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70"><i class="ph ph-smiley text-[16px]"></i></button>
@@ -364,10 +405,8 @@
       <!-- ============ COMPOSER ============ -->
       <div class="px-5 pb-5 pt-2 shrink-0 relative flex flex-col justify-end">
         
-        <!-- MENTION AUTOCOMPLETE DEMO POPOVERS (Mapped as Flex container for side-by-side view) -->
+        <!-- MENTION AUTOCOMPLETE DEMO POPOVERS -->
         <div class="absolute bottom-[calc(100%+4px)] left-5 flex gap-4 z-20 pointer-events-none w-[calc(100%-40px)] flex-wrap lg:flex-nowrap">
-          
-          <!-- STATE 1: MENTION RESULTS (Pointer events auto to allow interaction) -->
           <div class="w-[280px] max-h-[240px] flex flex-col bg-study-800 border border-white/10 shadow-[0_8px_24px_rgba(0,0,0,0.5)] rounded-lg overflow-hidden shrink-0 pointer-events-auto">
             <div class="px-3 py-2 border-b border-study-border text-[11px] font-semibold text-zinc-400 bg-study-900 shadow-sm shrink-0 uppercase tracking-widest">
               Members matching "@dav"
@@ -394,41 +433,6 @@
               </li>
             </ul>
           </div>
-
-          <!-- STATE 2: LOADING SKELETON (FIX 2) -->
-          <div class="w-[280px] flex flex-col bg-study-800 border border-white/10 shadow-[0_8px_24px_rgba(0,0,0,0.5)] rounded-lg overflow-hidden shrink-0 pointer-events-auto">
-            <div class="px-3 py-2 border-b border-study-border text-[11px] font-semibold text-zinc-400 bg-study-900 shadow-sm shrink-0 uppercase tracking-widest flex items-center gap-1.5">
-              Searching <span class="typing-dot bg-zinc-500 w-[3px] h-[3px] rounded-full inline-block"></span><span class="typing-dot bg-zinc-500 w-[3px] h-[3px] rounded-full inline-block" style="animation-delay: 150ms"></span><span class="typing-dot bg-zinc-500 w-[3px] h-[3px] rounded-full inline-block" style="animation-delay: 300ms"></span>
-            </div>
-            <div class="p-2 space-y-1 bg-study-800 flex-1">
-              <div class="flex items-center gap-2.5 px-2 py-2 animate-pulse">
-                <div class="w-6 h-6 rounded-full bg-study-600/70 shrink-0"></div>
-                <div class="flex flex-col gap-1.5 flex-1">
-                  <div class="h-[10px] bg-study-600/70 rounded w-1/2"></div>
-                  <div class="h-[8px] bg-study-600/70 rounded w-1/3"></div>
-                </div>
-              </div>
-              <div class="flex items-center gap-2.5 px-2 py-2 animate-pulse" style="animation-delay: 100ms">
-                <div class="w-6 h-6 rounded-full bg-study-600/70 shrink-0"></div>
-                <div class="flex flex-col gap-1.5 flex-1">
-                  <div class="h-[10px] bg-study-600/70 rounded w-2/3"></div>
-                  <div class="h-[8px] bg-study-600/70 rounded w-1/4"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- STATE 3: EMPTY RESULTS (FIX 1) -->
-          <div class="w-[280px] flex flex-col bg-study-800 border border-white/10 shadow-[0_8px_24px_rgba(0,0,0,0.5)] rounded-lg overflow-hidden shrink-0 pointer-events-auto hidden sm:flex">
-            <div class="px-3 py-2 border-b border-study-border text-[11px] font-semibold text-zinc-400 bg-study-900 shadow-sm shrink-0 uppercase tracking-widest">
-              Members matching "@xyz"
-            </div>
-            <div class="flex-1 flex flex-col items-center justify-center text-center py-6 px-4 bg-study-800">
-              <i class="ph ph-magnifying-glass text-[24px] text-zinc-400 mb-2"></i>
-              <p class="text-[13px] text-zinc-400 font-medium">No members match</p>
-            </div>
-          </div>
-
         </div>
 
         <div class="relative w-full h-0 z-10 pointer-events-none" role="status" aria-live="polite">
@@ -461,9 +465,148 @@
 
     </main>
 
-    <!-- PANE 4: RIGHT SIDEBAR -->
+    <!-- PANE 3.5 / 4 (Dynamic overlay below 1024px): THREAD PANEL -->
+    <aside id="thread-panel" role="dialog" aria-modal="true" aria-label="Thread" class="thread-panel bg-study-900 border-l border-study-border flex flex-col h-[100dvh]">
+      
+      <!-- Thread Header -->
+      <header class="h-14 flex items-center justify-between px-4 border-b border-study-border bg-study-900 shrink-0 z-10 w-full">
+        <h2 class="text-[11px] font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+            Thread <span class="bg-study-700 text-zinc-300 px-1.5 py-0.5 rounded text-[10px] tracking-normal capitalize">#questions</span>
+        </h2>
+        <button class="w-8 h-8 flex items-center justify-center rounded-md text-zinc-400 hover:bg-study-800 hover:text-zinc-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70" aria-label="Close thread">
+          <i class="ph ph-x text-[16px]"></i>
+        </button>
+      </header>
+
+      <!-- Scroll container for thread messages -->
+      <div class="flex-1 overflow-y-auto px-4 py-5 flex flex-col gap-6 relative hide-scrollbars shrink min-h-0">
+
+        <!-- Pinned Parent -->
+        <div class="relative w-full">
+            <h3 class="text-[11px] font-bold uppercase tracking-widest text-zinc-400 mb-2">Thread on:</h3>
+            <div class="bg-study-800 rounded-lg p-3.5 shadow-sm border border-white/5 flex gap-3 relative">
+                <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=64&q=80" alt="Mia Wong" class="w-8 h-8 rounded-full object-cover shrink-0">
+                <div class="flex flex-col min-w-0 w-full">
+                    <div class="flex items-baseline gap-2">
+                        <span class="font-medium text-zinc-100 text-[14px]">Mia Wong</span>
+                        <span class="text-[11px] text-zinc-400 font-medium">10:42 AM</span>
+                    </div>
+                    <p class="text-[13px] leading-relaxed text-zinc-200 mt-0.5">
+                        Did <span class="inline-flex items-center px-1.5 py-0.5 align-baseline rounded bg-study-700 text-zinc-100 font-medium text-[12px]">@David C.</span> mention if red-black trees are on the midterm? The syllabus is vague on how deep we go into balancing.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center w-full px-1">
+            <div class="flex-1 h-[1px] bg-study-border"></div>
+            <span class="text-[10px] font-semibold text-zinc-400 mx-3 tracking-widest uppercase">4 Replies</span>
+            <div class="flex-1 h-[1px] bg-study-border"></div>
+        </div>
+
+        <!-- Thread Replies (Oldest First) -->
+        <div class="flex flex-col gap-1 w-full flex-1">
+            
+            <!-- Thread Reply 1 -->
+            <div class="group relative px-2 py-2 flex gap-3 hover:bg-study-700/30 transition-colors rounded-md w-[calc(100%+1rem)] -ml-2">
+                <div class="w-8 h-8 rounded-full bg-study-600 flex items-center justify-center text-[11px] font-semibold text-zinc-100 shrink-0 mt-0.5">EL</div>
+                <div class="flex flex-col w-full min-w-0">
+                    <div class="flex items-baseline gap-2">
+                      <span class="font-medium text-zinc-100 text-[14px]">Elias (You)</span>
+                      <span class="text-[11px] text-zinc-400 font-medium tracking-wide">10:45 AM</span>
+                    </div>
+                    <p class="text-[13px] leading-relaxed text-zinc-200 mt-0.5">Yeah, he said properties only, no implementation needed.</p>
+                </div>
+            </div>
+
+            <!-- Thread Reply 2 (Tombstone Demo) -->
+            <div aria-label="Deleted reply" class="px-2 py-2 flex gap-3 rounded-md w-[calc(100%+1rem)] -ml-2">
+                <div class="w-8 h-8 rounded-full bg-study-800 border border-study-700 flex items-center justify-center shrink-0 mt-0.5">
+                  <i class="ph ph-prohibit text-zinc-600 text-[14px]"></i>
+                </div>
+                <div class="flex items-center min-w-0 mt-1">
+                  <span class="text-[13px] italic text-zinc-400 flex items-center gap-1.5"><i class="ph ph-trash text-[13px] text-zinc-500"></i> This reply was deleted</span>
+                </div>
+            </div>
+
+            <!-- Thread Reply 3 -->
+            <div class="group relative px-2 py-2 flex gap-3 hover:bg-study-700/30 transition-colors rounded-md w-[calc(100%+1rem)] -ml-2">
+                <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=64&q=80" alt="Davis Lee" class="w-8 h-8 rounded-full object-cover shrink-0 mt-0.5">
+                <div class="flex flex-col w-full min-w-0">
+                    <div class="flex items-baseline gap-2">
+                      <span class="font-medium text-zinc-100 text-[14px]">Davis Lee</span>
+                      <span class="text-[11px] text-zinc-400 font-medium tracking-wide">10:51 AM</span>
+                    </div>
+                    <p class="text-[13px] leading-relaxed text-zinc-200 mt-0.5">Just memorize the 4 rules and you'll be fine. He focused entirely on the insertion cases during review.</p>
+                </div>
+            </div>
+
+            <!-- Thread Reply Demo: Optimistic Pending Reply (Commented) -->
+            <!--
+            <div aria-busy="true" class="group px-2 py-2 flex gap-3 rounded-md border-l-2 border-amber-500/50 bg-study-700/10 w-[calc(100%+1rem)] -ml-2">
+              <div class="pending-dim w-8 h-8 rounded-full bg-study-600 flex items-center justify-center text-[11px] font-semibold text-zinc-100 shrink-0 mt-0.5">EL</div>
+              <div class="flex flex-col w-full min-w-0">
+                <div class="flex items-baseline gap-2">
+                  <span class="pending-dim font-medium text-zinc-100 text-[14px]">Elias (You)</span>
+                  <span class="text-[11px] text-amber-500 font-semibold tracking-wide flex items-center gap-1"><i class="ph ph-clock text-[12px]"></i> Sending…</span>
+                </div>
+                <p class="pending-dim text-[13px] leading-relaxed text-zinc-300 mt-0.5">Thanks! Putting together a study guide for that specifically right now.</p>
+                <!-- PANEL FAILED-REPLY STATE (demo; mirrors main-canvas failed row) -->
+                <!-- <div role="alert" class="mt-1 flex items-center gap-2 rounded-md border border-danger/40 bg-danger/10 px-2.5 py-1.5">
+                  <span class="text-[12px] text-red-300 font-medium flex items-center gap-1.5"><i class="ph ph-warning-circle text-[13px]"></i> Failed to send</span>
+                  <button type="button" class="ml-auto inline-flex items-center gap-1 text-[12px] font-semibold text-red-300 hover:text-red-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60 rounded"><i class="ph ph-arrow-clockwise text-[12px]"></i> Retry</button>
+                </div> --> 
+              </div>
+            </div>
+            -->
+
+            <!-- Thread Demo: Loading Skeleton (Commented) -->
+            <!--
+            <div class="px-2 py-4 flex gap-3 animate-pulse w-[calc(100%+1rem)] -ml-2">
+              <div class="w-8 h-8 rounded-full bg-study-700 shrink-0"></div>
+              <div class="flex flex-col gap-2 w-full pt-1">
+                <div class="h-[10px] bg-study-700 rounded w-1/4"></div>
+                <div class="h-[10px] bg-study-700 rounded w-full"></div>
+                <div class="h-[10px] bg-study-700 rounded w-2/3"></div>
+              </div>
+            </div>
+            -->
+
+            <!-- Thread Demo: Empty State (Commented) -->
+            <!--
+            <div class="flex flex-col items-center justify-center py-12 px-4 text-center">
+              <div class="w-12 h-12 rounded-full bg-study-800 flex items-center justify-center mb-3">
+                 <i class="ph ph-chats-circle text-[24px] text-zinc-400"></i>
+              </div>
+              <p class="text-[14px] font-medium text-zinc-200">No replies yet</p>
+              <p class="text-[13px] text-zinc-500 mt-1">Start the conversation below.</p>
+            </div>
+            -->
+
+        </div>
+      </div>
+
+      <!-- Thread Composer -->
+      <div class="p-4 bg-study-900 border-t border-study-border shrink-0 z-10 w-full mb-0 relative">
+        <form class="relative flex items-end bg-study-800 recessed-input border border-study-600/60 rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500/40 focus-within:border-emerald-500/60 transition-shadow">
+          <label class="sr-only">Reply to thread</label>
+          <textarea rows="1"
+            class="w-full bg-transparent text-[14px] text-zinc-100 placeholder-zinc-400 py-3 px-3 outline-none resize-none min-h-[44px] max-h-[30vh] leading-relaxed"
+            placeholder="Reply to Mia Wong..."
+          ></textarea>
+          <div class="px-2 py-2 flex items-center shrink-0 self-stretch">
+            <button type="button" aria-label="Send reply"
+              class="w-7 h-7 flex items-center justify-center rounded-md bg-emerald-500 text-study-950 hover:bg-emerald-400 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70">
+              <i class="ph ph-paper-plane-right text-[15px]"></i>
+            </button>
+          </div>
+        </form>
+      </div>
+
+    </aside>
+
+    <!-- PANE 5: RIGHT SIDEBAR MEMBER LIST -->
     <aside aria-label="Members" class="right-sidebar bg-study-900 border-l border-study-border flex flex-col z-20 overflow-hidden">
-      <!-- Member Roster Scroll Area -->
       <div class="flex-1 overflow-y-auto px-4 py-5 space-y-6 select-none">
         
         <h2 class="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Members</h2>
@@ -481,7 +624,6 @@
               </div>
               <span class="text-[14px] font-medium text-zinc-200 truncate group-hover:text-zinc-100 transition-colors">Mia Wong</span>
             </li>
-
             <li class="group flex items-center gap-3 p-1.5 rounded-md hover:bg-study-700 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70" tabindex="0">
               <div class="relative shrink-0">
                 <div class="w-8 h-8 rounded-full bg-study-600 flex items-center justify-center text-xs font-semibold text-zinc-100 shrink-0" aria-label="Elias">EL</div>

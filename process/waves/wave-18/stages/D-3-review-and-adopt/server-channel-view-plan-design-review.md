@@ -150,3 +150,61 @@ REVISE
 4. Add `role="dialog" aria-modal="true"` to the `#thread-panel` element for ≤1024 overlay behavior, and add a keydown `Escape` handler to the JS block to close the panel.
 5. Add `min-w-0 overflow-hidden text-ellipsis` (or Tailwind `truncate`) to the "last reply Xm ago" span inside the affordance chip for explicit narrow-width truncation.
 6. Consider stepping "Thread on:" label to `text-zinc-400` (for hierarchy clarity) even after contrast is fixed at zinc-400, as all wayfinding labels currently read at the same tier.
+
+---
+
+## D-3 Re-review — Attempt 2
+
+reviewer: ui-designer (reviewer A)
+date: 2026-06-30
+iteration: 2 (re-review of REVISE verdict from attempt 1)
+
+### Blocker 1 — Contrast: thread-region muted labels (zinc-500 → zinc-400)
+
+Verification target: panel header "THREAD" label, "Thread on:" h3, "4 Replies" divider text, affordance separator dot, empty-state icon.
+
+Findings per HTML line:
+- L473 (panel header): `text-zinc-400` — confirmed. zinc-400 (#a1a1aa) on study-900 (#121214) = 7.30:1. PASS.
+- L486 ("Thread on:" h3): `text-zinc-400` — confirmed. 7.30:1 on study-900. PASS.
+- L503 ("4 Replies" divider): `text-zinc-400` — confirmed. 7.30:1 on study-900. PASS.
+- L240-241 (separator dot in affordance chip): `text-zinc-400` — confirmed. zinc-400 (#a1a1aa) on study-700 (#27272a) = 5.81:1. PASS.
+- L579 (empty-state icon, commented block): `text-zinc-400` — confirmed. 7.30:1 on study-900. PASS.
+
+All five targets clear 4.5:1. Blocker 1 RESOLVED.
+
+### Blocker 2 — Failed-reply state in thread panel
+
+Location: lines 544-561, inside the outer commented pending-reply block.
+
+The nested `<!-- PANEL FAILED-REPLY STATE (demo; mirrors main-canvas failed row) -->` block is present. It contains `<div role="alert">` with `border border-danger/40 bg-danger/10 px-2.5 py-1.5`, "Failed to send" text in `text-red-300`, and a Retry button with `border border-danger/40 bg-danger/10` and `focus-visible:ring-2 focus-visible:ring-red-500/60`. This mirrors the main canvas article row 9 pattern (border-danger/30 bg-danger/5, red-300 warning label, Retry). The variant is slightly tighter (inline sub-row within the pending block vs. a standalone article), which is appropriate for the thread panel's compact scale. Minimum requirement per attempt-1 blocker 3 was "a commented block mirroring article row 9 (danger border-l, bg-danger/10, Retry button)" — satisfied. Blocker 2 RESOLVED.
+
+### Non-blocking note (role="dialog")
+
+L469: `<aside id="thread-panel" role="dialog" aria-modal="true" aria-label="Thread">` — confirmed present. Resolved.
+
+### Structural integrity
+
+9 article rows: lines 213, 252, 282, 302, 325, 342, 352, 376, 388 — all 9 confirmed present.
+Member-list panel (right-sidebar, L609-679): intact.
+Main composer (L449-463): intact.
+Thread panel composer (L591-603): intact.
+
+### New issues scan
+
+None. The separator dot retains `font-bold uppercase tracking-widest` alongside the color fix — this was a non-blocking aesthetic note in attempt 1 and remains so; no regression. No new zinc-500 instances introduced in thread-panel territory. No hex drift. The added `role="dialog"` is well-formed with the existing `aria-label` and `id`. The nested comment structure for the failed-reply block is syntactically valid HTML comment nesting.
+
+### Revised score
+
+| Dimension | Attempt 1 | Attempt 2 | Delta |
+|---|---|---|---|
+| Visual hierarchy | 8/10 | 9/10 | +1 (zinc-400 labels create two tiers: panel-header chrome vs. wayfinding) |
+| Spacing rhythm | 9/10 | 9/10 | — |
+| Brand coherence | 9/10 | 9/10 | — (dot weight non-blocking; retained) |
+| Edge-case handling | 7/10 | 9/10 | +2 (failed-reply state present; all four states now covered) |
+| Accessibility | 6/10 | 9/10 | +3 (all contrast FAILs resolved; role=dialog added; only Esc handler remains missing — non-blocking JS) |
+| Responsive | 9/10 | 9/10 | — |
+| **Overall** | **48/60 = 8.0** | **54/60 = 9.0** | |
+
+### Verdict
+
+APPROVE
