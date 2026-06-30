@@ -60,6 +60,6 @@ LEARN:
 [x] - [ ] L-2 Distill
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers (M4 in_progress→done [the WEDGE — scope-met mechanical close]; 6 tech-debt re-homed to M5; M5 todo→in_progress; decomposition fired → assignments bundle)
+- [x] N-2 Seed (seed 01fcefb8 assignments CRUD spine + 2 siblings; LLM re-order over re-homed debt)
+- [x] N-3 Handoff (wave-22 opened; wave-21 archived + closed)
