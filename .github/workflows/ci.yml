@@ -129,5 +129,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Install Playwright Chromium
         run: pnpm --filter @studyhall/web exec playwright install --with-deps chromium
-      - name: Run E2E smoke tests
+      - name: Run E2E tests (smoke + authed create-server)
         run: pnpm --filter @studyhall/web exec playwright test
+        env:
+          E2E_FIXTURE_EMAIL: ${{ secrets.E2E_FIXTURE_EMAIL }}
+          E2E_FIXTURE_PASSWORD: ${{ secrets.E2E_FIXTURE_PASSWORD }}
