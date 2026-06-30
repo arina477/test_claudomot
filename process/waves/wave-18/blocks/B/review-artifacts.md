@@ -4,8 +4,8 @@
 | Stage | Deliverable | Status | Notes |
 |---|---|---|---|
 | B-0 | stages/B-0-branch-and-schema.md | done | branch + claim + migration 0008 (thread_parent_id+reply_count+last_reply_at+index) |
-| B-1 | stages/B-1-contracts.md | pending | shared thread types |
-| B-2 | stages/B-2-backend.md | pending | createReply/deleteReply/listThreadReplies + transactional count + thread realtime |
+| B-1 | stages/B-1-contracts.md | done | shared thread types |
+| B-2 | stages/B-2-backend.md | done | createReply/deleteReply/listThreadReplies + transactional count + thread realtime |
 | B-3 | stages/B-3-frontend.md | pending | ThreadPanel + affordance + outbox parity (vs canonical design) |
 | B-4 | stages/B-4-wiring.md | pending | routes + ThreadPanel mount + typecheck |
 | B-5 | stages/B-5-verify.md | pending | |
