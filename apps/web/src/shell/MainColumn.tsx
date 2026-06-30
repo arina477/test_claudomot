@@ -48,12 +48,8 @@ export function MainColumn({ connectionState = 'online', onToggleSidebar }: Prop
     toggleReaction,
   } = useMessagesWithRetry(selectedChannelId);
 
-  // Typing presence — self userId comes from profile (excludes own name from indicator)
-  const currentUserId = profile?.username ?? null;
-  const { onComposerKeyPress, stopTyping, typingLabel } = useTyping(
-    selectedChannelId,
-    currentUserId,
-  );
+  // Typing presence — self-exclusion is enforced server-side via getTypers(excludeUserId).
+  const { onComposerKeyPress, stopTyping, typingLabel } = useTyping(selectedChannelId);
 
   // Wrap sendMessage to also stop typing
   function handleSend(content: string) {

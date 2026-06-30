@@ -29,8 +29,8 @@
 import type { ServerMember } from '@studyhall/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../auth/api';
-import { usePresence } from './usePresence';
 import { UsersIcon } from './icons';
+import { usePresence } from './usePresence';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -60,7 +60,6 @@ function MemberItem({ member, online }: MemberItemProps) {
   return (
     <li
       className="group flex items-center gap-3 p-1.5 rounded-md transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70"
-      tabIndex={0}
       onMouseEnter={(e) => {
         (e.currentTarget as HTMLLIElement).style.backgroundColor = '#27272a';
       }}
@@ -118,14 +117,14 @@ function MemberListSkeleton() {
   return (
     <div className="space-y-6 animate-pulse" aria-busy="true" aria-label="Loading members">
       <div>
-        <div
-          className="h-[11px] w-20 rounded-md mb-3"
-          style={{ backgroundColor: '#27272a' }}
-        />
+        <div className="h-[11px] w-20 rounded-md mb-3" style={{ backgroundColor: '#27272a' }} />
         <div className="space-y-2">
           {[1, 2].map((i) => (
             <div key={i} className="flex items-center gap-3 p-1.5">
-              <div className="w-8 h-8 rounded-full shrink-0" style={{ backgroundColor: '#27272a' }} />
+              <div
+                className="w-8 h-8 rounded-full shrink-0"
+                style={{ backgroundColor: '#27272a' }}
+              />
               <div className="h-4 w-24 rounded-md" style={{ backgroundColor: '#27272a' }} />
             </div>
           ))}
@@ -138,7 +137,10 @@ function MemberListSkeleton() {
 // Empty state
 function MemberListEmpty() {
   return (
-    <div className="flex flex-col items-center justify-center text-center py-4" style={{ opacity: 0.7 }}>
+    <div
+      className="flex flex-col items-center justify-center text-center py-4"
+      style={{ opacity: 0.7 }}
+    >
       <div
         className="w-12 h-12 rounded-full flex items-center justify-center mb-3"
         style={{ backgroundColor: '#1c1c1f', color: 'rgba(255,255,255,0.30)' }}
@@ -175,23 +177,20 @@ export function MemberListPanel({ serverId }: Props) {
   }, []);
 
   // Fetch members when server changes
-  const fetchMembers = useCallback(
-    (id: string) => {
-      setLoadStatus('loading');
-      api
-        .getServerMembers(id)
-        .then((list) => {
-          if (!mountedRef.current) return;
-          setMembers(list);
-          setLoadStatus('loaded');
-        })
-        .catch(() => {
-          if (!mountedRef.current) return;
-          setLoadStatus('error');
-        });
-    },
-    [],
-  );
+  const fetchMembers = useCallback((id: string) => {
+    setLoadStatus('loading');
+    api
+      .getServerMembers(id)
+      .then((list) => {
+        if (!mountedRef.current) return;
+        setMembers(list);
+        setLoadStatus('loaded');
+      })
+      .catch(() => {
+        if (!mountedRef.current) return;
+        setLoadStatus('error');
+      });
+  }, []);
 
   useEffect(() => {
     if (!serverId) {
@@ -248,64 +247,59 @@ export function MemberListPanel({ serverId }: Props) {
         )}
 
         {/* Loaded */}
-        {loadStatus === 'loaded' && (
-          <>
-            {members.length === 0 ? (
-              <MemberListEmpty />
-            ) : (
-              <div className="space-y-6">
-                {/* Online group */}
-                {onlineMembers.length > 0 && (
-                  <div>
-                    <h3
-                      id="member-group-online"
-                      className="text-[11px] font-bold uppercase tracking-widest mb-3"
-                      style={{ color: 'rgba(255,255,255,0.40)' }}
-                    >
-                      Online &mdash; {onlineMembers.length}
-                    </h3>
-                    <ul
-                      className="space-y-0.5"
-                      aria-labelledby="member-group-online"
-                      style={{ listStyle: 'none', padding: 0, margin: 0 }}
-                    >
-                      {onlineMembers.map((m) => (
-                        <MemberItem key={m.userId} member={m} online={true} />
-                      ))}
-                    </ul>
-                  </div>
-                )}
+        {loadStatus === 'loaded' &&
+          (members.length === 0 ? (
+            <MemberListEmpty />
+          ) : (
+            <div className="space-y-6">
+              {/* Online group */}
+              {onlineMembers.length > 0 && (
+                <div>
+                  <h3
+                    id="member-group-online"
+                    className="text-[11px] font-bold uppercase tracking-widest mb-3"
+                    style={{ color: 'rgba(255,255,255,0.40)' }}
+                  >
+                    Online &mdash; {onlineMembers.length}
+                  </h3>
+                  <ul
+                    className="space-y-0.5"
+                    aria-labelledby="member-group-online"
+                    style={{ listStyle: 'none', padding: 0, margin: 0 }}
+                  >
+                    {onlineMembers.map((m) => (
+                      <MemberItem key={m.userId} member={m} online={true} />
+                    ))}
+                  </ul>
+                </div>
+              )}
 
-                {/* Offline group */}
-                {offlineMembers.length > 0 && (
-                  <div>
-                    <h3
-                      id="member-group-offline"
-                      className="text-[11px] font-bold uppercase tracking-widest mb-3"
-                      style={{ color: 'rgba(255,255,255,0.40)' }}
-                    >
-                      Offline &mdash; {offlineMembers.length}
-                    </h3>
-                    <ul
-                      className="space-y-0.5"
-                      aria-labelledby="member-group-offline"
-                      style={{ listStyle: 'none', padding: 0, margin: 0 }}
-                    >
-                      {offlineMembers.map((m) => (
-                        <MemberItem key={m.userId} member={m} online={false} />
-                      ))}
-                    </ul>
-                  </div>
-                )}
+              {/* Offline group */}
+              {offlineMembers.length > 0 && (
+                <div>
+                  <h3
+                    id="member-group-offline"
+                    className="text-[11px] font-bold uppercase tracking-widest mb-3"
+                    style={{ color: 'rgba(255,255,255,0.40)' }}
+                  >
+                    Offline &mdash; {offlineMembers.length}
+                  </h3>
+                  <ul
+                    className="space-y-0.5"
+                    aria-labelledby="member-group-offline"
+                    style={{ listStyle: 'none', padding: 0, margin: 0 }}
+                  >
+                    {offlineMembers.map((m) => (
+                      <MemberItem key={m.userId} member={m} online={false} />
+                    ))}
+                  </ul>
+                </div>
+              )}
 
-                {/* No one online yet — show all in offline group */}
-                {onlineMembers.length === 0 && offlineMembers.length === 0 && (
-                  <MemberListEmpty />
-                )}
-              </div>
-            )}
-          </>
-        )}
+              {/* No one online yet — show all in offline group */}
+              {onlineMembers.length === 0 && offlineMembers.length === 0 && <MemberListEmpty />}
+            </div>
+          ))}
       </div>
     </aside>
   );

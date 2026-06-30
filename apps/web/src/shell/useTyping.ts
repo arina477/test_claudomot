@@ -18,12 +18,12 @@
  *     The server has its own 5 s TTL per the gateway; we stop at 4 s to stay
  *     slightly ahead of the server TTL so the UI clears before the server times out.
  *
- * Self-exclusion: The server already excludes the emitting user from typing:active
- * broadcasts. The currentUserId prop provides a defensive client-side filter as well.
+ * Self-exclusion: handled server-side — getTypers(excludeUserId) strips the
+ * emitting user before broadcasting typing:active. No client-side filter needed.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
 import type { TypingActive } from '@studyhall/shared';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   emitTypingStart,
   emitTypingStop,
@@ -72,10 +72,7 @@ function buildTypingLabel(typers: TypingActive['typers']): string {
   return 'Several people are typing';
 }
 
-export function useTyping(
-  channelId: string | null,
-  currentUserId: string | null,
-): UseTypingResult {
+export function useTyping(channelId: string | null): UseTypingResult {
   const [typers, setTypers] = useState<TypingActive['typers']>([]);
 
   const lastEmitRef = useRef<number>(0);
@@ -98,15 +95,15 @@ export function useTyping(
     // Join the presence channel room for typing events
     joinPresenceChannel(channelId);
 
-    // Sync current typers from store (may already have state if navigating back)
-    const initial = getTypers(channelId).filter((t) => t.userId !== currentUserId);
-    setTypers(initial);
+    // Sync current typers from store (may already have state if navigating back).
+    // Self-exclusion is enforced server-side via getTypers(excludeUserId).
+    setTypers(getTypers(channelId));
 
     // Subscribe to future typing:active events
     const unsub = subscribeTyping((updatedChannelId) => {
       if (updatedChannelId !== channelId) return;
-      const updated = getTypers(channelId).filter((t) => t.userId !== currentUserId);
-      setTypers(updated);
+      // Self-exclusion is enforced server-side via getTypers(excludeUserId).
+      setTypers(getTypers(channelId));
     });
 
     return () => {
@@ -121,7 +118,7 @@ export function useTyping(
         idleTimerRef.current = null;
       }
     };
-  }, [channelId, currentUserId]);
+  }, [channelId]);
 
   // ── stopTyping ────────────────────────────────────────────────────────────
   const stopTyping = useCallback(() => {
