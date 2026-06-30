@@ -62,6 +62,6 @@ LEARN:
 - [x] L-2 Distill
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers — M3 held in_progress (messaging scope unshipped); fired milestone-decomposition (feature-stockout: seed_candidates=3 all carried tech-debt). One bundle: seed a0c322b4 (MessagingModule REST) + siblings 723b5b6a (/messaging Socket.IO gateway) + d999d29c (message UI). head-next APPROVED.
+- [x] N-2 Seed — wave-12 seed a0c322b4 (MessagingModule REST) + siblings 723b5b6a, d999d29c. Authorized re-order over older tech-debt. Validation PASS. head-next APPROVED.
+- [x] N-3 Handoff — wave-11 closed (status='ok'); archived → _archive/wave-11; wave-12 opened. head-next APPROVED.
