@@ -360,6 +360,61 @@ export class ServersService {
   }
 
   // -------------------------------------------------------------------------
+  // Invite-code rotate — owner-only (task d058283d)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Rotate the permanent invite code for a server.
+   * Only the server owner may rotate (NOT owner-or-creator — no creator on a
+   * permanent code). Regenerates servers.invite_code using CSPRNG; retries up
+   * to 5 times on unique-constraint collision (23505); 409 after exhaustion.
+   *
+   * Known limitations (accepted at current scale):
+   *
+   * Rotate-vs-join race: the regeneration is a single non-transactional UPDATE.
+   * A `joinViaInvite` transaction that snapshotted the OLD `invite_code` before
+   * this UPDATE commits may still admit the member for the duration of that
+   * in-flight join (READ COMMITTED isolation). Strict invalidation would require
+   * a `SELECT ... FOR UPDATE` on the server row inside the join path to serialize
+   * against the rotate UPDATE — deferred, out of this wave's scope.
+   *
+   * Retry scope: the 23505-retry loop guards only `servers.invite_code`
+   * self-collisions. It does NOT guard the astronomically improbable (~2^-128)
+   * case of a regenerated code colliding with an existing ad-hoc `invites.code`
+   * in the separate resolution namespace. Documented as a known non-issue,
+   * not guarded.
+   */
+  async rotateInviteCode(serverId: string, callerId: string): Promise<{ invite_code: string }> {
+    const [server] = await db.select().from(servers).where(eq(servers.id, serverId)).limit(1);
+
+    if (!server) {
+      throw new NotFoundException('Server not found');
+    }
+
+    if (server.owner_id !== callerId) {
+      throw new ForbiddenException("Not authorized to rotate this server's invite code");
+    }
+
+    const MAX_RETRIES = 5;
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      const code = generateCode();
+
+      try {
+        await db.update(servers).set({ invite_code: code }).where(eq(servers.id, serverId));
+        return { invite_code: code };
+      } catch (err: unknown) {
+        const pgErr = err as { code?: string };
+        if (pgErr.code === '23505' && attempt < MAX_RETRIES - 1) {
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    throw new ConflictException('Failed to generate unique invite code');
+  }
+
+  // -------------------------------------------------------------------------
   // Invite preview — public (task 77e2041a)
   // -------------------------------------------------------------------------
 

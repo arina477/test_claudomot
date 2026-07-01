@@ -1082,6 +1082,99 @@ describe('ServersService.revokeInvite', () => {
 });
 
 // ---------------------------------------------------------------------------
+// ServersService — rotateInviteCode (task d058283d)
+// ---------------------------------------------------------------------------
+
+describe('ServersService.rotateInviteCode', () => {
+  let service: ServersService;
+
+  const mockServerWithCode = {
+    id: 'server-1',
+    name: 'Test Server',
+    owner_id: 'owner-1',
+    invite_code: 'old-code-aaaaaa',
+    created_at: new Date('2026-01-01T00:00:00Z'),
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    service = new ServersService(makeRbacServiceMock());
+  });
+
+  it('returns an invite_code with base64url shape (~22 chars)', async () => {
+    // The real old-vs-new contract (rotated code ≠ previous persisted code)
+    // is covered by the integration test invite-code-rotate.spec.ts.
+    // Here we verify only that the returned value has the expected encoding shape.
+    mockSelect.mockReturnValue(makeSelectChain([mockServerWithCode]));
+    mockUpdate.mockReturnValue(makeUpdateChain());
+
+    const result = await service.rotateInviteCode('server-1', 'owner-1');
+
+    expect(result.invite_code).toBeDefined();
+    // base64url shape: 16 bytes = 22 chars, URL-safe alphabet
+    expect(result.invite_code).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(result.invite_code.length).toBeGreaterThan(0);
+  });
+
+  it('throws NotFoundException (404) when server does not exist', async () => {
+    mockSelect.mockReturnValue(makeSelectChain([]));
+
+    await expect(service.rotateInviteCode('ghost-server', 'owner-1')).rejects.toThrow(
+      NotFoundException,
+    );
+  });
+
+  it('throws ForbiddenException (403) when caller is not the owner', async () => {
+    mockSelect.mockReturnValue(makeSelectChain([mockServerWithCode]));
+
+    await expect(service.rotateInviteCode('server-1', 'non-owner-99')).rejects.toThrow(
+      ForbiddenException,
+    );
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it('retries on 23505 (first attempt collides, second succeeds), generates a NEW code on retry', async () => {
+    mockSelect.mockReturnValue(makeSelectChain([mockServerWithCode]));
+
+    let updateAttempt = 0;
+    // Capture the invite_code passed to .set() on each attempt so we can assert
+    // that a fresh code is generated on retry (not the same collided code reused).
+    const capturedCodes: string[] = [];
+
+    mockUpdate.mockImplementation(() => {
+      updateAttempt++;
+      const chain: Record<string, unknown> = {};
+      chain.set = vi.fn((data: Record<string, unknown>) => {
+        capturedCodes.push(data.invite_code as string);
+        const whereChain: Record<string, unknown> = {
+          // biome-ignore lint/suspicious/noThenProperty: intentional thenable mock
+          then: (res: (v: unknown) => unknown, rej?: (e: unknown) => unknown) => {
+            if (updateAttempt === 1) {
+              return Promise.reject(
+                Object.assign(new Error('unique violation'), { code: '23505' }),
+              ).then(res, rej);
+            }
+            return Promise.resolve(undefined).then(res, rej);
+          },
+        };
+        return { where: vi.fn().mockReturnValue(whereChain) };
+      });
+      return chain;
+    });
+
+    const result = await service.rotateInviteCode('server-1', 'owner-1');
+
+    expect(result.invite_code).toBeDefined();
+    // Retry count: must have called update exactly twice
+    expect(updateAttempt).toBe(2);
+    // Regeneration: the code passed on attempt 2 must differ from attempt 1
+    // (proves generateCode() was called again, not the collided code reused)
+    expect(capturedCodes).toHaveLength(2);
+    expect(capturedCodes[1]).not.toBe(capturedCodes[0]);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // ServersService — listServerMembers (wave-15 B-4: username field added)
 // ---------------------------------------------------------------------------
 

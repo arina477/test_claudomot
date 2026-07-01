@@ -88,6 +88,20 @@ export class ServersController {
   // -------------------------------------------------------------------------
 
   /**
+   * POST /servers/:id/invite-code/rotate
+   * Rotate the server's permanent invite code.
+   * Owner-only. Returns 200 { invite_code: string }.
+   */
+  @Post(':id/invite-code/rotate')
+  @UseGuards(AuthGuard)
+  async rotateInviteCode(
+    @Req() req: SessionAugmentedRequest,
+    @Param('id') id: string,
+  ): Promise<{ invite_code: string }> {
+    return this.serversService.rotateInviteCode(id, req.session.getUserId());
+  }
+
+  /**
    * POST /servers/:id/invites
    * Create an ad-hoc invite for a server.
    * Requires authentication + email verification.

@@ -57,10 +57,10 @@ VERIFY:
 - [x] V-3 Fast-fix loop (or close) — head-verifier APPROVED; Phase 2 skipped (empty queue)
 
 LEARN:
-- [ ] L-1 Docs
-- [ ] L-2 Distill
+- [x] L-1 Docs
+- [x] L-2 Distill — promoted PRODUCT r2 + CI r6
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers — clean; M5 stays in_progress (open=8); no rituals fired
+- [x] N-2 Seed — seed d058283d (invite rotation), solo bundle; validation PASS
+- [x] N-3 Handoff — wave-28 opened; waves row 27 closed (status=ok); archived; loop_state ready
