@@ -16,8 +16,8 @@
 - **M5 backlog (future seeds, per head-next):** wave-25 candidate c18b8089 (mention parser parity, user-visible correctness) lands on top of the new test tier. Also open: d058283d (invite rotation), 6a546c7b (presence perf), 10b9d18e (presence dots — gated by chrome-absent), d23a0740 (cleanup); + wave-23 V-2 cross-cutting 4a92327c (ParseUUIDPipe), 875b97f4 (security hardening), 72cb6ebb (stale-comment sweep); + wave-22 V-2 follow-ons.
 
 PRODUCT:
-- [ ] P-0 Frame (discover + reframe)
-- [ ] P-1 Decompose
+- [x] P-0 Frame (no-prior-spec; problem-framer PROCEED [extend wave-17 harness NOT rebuild] + ceo-reviewer SELECTIVE-EXPANSION [add rbac/assignments authz coverage — align to F23-T-4] + mvp-thinner OK → accepted scope-correction; claimed [02fa8011])
+- [x] P-1 Decompose (single-spec; below floor → MERGE expansion incomplete-scope [reminders cred-blocked] → BOARD P-1-floor-merge-wave-24 6/7 override-ship; design_gap_flag=false → skip D; T-4 false-green guard binding)
 - [ ] P-2 Spec
 - [ ] P-3 Plan
 - [ ] P-4 Gate APPROVED
