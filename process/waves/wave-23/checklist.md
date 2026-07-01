@@ -54,9 +54,9 @@ TEST:
 - [x] T-9 Journey (head-tester APPROVED; annotation-only regen — no new route/screen; 0 regressions; journey-map wave-23 annotation added)
 
 VERIFY:
-- [ ] V-1 Independent reviews (Karen + jenny, parallel)
-- [ ] V-2 Triage
-- [ ] V-3 Fast-fix loop (or close)
+- [x] V-1 Independent reviews (Karen APPROVE all 9 claims VERIFIED; jenny APPROVE all 14 ACs MATCH, 0 drift)
+- [x] V-2 Triage (0 blocking; 3 non-blocking tasks 4a92327c/72cb6ebb/875b97f4; 3 noise suppressed; fast-fix queue empty)
+- [x] V-3 Fast-fix loop (queue empty; head-verifier APPROVED Phase-1; acceptance-by-behavior genuine, no green-by-suppression)
 
 LEARN:
 - [ ] L-1 Docs
