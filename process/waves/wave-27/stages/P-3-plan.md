@@ -22,17 +22,17 @@ N/A.
 **B-0 Schema (Spec A):**
 | # | Path | Op | What | Specialist |
 |---|---|---|---|---|
-| 1 | apps/api/src/db/schema/servers.ts | modify | add `index('server_members_user_id_idx').on(table.user_id)` to server_members table config | database-administrator |
-| 2 | apps/api/drizzle/migrations/ (generated) | create | `drizzle-kit generate` → migration adding the index; commit per project convention | database-administrator |
-| 3 | (local) | run | apply migration to local dev DB; verify `\d server_members` shows the index | database-administrator |
+| 1 | apps/api/src/db/schema/servers.ts | modify | add `index('server_members_user_id_idx').on(table.user_id)` to server_members table config | postgres-pro |
+| 2 | apps/api/drizzle/migrations/ (generated) | create | `drizzle-kit generate` → migration adding the index; commit per project convention | postgres-pro |
+| 3 | (local) | run | apply migration to local dev DB; verify `\d server_members` shows the index | postgres-pro |
 
 **B-1 Contracts:** SKIP (no shared type / Zod / API contract change).
 
 **B-2 Backend (Spec A proof):**
 | # | Path | Op | What | Specialist |
 |---|---|---|---|---|
-| 4 | apps/api/src/presence/presence.service.ts | confirm | `getServerIdsForUser` unchanged in logic; the index makes its `WHERE user_id` an Index Scan (no code change needed beyond confirming) | database-administrator |
-| 5 | apps/api/test/integration/presence-perf.spec.ts (or extend a presence integration spec) | create | real-PG test: EXPLAIN (or pg_stat/index-usage) asserts `getServerIdsForUser` uses `server_members_user_id_idx` (Index Scan, not Seq Scan) for a user with servers; + behavior: same co-member set as before. Uses the wave-17 pg-harness. | database-administrator |
+| 4 | apps/api/src/presence/presence.service.ts | confirm | `getServerIdsForUser` unchanged in logic; the index makes its `WHERE user_id` an Index Scan (no code change needed beyond confirming) | postgres-pro |
+| 5 | apps/api/test/integration/presence-perf.spec.ts (or extend a presence integration spec) | create | real-PG test: EXPLAIN (or pg_stat/index-usage) asserts `getServerIdsForUser` uses `server_members_user_id_idx` (Index Scan, not Seq Scan) for a user with servers; + behavior: same co-member set as before. Uses the wave-17 pg-harness. | postgres-pro |
 
 **B-3 Frontend (Spec B):**
 | # | Path | Op | What | Specialist |
@@ -43,14 +43,14 @@ N/A.
 **B-4 Wiring:** repo typecheck + `biome check` (BUILD rule 7) + build. **B-5 Verify:** api+web tests + build (+ integration tier runs the new presence-perf spec — CI rule 5 executed-count). **B-6 Review:** head-builder gate + /review. Commit-per-spec discipline (multi-spec): Spec-A commits cite 6a546c7b, Spec-B commits cite 07361daf (B-6 Action 6 checks this).
 
 ### Specialist routing (validated against AGENTS.md)
-- `database-administrator` — server_members index + migration + query-plan integration test (DB/migration/perf). In AGENTS.md.
+- `postgres-pro` — server_members index + migration + query-plan integration test (DB/migration/perf). In AGENTS.md.
 - `react-specialist` — MessageList subscription lift + test. In AGENTS.md (used w25/w26).
 
 ### Parallelization
-Spec A (B-0/B-2, database-administrator) ∥ Spec B (B-3, react-specialist) — disjoint file scopes (apps/api vs apps/web), no shared contract → run in parallel. B-4 gates both.
+Spec A (B-0/B-2, postgres-pro) ∥ Spec B (B-3, react-specialist) — disjoint file scopes (apps/api vs apps/web), no shared contract → run in parallel. B-4 gates both.
 
 ### Action 8 — self-consistency sweep
 Spec A ACs → steps 1-3 (index+migration) + 5 (proof test). Spec B ACs → steps 6-7. Every AC maps to a step; every step has a specialist; no file in two batches; design_gap_flag=false referenced; contracts concrete (index DDL; no API/data-shape change); no new deps; no SDK. Clean.
 
 ## Exit
-Multi-spec plan: Spec A server_members(user_id) index (database-administrator, B-0/B-2) ∥ Spec B MessageList single-subscription lift (react-specialist, B-3). design_gap_flag=false → skip D. → P-4 Gate (carry the M5 park-or-key escalation).
+Multi-spec plan: Spec A server_members(user_id) index (postgres-pro, B-0/B-2) ∥ Spec B MessageList single-subscription lift (react-specialist, B-3). design_gap_flag=false → skip D. → P-4 Gate (carry the M5 park-or-key escalation).

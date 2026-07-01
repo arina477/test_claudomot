@@ -3,7 +3,7 @@
 **Block:** P (Product)
 **Wave topic:** Server presence perf — getCoMemberUserIds full server_members scan per connect (optimize before scale)
 **Block exit gate:** P-4
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
@@ -12,7 +12,7 @@
 | P-1 | stages/P-1-decompose.md | done | multi-spec (2 specs); under-floor PRECEDENT-APPLICATION override-ship (6th); design_gap_flag=false → skip D |
 | P-2 | stages/P-2-spec.md | done | multi-spec, 2 spec blocks to 6a546c7b.desc |
 | P-3 | stages/P-3-plan.md | done | Spec A server_members(user_id) index (database-administrator) ∥ Spec B MessageList subscription lift (react-specialist); B-1 skip |
-| P-4 | stages/P-4-gemini-review.md | pending | |
+| P-4 | blocks/P/gate-verdict.md | done | head-product APPROVED + karen+jenny APPROVE; Gemini UNAVAILABLE (non-block); gate-passed |
 
 ## Block-specific context
 - **Wave topic:** `presence.service.getCoMemberUserIds` does a full `server_members` scan on every /presence connect/reconnect. Optimize (SELECT DISTINCT / index / cache). Source wave-14 V-2 (M-1/KI-1). Now hotter after wave-26 shipped author-avatar presence dots (a new presence consumer on every message row).
@@ -30,3 +30,8 @@
 
 ## Gate verdict log
 <appended by fresh head-product spawn at P-4 Action 1>
+
+## Binding B-block carries (P-4 Phase 2)
+- **CARRY-A (applied):** Spec A (server_members index + migration + query-plan test) routes to `postgres-pro`, NOT database-administrator (karen rule-11 fix).
+- **CARRY-B (jenny LOW):** Spec B react-specialist MUST preserve wave-26 CARRY-1 per-author render-scoping when lifting to a single list subscription (a dot re-renders only on ITS author's change; not whole-list on any event). Justify if whole-list chosen. task-completion-validator confirms at V.
+
