@@ -15,7 +15,7 @@
 - **Carries:** per-row client presence subscription (07361daf) is the CLIENT half of presence perf — this wave is the SERVER half; P-0 may consider whether they're one coherent perf slice. Playwright MCP chrome-absent → bundled-chromium (T-5 rule 1). BUILD rule 7 (biome check not format). biome now ignores process/** (wave-26 fix).
 
 PRODUCT:
-- [ ] P-0 Frame
+- [x] P-0 Frame
 - [ ] P-1 Decompose
 - [ ] P-2 Spec
 - [ ] P-3 Plan
