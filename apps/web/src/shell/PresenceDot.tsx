@@ -46,10 +46,12 @@ export const PresenceDot = memo(function PresenceDot({ online, size = 6 }: Prese
         height: outerSize,
         backgroundColor: '#121214',
       }}
-      aria-hidden="true"
     >
       <span className="sr-only">{online ? 'Online' : 'Offline'}</span>
+      {/* aria-hidden on the visual dot only — the decorative color dot is purely visual.
+          The sr-only label above remains in the a11y tree on the outer container. */}
       <div
+        aria-hidden="true"
         className="rounded-full"
         data-testid="presence-dot-inner"
         style={{

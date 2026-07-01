@@ -163,14 +163,42 @@ describe('PresenceDot', () => {
     expect(dot.getAttribute('style')).toContain('var(--color-surface-500)');
   });
 
-  it('renders an sr-only accessible label for online state', () => {
-    render(<PresenceDot online={true} />);
-    expect(screen.getByText('Online')).toBeInTheDocument();
+  it('renders an sr-only accessible label for online state and exposes it to the a11y tree', () => {
+    const { container } = render(<PresenceDot online={true} />);
+    const label = screen.getByText('Online');
+    expect(label).toBeInTheDocument();
+    // The label must NOT be inside an aria-hidden subtree — if any ancestor carries
+    // aria-hidden="true" the entire subtree is removed from the a11y tree and screen
+    // readers never announce the status (the regression this test guards against).
+    let node: Element | null = label;
+    while (node && node !== container) {
+      expect(node).not.toHaveAttribute('aria-hidden', 'true');
+      node = node.parentElement;
+    }
   });
 
-  it('renders an sr-only accessible label for offline state', () => {
-    render(<PresenceDot online={false} />);
-    expect(screen.getByText('Offline')).toBeInTheDocument();
+  it('renders an sr-only accessible label for offline state and exposes it to the a11y tree', () => {
+    const { container } = render(<PresenceDot online={false} />);
+    const label = screen.getByText('Offline');
+    expect(label).toBeInTheDocument();
+    // Same ancestor-aria-hidden guard as online state.
+    let node: Element | null = label;
+    while (node && node !== container) {
+      expect(node).not.toHaveAttribute('aria-hidden', 'true');
+      node = node.parentElement;
+    }
+  });
+
+  it('outer container does NOT carry aria-hidden (regression guard)', () => {
+    // aria-hidden on the outer container would suppress the sr-only label entirely.
+    // The decorative inner dot may carry aria-hidden; the outer wrapper must not.
+    const { getByTestId } = render(<PresenceDot online={true} />);
+    const innerDot = getByTestId('presence-dot-inner');
+    // Inner dot is allowed to be aria-hidden (it's purely decorative).
+    expect(innerDot).toHaveAttribute('aria-hidden', 'true');
+    // Outer container (parent of inner dot and sr-only label) must NOT be aria-hidden.
+    const outerContainer = innerDot.parentElement;
+    expect(outerContainer).not.toHaveAttribute('aria-hidden', 'true');
   });
 
   it('applies a custom size to the inner dot', () => {
@@ -274,25 +302,39 @@ describe('MessageList author-avatar presence dots', () => {
 // ── 3. MemberListPanel regression (AC5) ──────────────────────────────────────
 
 describe('MemberListPanel regression — PresenceDot used for member dots', () => {
-  it('renders Online sr-only label for an online member', async () => {
+  it('renders Online sr-only label for an online member and exposes it to the a11y tree', async () => {
     setPresence('member-1', 'online');
     mockApi.getServerMembers.mockResolvedValue([
       { userId: 'member-1', displayName: 'Alice', avatarUrl: null },
     ]);
-    render(<MemberListPanel serverId="srv-1" />);
+    const { container } = render(<MemberListPanel serverId="srv-1" />);
     // Wait for members to load
     await screen.findByText('Alice');
-    expect(screen.getByText('Online')).toBeInTheDocument();
+    const label = screen.getByText('Online');
+    expect(label).toBeInTheDocument();
+    // Guard: label must not be inside an aria-hidden ancestor.
+    let node: Element | null = label;
+    while (node && node !== container) {
+      expect(node).not.toHaveAttribute('aria-hidden', 'true');
+      node = node.parentElement;
+    }
   });
 
-  it('renders Offline sr-only label for an offline member', async () => {
+  it('renders Offline sr-only label for an offline member and exposes it to the a11y tree', async () => {
     setPresence('member-2', 'offline');
     mockApi.getServerMembers.mockResolvedValue([
       { userId: 'member-2', displayName: 'Bob', avatarUrl: null },
     ]);
-    render(<MemberListPanel serverId="srv-2" />);
+    const { container } = render(<MemberListPanel serverId="srv-2" />);
     await screen.findByText('Bob');
-    expect(screen.getByText('Offline')).toBeInTheDocument();
+    const label = screen.getByText('Offline');
+    expect(label).toBeInTheDocument();
+    // Guard: label must not be inside an aria-hidden ancestor.
+    let node: Element | null = label;
+    while (node && node !== container) {
+      expect(node).not.toHaveAttribute('aria-hidden', 'true');
+      node = node.parentElement;
+    }
   });
 
   it('renders both Online and Offline dots for mixed-presence member list', async () => {
