@@ -62,6 +62,6 @@ LEARN:
 - [x] L-2 Distill (02fa8011 done; 5 observations; CI-PRINCIPLES rule 5 promoted [assert-integration-executed, 2-wave w17+w24]; PRODUCT rule 2 v2 karen-REJECTED 2nd time non-falsifiable)
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers (no closure/promotion/decomp; seed c18b8089 recommended; Resend key sharpened as sole M5-close blocker)
+- [x] N-2 Seed (c18b8089 mention parser parity; 0 siblings; validated)
+- [x] N-3 Handoff (wave-25 opened; wave-24 archived + closed)

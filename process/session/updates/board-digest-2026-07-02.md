@@ -12,3 +12,9 @@
 
 ## Next up (autonomous, no input needed)
 Clearing re-homed engineering debt while reminders waits on the key. Next: a real-database test harness (makes future features safer to ship). Then chat/presence polish items.
+
+---
+## UPDATE (wave-24 close) — one action from you would unlock the last piece of the assignments milestone
+The assignments feature is fully built and solid. There's **one** remaining piece — **due-date reminders** (emailing a student before an assignment is due) — and it's the only thing standing between us and finishing the whole assignments milestone. Everything else the team can do on its own; reminders need an email-sending account that only you can create.
+
+**The single action:** create a free account at **resend.com**, make an API key, paste it here. ~3 minutes. The moment it lands, the team builds and ships reminders next. Until then it keeps clearing background engineering work (this wave added a safety test-net around the permissions system; next up is a chat @-mention fix students would notice).
