@@ -47,8 +47,8 @@ async function backfill(): Promise<void> {
       // 2. Upsert the default Member role for this server (idempotent)
       const roleResult = await pool.query<{ id: string }>(
         `INSERT INTO roles (server_id, name, position, manage_server, manage_roles,
-                            manage_channels, manage_members, is_default)
-         VALUES ($1, 'Member', 0, false, false, false, false, true)
+                            manage_channels, manage_members, manage_assignments, is_default)
+         VALUES ($1, 'Member', 0, false, false, false, false, false, true)
          ON CONFLICT DO NOTHING
          RETURNING id`,
         [server.id],

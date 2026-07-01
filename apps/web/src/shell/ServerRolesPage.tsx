@@ -84,6 +84,11 @@ const PERM_FLAGS: { key: PermFlag; label: string; description: string; sensitive
     label: 'Manage Members',
     description: 'Kick, ban, or assign roles to other members.',
   },
+  {
+    key: 'manage_assignments',
+    label: 'Manage Assignments',
+    description: 'Post, edit, and delete assignments for members to track.',
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -194,7 +199,7 @@ function CreateRoleModal({ onClose, onCreated, serverId }: CreateRoleModalProps)
   }
 
   return (
-    <div // biome-ignore lint/a11y/useSemanticElements: div with role="dialog" — native <dialog> requires show/close API
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
@@ -334,7 +339,7 @@ function DeleteRoleModal({ roleName, onClose, onDeleted, serverId, roleId }: Del
   }
 
   return (
-    <div // biome-ignore lint/a11y/useSemanticElements: div with role="dialog" — native <dialog> requires show/close API
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
@@ -676,6 +681,7 @@ export function ServerRolesPage({
     manage_roles: false,
     manage_channels: false,
     manage_members: false,
+    manage_assignments: false,
   });
   const [overrides, setOverrides] = useState<ChannelOverride[]>([]);
   const [overridesLoading, setOverridesLoading] = useState(false);
@@ -930,7 +936,7 @@ export function ServerRolesPage({
 
       {/* Full-screen settings shell */}
       <div
-        className="fixed inset-0 z-40 flex" // biome-ignore lint/a11y/useSemanticElements: settings shell uses role="dialog" — native <dialog> requires show/close API
+        className="fixed inset-0 z-40 flex"
         style={{ background: '#0a0a0b' }}
         role="dialog"
         aria-modal="true"

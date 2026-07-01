@@ -4,12 +4,21 @@ import { ChannelMessageGuard } from './channel-message.guard';
 import { ChannelOverrideController } from './channel-override.controller';
 import { ChannelPermissionGuard } from './channel-permission.guard';
 import { OwnerLockoutService } from './owner-lockout.service';
-import { MemberRoleController, RbacController } from './rbac.controller';
+import {
+  MemberRoleController,
+  RbacController,
+  ServerPermissionsController,
+} from './rbac.controller';
 import { RbacService } from './rbac.service';
 
 @Module({
   imports: [AuthModule],
-  controllers: [RbacController, MemberRoleController, ChannelOverrideController],
+  controllers: [
+    RbacController,
+    MemberRoleController,
+    ServerPermissionsController,
+    ChannelOverrideController,
+  ],
   providers: [RbacService, ChannelPermissionGuard, ChannelMessageGuard, OwnerLockoutService],
   exports: [RbacService, ChannelPermissionGuard, ChannelMessageGuard, OwnerLockoutService],
 })

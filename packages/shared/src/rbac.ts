@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 // ---------------------------------------------------------------------------
-// RolePermissions — the 4 fixed RBAC flags (no matrix/builder/hierarchy)
+// RolePermissions — the 5 fixed RBAC flags (no matrix/builder/hierarchy)
 // ---------------------------------------------------------------------------
 
 export const RolePermissionsSchema = z.object({
@@ -9,6 +9,7 @@ export const RolePermissionsSchema = z.object({
   manage_roles: z.boolean(),
   manage_channels: z.boolean(),
   manage_members: z.boolean(),
+  manage_assignments: z.boolean(),
 });
 export type RolePermissions = z.infer<typeof RolePermissionsSchema>;
 
@@ -50,6 +51,7 @@ export const CreateRoleSchema = z.object({
   manage_roles: z.boolean().optional(),
   manage_channels: z.boolean().optional(),
   manage_members: z.boolean().optional(),
+  manage_assignments: z.boolean().optional(),
 });
 export type CreateRoleInput = z.infer<typeof CreateRoleSchema>;
 
@@ -64,6 +66,7 @@ export const UpdateRoleSchema = z.object({
   manage_roles: z.boolean().optional(),
   manage_channels: z.boolean().optional(),
   manage_members: z.boolean().optional(),
+  manage_assignments: z.boolean().optional(),
 });
 export type UpdateRoleInput = z.infer<typeof UpdateRoleSchema>;
 
@@ -85,3 +88,18 @@ export const UpsertChannelOverrideSchema = z.object({
   canView: z.boolean(),
 });
 export type UpsertChannelOverrideInput = z.infer<typeof UpsertChannelOverrideSchema>;
+
+// ---------------------------------------------------------------------------
+// EffectivePermissions — response contract for GET /servers/:serverId/me/permissions
+// Includes the owner superuser flag alongside all 5 RBAC flags.
+// ---------------------------------------------------------------------------
+
+export const EffectivePermissionsSchema = z.object({
+  owner: z.boolean(),
+  manage_server: z.boolean(),
+  manage_roles: z.boolean(),
+  manage_channels: z.boolean(),
+  manage_members: z.boolean(),
+  manage_assignments: z.boolean(),
+});
+export type EffectivePermissions = z.infer<typeof EffectivePermissionsSchema>;

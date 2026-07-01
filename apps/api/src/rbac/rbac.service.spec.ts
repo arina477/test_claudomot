@@ -593,3 +593,171 @@ describe('RbacService.assignRole — no self-promote / manage_members gate', () 
     ).rejects.toThrow(NotFoundException);
   });
 });
+
+// ---------------------------------------------------------------------------
+// getEffectivePermissions — authz boundary (wave-23 B-6 coverage)
+// ---------------------------------------------------------------------------
+
+describe('RbacService.getEffectivePermissions', () => {
+  let service: RbacService;
+
+  // Full role fixture including manage_assignments (added in wave-23)
+  const mockRoleAssignmentsOnly = {
+    id: 'role-assign',
+    server_id: 'server-1',
+    name: 'Organizer',
+    position: 1,
+    manage_server: false,
+    manage_roles: false,
+    manage_channels: false,
+    manage_members: false,
+    manage_assignments: true,
+    is_default: false,
+    created_at: new Date(),
+  };
+
+  const mockRoleAllFalseFull = {
+    id: 'role-default',
+    server_id: 'server-1',
+    name: 'Member',
+    position: 0,
+    manage_server: false,
+    manage_roles: false,
+    manage_channels: false,
+    manage_members: false,
+    manage_assignments: false,
+    is_default: true,
+    created_at: new Date(),
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    service = new RbacService();
+  });
+
+  it('server not found → throws ForbiddenException (no enumeration)', async () => {
+    mockSelect.mockReturnValue(makeSelectChain([]));
+
+    await expect(service.getEffectivePermissions('any-user', 'nonexistent-server')).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  it('owner → all flags true + owner:true', async () => {
+    // select 1: server (owner_id === userId — short-circuit, no further selects)
+    mockSelect.mockReturnValue(makeSelectChain([mockServer]));
+
+    const result = await service.getEffectivePermissions('owner-1', 'server-1');
+
+    expect(result).toEqual({
+      owner: true,
+      manage_server: true,
+      manage_roles: true,
+      manage_channels: true,
+      manage_members: true,
+      manage_assignments: true,
+    });
+  });
+
+  it('non-member of server → throws ForbiddenException (403 — key negative path)', async () => {
+    // select 1: server found (userId is not owner); select 2: no membership row
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return makeSelectChain([mockServer]);
+      return makeSelectChain([]); // no server_members row
+    });
+
+    await expect(service.getEffectivePermissions('outsider', 'server-1')).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  it('member with null role_id → all flags false + owner:false (default-deny)', async () => {
+    // select 1: server; select 2: member with role_id=null
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return makeSelectChain([mockServer]);
+      return makeSelectChain([mockMemberNoRole]);
+    });
+
+    const result = await service.getEffectivePermissions('user-norole', 'server-1');
+
+    expect(result).toEqual({
+      owner: false,
+      manage_server: false,
+      manage_roles: false,
+      manage_channels: false,
+      manage_members: false,
+      manage_assignments: false,
+    });
+  });
+
+  it('member with role_id but role row missing → all flags false + owner:false (data inconsistency default-deny)', async () => {
+    // select 1: server; select 2: member with role_id set; select 3: role row absent
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return makeSelectChain([mockServer]);
+      if (callCount === 2) return makeSelectChain([mockMemberWithRole]); // role_id: 'role-1'
+      return makeSelectChain([]); // role row missing
+    });
+
+    const result = await service.getEffectivePermissions('user-member', 'server-1');
+
+    expect(result).toEqual({
+      owner: false,
+      manage_server: false,
+      manage_roles: false,
+      manage_channels: false,
+      manage_members: false,
+      manage_assignments: false,
+    });
+  });
+
+  it('member with role having manage_assignments:true → returns exact role flags', async () => {
+    // select 1: server; select 2: member with role_id; select 3: role with manage_assignments=true
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return makeSelectChain([mockServer]);
+      if (callCount === 2)
+        return makeSelectChain([{ ...mockMemberWithRole, role_id: 'role-assign' }]);
+      return makeSelectChain([mockRoleAssignmentsOnly]);
+    });
+
+    const result = await service.getEffectivePermissions('user-member', 'server-1');
+
+    expect(result).toEqual({
+      owner: false,
+      manage_server: false,
+      manage_roles: false,
+      manage_channels: false,
+      manage_members: false,
+      manage_assignments: true,
+    });
+  });
+
+  it('member with role having all flags false → returns all-false + owner:false', async () => {
+    // select 1: server; select 2: member with role_id; select 3: role all false
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return makeSelectChain([mockServer]);
+      if (callCount === 2) return makeSelectChain([mockMemberWithRole]);
+      return makeSelectChain([mockRoleAllFalseFull]);
+    });
+
+    const result = await service.getEffectivePermissions('user-member', 'server-1');
+
+    expect(result).toEqual({
+      owner: false,
+      manage_server: false,
+      manage_roles: false,
+      manage_channels: false,
+      manage_members: false,
+      manage_assignments: false,
+    });
+  });
+});

@@ -190,7 +190,7 @@ describe('AssignmentsService.createAssignment', () => {
     service = new AssignmentsService(rbac as any, files as any);
   });
 
-  it('creates assignment and returns DTO when organizer has can(manage_channels)', async () => {
+  it('creates assignment and returns DTO when organizer has can(manage_assignments)', async () => {
     let callCount = 0;
     mockInsert.mockReturnValue(makeInsertChain([mockAssignmentRow]));
     mockSelect.mockImplementation(() => {
@@ -206,7 +206,7 @@ describe('AssignmentsService.createAssignment', () => {
       dueDate: DUE_DATE.toISOString(),
     });
 
-    expect(rbac.can).toHaveBeenCalledWith(ORGANIZER_ID, SERVER_ID, 'manage_channels');
+    expect(rbac.can).toHaveBeenCalledWith(ORGANIZER_ID, SERVER_ID, 'manage_assignments');
     expect(result.id).toBe(ASSIGNMENT_ID);
     expect(result.serverId).toBe(SERVER_ID);
     expect(result.title).toBe('Test Assignment');
@@ -412,7 +412,7 @@ describe('AssignmentsService.softDeleteAssignment', () => {
 
     await service.softDeleteAssignment(ASSIGNMENT_ID, ORGANIZER_ID);
 
-    expect(rbac.can).toHaveBeenCalledWith(ORGANIZER_ID, SERVER_ID, 'manage_channels');
+    expect(rbac.can).toHaveBeenCalledWith(ORGANIZER_ID, SERVER_ID, 'manage_assignments');
     expect(mockUpdate).toHaveBeenCalledTimes(1); // only the assignment UPDATE
 
     // mockDelete must NOT have been called — status rows are not removed
@@ -576,7 +576,7 @@ describe('AssignmentsService.updateAssignment', () => {
       title: 'Updated Title',
     });
 
-    expect(rbac.can).toHaveBeenCalledWith(ORGANIZER_ID, SERVER_ID, 'manage_channels');
+    expect(rbac.can).toHaveBeenCalledWith(ORGANIZER_ID, SERVER_ID, 'manage_assignments');
     expect(result.title).toBe('Updated Title');
   });
 
@@ -612,7 +612,7 @@ describe('AssignmentsService.presignAttachmentUpload', () => {
   it('delegates to FilesService.presignAttachmentUpload when organizer', async () => {
     const result = await service.presignAttachmentUpload(SERVER_ID, ORGANIZER_ID, 'image/png');
 
-    expect(rbac.can).toHaveBeenCalledWith(ORGANIZER_ID, SERVER_ID, 'manage_channels');
+    expect(rbac.can).toHaveBeenCalledWith(ORGANIZER_ID, SERVER_ID, 'manage_assignments');
     expect(files.presignAttachmentUpload).toHaveBeenCalledWith(
       SERVER_ID,
       ORGANIZER_ID,

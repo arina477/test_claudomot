@@ -36,6 +36,7 @@ export const roles = pgTable('roles', {
   manage_roles: boolean('manage_roles').default(false).notNull(),
   manage_channels: boolean('manage_channels').default(false).notNull(),
   manage_members: boolean('manage_members').default(false).notNull(),
+  manage_assignments: boolean('manage_assignments').default(false).notNull(),
   is_default: boolean('is_default').default(false).notNull(),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });

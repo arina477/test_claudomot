@@ -14,6 +14,7 @@ import type {
   CreateAssignmentInput,
   CreateServerInput,
   EditMessageInput,
+  EffectivePermissions,
   InvitePreview,
   InviteResponse,
   JoinResult,
@@ -217,6 +218,14 @@ export const api = {
     requestNoContent(`/servers/${serverId}/channels/${channelId}/overrides/${roleId}`, {
       method: 'DELETE',
     }),
+
+  /**
+   * GET /servers/:serverId/me/permissions → EffectivePermissions.
+   * Session-scoped; owner gets all-true. Throws: 403 non-member, 401 unauthed.
+   * wave-23 B-2 backend + B-3 frontend gate.
+   */
+  getMyPermissions: (serverId: string) =>
+    request<EffectivePermissions>(`/servers/${serverId}/me/permissions`),
 
   // ── Messaging endpoints (wave-12 M3) ─────────────────────────────────────
 

@@ -65,6 +65,7 @@ function makeRole(overrides: Partial<Role> = {}): Role {
       manage_roles: true,
       manage_channels: true,
       manage_members: false,
+      manage_assignments: false,
     },
     isDefault: false,
     createdAt: '2024-01-01T00:00:00Z',
@@ -82,6 +83,7 @@ const DEFAULT_ROLE: Role = {
     manage_roles: false,
     manage_channels: false,
     manage_members: false,
+    manage_assignments: false,
   },
   isDefault: true,
   createdAt: '2024-01-01T00:00:00Z',
@@ -268,6 +270,7 @@ describe('ServerRolesPage', () => {
         manage_roles: true,
         manage_channels: true,
         manage_members: false,
+        manage_assignments: false,
       },
     });
     mockApi.updateRole.mockResolvedValue(updated);

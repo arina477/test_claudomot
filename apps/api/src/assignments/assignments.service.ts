@@ -29,9 +29,9 @@ import { RbacService } from '../rbac/rbac.service';
 // ---------------------------------------------------------------------------
 // AssignmentsService — wave-22 M5 (task 01fcefb8)
 //
-// Organizer authz: rbac can(userId, serverId, 'manage_channels')
+// Organizer authz: rbac can(userId, serverId, 'manage_assignments')
 //   - G3 carry: single call site; owner passes via superuser path.
-//   - Future swap to 'manage_assignments' is one line + additive roles migration.
+//   - wave-23 B-2: swapped from manage_channels per plan.
 //
 // Attachment anti-spoof: headAttachment() BEFORE assignment_attachments INSERT.
 //   - karen B-note 1: server-derived size+type; rejects >10MB (413).
@@ -58,10 +58,10 @@ export class AssignmentsService {
   // -------------------------------------------------------------------------
 
   private async assertOrganizer(userId: string, serverId: string): Promise<void> {
-    const allowed = await this.rbacService.can(userId, serverId, 'manage_channels');
+    const allowed = await this.rbacService.can(userId, serverId, 'manage_assignments');
     if (!allowed) {
       throw new ForbiddenException(
-        'Insufficient permissions: organizer (manage_channels) required',
+        'Insufficient permissions: organizer (manage_assignments) required',
       );
     }
   }
