@@ -1,6 +1,6 @@
 # Wave 26 — T-block review artifacts
 
-**Block:** T (Test) | **Wave topic:** presence dots on message-row author avatars (shared PresenceDot) | **Block exit gate:** T-9 | **Status:** in-progress
+**Block:** T (Test) | **Wave topic:** presence dots on message-row author avatars (shared PresenceDot) | **Block exit gate:** T-9 | **Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Pattern | Status | Notes |
@@ -13,7 +13,7 @@
 | T-6 | stages/T-6-*.md | done | PresenceDot on-token, no layout regression (live) |
 | T-7 | stages/T-7-*.md | skipped | not heavy; per-row subscription = future perf watch (B-6 P2) |
 | T-8 | stages/T-8-*.md | skipped | non-auth; secret-grep clean |
-| T-9 | stages/T-9-journey.md | active | pending | gate |
+| T-9 | stages/T-9-journey.md | active | done | head-tester APPROVED; journey annotated; T-5 fix-up resolved |
 
 ## Block-specific context
 - **wave_type:** [ui] (frontend-only). **Merge:** 1543a4e. **Live:** web 036c9612 (index-DBlhKjLW.js), api unchanged b0251962.
