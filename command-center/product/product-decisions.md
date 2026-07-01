@@ -360,3 +360,31 @@ First messaging bundle for M3's unshipped core text data plane — the most tech
 - scope discipline: bundle held to the buildable core that satisfies M5's success metric ("get a reminder before it is due"). Deliberately OUT: per-user reminder preferences, digest emails, SMS, member-facing "reminder sent" surface — gold-plating at 0 users, future waves.
 - EmailService/Resend wiring already exists (apps/api/src/email/email.service.ts) — no separate wiring sibling needed; the seed only adds the scheduler (@nestjs/schedule is NOT yet a dependency).
 - decomposed by: milestone-decomposer sub-agent
+
+## [2026-07-01] wave-30/N-block — M5 COMPLETE + 6-task disposition + M6 promotion (milestone transition)
+**M5 CLOSED (in_progress → done).** M5 (Academic tooling: assignments) is COMPLETE. Its sole unbuilt `## Scope` item — due-date reminder notifications (cron + NotificationsModule via Resend) — shipped LIVE this wave (PR #43 merged 81dc821, migration applied, api LIVE, all gates APPROVE). M5's `## Success metric` ("members ... get a reminder before it is due") is MET (V-block confirmed, T-9 F6/F9 reminders LIVE). This lands the founder's Path A directive (build reminders → close M5) resolved 2026-07-01. M5 is the academic-tooling Discord-displacer bet, complete after the Resend-key unblock.
+
+**Disposition of M5's 6 open non-metric child tasks (dispose-before-close per roadmap-lifecycle Invariant #3).** None of the 6 is an M5 success-metric scope item; all are generic assignments-polish / test-hardening / cross-cutting debt. Re-homed to the unassigned queue (`milestone_id = NULL`) so they survive as staged work for a future P-0 reassignment walk (none obsolete enough to cancel):
+- 4b397de0 — Assignments controller-spec IDOR assertion (test hardening) → unassigned
+- 6f257c82 — Assignments rowToDto per-row subquery fold (perf refactor) → unassigned
+- 3ad35a42 — Assignments optimistic-toggle-revert restore prior state (client polish) → unassigned
+- 72cb6ebb — Sweep stale manage_channels references (cross-cutting RBAC debt) → unassigned
+- 226c7e42 — Integration-tier hardening: CI executed-count assertion (test hardening) → unassigned
+- fdb444fc — Extend presence dots to DM/member-mention/hover (M3-era re-homed debt) → unassigned
+These are staged for the next P-0 walk (may re-home to M7 launch-polish or a successor), NOT a permanent backlog dumping ground (anti-pattern #9 respected: unassigned is staged-for-P-0, not the real backlog).
+
+**M6 PROMOTED (todo → in_progress).** Active slot emptied by the M5 close → promoted the highest-priority `todo` milestone: **M6 — Voice/video study rooms** (8702a335). Chosen over M7 (Privacy/launch-polish, `product-polish`) because M6 is a `product-feature` and an explicit founder-bet must-have ("voice study rooms ... the 'study room door left open' model"), matching the founder's Path-A-implied "reminders then next big feature." M6 is the other Discord-displacer and is credential-free at the first (LiveKit token-mint groundwork) slice (LiveKit Cloud decided; livekit-integration specialist exists). Milestone invariant holds: exactly one `in_progress` = M6.
+
+- M5: `in_progress → done` (N-1 closure — scope shipped, metric MET)
+- M6: `todo → in_progress` (N-1 promotion — highest-tier todo, founder-bet product-feature)
+- By: orchestrator (automatic mode) + head-next gate (N-1 APPROVED), wave-30 N-block.
+
+[2026-07-01] M6 (Voice/video study rooms): bundle authored — 3 tasks (server-side LiveKit token-mint VoiceModule + minimal client join surface + who's-in-room occupancy — first buildable slice of M6)
+- caller: N-1-next-bundle (automatic mode; fired by wave-30 N-1 Action 7 after M6 promotion todo → in_progress)
+- seed: Implement VoiceModule LiveKit token-mint service (d8a85de0) — NestJS VoiceModule minting short-lived (4h), room-scoped LiveKit Cloud access tokens; POST /api/v1/channels/:channelId/voice/token gated by SuperTokens session check THEN membership/RBAC check; identity=userId, grant {roomJoin, room=channelId, canPublish, canSubscribe}; API secret stays server-side, server out of the media path.
+- siblings: Build minimal voice-study-room client join surface (1dd1f2ca — single LiveKitRoom, "Join Room" gesture, mic/cam toggle, audio-first video=false, disconnect-on-unmount); Add who's-in-room occupancy indicator (78f51968 — GET .../voice/participants via RoomServiceClient.listParticipants + client count/identities).
+- slice rationale: groundwork-first per M6 ## Scope ordering ("LiveKit integration — room + token service after session check" is first + load-bearing). The token-mint core is the seed (nothing joins without it); the minimal client surface + occupancy read make the slice end-to-end demonstrable against M6's ## Success metric ("drop into a voice channel and talk"). Sized ~2,200 net LOC, well within the 1,500–5,000 / ≤60-file rubric; 1 seed + 2 siblings.
+- locked decisions honored (from product-decisions): LiveKit Cloud DECIDED (not self-host on Railway — TCP-only, needs UDP+TURN which Cloud provides); WS/LiveKit auth = SuperTokens session cookie validated then RBAC/membership token mint; env vars already provisioned (LIVEKIT_URL/API_KEY/API_SECRET server-side, VITE_LIVEKIT_URL client) — credential-free at the code level, no founder-ask blocks this slice.
+- deliberately OUT of this bundle (gold-plating at 0 users, later waves): screen share, speaking/voice-presence rings, low-bandwidth auto-downgrade heuristics beyond LiveKit-native audio-only fallback, per-room recording, breakout rooms, moderation controls.
+- carries encoded in task prose: (1) PRODUCT-PRINCIPLES rule 1 — P-block must VERIFY VoiceModule/channel-type/RBAC premises vs actual repo before assuming greenfield; (2) design_gap likely TRUE — voice-study-room page + join/occupancy primitives (design/voice-study-room.html) → expect a D-block; (3) livekit-integration + supertokens-integration specialists build this; SDK surface + 12 gotchas live at command-center/dev/SDK-Docs/LiveKit/livekit.md.
+- decomposed by: milestone-decomposer sub-agent (automatic mode, fired by wave-30 N-1 Action 7)
