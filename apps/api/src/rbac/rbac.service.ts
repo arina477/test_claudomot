@@ -8,6 +8,7 @@ import type {
   AssignRoleInput,
   ChannelOverride,
   CreateRoleInput,
+  EffectivePermissions,
   Role,
   UpdateRoleInput,
   UpsertChannelOverrideInput,
@@ -124,6 +125,7 @@ export class RbacService {
         manage_roles: input.manage_roles ?? false,
         manage_channels: input.manage_channels ?? false,
         manage_members: input.manage_members ?? false,
+        manage_assignments: input.manage_assignments ?? false,
         is_default: false,
       })
       .returning();
@@ -156,6 +158,7 @@ export class RbacService {
     if (input.manage_roles !== undefined) patch.manage_roles = input.manage_roles;
     if (input.manage_channels !== undefined) patch.manage_channels = input.manage_channels;
     if (input.manage_members !== undefined) patch.manage_members = input.manage_members;
+    if (input.manage_assignments !== undefined) patch.manage_assignments = input.manage_assignments;
 
     const updated = await db
       .update(roles)
@@ -255,6 +258,82 @@ export class RbacService {
       .update(server_members)
       .set({ role_id: input.roleId })
       .where(and(eq(server_members.server_id, serverId), eq(server_members.user_id, targetUserId)));
+  }
+
+  // -------------------------------------------------------------------------
+  // getEffectivePermissions — GET /servers/:serverId/me/permissions
+  //
+  // Returns the caller's effective permission set for a server:
+  //   - owner → owner:true + all 5 flags true (mirrors can() owner short-circuit)
+  //   - member with role → owner:false + role's 5 flags
+  //   - member without role → owner:false + all 5 flags false
+  //   - not a member → throws ForbiddenException (403)
+  // -------------------------------------------------------------------------
+
+  async getEffectivePermissions(userId: string, serverId: string): Promise<EffectivePermissions> {
+    const [server] = await db
+      .select({ owner_id: servers.owner_id })
+      .from(servers)
+      .where(eq(servers.id, serverId))
+      .limit(1);
+
+    if (!server) {
+      throw new ForbiddenException('Server not found or access denied');
+    }
+
+    if (server.owner_id === userId) {
+      return {
+        owner: true,
+        manage_server: true,
+        manage_roles: true,
+        manage_channels: true,
+        manage_members: true,
+        manage_assignments: true,
+      };
+    }
+
+    const [member] = await db
+      .select({ role_id: server_members.role_id })
+      .from(server_members)
+      .where(and(eq(server_members.server_id, serverId), eq(server_members.user_id, userId)))
+      .limit(1);
+
+    if (!member) {
+      throw new ForbiddenException('You are not a member of this server');
+    }
+
+    if (!member.role_id) {
+      return {
+        owner: false,
+        manage_server: false,
+        manage_roles: false,
+        manage_channels: false,
+        manage_members: false,
+        manage_assignments: false,
+      };
+    }
+
+    const [role] = await db.select().from(roles).where(eq(roles.id, member.role_id)).limit(1);
+
+    if (!role) {
+      return {
+        owner: false,
+        manage_server: false,
+        manage_roles: false,
+        manage_channels: false,
+        manage_members: false,
+        manage_assignments: false,
+      };
+    }
+
+    return {
+      owner: false,
+      manage_server: role.manage_server,
+      manage_roles: role.manage_roles,
+      manage_channels: role.manage_channels,
+      manage_members: role.manage_members,
+      manage_assignments: role.manage_assignments,
+    };
   }
 
   // -------------------------------------------------------------------------
@@ -551,6 +630,7 @@ function roleToDto(row: {
   manage_roles: boolean;
   manage_channels: boolean;
   manage_members: boolean;
+  manage_assignments: boolean;
   is_default: boolean;
   created_at: Date;
 }): Role {
@@ -564,6 +644,7 @@ function roleToDto(row: {
       manage_roles: row.manage_roles,
       manage_channels: row.manage_channels,
       manage_members: row.manage_members,
+      manage_assignments: row.manage_assignments,
     },
     isDefault: row.is_default,
     createdAt: row.created_at.toISOString(),

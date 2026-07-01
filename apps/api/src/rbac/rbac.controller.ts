@@ -13,7 +13,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import type { Role } from '@studyhall/shared';
+import type { EffectivePermissions, Role } from '@studyhall/shared';
 import { AssignRoleSchema, CreateRoleSchema, UpdateRoleSchema } from '@studyhall/shared';
 import { AuthGuard } from '../auth/auth.guard';
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
@@ -99,6 +99,27 @@ export class RbacController {
     }
 
     await this.rbacService.deleteRole(serverId, roleId);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// ServerPermissionsController — GET /servers/:serverId/me/permissions
+// Returns effective permissions for the authenticated caller in the given server.
+// 403 if the caller is not a member.
+// ---------------------------------------------------------------------------
+
+@Controller('servers/:serverId')
+@UseGuards(AuthGuard)
+export class ServerPermissionsController {
+  constructor(private readonly rbacService: RbacService) {}
+
+  @Get('me/permissions')
+  async getMyPermissions(
+    @Req() req: SessionAugmentedRequest,
+    @Param('serverId') serverId: string,
+  ): Promise<EffectivePermissions> {
+    const userId = req.session.getUserId();
+    return await this.rbacService.getEffectivePermissions(userId, serverId);
   }
 }
 
