@@ -53,6 +53,6 @@ LEARN:
 - [x] L-2 Distill
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers — clean; M6 held in_progress (metric not met, scope unshipped); no ritual fired; seed_candidates=1
+- [x] N-2 Seed — seed 78f51968 (occupancy), 0 siblings (single-task bundle), validation PASS; claimed_task_ids=[78f51968]
+- [x] N-3 Handoff — wave-32 opened (seed 78f51968, M6 in_progress, loop_state ready); wave-31 archived + waves row status='ok'; head-next APPROVED all three
