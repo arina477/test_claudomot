@@ -10,8 +10,8 @@
 |---|---|---|---|
 | P-0 | process/waves/wave-24/stages/P-0-frame.md | done | PROCEED + accepted SELECTIVE-EXPANSION (rbac/assignments authz coverage); reframe reviewers P-0-{problem-framer,ceo-reviewer,mvp-thinner}.md |
 | P-1 | process/waves/wave-24/stages/P-1-decompose.md | done | single-spec below floor → BOARD 6/7 override-ship; design_gap_flag=false |
-| P-2 | process/waves/wave-24/stages/P-2-spec.md | pending | |
-| P-3 | process/waves/wave-24/stages/P-3-plan.md | pending | approach + plan |
+| P-2 | process/waves/wave-24/stages/P-2-spec.md | done | single-spec, 5 ACs to 02fa8011.description |
+| P-3 | process/waves/wave-24/stages/P-3-plan.md | done | extend harness + 3 integration specs; test-automator |
 | P-4 | process/waves/wave-24/blocks/P/gate-verdict.md | pending | Phase-2 reviewer output |
 
 ## Block-specific context

@@ -18,8 +18,8 @@
 PRODUCT:
 - [x] P-0 Frame (no-prior-spec; problem-framer PROCEED [extend wave-17 harness NOT rebuild] + ceo-reviewer SELECTIVE-EXPANSION [add rbac/assignments authz coverage — align to F23-T-4] + mvp-thinner OK → accepted scope-correction; claimed [02fa8011])
 - [x] P-1 Decompose (single-spec; below floor → MERGE expansion incomplete-scope [reminders cred-blocked] → BOARD P-1-floor-merge-wave-24 6/7 override-ship; design_gap_flag=false → skip D; T-4 false-green guard binding)
-- [ ] P-2 Spec
-- [ ] P-3 Plan
+- [x] P-2 Spec (single-spec; 5 ACs written to 02fa8011.description — presence co-member + member-gate + rbac/assignments-authz real-DB integration specs + false-green guard)
+- [x] P-3 Plan (extend wave-17 pg-harness + 3 integration specs; test-automator; no prod code/dep/migration; false-green guard binding)
 - [ ] P-4 Gate APPROVED
 
 DESIGN (skip block if non-UI wave):
