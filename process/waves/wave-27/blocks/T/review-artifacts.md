@@ -1,6 +1,6 @@
 # Wave 27 — T-block review artifacts
 
-**Block:** T (Test) | **Wave topic:** Presence performance pair (server_members index + client subscription lift) | **Block exit gate:** T-9 | **Status:** in-progress
+**Block:** T (Test) | **Wave topic:** Presence performance pair (server_members index + client subscription lift) | **Block exit gate:** T-9 | **Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable | Pattern | Status | Notes |
@@ -13,7 +13,7 @@
 | T-6 | stages/T-6-layout.md | active | done | no visual change (behavior-preserving; PresenceDot unchanged) |
 | T-7 | stages/T-7-perf.md | active | done | THE perf wave — proof = EXPLAIN Index Scan (T-4) + subscription-count 1 (T-2); not heavy load-test |
 | T-8 | stages/T-8-security.md | — | skipped | non-auth; secret-grep clean |
-| T-9 | stages/T-9-journey.md | active | pending | gate |
+| T-9 | stages/T-9-journey.md | active | done | head-tester APPROVED; journey annotated (perf, no delta) |
 
 ## Block-specific context
 - **wave_type:** [backend, ui-perf] (behavior-preserving). **Merge:** 87b6ef7. **Live:** api 855f1ea1 (+index) + web 328b1ae9 (index-Dr2UkTXH.js).
