@@ -69,3 +69,6 @@ Promoted at L-2 Distill from `process/waves/wave-<N>/blocks/L/observations.md` b
 
 1. Verify every seed claim about what exists or is absent in the code at P-0; decomposer prose drifts both ways.
    Why: A false-absent premise rebuilds existing work; a false-present one skips a needed addition.
+
+2. Verify at P-0 that the seed's named entity is the real cost source or output boundary, not merely that it exists.
+   Why: An existing but wrong-target entity sends the wave to fix nothing.

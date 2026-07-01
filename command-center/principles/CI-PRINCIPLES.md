@@ -143,3 +143,6 @@ pr_conventions:
 
 5. Assert a nonzero executed-count from the CI integration job log; a green exit with zero specs run is a false-green.
    Why: A stripped env var makes the integration tier skip all specs yet still exit the job green.
+
+6. Run CI on every push to main, including docs and bypass pushes, or scope the linter to source files only.
+   Why: A direct-to-main push that skips CI hides breakage until the next feature PR runs.
