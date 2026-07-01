@@ -43,12 +43,12 @@ CI/CD:
 - [x] C-3 Canary (skipped — DAU 0 < 1000)
 
 TEST:
-- [ ] T-1 Static
-- [ ] T-2 Unit
-- [ ] T-3 Contract
-- [ ] T-4 Integration
-- [ ] T-5 E2E
-- [ ] T-6 Layout
+- [x] T-1 Static (CI lint+typecheck green; no prod ts-bypass)
+- [x] T-2 Unit (395 api + 216 web green; both authz boundaries covered)
+- [x] T-3 Contract (EffectivePermissions + role DTOs typed end-to-end, no drift)
+- [x] T-4 Integration (tier green; F23-T-4 Low: new-surface real-DB gap → V-2, reinforces 02fa8011)
+- [x] T-5 E2E (core /me/permissions authz boundary LIVE-verified via HTTP: owner all-true, non-member 403, IDOR-safe; visual BLOCKED by chrome-absent infra 67881a58 → F23-T-5 non-blocking)
+- [x] T-6 Layout (token audit PASS by diff — zero new hex/style/primitive; no canonicalized design; visual harness gap = shared F23-T-5)
 - [ ] T-7 Perf
 - [ ] T-8 Security
 - [ ] T-9 Journey

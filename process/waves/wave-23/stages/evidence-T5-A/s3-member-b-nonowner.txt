@@ -1,0 +1,2 @@
+{"owner":false,"manage_server":false,"manage_roles":false,"manage_channels":false,"manage_members":false,"manage_assignments":false}
+HTTP_STATUS:200
