@@ -40,12 +40,18 @@ export class ReminderScanService {
     // -----------------------------------------------------------------------
     // Step 1: find assignments due in the next 24 hours (strictly in future,
     //         E1 UTC / DB now(), E2 past-due guard: > now())
+    //
+    // due_date is included here so processAssignment can pass it straight to
+    // sendReminderIfNew, eliminating the N per-member re-query of due_date
+    // (N+1 fix) and the soft-delete/edit TOCTOU window between the scan and
+    // the inner fetch.
     // -----------------------------------------------------------------------
     let dueAssignments: Array<{
       id: string;
       title: string;
       server_id: string;
       server_name: string;
+      due_date: Date;
     }>;
 
     try {
@@ -55,6 +61,7 @@ export class ReminderScanService {
           title: assignments.title,
           server_id: assignments.server_id,
           server_name: servers.name,
+          due_date: assignments.due_date,
         })
         .from(assignments)
         .innerJoin(servers, eq(assignments.server_id, servers.id))
@@ -75,9 +82,14 @@ export class ReminderScanService {
 
     this.logger.log(`ReminderScanService: found ${dueAssignments.length} assignment(s) in window`);
 
+    let remindersSent = 0;
+    let sendFailures = 0;
+
     for (const assignment of dueAssignments) {
       try {
-        await this.processAssignment(assignment);
+        const counts = await this.processAssignment(assignment);
+        remindersSent += counts.sent;
+        sendFailures += counts.failures;
       } catch (err) {
         this.logger.error(
           `ReminderScanService: unhandled error processing assignment ${assignment.id}`,
@@ -87,7 +99,17 @@ export class ReminderScanService {
       }
     }
 
-    this.logger.log('ReminderScanService: scan complete');
+    const summary = {
+      assignmentsScanned: dueAssignments.length,
+      remindersSent,
+      sendFailures,
+    };
+
+    if (sendFailures > 0) {
+      this.logger.warn('ReminderScanService: scan complete (with send failures)', summary);
+    } else {
+      this.logger.log('ReminderScanService: scan complete', summary);
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -106,7 +128,8 @@ export class ReminderScanService {
     title: string;
     server_id: string;
     server_name: string;
-  }): Promise<void> {
+    due_date: Date;
+  }): Promise<{ sent: number; failures: number }> {
     // -----------------------------------------------------------------------
     // The scan query — correctness-critical.
     //
@@ -155,13 +178,18 @@ export class ReminderScanService {
         `ReminderScanService: failed to query recipients for assignment ${assignment.id}`,
         err,
       );
-      return;
+      return { sent: 0, failures: 0 };
     }
+
+    let sent = 0;
+    let failures = 0;
 
     for (const recipient of recipients) {
       try {
-        await this.sendReminderIfNew(assignment, recipient);
+        const didSend = await this.sendReminderIfNew(assignment, recipient);
+        if (didSend) sent++;
       } catch (err) {
+        failures++;
         this.logger.error(
           `ReminderScanService: unhandled error sending reminder to user ${recipient.user_id} for assignment ${assignment.id}`,
           err,
@@ -169,6 +197,8 @@ export class ReminderScanService {
         // continue to next recipient
       }
     }
+
+    return { sent, failures };
   }
 
   // -------------------------------------------------------------------------
@@ -177,33 +207,33 @@ export class ReminderScanService {
   // INSERT INTO assignment_reminder ON CONFLICT DO NOTHING RETURNING id.
   // Send email ONLY when the RETURNING clause shows a row was created.
   // This prevents double-sends across concurrent ticks/instances/crashes.
+  //
+  // due_date is threaded in from the window query (Fix 1: no per-member
+  // re-query of the assignment row — eliminates N+1 and the TOCTOU gap
+  // between the scan query and the former inner fetch).
+  //
+  // Returns true when the email was sent (row newly inserted), false when
+  // skipped (already sent or no email address). Throws on send failure so
+  // the caller can increment its sendFailures counter.
   // -------------------------------------------------------------------------
 
   private async sendReminderIfNew(
-    assignment: { id: string; title: string; server_id: string; server_name: string },
+    assignment: {
+      id: string;
+      title: string;
+      server_id: string;
+      server_name: string;
+      due_date: Date;
+    },
     recipient: { user_id: string; email: string },
-  ): Promise<void> {
+  ): Promise<boolean> {
     // Skip members with null/empty email (guard: users.email is notNull in schema,
     // but belt-and-suspenders for any edge cases)
     if (!recipient.email) {
       this.logger.warn(
         `ReminderScanService: user ${recipient.user_id} has no email, skipping reminder for assignment ${assignment.id}`,
       );
-      return;
-    }
-
-    // Fetch due_date for the email body (needed for human-legible date string)
-    const [assignmentRow] = await db
-      .select({ due_date: assignments.due_date })
-      .from(assignments)
-      .where(eq(assignments.id, assignment.id))
-      .limit(1);
-
-    if (!assignmentRow) {
-      this.logger.warn(
-        `ReminderScanService: assignment ${assignment.id} not found when fetching due_date`,
-      );
-      return;
+      return false;
     }
 
     // TOCTOU-safe send-once: INSERT RETURNING tells us whether this tick "wins"
@@ -221,18 +251,20 @@ export class ReminderScanService {
       this.logger.debug(
         `ReminderScanService: reminder already sent to user ${recipient.user_id} for assignment ${assignment.id}, skipping`,
       );
-      return;
+      return false;
     }
 
     // Row was just created — this tick owns the send
     await this.emailService.sendAssignmentReminder(recipient.email, {
       assignmentTitle: assignment.title,
-      dueDate: assignmentRow.due_date,
+      dueDate: assignment.due_date,
       serverName: assignment.server_name,
     });
 
     this.logger.log(
       `ReminderScanService: sent reminder to ${recipient.email} for assignment ${assignment.id}`,
     );
+
+    return true;
   }
 }
