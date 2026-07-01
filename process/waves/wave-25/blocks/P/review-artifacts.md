@@ -3,7 +3,7 @@
 **Block:** P (Product)
 **Wave topic:** M5 debt — mention token parser parity (client↔server) + editMessage mention-diff transaction wrapping
 **Block exit gate:** P-4
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
@@ -12,7 +12,7 @@
 | P-1 | process/waves/wave-25/stages/P-1-decompose.md | done | single-spec below floor → precedent override-ship (4th); M5-disposition escalated; design_gap_flag=false |
 | P-2 | process/waves/wave-25/stages/P-2-spec.md | done | single-spec 5 ACs to c18b8089.desc |
 | P-3 | process/waves/wave-25/stages/P-3-plan.md | done | shared grammar extraction + server/client imports + editMessage txn + rollback spec |
-| P-4 | process/waves/wave-25/blocks/P/gate-verdict.md | pending | |
+| P-4 | process/waves/wave-25/blocks/P/gate-verdict.md | done | head-product APPROVED + karen+jenny APPROVE (Gemini CONCERN→NOT-MATERIAL: usernames exclude dots); gate-passed |
 
 ## Block-specific context
 - **Wave topic:** c18b8089 — (1) align client MessageList tokenizer to server parseMentions grammar (interior-punctuation handles @bob.dev render as plain text client-side despite server resolution — user-visible inconsistency); (2) wrap editMessage mention-diff (delete-then-insert) in a transaction (robustness — partial failure can't leave inconsistent message_mentions). wave_db_id b0a1e114-c51b-4410-8a5c-95b36d6a6635.

@@ -20,7 +20,7 @@ PRODUCT:
 - [x] P-1 Decompose (single-spec below floor → decomposition incomplete-scope [reminders cred-blocked] → PRECEDENT-APPLICATION override-ship [4th; w24 BOARD said dont-re-litigate]; M5-disposition escalated to founder; design_gap_flag=false → skip D)
 - [x] P-2 Spec (single-spec; 5 ACs to c18b8089.desc — shared slug grammar extraction + client parity + editMessage txn wrap + real-PG rollback spec)
 - [x] P-3 Plan (shared slug grammar extraction + server/client imports + editMessage txn + real-PG rollback spec; typescript-pro/backend-developer/react-specialist; no dep/migration)
-- [ ] P-4 Gate APPROVED
+- [x] P-4 Gate APPROVED (head-product APPROVED + karen+jenny APPROVE; Gemini CONCERN→NOT-MATERIAL [usernames exclude dots, client-match-server correct]; B-1 carry: name export MENTION_TOKEN_SLUG_RE)
 
 DESIGN (skip block if non-UI wave):
 - [ ] D-1 Brief
