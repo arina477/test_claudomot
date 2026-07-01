@@ -49,6 +49,11 @@ All notable changes to StudyHall are documented here. Format follows
 - Each member gets a personal to-do / done toggle on every assignment that only changes their own status — your progress is yours and never visible to others. (#34)
 - Organizers can edit an assignment's details or remove it; a removed assignment disappears from everyone's list. (#34)
 
+### Changed
+
+- Assignment management can now be delegated: a server owner can grant a dedicated "Manage Assignments" permission to a non-owner member — such as a teaching assistant or study-group co-lead — so they can post, edit, and remove assignments without also handing over channel-management rights. (#35)
+- Owners toggle the new permission per role in the role editor, and the "New Assignment" button now appears for owners or anyone who holds it, where it was owner-only before. (#35)
+
 ### Fixed
 
 - The app now reports its true version on the health check, fixing a startup crash that could take the live API offline. (#13)
