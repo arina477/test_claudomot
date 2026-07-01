@@ -59,8 +59,8 @@ VERIFY:
 - [x] V-3 Fast-fix loop (queue empty; head-verifier APPROVED Phase-1; acceptance-by-behavior genuine, no green-by-suppression)
 
 LEARN:
-- [ ] L-1 Docs
-- [ ] L-2 Distill
+- [x] L-1 Docs (CHANGELOG #35 → new ### Changed section 2 bullets [delegated assignment authz; manage_assignments split + CTA re-gate]; Changed not Security [preventive hardening on shipped #34, nothing shipped vulnerable]; M5 delta RECORD-only 5 done/10 open → no close, no backlog-stockout; README skip [no env/CLI/install/dep]; commit 599703c)
+- [x] L-2 Distill (2 tasks done; 5 observations; BUILD-PRINCIPLES rule 6 promoted [formatter-before-report, 4x recurrence]; PRODUCT rule 2 karen-REJECTED non-falsifiable)
 
 NEXT:
 - [ ] N-1 Survey & triggers
