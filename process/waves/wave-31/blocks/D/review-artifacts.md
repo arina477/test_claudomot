@@ -10,7 +10,7 @@
 | Stage | Deliverable file(s) | Status | Notes |
 |---|---|---|---|
 | D-1 | process/waves/wave-31/stages/D-1-brief/voice-study-room-brief.md | done | brief authored; mask_mode PASS |
-| D-2 | process/waves/wave-31/stages/D-2-variants/voice-study-room-variants.md + voice-study-room-iterate.md | pending | /aidesigner generate → design/staging/voice-study-room.html; bounded iterate cap 3 |
+| D-2 | process/waves/wave-31/stages/D-2-variants/voice-study-room-variants.md + voice-study-room-iterate.md | done | /aidesigner generate (iter 0, HTTP 200) → design/staging/voice-study-room.html committed; checkpoint skipped-mode-automatic |
 | D-3 | process/waves/wave-31/stages/D-3-review-and-adopt/voice-study-room-{plan-design-review,ui-ux-pro-max,reconciliation,adopt}.md | pending | dual-reviewer gate + fresh head-designer verdict + canonicalization |
 
 ## Block-specific context
