@@ -3,7 +3,7 @@
 **Block:** P (Product)
 **Wave topic:** M5 debt-clearing — extend the real-Postgres integration test tier to presence/services (+ rbac/assignments authz)
 **Block exit gate:** P-4
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
@@ -12,7 +12,7 @@
 | P-1 | process/waves/wave-24/stages/P-1-decompose.md | done | single-spec below floor → BOARD 6/7 override-ship; design_gap_flag=false |
 | P-2 | process/waves/wave-24/stages/P-2-spec.md | done | single-spec, 5 ACs to 02fa8011.description |
 | P-3 | process/waves/wave-24/stages/P-3-plan.md | done | extend harness + 3 integration specs; test-automator |
-| P-4 | process/waves/wave-24/blocks/P/gate-verdict.md | pending | Phase-2 reviewer output |
+| P-4 | process/waves/wave-24/blocks/P/gate-verdict.md | done | Phase-1 head-product APPROVED + Phase-2 karen+jenny APPROVE (Gemini CONCERN→NOT-MATERIAL); gate-passed |
 
 ## Block-specific context
 - **Wave topic:** extend the real-PG integration test tier (seed 02fa8011). wave_db_id 60734a7e-2446-470b-8620-5f96b2a23c7f.

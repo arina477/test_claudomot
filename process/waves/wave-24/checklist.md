@@ -20,7 +20,7 @@ PRODUCT:
 - [x] P-1 Decompose (single-spec; below floor → MERGE expansion incomplete-scope [reminders cred-blocked] → BOARD P-1-floor-merge-wave-24 6/7 override-ship; design_gap_flag=false → skip D; T-4 false-green guard binding)
 - [x] P-2 Spec (single-spec; 5 ACs written to 02fa8011.description — presence co-member + member-gate + rbac/assignments-authz real-DB integration specs + false-green guard)
 - [x] P-3 Plan (extend wave-17 pg-harness + 3 integration specs; test-automator; no prod code/dep/migration; false-green guard binding)
-- [ ] P-4 Gate APPROVED
+- [x] P-4 Gate APPROVED (Phase-1 head-product APPROVED + Phase-2 karen+jenny APPROVE; Gemini CONCERN→NOT-MATERIAL [isolation strategy exists]; 3 binding B-2 carries)
 
 DESIGN (skip block if non-UI wave):
 - [ ] D-1 Brief
