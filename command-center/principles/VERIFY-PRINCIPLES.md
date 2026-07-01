@@ -70,4 +70,7 @@ Promoted at L-2 Distill from `process/waves/wave-<N>/blocks/L/observations.md` b
 1. Verify seeding ACs by inspecting create-path source, not runtime behavior; a safe fallback hides a missing seed.
    Why: A default-deny or nullable fallback passes runtime probes while the required seed is absent.
 
+2. When deployed behavior diverges from a spec AC and is more correct, amend the spec to match, not the code.
+   Why: Reverting correct shipped behavior to a weaker spec ships the worse option; the spec was the defect.
+
 ---

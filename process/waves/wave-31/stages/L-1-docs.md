@@ -44,7 +44,7 @@ verdict_evidence:
   - "apps/api/src/voice/voice-token.controller.spec.ts — 404 test reframed to BadRequestException propagation; vitest 4/4 green"
   - "command-center/product/product-decisions.md:387 — correction appended (LIVEKIT_* not set in Railway)"
   - "typecheck api=0 web=0; biome clean; voice controller spec 4/4"
-  - "commit SHA: <filled at commit>"
+  - "commit SHA: df9f1ae (pushed to main, 1b3b7b3..df9f1ae)"
 changelog_entry_added: true
 roadmap_milestones_progressed:
   - milestone: M6 (8702a335)
