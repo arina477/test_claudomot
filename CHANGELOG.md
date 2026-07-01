@@ -63,3 +63,4 @@ All notable changes to StudyHall are documented here. Format follows
 - The app now reports its true version on the health check, fixing a startup crash that could take the live API offline. (#13)
 - Editing a message now updates its mentions all-or-nothing, so a mid-edit failure can no longer leave a message with stale or half-updated mentions. (#37)
 - Presence dots now show for your own messages too, so you no longer appear offline on the very messages you just sent. (#39)
+- A member whose email has an unusual format and who hasn't set a display name no longer shows as a blank name in the member list and presence — it now falls back to a stable identifier; also removed an unused internal response schema. (#42)
