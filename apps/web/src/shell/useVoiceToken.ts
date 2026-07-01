@@ -123,6 +123,9 @@ function classifyVoiceTokenError(err: unknown): string {
     if (msg.startsWith('403') || msg.includes('403')) {
       return "You don't have permission to join this voice channel.";
     }
+    // Unreachable for a missing channel: the API returns 403 (uniform default-deny),
+    // not 404, so a non-existent channel maps to the 403 branch above. Kept as a
+    // defensive fallthrough only; no live server path emits 404 for this endpoint.
     if (msg.startsWith('404') || msg.includes('404')) {
       return 'This voice channel no longer exists.';
     }

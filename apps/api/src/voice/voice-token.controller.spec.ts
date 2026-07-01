@@ -4,10 +4,16 @@
  * Covers:
  *   - delegates to VoiceTokenService.mintToken with userId + channelId
  *   - returns the service result as-is (200 shape)
- *   - propagates service exceptions (403, 404, 400, 503)
+ *   - propagates service exceptions (403 non-member, 400 non-voice, etc.)
+ *
+ * Note: the controller is a pure pass-through — it re-throws whatever the
+ * service throws. A missing channel returns 403 (uniform default-deny), never
+ * 404, so there is no 404 path to assert here; the two exception-propagation
+ * tests below exercise the generic re-throw behaviour with the exception types
+ * the service actually emits.
  */
 
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { VoiceTokenController } from './voice-token.controller';
 
@@ -54,13 +60,13 @@ describe('VoiceTokenController.issueVoiceToken', () => {
     );
   });
 
-  it('propagates NotFoundException from service (404 missing channel)', async () => {
+  it('propagates BadRequestException from service (400 non-voice channel)', async () => {
     mockVoiceTokenService.mintToken.mockRejectedValueOnce(
-      new NotFoundException('Channel not found'),
+      new BadRequestException('Voice tokens can only be issued for voice channels'),
     );
 
     await expect(controller.issueVoiceToken(makeReq(USER_ID) as never, CHANNEL_ID)).rejects.toThrow(
-      NotFoundException,
+      BadRequestException,
     );
   });
 });

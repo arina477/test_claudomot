@@ -38,6 +38,8 @@ All notable changes to StudyHall are documented here. Format follows
 - An @-autocomplete picker pops up as you type a name in the composer, so you can pick the right member with the keyboard and never misspell a handle. (#27)
 - Mentions render as pills in the message — your own mentions stand out in green — and an unread-mention badge tells you when someone has pinged you, clearing once you've looked. (#27)
 - A "my mentions" view collects every message that mentions you in one place, and it only ever shows your own — no one can peek at anyone else's. (#27)
+- Voice study rooms — first slice: members can drop into a voice channel from an audio-first join surface, with the server minting a short-lived, single-room access pass only after it confirms you're signed in and a member of that channel. (#44)
+- This is the foundation (the join surface plus the server-side access-pass service); turning on live audio still needs voice-service credentials, which are being set up, and later waves add screen-share and a who's-here indicator. (#44)
 - Thread replies: reply in a thread off any message, with a reply-count affordance on the original and a thread panel that shows the parent message and its replies. (#30)
 - Replies appear and disappear live for everyone viewing the thread, and a reply you send while offline is queued and sent once you're back online. (#30)
 - Attach files and images to a message: pick from the composer (up to 10MB each), with an image thumbnail or file chip preview and a progress-and-retry indicator while it uploads. (#31)

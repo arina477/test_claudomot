@@ -33,8 +33,9 @@ export class VoiceTokenController {
    * 200 — token issued
    * 400 — channel is not a voice channel
    * 401 — unauthenticated (AuthGuard / SuperTokens)
-   * 403 — authenticated but not a channel member
-   * 404 — channelId does not exist
+   * 403 — authenticated but not a channel member, OR channel does not exist
+   *       (uniform default-deny: a missing channel returns 403, never 404, so
+   *        non-members get zero existence signal — matches ChannelMessageGuard)
    * 503 — LIVEKIT_URL / key / secret not configured
    */
   @Post(':channelId/voice/token')
