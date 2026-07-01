@@ -34,7 +34,7 @@ BUILD:
 - [x] B-3 Frontend
 - [x] B-4 Wiring
 - [x] B-5 Verify
-- [ ] B-6 Review
+- [x] B-6 Review (head-builder APPROVED + /review 0 crit/high/med genuine real-DB tests; false-green wiring verified; 5 Low accepted)
 
 CI/CD:
 - [ ] C-1 PR, CI & merge

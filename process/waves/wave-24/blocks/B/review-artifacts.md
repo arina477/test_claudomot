@@ -3,7 +3,7 @@
 **Block:** B (Build)
 **Wave topic:** M5 debt — extend the real-PG integration test tier (presence co-member + member-gate + rbac/assignments-authz specs)
 **Block exit gate:** B-6
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
@@ -35,3 +35,18 @@ none
 
 ## Gate verdict log
 <appended by fresh head-builder spawn at B-6 Action 1>
+
+## Gate verdict log
+- B-6 attempt 1 (head-builder a23843bf1897dfa3d): APPROVED — genuine real-DB round-trips, non-member 403 authz negative path, false-green guard real.
+- B-6 Phase 2 /review (code-reviewer a5c52fe1ea575a05f): APPROVED — 0 crit/high/med; CI false-green wiring verified (turbo.json passthrough).
+
+## Status (block exit)
+```yaml
+build_block_status:    complete
+branch:                wave-24-integration-tier
+stages_run:            [B-0, B-2, B-4, B-5, B-6]
+stages_skipped:        [B-1 (no contracts), B-3 (no UI)]
+review_verdict:        APPROVE
+deviations_logged:     []
+ready_for_ci:          true
+```
