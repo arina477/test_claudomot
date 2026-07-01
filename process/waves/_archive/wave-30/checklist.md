@@ -51,6 +51,6 @@ LEARN:
 - [x] L-2 Distill
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers — M5 CLOSED (done; metric MET); 6 open non-metric tasks disposed → unassigned; M6 PROMOTED (in_progress); M6 bundle decomposed (seed d8a85de0 + 2 siblings). head-next APPROVED.
+- [x] N-2 Seed — bundle validated (pass); claimed_task_ids [d8a85de0, 1dd1f2ca, 78f51968] for wave-31. head-next APPROVED.
+- [x] N-3 Handoff — wave-30 closed (waves status=ok), archived → _archive/wave-30/, handoff to wave-31 P-0; loop_state ready. head-next APPROVED.
