@@ -61,6 +61,6 @@ LEARN:
 - [x] L-2 Distill
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers — clean; M5 stays in_progress (open=7, done=11); no rituals fired
+- [x] N-2 Seed — seed d23a0740 (presence/members code-debt), solo bundle; claimed=[d23a0740]
+- [x] N-3 Handoff — wave-28 closed (status=ok); archived → _archive/wave-28/; wave-29 P-0 opened; loop_state ready
