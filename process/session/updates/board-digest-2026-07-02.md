@@ -18,3 +18,10 @@ Clearing re-homed engineering debt while reminders waits on the key. Next: a rea
 The assignments feature is fully built and solid. There's **one** remaining piece — **due-date reminders** (emailing a student before an assignment is due) — and it's the only thing standing between us and finishing the whole assignments milestone. Everything else the team can do on its own; reminders need an email-sending account that only you can create.
 
 **The single action:** create a free account at **resend.com**, make an API key, paste it here. ~3 minutes. The moment it lands, the team builds and ships reminders next. Until then it keeps clearing background engineering work (this wave added a safety test-net around the permissions system; next up is a chat @-mention fix students would notice).
+
+---
+## STRATEGIC — a decision that would let us finish the assignments milestone (wave-25)
+We've now shipped several rounds of solid engineering while the ONE remaining assignments feature — due-date reminders — waits on the Resend email key. Rather than keep clearing background work indefinitely, here's a clean choice for you:
+- **Option A — send the Resend key** (create a free resend.com account + API key, paste it): the team builds and ships reminders next, and the assignments milestone finishes.
+- **Option B — defer reminders** to a later release: we mark the assignments milestone "feature-complete for now" (reminders parked), close it, and move on to the next milestone (voice/video study rooms).
+Either way the loop keeps moving; this just decides whether the next wave is *reminders* (Option A) or the *next milestone* (Option B). No wrong answer — your call on priority.

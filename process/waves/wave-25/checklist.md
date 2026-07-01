@@ -17,7 +17,7 @@
 
 PRODUCT:
 - [x] P-0 Frame (no-prior-spec; problem-framer PROCEED [both premises code-verified] + ceo-reviewer SCOPE-EXPANSION [shared slug grammar] + mvp-thinner OK → accepted MINIMAL expansion: extract slug regex to packages/shared + editMessage txn wrap + real-PG rollback spec; claimed [c18b8089])
-- [ ] P-1 Decompose
+- [x] P-1 Decompose (single-spec below floor → decomposition incomplete-scope [reminders cred-blocked] → PRECEDENT-APPLICATION override-ship [4th; w24 BOARD said dont-re-litigate]; M5-disposition escalated to founder; design_gap_flag=false → skip D)
 - [ ] P-2 Spec
 - [ ] P-3 Plan
 - [ ] P-4 Gate APPROVED
