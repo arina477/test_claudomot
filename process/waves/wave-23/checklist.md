@@ -3,8 +3,8 @@
 **Wave:** 23
 **Active milestone:** a5232e16 — M5 Academic tooling: assignments [in_progress]
 **Seed task:** 8aa67564-a142-4628-b658-f020d4d2872c — Add dedicated manage_assignments permission (split from manage_channels)
-**Bundled siblings (0):** none — solo-task bundle
-**claimed_task_ids:** [8aa67564]
+**Bundled siblings (1):** edbdea8f-71c9-43f0-8f1f-0bcea355f183 — /me effective-permissions endpoint + assignments CTA gate (added at P-0 via BOARD-ratified SELECTIVE-EXPANSION for end-to-end delegated-organizer authz)
+**claimed_task_ids:** [8aa67564, edbdea8f]
 
 **Pending ritual outcomes / carry-ins for P-0:**
 - **M5 continues (bundle 2).** Wave-22 shipped the assignments spine LIVE (organizer posts + members mark to-do/done + panel/card). This wave does the manage_assignments authz refinement — split a dedicated permission off the wave-22 manage_channels reuse.
@@ -34,7 +34,7 @@ BUILD:
 - [x] B-2 Backend (rbac service createRole/updateRole/roleToDto +flag + getEffectivePermissions; GET /servers/:serverId/me/permissions; assertOrganizer swap manage_channels→manage_assignments; backfill seed; api typecheck clean)
 - [x] B-3 Frontend (api.ts getMyPermissions; AssignmentsPanel CTA gate owner→owner||manage_assignments; honest-403 via existing submitError; ServerRolesPage PERM_FLAGS 5th checkbox = end-to-end grantable; web typecheck clean)
 - [x] B-4 Wiring (repo typecheck 4/4 + pnpm lint exit 0; /me/permissions route registered; biome-format-drift in B-2 rbac files + 3 dead pre-existing suppressions fixed via react-specialist — CI-PRINCIPLES rule 4 catch, 3rd instance)
-- [x] B-5 Verify
+- [x] B-5 Verify (lint exit 0 + api unit 388 + web 216 [both authz-swap test-fixes + new manage_assignments-grant test] + build green; integration tier CI-gated no-local-DB; dev-smoke→C-2)
 - [ ] B-6 Review
 
 CI/CD:
