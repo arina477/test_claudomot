@@ -31,8 +31,8 @@ DESIGN (skip block if non-UI wave):
 BUILD:
 - [x] B-0 Branch & schema (branch wave-23-manage-assignments; bundle claimed; migration 0011_rainy_wild_child + backfill; no new dep/env; local apply deferred to C-block)
 - [x] B-1 Contracts (shared rbac.ts +manage_assignments in RolePermissions/Create/Update schemas + NEW EffectivePermissionsSchema; Permission union 4→5; isolated typecheck clean)
-- [ ] B-2 Backend
-- [ ] B-3 Frontend
+- [x] B-2 Backend (rbac service createRole/updateRole/roleToDto +flag + getEffectivePermissions; GET /servers/:serverId/me/permissions; assertOrganizer swap manage_channels→manage_assignments; backfill seed; api typecheck clean)
+- [x] B-3 Frontend (api.ts getMyPermissions; AssignmentsPanel CTA gate owner→owner||manage_assignments; honest-403 via existing submitError; ServerRolesPage PERM_FLAGS 5th checkbox = end-to-end grantable; web typecheck clean)
 - [ ] B-4 Wiring
 - [ ] B-5 Verify
 - [ ] B-6 Review
