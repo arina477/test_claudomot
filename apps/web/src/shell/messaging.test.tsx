@@ -1373,3 +1373,62 @@ describe('MainColumn — socket thread:reply:deleted affordance', () => {
     });
   });
 });
+
+// ── renderBodyWithMentions — shared-slug tokenizer parity (wave-25 B-3) ──────
+
+describe('MessageList — renderBodyWithMentions shared-slug parity (wave-25)', () => {
+  function renderMsg(content: string, mentions: { userId: string; username: string }[]) {
+    const msg = makeMsg({ content, mentions });
+    const msgs: DisplayMessage[] = [{ kind: 'real', ...msg }];
+    return render(
+      <MessageList
+        messages={msgs}
+        loadingInitial={false}
+        loadingOlder={false}
+        errorInitial={false}
+        hasOlderMessages={false}
+        onLoadOlder={vi.fn()}
+        onRetry={vi.fn()}
+        viewerUsername={null}
+        channelName="general"
+      />,
+    );
+  }
+
+  it('AC2: @bob.dev where bob is resolved → renders bob pill + trailing .dev text', () => {
+    renderMsg('hey @bob.dev check this', [{ userId: 'u1', username: 'bob' }]);
+    // MentionPill renders aria-label="mention: @bob"
+    expect(screen.getByLabelText('mention: @bob')).toBeInTheDocument();
+    // The trailing punctuation renders as plain text
+    expect(screen.getByText('.dev', { exact: false })).toBeInTheDocument();
+  });
+
+  it('AC2: @alice resolved with no trailing punctuation → pill only, no stray text', () => {
+    renderMsg('hello @alice how are you', [{ userId: 'u2', username: 'alice' }]);
+    expect(screen.getByLabelText('mention: @alice')).toBeInTheDocument();
+  });
+
+  it('AC3: @nobody NOT in mentionMap → plain text, no pill rendered', () => {
+    renderMsg('ping @nobody here', []);
+    // No aria-label with "mention:" prefix should exist
+    expect(screen.queryByLabelText(/mention:/)).not.toBeInTheDocument();
+    // The raw token text is present as plain text
+    expect(screen.getByText('@nobody', { exact: false })).toBeInTheDocument();
+  });
+
+  it('AC3: @bob.dev where bob is NOT resolved → plain text, no pill (unresolved superset)', () => {
+    renderMsg('check @bob.dev please', []);
+    expect(screen.queryByLabelText(/mention:/)).not.toBeInTheDocument();
+    // Token rendered verbatim as plain text
+    expect(screen.getByText('@bob.dev', { exact: false })).toBeInTheDocument();
+  });
+
+  it('two resolved mentions in one body → two pills both rendered', () => {
+    renderMsg('@bob and @alice are here', [
+      { userId: 'u1', username: 'bob' },
+      { userId: 'u2', username: 'alice' },
+    ]);
+    expect(screen.getByLabelText('mention: @bob')).toBeInTheDocument();
+    expect(screen.getByLabelText('mention: @alice')).toBeInTheDocument();
+  });
+});

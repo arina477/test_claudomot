@@ -664,24 +664,11 @@ export class MessagesService {
       throw new NotFoundException('Channel not found');
     }
 
-    const now = new Date();
-    const [updated] = await db
-      .update(messages)
-      .set({ content, is_edited: true, edited_at: now })
-      .where(eq(messages.id, messageId))
-      .returning();
-
-    if (!updated) {
-      throw new Error('Message update failed unexpectedly');
-    }
-
     // -----------------------------------------------------------------------
-    // Mention diff: compare previous mentions to new mentions from edited body.
-    //
-    // 1. Fetch existing mention rows for this message.
-    // 2. Resolve new @username tokens from the updated content.
-    // 3. Delete rows for users no longer mentioned.
-    // 4. Insert rows for newly mentioned users (ON CONFLICT DO NOTHING).
+    // Mention diff pre-read: resolve current and new mention sets BEFORE
+    // opening the transaction so the transaction body is pure write-only
+    // (reads here are non-transactional but consistent for the diff; the
+    // three writes below are the atomicity boundary).
     // -----------------------------------------------------------------------
 
     // Existing mentioned user IDs
@@ -698,27 +685,49 @@ export class MessagesService {
 
     // Removals: in existingIds but not in newIds
     const toRemove = [...existingIds].filter((id) => !newIds.has(id));
-    if (toRemove.length > 0) {
-      await db
-        .delete(message_mentions)
-        .where(
-          and(
-            eq(message_mentions.message_id, messageId),
-            inArray(message_mentions.mentioned_user_id, toRemove),
-          ),
-        );
-    }
 
     // Additions: in newIds but not in existingIds
     const toInsert = newMentionValues.filter((m) => !existingIds.has(m.mentioned_user_id));
-    if (toInsert.length > 0) {
-      await db
-        .insert(message_mentions)
-        .values(toInsert)
-        .onConflictDoNothing({
-          target: [message_mentions.message_id, message_mentions.mentioned_user_id],
-        });
-    }
+
+    // -----------------------------------------------------------------------
+    // Atomic transaction: UPDATE messages + DELETE stale mention rows +
+    // INSERT new mention rows. A mid-txn failure rolls back all three writes
+    // so the pre-edit state is fully preserved. Mirrors createReply (~:1031).
+    // -----------------------------------------------------------------------
+    const now = new Date();
+    const updated = await db.transaction(async (tx) => {
+      const [updatedRow] = await tx
+        .update(messages)
+        .set({ content, is_edited: true, edited_at: now })
+        .where(eq(messages.id, messageId))
+        .returning();
+
+      if (!updatedRow) {
+        throw new Error('Message update failed unexpectedly');
+      }
+
+      if (toRemove.length > 0) {
+        await tx
+          .delete(message_mentions)
+          .where(
+            and(
+              eq(message_mentions.message_id, messageId),
+              inArray(message_mentions.mentioned_user_id, toRemove),
+            ),
+          );
+      }
+
+      if (toInsert.length > 0) {
+        await tx
+          .insert(message_mentions)
+          .values(toInsert)
+          .onConflictDoNothing({
+            target: [message_mentions.message_id, message_mentions.mentioned_user_id],
+          });
+      }
+
+      return updatedRow;
+    });
 
     // Fetch updated mention rows (with username) for the DTO
     const mentionRows = await fetchMentionRows([messageId]);

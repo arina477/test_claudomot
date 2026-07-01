@@ -122,6 +122,12 @@ export type {
 } from './assignments.js';
 
 export {
+  MENTION_TOKEN_SLUG_SRC,
+  MENTION_TOKEN_SLUG_RE,
+  extractMentionSlug,
+} from './mentions.js';
+
+export {
   PresenceStatusSchema,
   PresenceStateSchema,
   PresenceSnapshotSchema,

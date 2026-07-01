@@ -377,6 +377,14 @@ describe('MessagesService.editMessage — mention diff', () => {
       makeRbacService() as any,
       makeFilesService(),
     );
+
+    // editMessage wraps UPDATE + DELETE + INSERT in db.transaction (wave-25 B-2).
+    // Forward tx.* calls to the same update/insert/delete mocks so existing
+    // assertions on mockUpdate / mockInsert / mockDelete remain valid.
+    // biome-ignore lint/suspicious/noExplicitAny: test transaction mock
+    mockTransaction.mockImplementation(async (cb: (tx: any) => Promise<unknown>) =>
+      cb({ update: mockUpdate, insert: mockInsert, delete: mockDelete }),
+    );
   });
 
   it('adding a new @username on edit creates a new mention row', async () => {

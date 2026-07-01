@@ -43,6 +43,7 @@ import {
   WarningCircleIcon,
   XIcon,
 } from './icons';
+import { extractMentionSlug } from './mentionSlug'; // CJS-avoidance: local mirror of @studyhall/shared extractMentionSlug
 
 // ---------------------------------------------------------------------------
 // Types
@@ -560,19 +561,21 @@ function renderBodyWithMentions(
 
   return parts.map((part, idx) => {
     if (part.startsWith('@')) {
-      // Strip trailing punctuation that is not part of the username
-      const raw = part.slice(1).replace(/[.,!?;:)]+$/, '');
-      const ref = mentionMap.get(raw.toLowerCase());
-      if (ref) {
+      // Use the shared slug grammar to extract the leading slug from the token.
+      // This matches the server-side parser (B-2) so client↔server tokenization
+      // is identical: "@bob.dev" → slug "bob", trailing ".dev" rendered as text.
+      const slug = extractMentionSlug(part);
+      const ref = slug != null ? mentionMap.get(slug.toLowerCase()) : undefined;
+      if (ref && slug != null) {
         const isSelf =
           viewerUsername !== null && ref.username.toLowerCase() === viewerUsername.toLowerCase();
+        const trailing = part.slice(1 + slug.length);
         return (
-          <MentionPill
-            // biome-ignore lint/suspicious/noArrayIndexKey: static split, stable
-            key={idx}
-            username={ref.username}
-            isSelf={isSelf}
-          />
+          // biome-ignore lint/suspicious/noArrayIndexKey: static split, stable
+          <span key={idx}>
+            <MentionPill username={ref.username} isSelf={isSelf} />
+            {trailing}
+          </span>
         );
       }
     }

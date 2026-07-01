@@ -1,6 +1,7 @@
 // ---------------------------------------------------------------------------
 // mentions.ts — @mention parsing utility
 // wave-15 task 3d238446
+// wave-25 mention-parity: TOKEN_RE rebuilt from shared MENTION_TOKEN_SLUG_SRC
 //
 // parseMentions(body) extracts @username tokens that are WORD-BOUNDARIED:
 //   - Only triggered after start-of-string or a whitespace character.
@@ -11,12 +12,19 @@
 // @everyone / @here / @role are out-of-scope this wave (spec §SECURITY).
 // ---------------------------------------------------------------------------
 
+import { MENTION_TOKEN_SLUG_SRC } from '@studyhall/shared';
+
 /**
  * Parse @username tokens from message body text.
  *
  * Token grammar: (^|\s)@([a-zA-Z0-9_-]+)
  *   - Capture group 1: the @token trigger — start-of-string or whitespace.
  *   - Capture group 2: the username slug (alphanumeric + _ + -).
+ *
+ * TOKEN_RE is derived from the shared MENTION_TOKEN_SLUG_SRC constant so the
+ * server and client share a single source of truth for the slug character class.
+ * The resulting pattern is identical to the former inline literal — behavior
+ * is fully preserved.
  *
  * Returns an array of unique lowercase usernames in order of first appearance.
  * An empty array is returned when the body contains no valid mention tokens.
@@ -31,8 +39,9 @@
 export function parseMentions(body: string): string[] {
   // (?:^|\s) — non-capturing: start-of-string OR any whitespace
   // @         — literal sigil
-  // ([a-zA-Z0-9_-]+) — username slug (captured)
-  const TOKEN_RE = /(?:^|\s)@([a-zA-Z0-9_-]+)/g;
+  // ([MENTION_TOKEN_SLUG_SRC]+) — username slug, rebuilt from shared constant
+  // Equivalent to the former inline: /(?:^|\s)@([a-zA-Z0-9_-]+)/g
+  const TOKEN_RE = new RegExp(`(?:^|\\s)@([${MENTION_TOKEN_SLUG_SRC}]+)`, 'g');
 
   const seen = new Set<string>();
   const result: string[] = [];
