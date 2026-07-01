@@ -26,7 +26,6 @@ import type {
   MessageResponse,
   ReactionSummary,
 } from '@studyhall/shared';
-import { extractMentionSlug } from '@studyhall/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArrowsOutIcon,
@@ -44,6 +43,7 @@ import {
   WarningCircleIcon,
   XIcon,
 } from './icons';
+import { extractMentionSlug } from './mentionSlug'; // CJS-avoidance: local mirror of @studyhall/shared extractMentionSlug
 
 // ---------------------------------------------------------------------------
 // Types
