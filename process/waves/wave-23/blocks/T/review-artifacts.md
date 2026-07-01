@@ -3,7 +3,7 @@
 **Block:** T (Test)
 **Wave topic:** M5 bundle 2 — delegated assignment-organizer authz (manage_assignments permission + /me effective-permissions CTA gate) — LIVE
 **Block exit gate:** T-9
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 
@@ -34,3 +34,18 @@ none
 
 ## Gate verdict log
 <appended by fresh head-tester spawn at T-9 Action 1>
+
+## Gate verdict log
+- T-9 (attempt 1): head-tester APPROVED (af1fb31eaac85eeb8). Authz genuine across 5 layers; visual gap infra-attributed (67881a58); F23-T-4 honest disclosure.
+
+## Status (block exit)
+```yaml
+test_block_status:    complete
+stages_run:           [T-1, T-2, T-3, T-4, T-5, T-6, T-7, T-8, T-9]
+stages_skipped:       []   # T-7 ran light (not skipped); all layers fired
+findings_total:       6    # F23-T-4 + F23-T-5 + F23-T-8a/b/c/d (all Low/non-blocking)
+findings_critical:    0
+findings_aggregate:   process/waves/wave-23/blocks/T/findings-aggregate.md
+journey_map_commit:   <this commit>
+ready_for_verify:     true
+```

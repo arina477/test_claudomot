@@ -1,0 +1,24 @@
+# Wave 23 — T-9 Verdict
+
+**Reviewer:** head-tester (fresh spawn)
+**Reviewed against:** process/waves/wave-23/blocks/T/review-artifacts.md + findings-aggregate.md
+**Attempt:** 1  (first gate)
+
+## Verdict
+APPROVED
+
+## Rationale
+
+The wave's core risk is a single authz boundary (`manage_channels → manage_assignments` swap + `/me/permissions` read endpoint + CTA/role-editor gate), and the suite proves that boundary honestly across five independent layers, not one padded one. **T-2** tests `getEffectivePermissions` as a 7-row transition table (owner→all-true, member-role→flags, null-role→all-false, missing-role→all-false, non-member→403, manage_assignments-true, all-false) and `assertOrganizer` as 4 organizer + 4 negative paths — every assertion is a return-value/state-change on the shared shape, zero mock-call-count trivia, so this is not coverage theater. **T-3** confirms the EffectivePermissions + role DTOs are typed end-to-end through the single shared package (server↔client drift is compile-time-prevented). **T-8** is the load-bearing layer and it is genuine live adversarial coverage of the wave's whole point: the penetration-tester mutated fixture B's role on **prod Postgres** and re-probed the full truth-table — no-perm→403, `manage_channels`-only→403 (the definitive proof the old key no longer grants), `manage_assignments`→201, owner→201 — then restored all state; the read door is IDOR-tested in **both** directions (403/all-false, not just the allowed 200), unauth→401 negative test present, escalation doors `manage_roles`/`manage_members`-gated to 403. I independently verified the **T-5** A3 evidence files (`evidence-T5-A/*.txt`) and they corroborate the deliverable exactly (owner all-true incl `manage_assignments:true`, member-non-owner all-false, non-member 403, unauth 401, IDOR-injected `?userId` ignored) — the live HTTP proof is real, not fabricated. This is a request/response authz surface (not a realtime fan-out path), so distinct-fixture HTTP probing is the correct verification shape; the two-client-echo rule does not apply.
+
+On the honesty tests I am charged to catch: (a) **T-4's F23-T-4** is the opposite of coverage theater — it does NOT claim real-DB integration coverage it lacks; it plainly discloses that the new surface has no dedicated transaction-rollback integration test, attributes the gap to the project-wide thin integration tier (debt 02fa8011), and notes the logic is nonetheless exercised against a real database (T-8's prod role-mutation probe + C-2 prod-migration verification). Honest disclosure + genuine compensating real-DB evidence = correctly non-blocking. The unit tier mocking the DB at the outermost boundary is legitimate unit isolation, not mock-the-SUT. (b) **T-5's visual gap** (A1/A2/B1/B2) is correctly `BLOCKED`-not-`FAIL`: the app is not broken, the Playwright fleet is pinned to an absent Chrome channel (task 67881a58, a cross-wave carry w16/w22/w23), and the deliverable states plainly that the pixel render is unverified rather than silently passing it. It cannot REWORK — the fix is host-side harness config, not test code — and it is correctly escalated to the founder digest. It does not exceed the wave's risk budget: for an authz wave the security-load-bearing decision behind the CTA is HTTP-verified and the gate code is confirmed present in the deployed bundle; only cosmetic rendering is unproven. (c) No flaky-retry masking — 0 fix-up cycles, 0 new flakes, A3 run 2× identical. **T-1** (lint+typecheck green on the merge commit's headSha, 2 ts-bypasses both test-mock DI casts), **T-6** (token audit PASS by static diff — zero new hex/style/primitive, no canonicalized surface to diff), and **T-7** (0 new deps by lockfile diff, new endpoint mean 0.12s within the p95<500ms read SLO, CWV correctly N/A on a zero-render-path-change wave) are all proportionate and non-fabricated for a light non-heavy wave. The 4 Low security findings are all pre-existing hygiene items outside the authz surface (non-UUID→500 robustness, doc-drift comments, missing HSTS, 429 envelope fingerprint), correctly triaged non-blocking; LOW-2 (stale `manage_channels` comments) carries the most latent teeth but the runtime is correct and now guarded by a live truth-table + unit tests, so a tracked doc-cleanup follow-up is the right disposition, not a gate block. Test suite honestly covers the wave's risk; visual gap honestly infra-attributed; findings correctly triaged. Proceed to journey regen.
+
+## Rework instructions
+N/A — APPROVED.
+
+## Escalation
+N/A — APPROVED. (Recurring carry noted for the founder digest, not a gate escalation: task 67881a58 Playwright chrome-absent now blocks the visual E2E/layout layer for the 3rd+ UI wave; host-side fix is `npx playwright install chrome` or starting the MCP fleet with `--browser chromium`. This is a T-block-external harness gap, not a wave-23 app defect.)
+
+## Footer
+- verdict_complete: true
+- rework_attempt_cap_remaining: 3

@@ -51,7 +51,7 @@ TEST:
 - [x] T-6 Layout (token audit PASS by diff — zero new hex/style/primitive; no canonicalized design; visual harness gap = shared F23-T-5)
 - [x] T-7 Perf (bundle unchanged/0 new deps; /me/permissions mean 0.12s within SLO; no render-path change)
 - [x] T-8 Security (LIVE authz AIRTIGHT — write/read/escalation doors all held via full truth-table probe; secret-grep 0; 0 crit/high/med; 4 Low→V-2)
-- [ ] T-9 Journey
+- [x] T-9 Journey (head-tester APPROVED; annotation-only regen — no new route/screen; 0 regressions; journey-map wave-23 annotation added)
 
 VERIFY:
 - [ ] V-1 Independent reviews (Karen + jenny, parallel)
