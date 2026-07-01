@@ -13,6 +13,7 @@
 import './pg-harness';
 import {
   countRows,
+  harnessQuery,
   insertFixtureChannel,
   insertFixtureMembership,
   insertFixtureMention,
@@ -175,13 +176,13 @@ describe.skipIf(SKIP)('editMessage — real-Postgres transaction (rollback + com
     // Mention diff applied: alice removed, bob added — exactly 1 row
     expect(await countRows('message_mentions')).toBe(1);
 
-    // bob's mention is present, alice's is gone
-    const pool = dbModule.pool();
-    const rows = await pool.query<{ mentioned_user_id: string }>(
+    // bob's mention is present, alice's is gone — queried via the SEPARATE
+    // harness pool to verify committed state is visible across connections.
+    const rows = await harnessQuery<{ mentioned_user_id: string }>(
       'SELECT mentioned_user_id FROM message_mentions WHERE message_id = $1',
       [MESSAGE_ID],
     );
-    expect(rows.rows.map((r) => r.mentioned_user_id)).toEqual([BOB_ID]);
+    expect(rows.map((r) => r.mentioned_user_id)).toEqual([BOB_ID]);
   });
 
   // -----------------------------------------------------------------------
@@ -197,9 +198,12 @@ describe.skipIf(SKIP)('editMessage — real-Postgres transaction (rollback + com
   //   - message_mentions still has alice's row (DELETE rolled back)
   //   - bob's row is absent (INSERT never committed)
   //
-  // countRows via the SEPARATE harness pool proves zero cross-connection
-  // visibility of the aborted transaction (standard Postgres commit-visibility
-  // semantics). This mirrors the technique from create-server-rollback.spec.ts.
+  // ALL post-rollback assertions — countRows AND row-content checks — run via
+  // the SEPARATE harness pool (a distinct Pool instance with its own TCP
+  // connections, independent from the SUT's drizzle pool). This proves that
+  // rolled-back writes are invisible across connections, satisfying standard
+  // Postgres commit-visibility semantics (AC5). Mirrors the technique from
+  // create-server-rollback.spec.ts.
   // -----------------------------------------------------------------------
   it('rolls back UPDATE + DELETE when message_mentions INSERT fails mid-txn', async () => {
     restorePool = wrapPoolConnect((sqlText) => {
@@ -224,24 +228,28 @@ describe.skipIf(SKIP)('editMessage — real-Postgres transaction (rollback + com
     // (a) message_mentions still has exactly alice's pre-edit row (1 row)
     expect(await countRows('message_mentions')).toBe(1);
 
-    // (b) alice's row is present (DELETE was rolled back)
-    const pool = dbModule.pool();
-    const mentionRows = await pool.query<{ mentioned_user_id: string }>(
+    // (b) alice's row is present (DELETE was rolled back) — queried via the
+    // SEPARATE harness pool: proves the rolled-back DELETE is invisible across
+    // connections (standard Postgres commit-visibility semantics).
+    const mentionRows = await harnessQuery<{ mentioned_user_id: string }>(
       'SELECT mentioned_user_id FROM message_mentions WHERE message_id = $1',
       [MESSAGE_ID],
     );
-    expect(mentionRows.rows.map((r) => r.mentioned_user_id)).toContain(ALICE_ID);
+    expect(mentionRows.map((r) => r.mentioned_user_id)).toContain(ALICE_ID);
 
-    // (c) bob's row is absent (INSERT never committed)
-    expect(mentionRows.rows.map((r) => r.mentioned_user_id)).not.toContain(BOB_ID);
+    // (c) bob's row is absent (INSERT never committed) — same harness pool:
+    // proves the rolled-back INSERT is invisible across connections.
+    expect(mentionRows.map((r) => r.mentioned_user_id)).not.toContain(BOB_ID);
 
     // (d) message content is unchanged — "@alice" not "@bob" (UPDATE rolled back)
-    const msgRows = await pool.query<{ content: string; is_edited: boolean }>(
+    // Queried via the SEPARATE harness pool: proves the rolled-back UPDATE is
+    // invisible across connections.
+    const msgRows = await harnessQuery<{ content: string; is_edited: boolean }>(
       'SELECT content, is_edited FROM messages WHERE id = $1',
       [MESSAGE_ID],
     );
-    expect(msgRows.rows[0]?.content).toBe('@alice');
-    expect(msgRows.rows[0]?.is_edited).toBe(false);
+    expect(msgRows[0]?.content).toBe('@alice');
+    expect(msgRows[0]?.is_edited).toBe(false);
   });
 });
 

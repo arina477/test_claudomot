@@ -260,6 +260,26 @@ export async function countRows(table: string): Promise<number> {
 }
 
 /**
+ * Run an arbitrary parameterised query on the SEPARATE harness pool.
+ *
+ * Use this wherever a spec needs to assert row content (not just row count)
+ * via a connection that is independent from the SUT's drizzle pool. Querying
+ * through this pool proves that committed state is visible across connections
+ * and that rolled-back state is NOT visible — standard Postgres commit-visibility
+ * semantics verified from a genuinely separate TCP connection.
+ *
+ * The type parameter T describes the shape of a single result row.
+ */
+export async function harnessQuery<T extends Record<string, unknown>>(
+  sql: string,
+  params?: unknown[],
+): Promise<T[]> {
+  if (!harnessPool) throw new Error('pg-harness: call setupHarness() first');
+  const result = await harnessPool.query<T>(sql, params);
+  return result.rows;
+}
+
+/**
  * Tear down the harness pool after all tests complete.
  * Does NOT drop tables — migrations are idempotent and the test DB persists
  * across CI runs (truncate-between-cases ensures isolation).
