@@ -33,7 +33,7 @@ BUILD:
 - [x] B-1 Contracts (shared rbac.ts +manage_assignments in RolePermissions/Create/Update schemas + NEW EffectivePermissionsSchema; Permission union 4→5; isolated typecheck clean)
 - [x] B-2 Backend (rbac service createRole/updateRole/roleToDto +flag + getEffectivePermissions; GET /servers/:serverId/me/permissions; assertOrganizer swap manage_channels→manage_assignments; backfill seed; api typecheck clean)
 - [x] B-3 Frontend (api.ts getMyPermissions; AssignmentsPanel CTA gate owner→owner||manage_assignments; honest-403 via existing submitError; ServerRolesPage PERM_FLAGS 5th checkbox = end-to-end grantable; web typecheck clean)
-- [ ] B-4 Wiring
+- [x] B-4 Wiring (repo typecheck 4/4 + pnpm lint exit 0; /me/permissions route registered; biome-format-drift in B-2 rbac files + 3 dead pre-existing suppressions fixed via react-specialist — CI-PRINCIPLES rule 4 catch, 3rd instance)
 - [ ] B-5 Verify
 - [ ] B-6 Review
 
