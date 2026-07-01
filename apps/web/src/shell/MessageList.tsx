@@ -27,6 +27,7 @@ import type {
   ReactionSummary,
 } from '@studyhall/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { PresenceDot } from './PresenceDot';
 import {
   ArrowsOutIcon,
   ChatsCircleIcon,
@@ -44,6 +45,7 @@ import {
   XIcon,
 } from './icons';
 import { extractMentionSlug } from './mentionSlug'; // CJS-avoidance: local mirror of @studyhall/shared extractMentionSlug
+import { getPresenceStatus, subscribePresence } from './presenceSocket';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -929,6 +931,37 @@ function InlineEdit({ initialContent, onSave, onCancel }: InlineEditProps) {
 }
 
 // ---------------------------------------------------------------------------
+// AuthorPresenceDot — per-author presence wrapper (CARRY-1 memoization)
+// ---------------------------------------------------------------------------
+
+/**
+ * AuthorPresenceDot subscribes to the SHARED presence store (AC4 — no new socket)
+ * scoped to a single `authorId`. It only re-renders when THAT author's status
+ * changes (state is derived by comparing old vs new value on each notification),
+ * so a change for user-B does NOT re-render the dot for user-A.
+ *
+ * Callers that only have `authorDisplay` (optimistic PendingRow / FailedRow) do NOT
+ * have a stable userId — those rows render NO dot (graceful degrade, AC3, CARRY-2).
+ */
+function AuthorPresenceDot({ authorId }: { authorId: string }) {
+  const [online, setOnline] = useState<boolean>(() => getPresenceStatus(authorId) === 'online');
+
+  useEffect(() => {
+    // Subscribe to the shared store — same fan-out, no new socket (AC4).
+    const unsub = subscribePresence(() => {
+      const next = getPresenceStatus(authorId) === 'online';
+      // Only call setState when this author's value actually changed (CARRY-1).
+      setOnline((prev) => (prev === next ? prev : next));
+    });
+    // Re-sync on mount in case the store was updated between render and effect.
+    setOnline(getPresenceStatus(authorId) === 'online');
+    return unsub;
+  }, [authorId]);
+
+  return <PresenceDot online={online} />;
+}
+
+// ---------------------------------------------------------------------------
 // Row components
 // ---------------------------------------------------------------------------
 
@@ -1010,13 +1043,17 @@ function SentRow({
         if (rowState === 'normal') (e.currentTarget as HTMLElement).style.backgroundColor = '';
       }}
     >
-      {/* Avatar */}
-      <div
-        className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
-        style={{ backgroundColor: '#3f3f46', color: 'rgba(255,255,255,0.92)' }}
-        aria-hidden="true"
-      >
-        {abbr}
+      {/* Avatar + presence dot (AC1, CARRY-1) */}
+      <div className="relative mt-0.5 shrink-0">
+        <div
+          className="flex h-10 w-10 items-center justify-center rounded-full text-xs font-semibold"
+          style={{ backgroundColor: '#3f3f46', color: 'rgba(255,255,255,0.92)' }}
+          aria-hidden="true"
+        >
+          {abbr}
+        </div>
+        {/* AuthorPresenceDot reads msg.authorId (userId) — confirmed in scope (CARRY-2). */}
+        <AuthorPresenceDot authorId={msg.authorId} />
       </div>
 
       {/* Content column */}
