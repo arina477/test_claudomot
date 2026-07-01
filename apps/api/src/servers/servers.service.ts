@@ -360,6 +360,46 @@ export class ServersService {
   }
 
   // -------------------------------------------------------------------------
+  // Invite-code rotate — owner-only (task d058283d)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Rotate the permanent invite code for a server.
+   * Only the server owner may rotate (NOT owner-or-creator — no creator on a
+   * permanent code). Regenerates servers.invite_code using CSPRNG; retries up
+   * to 5 times on unique-constraint collision (23505); 409 after exhaustion.
+   */
+  async rotateInviteCode(serverId: string, callerId: string): Promise<{ invite_code: string }> {
+    const [server] = await db.select().from(servers).where(eq(servers.id, serverId)).limit(1);
+
+    if (!server) {
+      throw new NotFoundException('Server not found');
+    }
+
+    if (server.owner_id !== callerId) {
+      throw new ForbiddenException("Not authorized to rotate this server's invite code");
+    }
+
+    const MAX_RETRIES = 5;
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      const code = generateCode();
+
+      try {
+        await db.update(servers).set({ invite_code: code }).where(eq(servers.id, serverId));
+        return { invite_code: code };
+      } catch (err: unknown) {
+        const pgErr = err as { code?: string };
+        if (pgErr.code === '23505' && attempt < MAX_RETRIES - 1) {
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    throw new ConflictException('Failed to generate unique invite code');
+  }
+
+  // -------------------------------------------------------------------------
   // Invite preview — public (task 77e2041a)
   // -------------------------------------------------------------------------
 

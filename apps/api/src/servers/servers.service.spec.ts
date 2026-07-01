@@ -1082,6 +1082,86 @@ describe('ServersService.revokeInvite', () => {
 });
 
 // ---------------------------------------------------------------------------
+// ServersService — rotateInviteCode (task d058283d)
+// ---------------------------------------------------------------------------
+
+describe('ServersService.rotateInviteCode', () => {
+  let service: ServersService;
+
+  const mockServerWithCode = {
+    id: 'server-1',
+    name: 'Test Server',
+    owner_id: 'owner-1',
+    invite_code: 'old-code-aaaaaa',
+    created_at: new Date('2026-01-01T00:00:00Z'),
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    service = new ServersService(makeRbacServiceMock());
+  });
+
+  it('returns a new invite_code that differs from the prior code', async () => {
+    mockSelect.mockReturnValue(makeSelectChain([mockServerWithCode]));
+    mockUpdate.mockReturnValue(makeUpdateChain());
+
+    const result = await service.rotateInviteCode('server-1', 'owner-1');
+
+    expect(result.invite_code).toBeDefined();
+    expect(result.invite_code).not.toBe(mockServerWithCode.invite_code);
+    // base64url shape: 16 bytes = 22 chars
+    expect(result.invite_code).toMatch(/^[A-Za-z0-9_-]{22}$/);
+  });
+
+  it('throws NotFoundException (404) when server does not exist', async () => {
+    mockSelect.mockReturnValue(makeSelectChain([]));
+
+    await expect(service.rotateInviteCode('ghost-server', 'owner-1')).rejects.toThrow(
+      NotFoundException,
+    );
+  });
+
+  it('throws ForbiddenException (403) when caller is not the owner', async () => {
+    mockSelect.mockReturnValue(makeSelectChain([mockServerWithCode]));
+
+    await expect(service.rotateInviteCode('server-1', 'non-owner-99')).rejects.toThrow(
+      ForbiddenException,
+    );
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it('retries on 23505 (first attempt collides, second succeeds) and returns a code', async () => {
+    mockSelect.mockReturnValue(makeSelectChain([mockServerWithCode]));
+
+    let updateAttempt = 0;
+    mockUpdate.mockImplementation(() => {
+      updateAttempt++;
+      const chain: Record<string, unknown> = {};
+      chain.set = vi.fn(() => {
+        const whereChain: Record<string, unknown> = {
+          // biome-ignore lint/suspicious/noThenProperty: intentional thenable mock
+          then: (res: (v: unknown) => unknown, rej?: (e: unknown) => unknown) => {
+            if (updateAttempt === 1) {
+              return Promise.reject(
+                Object.assign(new Error('unique violation'), { code: '23505' }),
+              ).then(res, rej);
+            }
+            return Promise.resolve(undefined).then(res, rej);
+          },
+        };
+        return { where: vi.fn().mockReturnValue(whereChain) };
+      });
+      return chain;
+    });
+
+    const result = await service.rotateInviteCode('server-1', 'owner-1');
+
+    expect(result.invite_code).toBeDefined();
+    expect(updateAttempt).toBe(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // ServersService — listServerMembers (wave-15 B-4: username field added)
 // ---------------------------------------------------------------------------
 

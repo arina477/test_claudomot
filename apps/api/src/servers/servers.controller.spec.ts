@@ -58,6 +58,7 @@ function makeController() {
     getInvitePreview: vi.fn<() => Promise<InvitePreview>>(),
     joinViaInvite: vi.fn<() => Promise<JoinResult>>(),
     revokeInvite: vi.fn<() => Promise<void>>(),
+    rotateInviteCode: vi.fn<() => Promise<{ invite_code: string }>>(),
   };
   // biome-ignore lint/suspicious/noExplicitAny: test mock — full type not needed
   const controller = new ServersController(serversService as any);
@@ -352,6 +353,46 @@ describe('InvitesController — public preview guard contract', () => {
 
     expect(serversService.joinViaInvite).toHaveBeenCalledWith('abc123', 'verified-user');
     expect(result).toEqual({ serverId: 'server-1' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /servers/:id/invite-code/rotate (task d058283d) — owner-only
+// ---------------------------------------------------------------------------
+
+describe('ServersController.rotateInviteCode', () => {
+  let controller: ServersController;
+  let serversService: ReturnType<typeof makeController>['serversService'];
+
+  beforeEach(() => {
+    ({ controller, serversService } = makeController());
+  });
+
+  it('returns { invite_code } and wires req.session.getUserId() → service', async () => {
+    serversService.rotateInviteCode.mockResolvedValue({ invite_code: 'new-code-abc123xyz00' });
+
+    const result = await controller.rotateInviteCode(makeReq('owner-1'), 'server-1');
+
+    expect(result).toEqual({ invite_code: 'new-code-abc123xyz00' });
+    expect(serversService.rotateInviteCode).toHaveBeenCalledWith('server-1', 'owner-1');
+  });
+
+  it('propagates ForbiddenException (403) when caller is not the owner', async () => {
+    serversService.rotateInviteCode.mockRejectedValue(
+      new ForbiddenException("Not authorized to rotate this server's invite code"),
+    );
+
+    await expect(controller.rotateInviteCode(makeReq('non-owner'), 'server-1')).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  it('propagates NotFoundException (404) for a non-existent server', async () => {
+    serversService.rotateInviteCode.mockRejectedValue(new NotFoundException('Server not found'));
+
+    await expect(
+      controller.rotateInviteCode(makeReq('owner-1'), 'ghost-server'),
+    ).rejects.toThrow(NotFoundException);
   });
 });
 
