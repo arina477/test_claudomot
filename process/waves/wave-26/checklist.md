@@ -14,7 +14,7 @@
 - **M5 remaining seed candidates (future):** d058283d (invite rotation — trigger not fired at ~0 servers), 6a546c7b (presence perf — test-covered, below scale threshold), d23a0740 (presence code-debt); + cross-cutting (ParseUUIDPipe, security-hardening, stale-comment-sweep, integration-tier-hardening); + reminders arc (cred-blocked headline).
 
 PRODUCT:
-- [ ] P-0 Frame
+- [x] P-0 Frame
 - [ ] P-1 Decompose
 - [ ] P-2 Spec
 - [ ] P-3 Plan
