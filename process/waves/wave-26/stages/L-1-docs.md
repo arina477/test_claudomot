@@ -39,7 +39,7 @@ verdict_evidence:
   - "CHANGELOG.md:57 (### Added, #38)"
   - "CHANGELOG.md:63 (### Fixed, #39)"
   - "milestones census M5 a5232e16: 8 done / 9 open — NO UPDATE (open_count!=0)"
-  - "commit: <sha-filled-post-commit>"
+  - "commit: 7c51257bfd30024210a441b3b0e52d1bc52d188e (pushed 8a5b370..7c51257 main)"
 changelog_entry_added: true
 roadmap_milestones_progressed:
   - {milestone: "M5 (a5232e16 — Academic tooling: assignments)", before: "7 done / in_progress", after: "8 done / in_progress"}
