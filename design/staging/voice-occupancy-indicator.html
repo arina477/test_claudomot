@@ -132,13 +132,13 @@
     <header class="w-full max-w-5xl flex flex-col gap-2">
       <div class="flex items-center gap-3 text-xs tracking-wider uppercase text-text-muted font-mono mb-2">
         <i class="ph ph-hash"></i>
-        <span>Wave 32 · Pre-Join Orchestration</span>
+        <span>Wave 32 · Pre-Join Orchestration (Iteration 2)</span>
       </div>
       <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-text-primary">
         Voice Occupancy Indicator
       </h1>
       <p class="text-sm text-text-secondary max-w-2xl leading-relaxed">
-        The surface logic presented before a user commits to joining a channel. It features a bounded poll, degrading gracefully across viewports, utilizing strict DESIGN-SYSTEM.md primitive tokens. 
+        The surface logic presented before a user commits to joining a channel. Features byte-identical continuation chips, properly centralized A11y readout trees avoiding viewport data loss, and calm fail-soft degradation.
       </p>
     </header>
 
@@ -169,23 +169,22 @@
 
           <!-- THE COMPONENT: Loading Indicator -->
           <div class="border-t border-border-hairline pt-5 pb-6 mb-auto" role="status" aria-live="polite" aria-busy="true" aria-label="Loading occupancy data">
-            <div class="flex items-center justify-between w-full gap-4">
-              <!-- Left: Skeletons for Chip & Text -->
-              <div class="flex items-center gap-3">
-                <div class="h-[26px] w-14 bg-study-700/50 rounded-full animate-pulse"></div>
-                <div class="h-3 w-20 bg-study-700/50 rounded-full animate-pulse"></div>
-              </div>
+            <div class="flex items-center w-full gap-4">
               
-              <!-- Right: Skeletons for Avatars (Hidden < 1024 to match spec) -->
+              <!-- Left Skeletons (Avatars / Mobile Text substitute) -->
               <div class="hidden lg:flex items-center -space-x-2">
-                <div class="w-[32px] h-[32px] rounded-full bg-study-700/40 animate-pulse border-2 border-study-800 relative z-30"></div>
-                <div class="w-[32px] h-[32px] rounded-full bg-study-700/30 animate-pulse border-2 border-study-800 relative z-20"></div>
-                <div class="w-[32px] h-[32px] rounded-full bg-study-700/20 animate-pulse border-2 border-study-800 relative z-10"></div>
+                <div class="w-[34px] h-[34px] rounded-full bg-study-700/40 animate-pulse border-2 border-study-800 relative z-30"></div>
+                <div class="w-[34px] h-[34px] rounded-full bg-study-700/30 animate-pulse border-2 border-study-800 relative z-20"></div>
+                <div class="w-[34px] h-[34px] rounded-full bg-study-700/20 animate-pulse border-2 border-study-800 relative z-10"></div>
               </div>
+              <div class="h-3 w-20 bg-study-700/50 rounded-full animate-pulse lg:hidden"></div>
+
+              <!-- Right Skeleton: Standard Chip matched placement -->
+              <div class="ml-auto w-12 h-6 rounded bg-study-700/50 border border-border-hairline animate-pulse"></div>
             </div>
           </div>
 
-          <!-- Join CTA (Existing/Consistent) -->
+          <!-- Join CTA -->
           <button class="w-full bg-accent-emerald text-white rounded-md py-[9px] px-4 font-semibold text-sm transition-colors hover:bg-accent-emerald/90 focus-ring-emerald flex items-center justify-center gap-2 active:scale-[0.98]">
             Join Room
           </button>
@@ -216,76 +215,64 @@
           </div>
 
           <!-- THE COMPONENT: Populated Indicator -->
+          <!-- 
+            We isolate the SR announcement to one contiguous span so that dynamic viewport collapsing (<1024px) 
+            does not lose the member names, fulfilling the requirement to preserve visibility/announcement cleanly mapping the whole data.
+          -->
           <div class="border-t border-border-hairline pt-5 pb-6 mb-auto" role="status" aria-live="polite">
-            <div class="flex items-center justify-between w-full h-full gap-4">
+            <span class="sr-only">8 participants studying now: Sarah Chen, Julian Davis, Mateo Ruiz, Omar F., and 4 others.</span>
+            
+            <!-- Hide visual layout from screen readers to prevent duplicated announcement clashing -->
+            <div class="flex items-center w-full h-full gap-4 relative" aria-hidden="true">
               
-              <!-- Left: Continuity Chip + Label -->
-              <!-- The ph-users + count pill perfectly matches voice-study-room.html:278-281 spec -->
-              <div class="flex items-center gap-3">
-                <div class="flex items-center gap-1.5 px-2 py-0.5 bg-study-900 border border-border-hairline rounded-full cursor-default select-none group transition-colors hover:border-border-hover">
-                  <i class="ph ph-users text-[15px] text-text-secondary group-hover:text-text-primary transition-colors"></i>
-                  <span class="text-[11px] font-semibold text-text-secondary group-hover:text-text-primary transition-colors">8</span>
-                </div>
-                <span class="text-sm text-text-secondary cursor-default">studying now</span>
-              </div>
-              
-              <!-- Right: Avatar Cluster (Responsive collapse < 1024 via lg:flex) -->
-              <div class="hidden lg:flex items-center -space-x-[10px]" aria-label="8 members in room right now">
+              <!-- Left: Avatar Cluster (Responsive collapse < 1024 via lg:flex) -->
+              <div class="hidden lg:flex items-center -space-x-[10px]">
                 
                 <!-- Participant 1 -->
                 <div class="avatar-wrapper z-40 transition-transform hover:-translate-y-0.5">
-                  <div class="relative w-[34px] h-[34px] rounded-full border-2 border-study-800 shadow-sm bg-study-600 overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" alt="Sarah Chen" class="w-full h-full object-cover">
-                  </div>
-                  <!-- Emerald Presence Ring (Absolute overlay on border cut-out) -->
-                  <div class="absolute bottom-0 right-0 w-[11px] h-[11px] bg-study-800 rounded-full flex items-center justify-center">
-                    <div class="w-[7px] h-[7px] bg-accent-emerald rounded-full"></div>
-                  </div>
+                  <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" alt="Sarah Chen" class="relative w-[34px] h-[34px] rounded-full border-2 border-study-800 shadow-sm bg-study-600 object-cover">
                   <div class="ds-tooltip" role="tooltip">Sarah Chen</div>
                 </div>
 
                 <!-- Participant 2 -->
                 <div class="avatar-wrapper z-30 transition-transform hover:-translate-y-0.5">
-                  <div class="relative w-[34px] h-[34px] rounded-full border-2 border-study-800 shadow-sm bg-study-600 flex items-center justify-center text-xs text-text-primary font-medium tracking-tight">
+                  <div class="relative w-[34px] h-[34px] rounded-full border-2 border-study-800 shadow-sm bg-study-600 flex items-center justify-center text-xs text-text-primary font-medium tracking-tight" role="img" aria-label="Julian Davis">
                     JD
-                  </div>
-                  <div class="absolute bottom-0 right-0 w-[11px] h-[11px] bg-study-800 rounded-full flex items-center justify-center">
-                    <div class="w-[7px] h-[7px] bg-accent-emerald rounded-full"></div>
                   </div>
                   <div class="ds-tooltip" role="tooltip">Julian Davis</div>
                 </div>
 
                 <!-- Participant 3 -->
                 <div class="avatar-wrapper z-20 transition-transform hover:-translate-y-0.5">
-                  <div class="relative w-[34px] h-[34px] rounded-full border-2 border-study-800 shadow-sm bg-study-600 overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80" alt="Mateo Ruiz" class="w-full h-full object-cover">
-                  </div>
-                  <div class="absolute bottom-0 right-0 w-[11px] h-[11px] bg-study-800 rounded-full flex items-center justify-center">
-                    <div class="w-[7px] h-[7px] bg-accent-emerald rounded-full"></div>
-                  </div>
+                  <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80" alt="Mateo Ruiz" class="relative w-[34px] h-[34px] rounded-full border-2 border-study-800 shadow-sm bg-study-600 object-cover">
                   <div class="ds-tooltip" role="tooltip">Mateo Ruiz</div>
                 </div>
 
                 <!-- Participant 4 -->
                 <div class="avatar-wrapper z-10 transition-transform hover:-translate-y-0.5">
-                  <div class="relative w-[34px] h-[34px] rounded-full border-2 border-study-800 shadow-sm bg-study-600 overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?auto=format&fit=crop&w=150&q=80" alt="Omar F." class="w-full h-full object-cover">
-                  </div>
-                  <div class="absolute bottom-0 right-0 w-[11px] h-[11px] bg-study-800 rounded-full flex items-center justify-center">
-                    <div class="w-[7px] h-[7px] bg-accent-emerald rounded-full"></div>
-                  </div>
+                  <img src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?auto=format&fit=crop&w=150&q=80" alt="Omar F." class="relative w-[34px] h-[34px] rounded-full border-2 border-study-800 shadow-sm bg-study-600 object-cover">
                   <div class="ds-tooltip" role="tooltip">Omar F.</div>
                 </div>
 
                 <!-- +N Overflow Pill -->
                 <div class="avatar-wrapper z-0 transition-transform hover:-translate-y-0.5">
-                  <div class="relative w-[34px] h-[34px] rounded-full border-2 border-study-800 bg-study-900 flex items-center justify-center shadow-sm">
+                  <div class="relative w-[34px] h-[34px] rounded-full border-2 border-study-800 bg-study-900 flex items-center justify-center shadow-sm" role="img" aria-label="and 4 others">
                     <span class="text-[11px] font-medium text-text-secondary">+4</span>
                   </div>
                   <div class="ds-tooltip" role="tooltip">and 4 others</div>
                 </div>
 
               </div>
+
+              <!-- Left: Mobile fallback text -->
+              <span class="lg:hidden text-sm text-text-secondary">8 studying now</span>
+              
+              <!-- Right: Continuity Chip EXACT class match -->
+              <div class="ml-auto flex items-center gap-1.5 px-2 py-1 rounded bg-study-900 border border-border-hairline text-xs font-medium text-text-secondary" aria-label="8 participants">
+                <i class="ph ph-users" aria-hidden="true"></i>
+                <span aria-hidden="true">8</span>
+              </div>
+
             </div>
           </div>
 
@@ -329,7 +316,6 @@
             
           </div>
 
-          <!-- Button reads differently conceptually to match the calm state -->
           <button class="w-full bg-study-700 text-text-primary hover:text-white rounded-md py-[9px] px-4 font-semibold text-sm transition-colors hover:bg-study-600 focus-ring-emerald flex items-center justify-center gap-2 active:scale-[0.98] border border-border-hairline hover:border-border-hover shadow-sm">
             Be the First to Join
           </button>
@@ -338,7 +324,7 @@
 
       <!-- ==========================================
            STATE 4: ERROR / FAIL-SOFT
-           API degradation does not block the core action.
+           API degradation does not block the core action. Uses Polite Status.
       =========================================== -->
       <section class="flex flex-col gap-4">
         <div class="flex items-center gap-2 px-1">
@@ -356,17 +342,16 @@
             <p class="text-xs text-text-secondary">Voice Study Room</p>
           </div>
 
-          <!-- THE COMPONENT: Error State Sub-panel -->
-          <div class="border-t border-border-hairline pt-5 pb-6 mb-auto" role="alert" aria-live="polite">
+          <!-- THE COMPONENT: Error State Sub-panel using role="status" -->
+          <div class="border-t border-border-hairline pt-5 pb-6 mb-auto" role="status" aria-live="polite">
             
-            <div class="flex items-center gap-3 bg-study-900/40 border border-border-hairline rounded-md px-3 py-2 w-max">
-              <i class="ph ph-warning-circle text-text-muted text-[16px]"></i>
-              <span class="text-xs text-text-muted font-medium">Occupancy data currently unavailable</span>
+            <div class="flex items-center gap-3 bg-study-900/40 border border-border-hairline rounded-md px-3 py-2 w-max text-text-muted">
+              <i class="ph ph-warning-circle text-[16px] aria-hidden="true""></i>
+              <span class="text-xs font-medium">Occupancy data currently unavailable</span>
             </div>
             
           </div>
 
-          <!-- Important: The join button must always remain accessible/clickable in fail-soft -->
           <button class="w-full bg-accent-emerald text-white rounded-md py-[9px] px-4 font-semibold text-sm transition-colors hover:bg-accent-emerald/90 focus-ring-emerald flex items-center justify-center gap-2 active:scale-[0.98]">
             Join Room Anyway
           </button>
@@ -377,14 +362,14 @@
   </main>
 
   <script>
-    // Pure cosmetic JS simulating bounded poll fade interactions (Optional layer, core styles are CSS)
+    // Simulate simple interaction enhancements where strictly necessary.
     document.addEventListener("DOMContentLoaded", () => {
-      // Simulate real-ish delay for tooltips to feel native-like
+      // Connect tooltips dynamically if needed in non-React vanilla implementations 
+      // (not strictly required as CSS handles the hover reveal nicely)
       const tooltips = document.querySelectorAll('.ds-tooltip');
       tooltips.forEach(tp => {
         tp.setAttribute('aria-hidden', 'true');
       });
-      // In a real react app, aria-describedby connects the trigger and tooltip.
     });
   </script>
 </body>
