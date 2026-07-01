@@ -35,7 +35,7 @@ BUILD:
 - [x] B-3 Frontend (api.ts getMyPermissions; AssignmentsPanel CTA gate owner→owner||manage_assignments; honest-403 via existing submitError; ServerRolesPage PERM_FLAGS 5th checkbox = end-to-end grantable; web typecheck clean)
 - [x] B-4 Wiring (repo typecheck 4/4 + pnpm lint exit 0; /me/permissions route registered; biome-format-drift in B-2 rbac files + 3 dead pre-existing suppressions fixed via react-specialist — CI-PRINCIPLES rule 4 catch, 3rd instance)
 - [x] B-5 Verify (lint exit 0 + api unit 388 + web 216 [both authz-swap test-fixes + new manage_assignments-grant test] + build green; integration tier CI-gated no-local-DB; dev-smoke→C-2)
-- [ ] B-6 Review
+- [x] B-6 Review (head-builder attempt-1 REWORK [/me authz coverage] → attempt-2 APPROVED; /review 0 crit/high/med, both authz doors airtight; 3 Low accepted; commit-discipline PASS)
 
 CI/CD:
 - [ ] C-1 PR, CI & merge

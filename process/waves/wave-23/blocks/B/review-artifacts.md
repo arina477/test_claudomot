@@ -3,7 +3,7 @@
 **Block:** B (Build)
 **Wave topic:** M5 bundle 2 — delegated assignment-organizer authz (manage_assignments permission split + /me effective-permissions CTA gate)
 **Block exit gate:** B-6
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 
@@ -42,5 +42,18 @@ Migration no-silent-privilege-loss backfill + can() fail-closed; /me endpoint se
 none
 
 ## Gate verdict log
+- B-6 attempt 1 (head-builder aaab1d8523db91f1c): REWORK — getEffectivePermissions /me door had no in-block negative coverage (BUILD rule 4).
+- B-6 attempt 2 (head-builder ad4f6e3b7aed10aad): APPROVED — 7 getEffectivePermissions tests added (non-member→403 genuine); both authz doors covered; no regression.
+- B-6 Phase 2 /review (code-reviewer a9ae4a83dcdd29c95): APPROVE — both authz boundaries airtight; 0 crit/high/med; 3 Low accepted.
 
-<appended by fresh head-builder spawn at B-6 Action 1; one entry per attempt>
+## Status (block exit)
+```yaml
+build_block_status:    complete
+branch:                wave-23-manage-assignments
+stages_run:            [B-0, B-1, B-2, B-3, B-4, B-5, B-6]
+stages_skipped:        []
+review_verdict:        APPROVE
+deviations_logged:     ["B-2 module controller registration (accepted)", "B-3 ServerRolesPage RolePermissions consumer fix + PERM_FLAGS scope-completion (accepted)", "biome-format-drift x2 (B-2+B-6) auto-fixed — L-2 candidate"]
+last_commit_sha:       <B-6 deliverable commit>
+ready_for_ci:          true
+```
