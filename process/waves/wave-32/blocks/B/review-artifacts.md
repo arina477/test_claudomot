@@ -3,7 +3,7 @@
 **Block:** B (Build)
 **Wave topic:** M6 voice occupancy — GET /channels/:channelId/voice/participants + pre-join client occupancy indicator
 **Block exit gate:** B-6
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
@@ -14,7 +14,7 @@
 | B-3 | process/waves/wave-32/stages/B-3-frontend.md | done | livekit-integration; 27 tests; 4 states to adopted design; bounded poll + AbortController coalescing; simplify removed dead ref |
 | B-4 | process/waves/wave-32/stages/B-4-wiring.md | done | repo typecheck PASS; route registered both sides; B-3 drift (dead api method) reconciled |
 | B-5 | process/waves/wave-32/stages/B-5-verify.md | done | lint+build clean; api 449 + web 296 green; smoke 401 missing_bearer; 1 flake documented |
-| B-6 | process/waves/wave-32/stages/B-6-review.md | pending | |
+| B-6 | process/waves/wave-32/stages/B-6-review.md | done | Phase1 head-builder APPROVED + Phase2 /review no crit/high → APPROVE |
 
 ## Block-specific context
 - **Spec contract:** tasks row 78f51968-2c48-4368-93d4-7d3f02111a7b (DB); spec at process/waves/wave-32/stages/P-2-spec.md
@@ -35,3 +35,15 @@
 
 ## Gate verdict log
 <appended by fresh head-builder spawn at B-6 Action 1>
+
+## Block-exit handoff
+```yaml
+build_block_status:    complete
+branch:                wave-32-voice-occupancy
+stages_run:            [B-0, B-2, B-4, B-5, B-6]
+stages_skipped:        [B-1 (inline DTO, no contract change), B-0-schema (no migration)]
+review_verdict:        APPROVE
+deviations_logged:     [process.env-not-ConfigService (L-1 reconcile), isTwirpError-classname, dead-api-method-reconciled, wave31-test-stub-fix]
+last_commit_sha:       7297661
+ready_for_ci:          true
+```
