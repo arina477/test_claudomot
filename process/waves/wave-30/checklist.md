@@ -47,7 +47,7 @@ VERIFY:
 - [x] V-3 Fast-fix loop (or close) — APPROVED (empty queue, closed without fix)
 
 LEARN:
-- [ ] L-1 Docs
+- [x] L-1 Docs — CHANGELOG #43 (assignment reminders); M5 metric MET (15 done/6 open), stays in_progress (N closes after disposition); README skipped (no feature list/env table)
 - [ ] L-2 Distill
 
 NEXT:

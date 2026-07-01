@@ -49,6 +49,8 @@ All notable changes to StudyHall are documented here. Format follows
 - Each member gets a personal to-do / done toggle on every assignment that only changes their own status — your progress is yours and never visible to others. (#34)
 - Organizers can edit an assignment's details or remove it; a removed assignment disappears from everyone's list. (#34)
 - Rotate a study server's permanent invite link: the owner can regenerate the link so a leaked one stops working immediately, closing the gap where the default permanent link could never be revoked. Owner-only; no client button yet. (#41)
+- Assignment due-date reminders — members are emailed about once, roughly 24 hours before an assignment is due, and anyone who has already marked it done is skipped. (#43)
+- Reminders run automatically on an hourly schedule and remind each member only once per assignment; stronger delivery guarantees under heavy load are tracked as a separate follow-up. (#43)
 
 ### Changed
 
