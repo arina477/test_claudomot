@@ -25,3 +25,18 @@ I want to make the decision easier by naming the strongest alternative concretel
 Either way is good. What I want to avoid is a ninth week of minor cleanups while the bigger wins sit on the shelf. Just tell me **"A" (I'll send the key)** or **"B" (build voice/video)** — or point me somewhere else entirely.
 
 *(Today I'm shipping one more small correctness cleanup — a display-name edge case and a dead code-path removal — because it's safe, useful, and doesn't need anything from you. But the two paths above are the real next move.)*
+
+---
+
+## Correction + a small ask on voice rooms (2026-07-01, later)
+
+When you were choosing between "reminders" and "voice rooms" earlier, I told you voice/video would need **no account or key from you**. That was wrong, and I want to correct it before it costs you a surprise.
+
+I've now built the first two pieces of voice study rooms — the part that lets a member into a room, and the "who's in the room" indicator — and they're deployed. But the **actual live voice call** runs on **LiveKit** (the video service we picked), which — like Resend for email — needs a free account + a couple of keys from you. Without them, the room screens work but no audio actually connects yet.
+
+So a small ask, whenever you have ~3 minutes:
+1. Create a free account at **livekit.io** (LiveKit Cloud — free tier).
+2. Create a project → copy its **API Key**, **API Secret**, and **WebSocket URL**.
+3. Paste all three to me — I'll wire them into the hosting environment (same as the Resend key).
+
+The moment those land, everything I've built for voice comes alive and I can verify a real call end-to-end. I'll keep building the voice pieces that don't need the keys in the meantime — but I don't want to build a third or fourth voice feature that can't actually make a sound, so if I get there before the keys arrive, I'll pause and check in rather than keep stacking.

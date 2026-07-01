@@ -3,14 +3,14 @@
 **Block:** D (Design)
 **Wave topic:** M6 voice occupancy — pre-join "who's inside" indicator (count + member identities)
 **Block exit gate:** D-3
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file(s) | Status | Notes |
 |---|---|---|---|
 | D-1 | process/waves/wave-32/stages/D-1-brief/voice-occupancy-indicator-brief.md | done | 1 gap; bounded extension of adopted voice-study-room.html pre-join surface |
 | D-2 | process/waves/wave-32/stages/D-2-variants/voice-occupancy-indicator-variants.md | pending | /aidesigner generate → design/staging/voice-occupancy-indicator.html |
-| D-3 | process/waves/wave-32/stages/D-3-review-and-adopt/voice-occupancy-indicator-{plan-design-review,ui-ux-pro-max,reconciliation,adopt}.md | pending | dual-reviewer gate + canonicalization |
+| D-3 | D-3 deliverables (plan-design-review/ui-ux-pro-max/reconciliation/adopt) | done | APPROVE/APPROVE → head-designer APPROVED → canonicalized design/voice-occupancy-indicator.html |
 
 ## Block-specific context
 - **Wave topic:** pre-join occupancy indicator on the voice-study-room entry surface (before the user joins) — participant count + member identities, live-polled.
@@ -25,3 +25,12 @@
 
 ## Gate verdict log
 <appended by fresh head-designer spawn at D-3 Action 1; one entry per attempt>
+
+## Block-exit handoff
+```yaml
+design_block_status:    complete
+gaps_resolved:          [voice-occupancy-indicator]
+gaps_deferred:          []
+design_system_updates:  []
+canonicalized_at:       2026-07-01T22:45:31Z
+```
