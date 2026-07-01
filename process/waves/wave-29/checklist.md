@@ -41,15 +41,15 @@ CI/CD:
 - [x] C-2 Deploy & verify (api + web deployed via railway up, verified via deployment-state endpoint serving fd03d27; canary skipped — 0 DAU pre-launch)
 
 TEST:
-- [ ] T-1 Static
-- [ ] T-2 Unit
-- [ ] T-3 Contract
-- [ ] T-4 Integration
-- [ ] T-5 E2E
-- [ ] T-6 Layout
-- [ ] T-7 Perf
-- [ ] T-8 Security
-- [ ] T-9 Journey
+- [x] T-1 Static (ci-verified — lint+typecheck green on fd03d27)
+- [x] T-2 Unit (ci-verified — 407 pass; 5 mutation-genuine guard tests executed nonzero)
+- [x] T-3 Contract (skipped — no contract-shape change; dead-code deletion, wire unchanged)
+- [x] T-4 Integration (ci-verified — touched service specs executed on fd03d27; no live-probe value)
+- [x] T-5 E2E (skipped — no user-visible UI change; C-2 verified api+web live)
+- [x] T-6 Layout (skipped — non-UI wave)
+- [x] T-7 Perf (skipped — not heavy)
+- [x] T-8 Security (skipped — no auth/session/CSRF/rate-limit surface)
+- [x] T-9 Journey (gate-passed — head-tester APPROVED; annotation-only regen, map af100be)
 
 VERIFY:
 - [ ] V-1 Independent reviews (Karen + jenny, parallel)
