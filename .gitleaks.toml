@@ -32,3 +32,14 @@ commits = ["ab6ce69a7d8b2ff9a2ab5628a7254545e8d1bdc8"]
 paths = ['''project\.yaml''']
 regexes = ['''21984eb2-8029-4c1b-9e73-bc586a0be4d2''']
 regexTarget = "match"
+
+# Wave transcript allowlist — process/ holds model-authored per-wave prose (gate verdicts,
+# stage deliverables, review artefacts, wave checklists). Per always-on rule 2, secrets are
+# NEVER committed to source; they live exclusively in platform env vars (GitHub Actions /
+# Railway). The transcripts are structurally secret-free but contain hyphenated technical
+# phrases, base64url code samples, and EXPLAIN-plan / hash strings that trip gitleaks'
+# entropy heuristics every wave. Scoped strictly to process/** — apps/**, packages/**,
+# .env*, and all other source paths remain fully scanned.
+[[allowlists]]
+description = "Wave transcripts (process/**): model-authored prose, structurally secret-free per project policy — entropy false positives only."
+paths = ['''process/.*''']
