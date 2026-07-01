@@ -6,11 +6,11 @@
 | Stage | Deliverable file | Status | Notes |
 |---|---|---|---|
 | B-0 | stages/B-0-branch-and-schema.md | done | branch created; schema/deps/env SKIP (frontend-only) |
-| B-1 | stages/B-1-contracts.md | pending | SKIP expected (no shared-type change; PresenceDot is web-local) |
-| B-2 | stages/B-2-backend.md | pending | SKIP (no backend change — presence infra exists) |
-| B-3 | stages/B-3-frontend.md | pending | react-specialist: extract PresenceDot + apply to author avatars + member-panel refactor + tests |
-| B-4 | stages/B-4-wiring.md | pending | typecheck + biome check (rule 7) |
-| B-5 | stages/B-5-verify.md | pending | web tests + build |
+| B-1 | (skipped) | skipped | no contract surface — PresenceDot is a web-local component, no shared type/Zod change |
+| B-2 | (skipped) | skipped | pure-frontend wave — presence infra (/presence, store) already exists |
+| B-3 | stages/B-3-*.md | done | react-specialist: PresenceDot + author dots + member-panel refactor + 15 tests (9056900); CARRY-2 pending/failed no-dot |
+| B-4 | stages/B-4-*.md | done | typecheck 4/4; caught+repaired 2 pre-existing main-CI-red (biome process/** ignore + assignments clock-mock fa6c9e6) |
+| B-5 | stages/B-5-*.md | done | lint 0 err, web 249 + api 395, build 3/3 |
 | B-6 | stages/B-6-review.md | pending | head-builder + /review |
 
 ## Block-specific context
