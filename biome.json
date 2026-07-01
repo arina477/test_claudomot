@@ -54,7 +54,8 @@
       ".mcp.json",
       "**/e2e/.auth/**",
       "**/test-results/**",
-      "**/playwright-report/**"
+      "**/playwright-report/**",
+      "process/**"
     ]
   }
 }
