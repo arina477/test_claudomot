@@ -29,8 +29,8 @@ BUILD:
 - [x] B-6 Review
 
 CI/CD:
-- [ ] C-1 PR, CI & merge
-- [ ] C-2 Deploy & verify (canary armed when real users > 1000)
+- [x] C-1 PR, CI & merge — PR #44 MERGED (squash ca3d277); 7/7 checks green; boot-probe api+LiveKit-ESM OK; voice suites ran; no leaks
+- [x] C-2 Deploy & verify — api+web deployed via railway up; deploy-state SUCCESS both (api 001b3da2, web e103384e), distinct revisions/digests; /health 200; POST /voice/token 401 route-flip proof; canary skipped (0<1000 DAU); LIVEKIT creds pending (503-until-provided, informational)
 
 TEST:
 - [ ] T-1 Static
