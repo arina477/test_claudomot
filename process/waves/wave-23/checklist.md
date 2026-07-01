@@ -17,11 +17,11 @@
 - **Carried obs (record-only, founder digest):** principles-write-outside-L-block durable structural guard (git diff at any non-L block exit = fail) still UNIMPLEMENTED — 2nd consecutive hold via per-spawn reminder (lower urgency). Playwright chrome-absent (67881a58, recurring).
 
 PRODUCT:
-- [ ] P-0 Frame (discover + reframe)
-- [ ] P-1 Decompose
-- [ ] P-2 Spec
-- [ ] P-3 Plan
-- [ ] P-4 Gate APPROVED
+- [x] P-0 Frame (no-prior-spec; problem-framer PROCEED + ceo-reviewer SELECTIVE-EXPANSION + mvp-thinner OK → accepted: bundle edbdea8f /me-roles CTA as sibling for end-to-end delegated-organizer authz; P-1 sizes, fallback seed-alone)
+- [x] P-1 Decompose (multi-spec; below floor → MERGE expansion incomplete-scope [reminders cred-blocked] → BOARD P-1-floor-merge-wave-23 6/7 override-ship; design_gap_flag=false → skip D)
+- [x] P-2 Spec (multi-spec, 2 blocks written to 8aa67564.description; manage_assignments perm + /me-permissions CTA gate; BOARD conditions embedded)
+- [x] P-3 Plan (extend RBAC +manage_assignments: migration 0011 + backfill, Permission union, role DTOs, /me/permissions endpoint, call-site swap, CTA gate; no new dep/SDK; specialists postgres-pro/typescript-pro/backend-developer/react-specialist)
+- [x] P-4 Gate APPROVED (Phase-1 head-product APPROVED + Phase-2 karen+jenny APPROVE, Gemini UNAVAILABLE; 3 non-blocking B-stage carries logged in gate-verdict)
 
 DESIGN (skip block if non-UI wave):
 - [ ] D-1 Brief
