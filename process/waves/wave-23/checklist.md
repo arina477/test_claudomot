@@ -38,9 +38,9 @@ BUILD:
 - [x] B-6 Review (head-builder attempt-1 REWORK [/me authz coverage] → attempt-2 APPROVED; /review 0 crit/high/med, both authz doors airtight; 3 Low accepted; commit-discipline PASS)
 
 CI/CD:
-- [ ] C-1 PR, CI & merge
-- [ ] C-2 Deploy & verify
-- [ ] C-3 Canary (skip if DAU<1000)
+- [x] C-1 PR, CI & merge (PR #35 merged squash; 6/6 required CI jobs success per-job-verified; merge 489c86a; local main synced)
+- [x] C-2 Deploy & verify (migration 0011 applied prod-first [manage_assignments col verified]; api 0ebf493d + web 31fca925 SUCCESS distinct revisions; /me/permissions 401-not-404 LIVE proof; canary skip DAU<1000)
+- [x] C-3 Canary (skipped — DAU 0 < 1000)
 
 TEST:
 - [ ] T-1 Static
