@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en" class="antialiased dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyHall — Voice Occupancy Indicator (Pre-Join)</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- 
+  aesthetic_dna: {"palette": "zinc-emerald-danger", "radius": "md-lg", "vibe": "academic-calm"}
+  ui_paradigm: "multi-pane-workspace (server-channel-view with multi-state staging)"
+  -->
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Geist', 'system-ui', '-apple-system', '"Segoe UI"', 'sans-serif'] },
+          colors: {
+            study: {
+              950: '#0a0a0b',
+              900: '#121214',
+              800: '#1c1c1f',
+              700: '#27272a',
+              600: '#3f3f46',
+              500: '#52525b',
+            },
+            accent: {
+              emerald: '#10b981',
+              amber: '#f59e0b',
+            },
+            danger: {
+              DEFAULT: '#ef4444',
+              text: '#f87171',
+              tint: 'rgba(239, 68, 68, 0.10)' 
+            },
+            text: {
+              primary: 'rgba(255,255,255,0.92)',
+              secondary: 'rgba(255,255,255,0.60)',
+              muted: 'rgba(255,255,255,0.40)'
+            },
+            border: {
+              hairline: 'rgba(255,255,255,0.06)',
+              hover: 'rgba(255,255,255,0.10)'
+            }
+          },
+          boxShadow: {
+            sm: '0 1px 2px rgba(0,0,0,0.4)',
+            pop: '0 8px 24px rgba(0,0,0,0.5)',
+            'glow-focus': '0 0 0 2px rgba(16,185,129,0.4)',
+            'glow-danger': '0 0 0 2px rgba(239,68,68,0.4)'
+          },
+          transitionTimingFunction: {
+            DEFAULT: 'cubic-bezier(0.25, 0.1, 0.25, 1)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* System Global Overrides */
+    body { 
+      background-color: #0a0a0b; 
+      color: rgba(255,255,255,0.92); 
+    }
+    
+    /* Minimal dark scrollbar */
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #52525b; }
+
+    /* Custom Avatar Cluster Tooltip (No JS required) */
+    .avatar-wrapper { position: relative; }
+    .ds-tooltip {
+      visibility: hidden;
+      opacity: 0;
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%) translateY(4px) scale(0.96);
+      transition: all 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
+      background-color: #27272a; /* surface-700 */
+      color: rgba(255,255,255,0.92);
+      padding: 6px 12px;
+      border-radius: 6px; /* radius-md */
+      font-size: 12px; /* text-xs */
+      font-weight: 500;
+      white-space: nowrap;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5); /* shadow-pop */
+      z-index: 50;
+      pointer-events: none;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    
+    .avatar-wrapper:hover .ds-tooltip {
+      visibility: visible;
+      opacity: 1;
+      transform: translateX(-50%) translateY(0) scale(1);
+    }
+    
+    /* Specific focus ring polyfill for the custom variables */
+    .focus-ring-emerald:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(16,185,129,0.4);
+    }
+
+    /* Motion preference override */
+    @media (prefers-reduced-motion: reduce) {
+      * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body class="min-h-[100dvh] custom-scrollbar overflow-x-hidden selection:bg-accent-emerald/30 selection:text-white">
+
+  <!-- Staging Wrapper (Simulates the app canvas context) -->
+  <main class="w-full max-w-[1400px] mx-auto px-4 py-8 md:p-12 lg:p-16 flex flex-col items-center gap-16">
+    
+    <!-- Header: Staging Metadata -->
+    <header class="w-full max-w-5xl flex flex-col gap-2">
+      <div class="flex items-center gap-3 text-xs tracking-wider uppercase text-text-muted font-mono mb-2">
+        <i class="ph ph-hash"></i>
+        <span>Wave 32 · Pre-Join Orchestration</span>
+      </div>
+      <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-text-primary">
+        Voice Occupancy Indicator
+      </h1>
+      <p class="text-sm text-text-secondary max-w-2xl leading-relaxed">
+        The surface logic presented before a user commits to joining a channel. It features a bounded poll, degrading gracefully across viewports, utilizing strict DESIGN-SYSTEM.md primitive tokens. 
+      </p>
+    </header>
+
+    <!-- Component Staging Grid -->
+    <div class="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-8 xl:gap-12 pb-24">
+
+      <!-- ==========================================
+           STATE 1: LOADING 
+           First poll in flight. Skeleton shimmer.
+      =========================================== -->
+      <section class="flex flex-col gap-4">
+        <div class="flex items-center gap-2 px-1">
+          <div class="w-2 h-2 rounded-full bg-study-500"></div>
+          <h2 class="text-xs font-semibold text-text-muted uppercase tracking-wider">State: Loading</h2>
+        </div>
+        
+        <!-- Entry Panel Surface -->
+        <div class="bg-study-800 border border-border-hairline rounded-lg shadow-sm p-5 md:p-6 flex flex-col w-full h-full justify-between">
+          
+          <!-- Contextual Channel Name -->
+          <div class="flex flex-col gap-1.5 mb-6">
+            <div class="flex items-center gap-2 text-text-primary font-medium text-lg">
+              <i class="ph ph-speaker-high text-text-secondary"></i>
+              <span>Late Night Algorithms</span>
+            </div>
+            <p class="text-xs text-text-secondary">Voice Study Room</p>
+          </div>
+
+          <!-- THE COMPONENT: Loading Indicator -->
+          <div class="border-t border-border-hairline pt-5 pb-6 mb-auto" role="status" aria-live="polite" aria-busy="true" aria-label="Loading occupancy data">
+            <div class="flex items-center justify-between w-full gap-4">
+              <!-- Left: Skeletons for Chip & Text -->
+              <div class="flex items-center gap-3">
+                <div class="h-[26px] w-14 bg-study-700/50 rounded-full animate-pulse"></div>
+                <div class="h-3 w-20 bg-study-700/50 rounded-full animate-pulse"></div>
+              </div>
+              
+              <!-- Right: Skeletons for Avatars (Hidden < 1024 to match spec) -->
+              <div class="hidden lg:flex items-center -space-x-2">
+                <div class="w-[32px] h-[32px] rounded-full bg-study-700/40 animate-pulse border-2 border-study-800 relative z-30"></div>
+                <div class="w-[32px] h-[32px] rounded-full bg-study-700/30 animate-pulse border-2 border-study-800 relative z-20"></div>
+                <div class="w-[32px] h-[32px] rounded-full bg-study-700/20 animate-pulse border-2 border-study-800 relative z-10"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Join CTA (Existing/Consistent) -->
+          <button class="w-full bg-accent-emerald text-white rounded-md py-[9px] px-4 font-semibold text-sm transition-colors hover:bg-accent-emerald/90 focus-ring-emerald flex items-center justify-center gap-2 active:scale-[0.98]">
+            Join Room
+          </button>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           STATE 2: POPULATED
+           1-N inside. Full avatar cluster rendering.
+      =========================================== -->
+      <section class="flex flex-col gap-4">
+        <div class="flex items-center gap-2 px-1">
+          <div class="w-2 h-2 rounded-full bg-accent-emerald relative">
+            <div class="absolute inset-0 bg-accent-emerald rounded-full animate-ping opacity-20"></div>
+          </div>
+          <h2 class="text-xs font-semibold text-text-primary uppercase tracking-wider">State: Populated (Optimal)</h2>
+        </div>
+        
+        <!-- Entry Panel Surface -->
+        <div class="bg-study-800 border border-border-hairline rounded-lg shadow-sm p-5 md:p-6 flex flex-col w-full h-full justify-between">
+          
+          <div class="flex flex-col gap-1.5 mb-6">
+            <div class="flex items-center gap-2 text-text-primary font-medium text-lg">
+              <i class="ph ph-speaker-high text-text-secondary"></i>
+              <span>Late Night Algorithms</span>
+            </div>
+            <p class="text-xs text-text-secondary">Voice Study Room</p>
+          </div>
+
+          <!-- THE COMPONENT: Populated Indicator -->
+          <div class="border-t border-border-hairline pt-5 pb-6 mb-auto" role="status" aria-live="polite">
+            <div class="flex items-center justify-between w-full h-full gap-4">
+              
+              <!-- Left: Continuity Chip + Label -->
+              <!-- The ph-users + count pill perfectly matches voice-study-room.html:278-281 spec -->
+              <div class="flex items-center gap-3">
+                <div class="flex items-center gap-1.5 px-2 py-0.5 bg-study-900 border border-border-hairline rounded-full cursor-default select-none group transition-colors hover:border-border-hover">
+                  <i class="ph ph-users text-[15px] text-text-secondary group-hover:text-text-primary transition-colors"></i>
+                  <span class="text-[11px] font-semibold text-text-secondary group-hover:text-text-primary transition-colors">8</span>
+                </div>
+                <span class="text-sm text-text-secondary cursor-default">studying now</span>
+              </div>
+              
+              <!-- Right: Avatar Cluster (Responsive collapse < 1024 via lg:flex) -->
+              <div class="hidden lg:flex items-center -space-x-[10px]" aria-label="8 members in room right now">
+                
+                <!-- Participant 1 -->
+                <div class="avatar-wrapper z-40 transition-transform hover:-translate-y-0.5">
+                  <div class="relative w-[34px] h-[34px] rounded-full border-2 border-study-800 shadow-sm bg-study-600 overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" alt="Sarah Chen" class="w-full h-full object-cover">
+                  </div>
+                  <!-- Emerald Presence Ring (Absolute overlay on border cut-out) -->
+                  <div class="absolute bottom-0 right-0 w-[11px] h-[11px] bg-study-800 rounded-full flex items-center justify-center">
+                    <div class="w-[7px] h-[7px] bg-accent-emerald rounded-full"></div>
+                  </div>
+                  <div class="ds-tooltip" role="tooltip">Sarah Chen</div>
+                </div>
+
+                <!-- Participant 2 -->
+                <div class="avatar-wrapper z-30 transition-transform hover:-translate-y-0.5">
+                  <div class="relative w-[34px] h-[34px] rounded-full border-2 border-study-800 shadow-sm bg-study-600 flex items-center justify-center text-xs text-text-primary font-medium tracking-tight">
+                    JD
+                  </div>
+                  <div class="absolute bottom-0 right-0 w-[11px] h-[11px] bg-study-800 rounded-full flex items-center justify-center">
+                    <div class="w-[7px] h-[7px] bg-accent-emerald rounded-full"></div>
+                  </div>
+                  <div class="ds-tooltip" role="tooltip">Julian Davis</div>
+                </div>
+
+                <!-- Participant 3 -->
+                <div class="avatar-wrapper z-20 transition-transform hover:-translate-y-0.5">
+                  <div class="relative w-[34px] h-[34px] rounded-full border-2 border-study-800 shadow-sm bg-study-600 overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80" alt="Mateo Ruiz" class="w-full h-full object-cover">
+                  </div>
+                  <div class="absolute bottom-0 right-0 w-[11px] h-[11px] bg-study-800 rounded-full flex items-center justify-center">
+                    <div class="w-[7px] h-[7px] bg-accent-emerald rounded-full"></div>
+                  </div>
+                  <div class="ds-tooltip" role="tooltip">Mateo Ruiz</div>
+                </div>
+
+                <!-- Participant 4 -->
+                <div class="avatar-wrapper z-10 transition-transform hover:-translate-y-0.5">
+                  <div class="relative w-[34px] h-[34px] rounded-full border-2 border-study-800 shadow-sm bg-study-600 overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?auto=format&fit=crop&w=150&q=80" alt="Omar F." class="w-full h-full object-cover">
+                  </div>
+                  <div class="absolute bottom-0 right-0 w-[11px] h-[11px] bg-study-800 rounded-full flex items-center justify-center">
+                    <div class="w-[7px] h-[7px] bg-accent-emerald rounded-full"></div>
+                  </div>
+                  <div class="ds-tooltip" role="tooltip">Omar F.</div>
+                </div>
+
+                <!-- +N Overflow Pill -->
+                <div class="avatar-wrapper z-0 transition-transform hover:-translate-y-0.5">
+                  <div class="relative w-[34px] h-[34px] rounded-full border-2 border-study-800 bg-study-900 flex items-center justify-center shadow-sm">
+                    <span class="text-[11px] font-medium text-text-secondary">+4</span>
+                  </div>
+                  <div class="ds-tooltip" role="tooltip">and 4 others</div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <button class="w-full bg-accent-emerald text-white rounded-md py-[9px] px-4 font-semibold text-sm transition-colors hover:bg-accent-emerald/90 focus-ring-emerald flex items-center justify-center gap-2 active:scale-[0.98]">
+            Join Room
+          </button>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           STATE 3: EMPTY
+           Calm "Door's Open" invitation. Beautiful typography.
+      =========================================== -->
+      <section class="flex flex-col gap-4">
+        <div class="flex items-center gap-2 px-1">
+          <div class="w-2 h-2 rounded-full border border-study-500"></div>
+          <h2 class="text-xs font-semibold text-text-muted uppercase tracking-wider">State: Empty (0 occupants)</h2>
+        </div>
+        
+        <div class="bg-study-800 border border-border-hairline rounded-lg shadow-sm p-5 md:p-6 flex flex-col w-full h-full justify-between">
+          
+          <div class="flex flex-col gap-1.5 mb-2">
+            <div class="flex items-center gap-2 text-text-primary font-medium text-lg">
+              <i class="ph ph-speaker-high text-text-secondary"></i>
+              <span>Late Night Algorithms</span>
+            </div>
+            <p class="text-xs text-text-secondary">Voice Study Room</p>
+          </div>
+
+          <!-- THE COMPONENT: Empty State Indicator (Matches DESIGN-SYSTEM empty sub-primitive) -->
+          <div class="border-t border-border-hairline pt-6 pb-6 mb-auto flex flex-col items-center justify-center text-center gap-3" role="status" aria-live="polite">
+            
+            <div class="w-[42px] h-[42px] rounded-full bg-study-900 border border-border-hairline flex items-center justify-center shadow-sm">
+              <i class="ph ph-door-open text-[20px] text-text-muted"></i>
+            </div>
+            
+            <div class="space-y-1">
+              <h3 class="text-base font-medium text-text-primary tracking-tight">Room is empty</h3>
+              <p class="text-sm text-text-secondary">No one else here yet — the door's open.</p>
+            </div>
+            
+          </div>
+
+          <!-- Button reads differently conceptually to match the calm state -->
+          <button class="w-full bg-study-700 text-text-primary hover:text-white rounded-md py-[9px] px-4 font-semibold text-sm transition-colors hover:bg-study-600 focus-ring-emerald flex items-center justify-center gap-2 active:scale-[0.98] border border-border-hairline hover:border-border-hover shadow-sm">
+            Be the First to Join
+          </button>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           STATE 4: ERROR / FAIL-SOFT
+           API degradation does not block the core action.
+      =========================================== -->
+      <section class="flex flex-col gap-4">
+        <div class="flex items-center gap-2 px-1">
+          <div class="w-2 h-2 rounded-full bg-danger"></div>
+          <h2 class="text-xs font-semibold text-text-muted uppercase tracking-wider">State: Error (Fail-Soft)</h2>
+        </div>
+        
+        <div class="bg-study-800 border border-border-hairline rounded-lg shadow-sm p-5 md:p-6 flex flex-col w-full h-full justify-between">
+          
+          <div class="flex flex-col gap-1.5 mb-6">
+            <div class="flex items-center gap-2 text-text-primary font-medium text-lg">
+              <i class="ph ph-speaker-high text-text-secondary"></i>
+              <span>Late Night Algorithms</span>
+            </div>
+            <p class="text-xs text-text-secondary">Voice Study Room</p>
+          </div>
+
+          <!-- THE COMPONENT: Error State Sub-panel -->
+          <div class="border-t border-border-hairline pt-5 pb-6 mb-auto" role="alert" aria-live="polite">
+            
+            <div class="flex items-center gap-3 bg-study-900/40 border border-border-hairline rounded-md px-3 py-2 w-max">
+              <i class="ph ph-warning-circle text-text-muted text-[16px]"></i>
+              <span class="text-xs text-text-muted font-medium">Occupancy data currently unavailable</span>
+            </div>
+            
+          </div>
+
+          <!-- Important: The join button must always remain accessible/clickable in fail-soft -->
+          <button class="w-full bg-accent-emerald text-white rounded-md py-[9px] px-4 font-semibold text-sm transition-colors hover:bg-accent-emerald/90 focus-ring-emerald flex items-center justify-center gap-2 active:scale-[0.98]">
+            Join Room Anyway
+          </button>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <script>
+    // Pure cosmetic JS simulating bounded poll fade interactions (Optional layer, core styles are CSS)
+    document.addEventListener("DOMContentLoaded", () => {
+      // Simulate real-ish delay for tooltips to feel native-like
+      const tooltips = document.querySelectorAll('.ds-tooltip');
+      tooltips.forEach(tp => {
+        tp.setAttribute('aria-hidden', 'true');
+      });
+      // In a real react app, aria-describedby connects the trigger and tooltip.
+    });
+  </script>
+</body>
+</html>
