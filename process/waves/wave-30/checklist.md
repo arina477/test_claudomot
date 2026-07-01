@@ -31,15 +31,15 @@ CI/CD:
 - [x] C-2 Deploy & verify (canary armed when real users > 1000)
 
 TEST:
-- [ ] T-1 Static
-- [ ] T-2 Unit
-- [ ] T-3 Contract
-- [ ] T-4 Integration
-- [ ] T-5 E2E
-- [ ] T-6 Layout
-- [ ] T-7 Perf
-- [ ] T-8 Security
-- [ ] T-9 Journey
+- [x] T-1 Static
+- [x] T-2 Unit
+- [x] T-3 Contract (skipped — no contract/Zod/API surface)
+- [x] T-4 Integration (real-PG tier EXECUTED nonzero — CI rule 5)
+- [x] T-5 E2E (skipped — no user-visible UI/browser flow)
+- [x] T-6 Layout (skipped — no app UI)
+- [x] T-7 Perf (skipped — not heavy)
+- [x] T-8 Security (judged-run light source-pass)
+- [x] T-9 Journey — gate APPROVED (head-tester abcf3b7a); F6/F9 reminders LIVE; map bf87957
 
 VERIFY:
 - [ ] V-1 Independent reviews (Karen + jenny, parallel)
