@@ -53,9 +53,9 @@ TEST:
 - [x] T-9 Journey (head-tester APPROVED; T-4 genuine executed coverage verified [10 new real-PG tests, 0 skips]; regen skipped [no UI change]; 0 findings)
 
 VERIFY:
-- [ ] V-1 Independent reviews (Karen + jenny, parallel)
-- [ ] V-2 Triage
-- [ ] V-3 Fast-fix loop (or close)
+- [x] V-1 Independent reviews (karen + jenny both APPROVE; specs real-DB round-trips EXECUTED in CI, closes F23-T-4; 0 drift)
+- [x] V-2 Triage (0 blocking; 1 non-blocking hardening task 226c7e42; fast-fix queue empty)
+- [x] V-3 Fast-fix loop (queue empty; head-verifier APPROVED — executed-coverage chain airtight, triage honest)
 
 LEARN:
 - [ ] L-1 Docs
