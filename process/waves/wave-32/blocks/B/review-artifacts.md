@@ -13,7 +13,7 @@
 | B-2 | process/waves/wave-32/stages/B-2-backend.md | done | livekit-integration; 449 tests green; uniform-403 + RoomServiceClient + `||` fallback + TwirpError→empty |
 | B-3 | process/waves/wave-32/stages/B-3-frontend.md | done | livekit-integration; 27 tests; 4 states to adopted design; bounded poll + AbortController coalescing; simplify removed dead ref |
 | B-4 | process/waves/wave-32/stages/B-4-wiring.md | done | repo typecheck PASS; route registered both sides; B-3 drift (dead api method) reconciled |
-| B-5 | process/waves/wave-32/stages/B-5-verify.md | pending | |
+| B-5 | process/waves/wave-32/stages/B-5-verify.md | done | lint+build clean; api 449 + web 296 green; smoke 401 missing_bearer; 1 flake documented |
 | B-6 | process/waves/wave-32/stages/B-6-review.md | pending | |
 
 ## Block-specific context
