@@ -5,3 +5,4 @@ export * from './messages';
 // message_reactions is exported from messages.ts
 export * from './attachments';
 export * from './assignments';
+export * from './assignment-reminder';
