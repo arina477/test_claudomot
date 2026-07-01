@@ -87,3 +87,6 @@ Promoted at L-2 Distill from `process/waves/wave-<N>/blocks/L/observations.md` b
 
 7. Run the lint/import-organizer check command, not the formatter alone, before reporting a build task done.
    Why: A formatter can pass while the CI check gate rejects import ordering it never touches.
+
+8. Gate commits with a pre-commit hook running the format/import-sort check on staged files so violations cannot be committed.
+   Why: A rule prescribing what to run is advisory and gets skipped; a hook enforces it at every commit.
