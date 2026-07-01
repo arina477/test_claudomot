@@ -94,6 +94,91 @@ export async function insertFixtureUser(id: string, email: string): Promise<void
 }
 
 // ---------------------------------------------------------------------------
+// Fixture helpers — servers, roles, server_members (wave-24)
+// ---------------------------------------------------------------------------
+
+/**
+ * Permission flags for a role row (all default false when omitted).
+ * Covers all 5 RBAC boolean columns incl manage_assignments (wave-23).
+ */
+export interface RolePerms {
+  manage_server?: boolean;
+  manage_roles?: boolean;
+  manage_channels?: boolean;
+  manage_members?: boolean;
+  manage_assignments?: boolean;
+}
+
+/**
+ * Insert a minimal real servers row.
+ * ownerId must already exist in users (FK: servers.owner_id → users.id).
+ * invite_code is omitted (defaults to NULL — Postgres allows multiple NULL values on a UNIQUE column).
+ */
+export async function insertFixtureServer(
+  id: string,
+  ownerId: string,
+  name: string,
+): Promise<void> {
+  if (!harnessPool) throw new Error('pg-harness: call setupHarness() first');
+  await harnessPool.query(
+    `INSERT INTO servers (id, name, owner_id)
+     VALUES ($1, $2, $3)
+     ON CONFLICT DO NOTHING`,
+    [id, name, ownerId],
+  );
+}
+
+/**
+ * Insert a real roles row with explicit permission flags (all default false).
+ * serverId must already exist in servers (FK: roles.server_id → servers.id).
+ */
+export async function insertFixtureRole(
+  id: string,
+  serverId: string,
+  name: string,
+  perms: RolePerms = {},
+): Promise<void> {
+  if (!harnessPool) throw new Error('pg-harness: call setupHarness() first');
+  await harnessPool.query(
+    `INSERT INTO roles
+       (id, server_id, name, position,
+        manage_server, manage_roles, manage_channels, manage_members, manage_assignments,
+        is_default)
+     VALUES ($1, $2, $3, 0, $4, $5, $6, $7, $8, false)
+     ON CONFLICT DO NOTHING`,
+    [
+      id,
+      serverId,
+      name,
+      perms.manage_server ?? false,
+      perms.manage_roles ?? false,
+      perms.manage_channels ?? false,
+      perms.manage_members ?? false,
+      perms.manage_assignments ?? false,
+    ],
+  );
+}
+
+/**
+ * Insert a real server_members row.
+ * serverId and userId must already exist (FK). roleId is optional (may be null —
+ * server_members.role_id is nullable per schema).
+ */
+export async function insertFixtureMembership(
+  serverId: string,
+  userId: string,
+  roleId?: string,
+): Promise<void> {
+  if (!harnessPool) throw new Error('pg-harness: call setupHarness() first');
+  await harnessPool.query(
+    `INSERT INTO server_members (server_id, user_id, role_id)
+     VALUES ($1, $2, $3)
+     ON CONFLICT DO NOTHING`,
+    [serverId, userId, roleId ?? null],
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Row-count helpers (used by specs for assertions)
 // ---------------------------------------------------------------------------
 
