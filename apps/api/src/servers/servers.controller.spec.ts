@@ -390,9 +390,9 @@ describe('ServersController.rotateInviteCode', () => {
   it('propagates NotFoundException (404) for a non-existent server', async () => {
     serversService.rotateInviteCode.mockRejectedValue(new NotFoundException('Server not found'));
 
-    await expect(
-      controller.rotateInviteCode(makeReq('owner-1'), 'ghost-server'),
-    ).rejects.toThrow(NotFoundException);
+    await expect(controller.rotateInviteCode(makeReq('owner-1'), 'ghost-server')).rejects.toThrow(
+      NotFoundException,
+    );
   });
 });
 
