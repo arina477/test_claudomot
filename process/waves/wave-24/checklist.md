@@ -58,8 +58,8 @@ VERIFY:
 - [x] V-3 Fast-fix loop (queue empty; head-verifier APPROVED — executed-coverage chain airtight, triage honest)
 
 LEARN:
-- [ ] L-1 Docs
-- [ ] L-2 Distill
+- [x] L-1 Docs (head-learn COMPLETE — CHANGELOG SKIP test-only; M5 stays in_progress 6/10; README SKIP; no commit)
+- [x] L-2 Distill (02fa8011 done; 5 observations; CI-PRINCIPLES rule 5 promoted [assert-integration-executed, 2-wave w17+w24]; PRODUCT rule 2 v2 karen-REJECTED 2nd time non-falsifiable)
 
 NEXT:
 - [ ] N-1 Survey & triggers
