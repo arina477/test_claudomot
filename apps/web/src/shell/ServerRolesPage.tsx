@@ -676,6 +676,7 @@ export function ServerRolesPage({
     manage_roles: false,
     manage_channels: false,
     manage_members: false,
+    manage_assignments: false,
   });
   const [overrides, setOverrides] = useState<ChannelOverride[]>([]);
   const [overridesLoading, setOverridesLoading] = useState(false);

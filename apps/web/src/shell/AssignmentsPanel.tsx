@@ -8,14 +8,12 @@
  *   - Empty state when list is empty: clipboard icon + "No assignments yet." + organizer CTA.
  *   - AssignmentForm modal (create/edit) — organizer-only.
  *
- * ORGANIZER check: user is organizer if their userId === server ownerId (owner)
- * OR if their server member role has manage_channels permission.
- * We derive this from: selectedDetail.server.ownerId vs profile.sub (userId from /me),
- * and from api.getServerMembers to find the current user's role, cross-referenced with
- * api.listRoles. This is a convenience-only check; the server always enforces.
- *
- * Simpler approach used here: pass isOrganizer as prop from ChannelSidebar/AppShell
- * which already has the ServerDetail and ProfileContext data.
+ * ORGANIZER check (wave-23 B-3): gated on effective permissions from
+ * GET /servers/:serverId/me/permissions. CTA is shown when perms.owner OR
+ * perms.manage_assignments is true. While loading or on fetch error the CTA is hidden.
+ * The server always enforces; client gate is convenience-only.
+ * On 403 from POST/PATCH (permission revoked between load and submit), AssignmentForm
+ * surfaces the thrown error as an inline red alert — no new toast system needed.
  */
 
 import type { Assignment } from '@studyhall/shared';
@@ -44,7 +42,7 @@ type Props = {
 };
 
 export function AssignmentsPanel({ onClose }: Props) {
-  const { selectedId: serverId, selectedDetail } = useServers();
+  const { selectedId: serverId } = useServers();
 
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loadStatus, setLoadStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
@@ -65,36 +63,35 @@ export function AssignmentsPanel({ onClose }: Props) {
   }, []);
 
   // ---------------------------------------------------------------------------
-  // Organizer check
+  // Effective permissions (wave-23 B-3)
   // ---------------------------------------------------------------------------
 
-  // Owner check: compare server ownerId with the profile userId.
-  // Profile userId is exposed as profile.sub from the /me endpoint (stored as userId in ProfileResponse).
-  // In the current schema ProfileResponse has `username` and `displayName`, not `userId`.
-  // We use a different approach: check if any role on the server has manage_channels and
-  // belongs to the current user. Since we don't have that at this point without extra API calls,
-  // we check ownerId against a user identifier from ProfileContext.
-  // The safest client-side signal: if the user has `manage_channels` permission via their role,
-  // OR if they're the server owner. We approximate this by re-using the ServerDetail ownerId
-  // + a GET /me userId (fetched separately).
-  const [myUserId, setMyUserId] = useState<string | null>(null);
+  // Fetch session-scoped effective permissions for this server.
+  // CTA is hidden while loading or if the fetch fails (e.g. 403 non-member).
+  // Gate: perms.owner || perms.manage_assignments (server always enforces).
+  type PermsState = 'loading' | 'ready' | 'error';
+  const [perms, setPerms] = useState<import('@studyhall/shared').EffectivePermissions | null>(null);
+  const [permsStatus, setPermsStatus] = useState<PermsState>('loading');
 
   useEffect(() => {
+    if (!serverId) return;
+    setPermsStatus('loading');
+    setPerms(null);
     api
-      .getMe()
-      .then((me) => {
+      .getMyPermissions(serverId)
+      .then((p) => {
         if (!mounted.current) return;
-        setMyUserId(me.userId);
+        setPerms(p);
+        setPermsStatus('ready');
       })
-      .catch(() => null);
-  }, []);
+      .catch(() => {
+        if (!mounted.current) return;
+        setPermsStatus('error');
+      });
+  }, [serverId]);
 
-  // Organizer = server owner (client-side convenience gate).
-  // ServerMember schema does not expose roleId, so manage_channels role check requires a
-  // dedicated /me/roles endpoint not yet available. Conservative default: owner only.
-  // Server always enforces — non-owner attempts to POST/PATCH get a 403.
-  const ownerId = selectedDetail?.server.ownerId ?? null;
-  const isOrganizer = myUserId !== null && ownerId !== null && myUserId === ownerId;
+  const isOrganizer =
+    permsStatus === 'ready' && perms !== null && (perms.owner || perms.manage_assignments);
 
   // ---------------------------------------------------------------------------
   // Load assignments
