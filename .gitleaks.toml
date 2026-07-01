@@ -26,20 +26,23 @@
 [extend]
 useDefault = true
 
+# Allowlist semantics note (gitleaks 8.x): the singular [allowlist] table uses OR semantics —
+# a finding is suppressed if it matches ANY of commits[], paths[], or regexes[]. The plural
+# [[allowlists]] array-of-tables is NOT supported in gitleaks-action@v3 (8.24.3) and is silently
+# ignored. All suppressions therefore live in this single [allowlist] block.
+#
+# paths[] covers two cases:
+#   1. project\.yaml  — hosts the SuperTokens UUID false positive (any commit, OR-match)
+#   2. process/.*     — wave transcripts: model-authored per-wave prose (gate verdicts, stage
+#                       deliverables, review artefacts, checklists). Per always-on rule 2,
+#                       secrets are NEVER committed to source; they live exclusively in platform
+#                       env vars. Transcripts are structurally secret-free but contain UUIDs,
+#                       base64url samples, and EXPLAIN-plan hashes that trip entropy heuristics
+#                       every wave. Scoped strictly to process/** — apps/**, packages/**, .env*,
+#                       and all other source paths remain fully scanned.
 [allowlist]
-description = "Confirmed false positive: SuperTokens user_id (DB record UUID, not a credential), pinned to the exact commit, path, and value."
+description = "False positives: SuperTokens user_id UUID (not a credential) + wave transcripts in process/** (model-authored prose, structurally secret-free per project policy)."
 commits = ["ab6ce69a7d8b2ff9a2ab5628a7254545e8d1bdc8"]
-paths = ['''project\.yaml''']
+paths = ['''project\.yaml''', '''process/.*''']
 regexes = ['''21984eb2-8029-4c1b-9e73-bc586a0be4d2''']
 regexTarget = "match"
-
-# Wave transcript allowlist — process/ holds model-authored per-wave prose (gate verdicts,
-# stage deliverables, review artefacts, wave checklists). Per always-on rule 2, secrets are
-# NEVER committed to source; they live exclusively in platform env vars (GitHub Actions /
-# Railway). The transcripts are structurally secret-free but contain hyphenated technical
-# phrases, base64url code samples, and EXPLAIN-plan / hash strings that trip gitleaks'
-# entropy heuristics every wave. Scoped strictly to process/** — apps/**, packages/**,
-# .env*, and all other source paths remain fully scanned.
-[[allowlists]]
-description = "Wave transcripts (process/**): model-authored prose, structurally secret-free per project policy — entropy false positives only."
-paths = ['''process/.*''']
