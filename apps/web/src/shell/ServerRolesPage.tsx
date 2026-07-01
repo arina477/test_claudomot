@@ -199,7 +199,7 @@ function CreateRoleModal({ onClose, onCreated, serverId }: CreateRoleModalProps)
   }
 
   return (
-    <div // biome-ignore lint/a11y/useSemanticElements: div with role="dialog" — native <dialog> requires show/close API
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
@@ -339,7 +339,7 @@ function DeleteRoleModal({ roleName, onClose, onDeleted, serverId, roleId }: Del
   }
 
   return (
-    <div // biome-ignore lint/a11y/useSemanticElements: div with role="dialog" — native <dialog> requires show/close API
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
@@ -936,7 +936,7 @@ export function ServerRolesPage({
 
       {/* Full-screen settings shell */}
       <div
-        className="fixed inset-0 z-40 flex" // biome-ignore lint/a11y/useSemanticElements: settings shell uses role="dialog" — native <dialog> requires show/close API
+        className="fixed inset-0 z-40 flex"
         style={{ background: '#0a0a0b' }}
         role="dialog"
         aria-modal="true"
