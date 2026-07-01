@@ -54,8 +54,10 @@ All notable changes to StudyHall are documented here. Format follows
 - Assignment management can now be delegated: a server owner can grant a dedicated "Manage Assignments" permission to a non-owner member — such as a teaching assistant or study-group co-lead — so they can post, edit, and remove assignments without also handing over channel-management rights. (#35)
 - Owners toggle the new permission per role in the role editor, and the "New Assignment" button now appears for owners or anyone who holds it, where it was owner-only before. (#35)
 - Mentions now render consistently when a handle is followed by punctuation: a message with `@bob.dev` where `bob` is the member shows the mention pill plus `.dev` as plain text, instead of leaving the whole thing as plain text. The app and server now share one rule for what counts as a mention, so the two can't drift apart. (#37)
+- Live presence dots on message author avatars: every message now shows a small green dot on the author's avatar when that person is online, so you can see at a glance who's around in a channel. (#38)
 
 ### Fixed
 
 - The app now reports its true version on the health check, fixing a startup crash that could take the live API offline. (#13)
 - Editing a message now updates its mentions all-or-nothing, so a mid-edit failure can no longer leave a message with stale or half-updated mentions. (#37)
+- Presence dots now show for your own messages too, so you no longer appear offline on the very messages you just sent. (#39)
