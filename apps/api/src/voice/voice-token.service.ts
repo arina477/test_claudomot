@@ -2,28 +2,38 @@
  * VoiceTokenService — B-2 LiveKit token-mint (wave-31, Refs d8a85de0)
  *
  * Mints a short-lived LiveKit access token for a voice channel after:
- *   1. Confirming the channel exists (404 if missing).
- *   2. Confirming the channel type is 'voice' (400 otherwise).
- *   3. Confirming the caller has view-permission via RBAC (403 otherwise).
- *   4. Confirming LIVEKIT_URL / API key / API secret are configured (503 otherwise).
+ *   1. RBAC canViewChannelById → 403 if false (uniform deny: covers missing + non-member).
+ *   2. Load channel (now known-viewable) → check type === 'voice' → 400 if not.
+ *   3. Confirming LIVEKIT_URL / API key / API secret are configured (503 otherwise).
+ *   4. Mint token → return { token, url }.
+ *
+ * Gate order rationale (B-6 security fix, wave-31):
+ *   The RBAC check is FIRST so a non-member (or missing channel) gets a uniform 403
+ *   with zero existence/type signal — matches ChannelMessageGuard convention.
+ *   A member on a non-voice channel gets 400 (type error only reachable by a member).
+ *   Note: a missing channel now returns 403 (not 404) — deliberate default-deny;
+ *   the old 404-for-missing spec is superseded by this security-correct behaviour.
+ *   Flag for L-1 spec reconciliation.
  *
  * Token is room-scoped (room = channelId), identity = userId, TTL = 1h.
+ * Grant is audio-first: canPublishSources = [TrackSource.MICROPHONE] only.
  *
  * ESM note: livekit-server-sdk v2.x is ESM-only. This file compiles under
- * "module": "CommonJS" (NestJS default tsconfig), so AccessToken is loaded
- * via a lazy dynamic import() cached after the first call.
+ * "module": "CommonJS" (NestJS default tsconfig), so the module is loaded
+ * via a lazy dynamic import(). The in-flight Promise is memoized so concurrent
+ * first-calls share one import; an import throw maps to 503.
  *
  * Security invariants:
  *   - LIVEKIT_API_SECRET never leaves this service.
  *   - Token is never minted before the RBAC check passes.
  *   - Token grant is scoped to the specific room (channelId).
+ *   - canPublishSources restricts publish to microphone only (audio-first).
  */
 
 import {
   BadRequestException,
   ForbiddenException,
   Injectable,
-  NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
@@ -39,9 +49,10 @@ export interface VoiceTokenResult {
 
 @Injectable()
 export class VoiceTokenService {
-  // Cached AccessToken constructor — loaded once via dynamic import() on first mint.
-  // Using a lazy cache avoids the cost of re-importing the ESM module on every request.
-  private _AccessToken: typeof import('livekit-server-sdk')['AccessToken'] | null = null;
+  // Memoized in-flight Promise for the ESM module load.
+  // Storing the Promise (not just the resolved value) ensures concurrent first-calls
+  // share one import rather than racing into multiple dynamic import() calls.
+  private _sdkPromise: Promise<typeof import('livekit-server-sdk')> | null = null;
 
   constructor(private readonly rbacService: RbacService) {}
 
@@ -49,13 +60,21 @@ export class VoiceTokenService {
   // Private helpers
   // ---------------------------------------------------------------------------
 
-  /** Lazy-load AccessToken from the ESM-only livekit-server-sdk. */
-  private async getAccessToken(): Promise<typeof import('livekit-server-sdk')['AccessToken']> {
-    if (!this._AccessToken) {
-      const mod = await import('livekit-server-sdk');
-      this._AccessToken = mod.AccessToken;
+  /**
+   * Lazy-load livekit-server-sdk (ESM-only).
+   * The Promise is memoized on first call; an import failure maps to 503.
+   */
+  private getSdk(): Promise<typeof import('livekit-server-sdk')> {
+    if (!this._sdkPromise) {
+      this._sdkPromise = import('livekit-server-sdk').catch((err: unknown) => {
+        // Reset so a future call can retry after a transient failure.
+        this._sdkPromise = null;
+        throw new ServiceUnavailableException(
+          `Voice unavailable: SDK load failed — ${err instanceof Error ? err.message : String(err)}`,
+        );
+      });
     }
-    return this._AccessToken;
+    return this._sdkPromise;
   }
 
   // ---------------------------------------------------------------------------
@@ -65,37 +84,34 @@ export class VoiceTokenService {
   /**
    * Mint a LiveKit access token for `userId` to join the voice channel `channelId`.
    *
-   * Gate order (spec d8a85de0):
-   *   1. Load channel → 404 if missing.
-   *   2. channel.type !== 'voice' → 400.
-   *   3. RBAC canViewChannelById → 403 if false.
-   *   4. Env-var guard → 503 if LIVEKIT_URL / key / secret unset.
-   *   5. Mint token → return { token, url }.
+   * Gate order (B-6 security-correct, wave-31):
+   *   1. RBAC canViewChannelById → 403 if false (uniform: covers missing + non-member).
+   *   2. Load channel + type check → 400 if not voice (member-only reachable).
+   *   3. Env-var guard → 503 if LIVEKIT_URL / key / secret unset.
+   *   4. Mint token → return { token, url }.
    */
   async mintToken(userId: string, channelId: string): Promise<VoiceTokenResult> {
-    // ── Step 1: load channel ──────────────────────────────────────────────────
+    // ── Step 1: RBAC check (FIRST — uniform 403 for missing + non-member) ────
+    // This matches the ChannelMessageGuard convention: default-deny with no
+    // existence or type signal to non-members.
+    const canView = await this.rbacService.canViewChannelById(userId, channelId);
+    if (!canView) {
+      throw new ForbiddenException('Insufficient permissions to join this voice channel');
+    }
+
+    // ── Step 2: load channel + voice-channel discriminator ────────────────────
+    // Channel is now known-viewable. Load to confirm it is a voice channel.
     const [channel] = await db
       .select({ id: channels.id, type: channels.type })
       .from(channels)
       .where(eq(channels.id, channelId))
       .limit(1);
 
-    if (!channel) {
-      throw new NotFoundException(`Channel ${channelId} not found`);
-    }
-
-    // ── Step 2: voice-channel discriminator ───────────────────────────────────
-    if (channel.type !== 'voice') {
+    if (!channel || channel.type !== 'voice') {
       throw new BadRequestException('Voice tokens can only be issued for voice channels');
     }
 
-    // ── Step 3: RBAC check ────────────────────────────────────────────────────
-    const canView = await this.rbacService.canViewChannelById(userId, channelId);
-    if (!canView) {
-      throw new ForbiddenException('Insufficient permissions to join this voice channel');
-    }
-
-    // ── Step 4: env-var guard ─────────────────────────────────────────────────
+    // ── Step 3: env-var guard ─────────────────────────────────────────────────
     const apiKey = process.env.LIVEKIT_API_KEY;
     const apiSecret = process.env.LIVEKIT_API_SECRET;
     const livekitUrl = process.env.LIVEKIT_URL;
@@ -104,8 +120,8 @@ export class VoiceTokenService {
       throw new ServiceUnavailableException('Voice service is not configured');
     }
 
-    // ── Step 5: mint token ────────────────────────────────────────────────────
-    const AccessToken = await this.getAccessToken();
+    // ── Step 4: mint token ────────────────────────────────────────────────────
+    const { AccessToken, TrackSource } = await this.getSdk();
 
     const at = new AccessToken(apiKey, apiSecret, {
       identity: userId, // maps LiveKit participant → StudyHall user (JWT `sub` claim)
@@ -116,6 +132,9 @@ export class VoiceTokenService {
       roomJoin: true,
       room: channelId, // scoped to this channel only — prevents cross-room joins
       canPublish: true,
+      // Audio-first: restrict publish to microphone only. canPublishSources supersedes
+      // canPublish when set — camera and screen-share are excluded from this token.
+      canPublishSources: [TrackSource.MICROPHONE],
       canSubscribe: true,
     });
 

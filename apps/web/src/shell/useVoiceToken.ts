@@ -27,6 +27,12 @@ export type VoiceTokenState = {
   fetchToken: () => void;
   /** Reset back to 'idle' (clears token + error). Used by Leave to go back to pre-join. */
   reset: () => void;
+  /**
+   * Transition to the 'error' state with the given message.
+   * Used by LiveKitRoom's onError to show the error view instead of silently
+   * falling back to pre-join — an involuntary connect failure must be visible.
+   */
+  setError: (message: string) => void;
 };
 
 export function useVoiceToken(channelId: string | null): VoiceTokenState {
@@ -94,7 +100,14 @@ export function useVoiceToken(channelId: string | null): VoiceTokenState {
     setErrorMessage(null);
   }, []);
 
-  return { status, token, url, errorMessage, fetchToken, reset };
+  const setError = useCallback((message: string) => {
+    setStatus('error');
+    setToken(null);
+    setUrl(null);
+    setErrorMessage(message);
+  }, []);
+
+  return { status, token, url, errorMessage, fetchToken, reset, setError };
 }
 
 /**

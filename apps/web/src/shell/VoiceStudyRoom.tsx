@@ -53,7 +53,8 @@ type Props = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function VoiceStudyRoom({ channelId, channelName }: Props) {
-  const { status, token, url, errorMessage, fetchToken, reset } = useVoiceToken(channelId);
+  const { status, token, url, errorMessage, fetchToken, reset, setError } =
+    useVoiceToken(channelId);
 
   // Shared channel header across all states (design pattern from mockup)
   return (
@@ -97,12 +98,18 @@ export function VoiceStudyRoom({ channelId, channelName }: Props) {
           audio={true}
           video={false}
           onDisconnected={() => {
-            // Deliberate disconnect (Leave button or network drop) → back to pre-join
+            // Involuntary network drop → show pre-join (user did not explicitly leave;
+            // if the Leave button triggered this, handleLeave already called reset()
+            // and the LiveKitRoom will have unmounted before onDisconnected fires,
+            // so this is a no-op in that path — idempotent).
             reset();
           }}
-          onError={() => {
-            // LiveKit connect failure → show error state
-            reset();
+          onError={(err) => {
+            // LiveKit connect failure → show the error state with a message, not pre-join.
+            // Routing to reset() (pre-join) would silently swallow the failure.
+            const message =
+              err instanceof Error ? err.message : 'Connection to the voice room failed.';
+            setError(message);
           }}
           style={{ display: 'contents' }}
         >

@@ -30,6 +30,13 @@ vi.mock('../auth/api', () => ({
 // ── Mock @livekit/components-react ──────────────────────────────────────────
 // The media plane (LiveKit SFU, ICE, DTLS) is not testable in headless.
 // We mock the components-react surface to isolate the wiring + state machine.
+//
+// disconnect is a STABLE mock hoisted outside the vi.mock factory so we can
+// assert on it in teardown tests without the mock returning a fresh fn() on
+// every useRoomContext() call (a fresh vi.fn() per render would never have
+// been called from the perspective of our expect()).
+const mockDisconnect = vi.fn();
+
 vi.mock('@livekit/components-react', () => ({
   LiveKitRoom: ({
     children,
@@ -68,8 +75,10 @@ vi.mock('@livekit/components-react', () => ({
       isMicrophoneEnabled: true,
     },
   ],
+  // Returns the SAME stable mockDisconnect reference on every call so teardown
+  // assertions accumulate calls on a single spy, not a fresh one per render.
   useRoomContext: () => ({
-    disconnect: vi.fn(),
+    disconnect: mockDisconnect,
   }),
 }));
 
@@ -95,6 +104,8 @@ function renderVoice(props = { channelId: 'ch-voice-1', channelName: 'study-room
 describe('VoiceStudyRoom', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // clearAllMocks resets call history on mockDisconnect (it's a module-level vi.fn(),
+    // so clearAllMocks covers it — no need to manually call mockDisconnect.mockClear()).
   });
 
   // ── Pre-join state ─────────────────────────────────────────────────────────
@@ -261,6 +272,50 @@ describe('VoiceStudyRoom', () => {
     });
 
     expect(mockApi.getVoiceToken).toHaveBeenCalledTimes(2);
+  });
+
+  // ── Disconnect on unmount (no leaked LiveKit connection / mic-hot-after-leave) ─
+
+  it('calls room.disconnect() when the component unmounts (no leaked connection)', async () => {
+    // Arrange: get into in-room state
+    mockApi.getVoiceToken.mockResolvedValue({
+      token: 'jwt',
+      url: 'wss://lk.example.com',
+    });
+    const user = userEvent.setup();
+    const { unmount } = renderVoice();
+
+    await user.click(screen.getByTestId('join-voice-btn'));
+    await waitFor(() => expect(screen.getByTestId('livekit-room')).toBeInTheDocument());
+
+    // Act: unmount (simulates navigation away or tab close)
+    unmount();
+
+    // Assert: the RoomView teardown effect called disconnect()
+    // This proves the LiveKit connection is not leaked after unmount.
+    expect(mockDisconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls room.disconnect() when the Leave button is clicked (no mic-hot-after-leave)', async () => {
+    // Arrange: get into in-room state
+    mockApi.getVoiceToken.mockResolvedValue({
+      token: 'jwt',
+      url: 'wss://lk.example.com',
+    });
+    const user = userEvent.setup();
+    renderVoice();
+
+    await user.click(screen.getByTestId('join-voice-btn'));
+    await waitFor(() => expect(screen.getByTestId('voice-controls')).toBeInTheDocument());
+
+    // Act: user clicks Leave
+    await user.click(screen.getByTestId('leave-voice-btn'));
+
+    // Assert: handleLeave called room.disconnect() — mic is no longer publishing
+    expect(mockDisconnect).toHaveBeenCalled();
+
+    // Assert: UI returns to pre-join state after Leave
+    await waitFor(() => expect(screen.getByTestId('join-voice-btn')).toBeInTheDocument());
   });
 
   // ── Security: no livekit-server-sdk import in frontend ────────────────────

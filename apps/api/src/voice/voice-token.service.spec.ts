@@ -1,11 +1,17 @@
 /**
- * VoiceTokenService unit tests — wave-31 B-2 (Refs d8a85de0)
+ * VoiceTokenService unit tests — wave-31 B-2/B-6 (Refs d8a85de0)
+ *
+ * Gate order (B-6 security-correct):
+ *   1. canViewChannelById (RBAC) → 403 if false — uniform deny (missing + non-member)
+ *   2. load channel + type check → 400 if not voice (member-only reachable)
+ *   3. env-var guard → 503 if creds unset
+ *   4. mint token → { token, url }
  *
  * Covers:
  *   - member on a voice channel → 200; decoded JWT has correct sub, video grant, bounded exp
  *   - non-member → ForbiddenException (403)
- *   - missing channel → NotFoundException (404)
- *   - non-voice channel (type='text') → BadRequestException (400)
+ *   - missing channel → ForbiddenException (403) [not 404 — deliberate default-deny]
+ *   - non-voice channel (type='text') with MEMBER → BadRequestException (400)
  *   - creds unset → ServiceUnavailableException (503)
  *
  * Token assertions decode the returned JWT (base64url) — no live LiveKit connection.
@@ -13,13 +19,12 @@
  *
  * ESM note: livekit-server-sdk is ESM-only. Vitest runs in a Node environment
  * where dynamic import() works from CommonJS-compiled output; the service's
- * lazy getAccessToken() is exercised directly by the happy-path test.
+ * lazy getSdk() is exercised directly by the happy-path test.
  */
 
 import {
   BadRequestException,
   ForbiddenException,
-  NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -125,7 +130,7 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('VoiceTokenService.mintToken', () => {
-  it('member on voice channel → returns token + url; decoded JWT has correct identity, video grant, bounded exp', async () => {
+  it('member on voice channel → returns token + url; decoded JWT has correct identity, video grant, audio-only scope, bounded exp', async () => {
     const result = await sut.mintToken(USER_ID, CHANNEL_ID);
 
     // Shape check
@@ -140,13 +145,15 @@ describe('VoiceTokenService.mintToken', () => {
     // Identity → userId (JWT `sub` claim)
     expect(payload.sub).toBe(USER_ID);
 
-    // Video grant — room-scoped, roomJoin, canPublish, canSubscribe
+    // Video grant — room-scoped, roomJoin, canPublish, canSubscribe, audio-only scope
     const video = payload.video as Record<string, unknown>;
     expect(video).toBeDefined();
     expect(video.roomJoin).toBe(true);
     expect(video.room).toBe(CHANNEL_ID);
     expect(video.canPublish).toBe(true);
     expect(video.canSubscribe).toBe(true);
+    // Audio-first: canPublishSources serialises to ['microphone'] (TrackSource.MICROPHONE)
+    expect(video.canPublishSources).toEqual(['microphone']);
 
     // Expiry — bounded: exp > now AND exp <= now + 2h (not a fixed timestamp)
     const nowSeconds = Math.floor(Date.now() / 1000);
@@ -162,18 +169,25 @@ describe('VoiceTokenService.mintToken', () => {
     await expect(sut.mintToken(USER_ID, CHANNEL_ID)).rejects.toThrow(ForbiddenException);
   });
 
-  it('missing channel → NotFoundException', async () => {
-    // db returns empty array — channel not found
-    mockSelect.mockReturnValueOnce(makeSelectChain([]));
+  it('missing channel → ForbiddenException (403, not 404 — uniform default-deny, no existence leak)', async () => {
+    // Gate order: RBAC runs first (returns false for missing channel since it
+    // can't find a membership) → 403. The db is never consulted.
+    // This matches the ChannelMessageGuard convention.
+    canViewResult = false;
+    mockRbac.canViewChannelById.mockResolvedValueOnce(false);
 
-    await expect(sut.mintToken(USER_ID, CHANNEL_ID)).rejects.toThrow(NotFoundException);
+    await expect(sut.mintToken(USER_ID, CHANNEL_ID)).rejects.toThrow(ForbiddenException);
+    // db.select must NOT have been called — RBAC short-circuits before the load
+    expect(mockSelect).not.toHaveBeenCalled();
   });
 
-  it('non-voice channel (type=text) → BadRequestException', async () => {
-    // db returns a text channel
+  it('non-voice channel (type=text) tested as MEMBER → BadRequestException', async () => {
+    // canViewChannelById returns true (member) — the 400 is only reachable by a member.
+    // This is the security-correct test: the type-check gate is after RBAC.
     mockSelect.mockReturnValueOnce(makeSelectChain([TEXT_CHANNEL]));
 
     await expect(sut.mintToken(USER_ID, 'chan-text-1')).rejects.toThrow(BadRequestException);
+    expect(mockRbac.canViewChannelById).toHaveBeenCalledWith(USER_ID, 'chan-text-1');
   });
 
   it('LIVEKIT_API_KEY unset → ServiceUnavailableException', async () => {
@@ -203,17 +217,19 @@ describe('VoiceTokenService.mintToken', () => {
     expect(mockRbac.canViewChannelById).toHaveBeenCalledWith(USER_ID, CHANNEL_ID);
   });
 
-  it('RBAC check is NOT called when channel is missing (404 short-circuits before RBAC)', async () => {
-    mockSelect.mockReturnValueOnce(makeSelectChain([]));
+  it('RBAC check is called FIRST — db.select is NOT called when RBAC denies', async () => {
+    // Non-member: RBAC denies → 403 before the channel is loaded.
+    canViewResult = false;
+    mockRbac.canViewChannelById.mockResolvedValueOnce(false);
 
-    await expect(sut.mintToken(USER_ID, CHANNEL_ID)).rejects.toThrow(NotFoundException);
-    expect(mockRbac.canViewChannelById).not.toHaveBeenCalled();
+    await expect(sut.mintToken(USER_ID, CHANNEL_ID)).rejects.toThrow(ForbiddenException);
+    expect(mockSelect).not.toHaveBeenCalled();
   });
 
-  it('RBAC check is NOT called when channel type is text (400 short-circuits before RBAC)', async () => {
-    mockSelect.mockReturnValueOnce(makeSelectChain([TEXT_CHANNEL]));
+  it('db.select IS called after RBAC passes (member on voice channel)', async () => {
+    await sut.mintToken(USER_ID, CHANNEL_ID);
 
-    await expect(sut.mintToken(USER_ID, 'chan-text-1')).rejects.toThrow(BadRequestException);
-    expect(mockRbac.canViewChannelById).not.toHaveBeenCalled();
+    expect(mockRbac.canViewChannelById).toHaveBeenCalledWith(USER_ID, CHANNEL_ID);
+    expect(mockSelect).toHaveBeenCalled();
   });
 });
