@@ -29,6 +29,7 @@ import {
 } from '@livekit/components-react';
 import { useCallback, useContext, useEffect, useRef } from 'react';
 import { ProfileContext } from './ProfileContext';
+import { VoiceOccupancyIndicator } from './VoiceOccupancyIndicator';
 import {
   ArrowCounterClockwiseIcon,
   MicrophoneIcon,
@@ -37,6 +38,7 @@ import {
   SpeakerHighIcon,
   UsersIcon,
 } from './icons';
+import { useVoiceOccupancy } from './useVoiceOccupancy';
 import { useVoiceToken } from './useVoiceToken';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -55,6 +57,11 @@ type Props = {
 export function VoiceStudyRoom({ channelId, channelName }: Props) {
   const { status, token, url, errorMessage, fetchToken, reset, setError } =
     useVoiceToken(channelId);
+
+  // Occupancy polling: active only on the pre-join surface (status === 'idle').
+  // Polling stops once the user joins (status changes away from 'idle') so stale
+  // intervals never fire during an active LiveKit session.
+  const occupancy = useVoiceOccupancy(channelId, { enabled: status === 'idle' });
 
   // Shared channel header across all states (design pattern from mockup)
   return (
@@ -84,7 +91,15 @@ export function VoiceStudyRoom({ channelId, channelName }: Props) {
       </header>
 
       {/* State views */}
-      {status === 'idle' && <PreJoinView channelName={channelName} onJoin={fetchToken} />}
+      {status === 'idle' && (
+        <PreJoinView
+          channelName={channelName}
+          onJoin={fetchToken}
+          occupancyCount={occupancy.count}
+          occupancyParticipants={occupancy.participants}
+          occupancyStatus={occupancy.status}
+        />
+      )}
 
       {status === 'loading' && <ConnectingView channelName={channelName} />}
 
@@ -124,9 +139,26 @@ export function VoiceStudyRoom({ channelId, channelName }: Props) {
 // State 1: Pre-join
 // ─────────────────────────────────────────────────────────────────────────────
 
-type PreJoinViewProps = { channelName: string; onJoin: () => void };
+type PreJoinViewProps = {
+  channelName: string;
+  onJoin: () => void;
+  occupancyCount: number;
+  occupancyParticipants: import('./useVoiceOccupancy').VoiceParticipant[];
+  occupancyStatus: import('./useVoiceOccupancy').VoiceOccupancyStatus;
+};
 
-function PreJoinView({ channelName, onJoin }: PreJoinViewProps) {
+function PreJoinView({
+  channelName,
+  onJoin,
+  occupancyCount,
+  occupancyParticipants,
+  occupancyStatus,
+}: PreJoinViewProps) {
+  // Derive the join button label: empty room → "Be the First to Join" (D-3 empty state CTA);
+  // error / loading / populated → "Join voice" (standard CTA).
+  const isEmptyRoom = occupancyStatus === 'loaded' && occupancyCount === 0;
+  const joinLabel = isEmptyRoom ? 'Be the First to Join' : 'Join voice';
+
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
       <div
@@ -147,26 +179,62 @@ function PreJoinView({ channelName, onJoin }: PreJoinViewProps) {
       >
         {channelName}
       </h3>
-      <p className="text-sm mb-8" style={{ color: 'rgba(255,255,255,0.60)' }}>
+      <p className="text-sm mb-6" style={{ color: 'rgba(255,255,255,0.60)' }}>
         Drop in to connect via audio. The door is always open.
       </p>
+
+      {/* Occupancy indicator — pre-join surface only.
+          Bounded by a top-border panel to match the D-3 design card layout.
+          Error state uses role="status" (not role="alert") per D-3 spec so a
+          transient occupancy failure never hijacks the screen-reader focus from Join. */}
+      <div
+        data-testid="voice-occupancy-panel"
+        className="w-full max-w-sm mb-6 pt-5"
+        style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
+      >
+        <VoiceOccupancyIndicator
+          count={occupancyCount}
+          participants={occupancyParticipants}
+          status={occupancyStatus}
+        />
+      </div>
 
       <button
         type="button"
         data-testid="join-voice-btn"
         onClick={onJoin}
         className="flex items-center justify-center gap-2 rounded-md px-8 py-3 text-base font-semibold transition-colors duration-150 focus-visible:outline-none"
-        style={{
-          backgroundColor: '#10b981',
-          color: '#0a0a0b',
-          minWidth: 160,
-          boxShadow: '0 1px 2px rgba(0,0,0,0.4)',
-        }}
+        style={
+          isEmptyRoom
+            ? {
+                // Empty state: muted secondary style (D-3 spec — "Be the First to Join")
+                backgroundColor: '#27272a',
+                color: 'rgba(255,255,255,0.92)',
+                border: '1px solid rgba(255,255,255,0.10)',
+                minWidth: 200,
+                boxShadow: '0 1px 2px rgba(0,0,0,0.4)',
+              }
+            : {
+                // Populated / loading / error: primary emerald CTA
+                backgroundColor: '#10b981',
+                color: '#0a0a0b',
+                minWidth: 160,
+                boxShadow: '0 1px 2px rgba(0,0,0,0.4)',
+              }
+        }
         onMouseEnter={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(16,185,129,0.90)';
+          if (isEmptyRoom) {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#3f3f46';
+          } else {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(16,185,129,0.90)';
+          }
         }}
         onMouseLeave={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#10b981';
+          if (isEmptyRoom) {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#27272a';
+          } else {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#10b981';
+          }
         }}
         onFocus={(e) => {
           e.currentTarget.style.boxShadow = '0 0 0 2px rgba(16,185,129,0.4)';
@@ -175,7 +243,7 @@ function PreJoinView({ channelName, onJoin }: PreJoinViewProps) {
           e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.4)';
         }}
       >
-        Join voice
+        {joinLabel}
       </button>
     </div>
   );

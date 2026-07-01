@@ -24,6 +24,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('../auth/api', () => ({
   api: {
     getVoiceToken: vi.fn(),
+    // wave-32: VoiceStudyRoom now mounts useVoiceOccupancy on the pre-join
+    // surface; stub getVoiceParticipants so the occupancy poll does not fire
+    // an unhandled real fetch in these wave-31 tests.
+    getVoiceParticipants: vi.fn().mockResolvedValue({ count: 0, participants: [] }),
   },
 }));
 

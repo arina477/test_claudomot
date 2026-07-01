@@ -457,4 +457,21 @@ export const api = {
       method: 'POST',
       body: '{}',
     }),
+
+  /**
+   * GET /channels/:channelId/voice/participants
+   * → { count: number, participants: { userId: string, displayName: string }[] }.
+   *
+   * Returns current LiveKit-room occupancy for the given voice channel.
+   * Session + RBAC-gated server-side (same gate as voice/token).
+   *
+   * Throws: 400 non-voice channel, 401 unauthed, 403 not a member,
+   *         503 LiveKit not configured (returns {count:0,participants:[]} when creds absent).
+   * Empty / not-yet-created room → { count: 0, participants: [] } (not an error).
+   */
+  getVoiceParticipants: (channelId: string, signal?: AbortSignal) =>
+    request<{ count: number; participants: { userId: string; displayName: string }[] }>(
+      `/channels/${channelId}/voice/participants`,
+      signal != null ? { signal } : undefined,
+    ),
 };
