@@ -3,7 +3,7 @@
 **Block:** T (Test)
 **Wave topic:** mention token-parser parity (shared slug, client↔server) + editMessage atomicity
 **Block exit gate:** T-9
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 
@@ -11,13 +11,13 @@
 |---|---|---|---|---|
 | T-1 | stages/T-1-static.md | ci-verified | done | typecheck + lint green (C-1 run 28512345221); 0 prod bypasses |
 | T-2 | stages/T-2-unit.md | ci-verified | done | api 395 + web 234 green; new mention + parity tests |
-| T-3 | stages/T-3-contract.md | ci-verified | pending | shared slug grammar cross-package contract → parity test |
-| T-4 | stages/T-4-integration.md | ci-verified | pending | editMessage rollback real-PG spec (executed in CI) |
-| T-5 | stages/T-5-e2e.md | active | pending | live mention render (@handle→pill) on prod |
-| T-6 | stages/T-6-layout.md | active | pending | pill component unchanged — assess |
-| T-7 | stages/T-7-perf.md | active | pending | SKIP (not heavy) |
-| T-8 | stages/T-8-security.md | active | pending | SKIP (non-auth; no new XSS surface — React-escaped) |
-| T-9 | stages/T-9-journey.md | active | pending | gate |
+| T-3 | stages/T-3-*.md | active | done | shared slug contract → parity test |
+| T-4 | stages/T-4-*.md | active | done | editMessage rollback real-PG spec executed in CI |
+| T-5 | stages/T-5-*.md | active | done | live prod E2E: AC2/AC3 PASS ×4, 0 flakes; 1 LOW infra finding |
+| T-6 | stages/T-6-*.md | active | done | no visual delta — MentionPill unchanged, on-token |
+| T-7 | stages/T-7-*.md | active | skipped | not heavy; algorithmically-equiv tokenizer, no new dep |
+| T-8 | stages/T-8-*.md | active | skipped | non-auth; secret-grep clean; no new XSS surface |
+| T-9 | stages/T-9-journey.md | active | done | head-tester APPROVED; annotation-only journey regen |
 
 ## Block-specific context
 - **Wave topic:** shared mention slug grammar + client/server parity + editMessage txn atomicity + real-PG rollback spec.
