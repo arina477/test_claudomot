@@ -31,6 +31,7 @@ let subscribePresenceCallCount = 0;
 vi.mock('./presenceSocket', () => ({
   getPresenceSocket: vi.fn(),
   getPresenceStatus: vi.fn((userId: string) => _store.get(userId) ?? 'offline'),
+  hasPresence: vi.fn((userId: string) => _store.has(userId)),
   subscribePresence: vi.fn((handler: PresenceSubscriber) => {
     subscribePresenceCallCount++;
     _subscribers.add(handler);
@@ -200,16 +201,15 @@ describe('MessageList author-avatar presence dots', () => {
     expect(screen.getByText('Offline')).toBeInTheDocument();
   });
 
-  it('shows offline dot when author is NOT in the store (graceful degrade — defaults to offline, AC3)', () => {
-    // Author key absent from store — getPresenceStatus returns 'offline' by default.
-    // AC3 says "render WITHOUT a dot" means no positive online indicator — the dot
-    // renders as offline (muted), which is the safe degrade defined by getPresenceStatus
-    // returning 'offline' for unknown users (presenceSocket.ts:149).
+  it('renders NO dot when author is NOT in the store (unknown — graceful degrade, AC3)', () => {
+    // Author key absent from store — hasPresence returns false.
+    // AC3: unknown author must produce NO dot at all, not a default offline dot.
     clearPresence('user-unknown');
-    renderMessageList([makeRealMsg({ authorId: 'user-unknown' })]);
-    // No Online dot — should be offline/muted
+    const { queryByTestId } = renderMessageList([makeRealMsg({ authorId: 'user-unknown' })]);
+    // Neither online nor offline label present — no PresenceDot rendered.
     expect(screen.queryByText('Online')).not.toBeInTheDocument();
-    expect(screen.getByText('Offline')).toBeInTheDocument();
+    expect(screen.queryByText('Offline')).not.toBeInTheDocument();
+    expect(queryByTestId('presence-dot-inner')).not.toBeInTheDocument();
   });
 
   it('updates dot when author flips from online to offline (live update, AC1)', async () => {
@@ -224,6 +224,23 @@ describe('MessageList author-avatar presence dots', () => {
 
     expect(screen.queryByText('Online')).not.toBeInTheDocument();
     expect(screen.getByText('Offline')).toBeInTheDocument();
+  });
+
+  it('removes dot when author transitions from online to unknown (AC3 live degrade)', () => {
+    // Author starts known-online, then is removed from the store (e.g. server eviction).
+    setPresence('user-delta', 'online');
+    const { queryByTestId } = renderMessageList([makeRealMsg({ authorId: 'user-delta' })]);
+    expect(screen.getByText('Online')).toBeInTheDocument();
+
+    // Simulate the author becoming unknown (absent from store).
+    act(() => {
+      clearPresence('user-delta');
+    });
+
+    // No dot rendered — unknown author degrades to no dot (AC3).
+    expect(screen.queryByText('Online')).not.toBeInTheDocument();
+    expect(screen.queryByText('Offline')).not.toBeInTheDocument();
+    expect(queryByTestId('presence-dot-inner')).not.toBeInTheDocument();
   });
 
   it('does not render any presence dot on optimistic PendingRow (CARRY-2 degrade)', () => {

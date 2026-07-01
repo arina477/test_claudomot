@@ -45,7 +45,7 @@ import {
   XIcon,
 } from './icons';
 import { extractMentionSlug } from './mentionSlug'; // CJS-avoidance: local mirror of @studyhall/shared extractMentionSlug
-import { getPresenceStatus, subscribePresence } from './presenceSocket';
+import { getPresenceStatus, hasPresence, subscribePresence } from './presenceSocket';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -940,25 +940,37 @@ function InlineEdit({ initialContent, onSave, onCancel }: InlineEditProps) {
  * changes (state is derived by comparing old vs new value on each notification),
  * so a change for user-B does NOT re-render the dot for user-A.
  *
+ * AC3: distinguishes KNOWN (online/offline) from UNKNOWN (absent from store).
+ *   - KNOWN online  → PresenceDot online (emerald).
+ *   - KNOWN offline → PresenceDot offline (muted).
+ *   - UNKNOWN       → render null (no dot — graceful degrade, no false-default).
+ *
  * Callers that only have `authorDisplay` (optimistic PendingRow / FailedRow) do NOT
  * have a stable userId — those rows render NO dot (graceful degrade, AC3, CARRY-2).
  */
 function AuthorPresenceDot({ authorId }: { authorId: string }) {
-  const [online, setOnline] = useState<boolean>(() => getPresenceStatus(authorId) === 'online');
+  // Tri-state: null = unknown (absent from store), true = online, false = offline.
+  const [status, setStatus] = useState<boolean | null>(() => {
+    if (!hasPresence(authorId)) return null;
+    return getPresenceStatus(authorId) === 'online';
+  });
 
   useEffect(() => {
     // Subscribe to the shared store — same fan-out, no new socket (AC4).
     const unsub = subscribePresence(() => {
-      const next = getPresenceStatus(authorId) === 'online';
+      const next = hasPresence(authorId) ? getPresenceStatus(authorId) === 'online' : null;
       // Only call setState when this author's value actually changed (CARRY-1).
-      setOnline((prev) => (prev === next ? prev : next));
+      setStatus((prev) => (prev === next ? prev : next));
     });
     // Re-sync on mount in case the store was updated between render and effect.
-    setOnline(getPresenceStatus(authorId) === 'online');
+    setStatus(hasPresence(authorId) ? getPresenceStatus(authorId) === 'online' : null);
     return unsub;
   }, [authorId]);
 
-  return <PresenceDot online={online} />;
+  // UNKNOWN author (absent from store) — render nothing (AC3).
+  if (status === null) return null;
+
+  return <PresenceDot online={status} />;
 }
 
 // ---------------------------------------------------------------------------
