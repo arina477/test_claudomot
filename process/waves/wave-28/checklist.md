@@ -52,9 +52,9 @@ TEST:
 - [x] T-9 Journey — head-tester gate APPROVED; annotation-only regen (wave-9 rotation-gap closed)
 
 VERIFY:
-- [ ] V-1 Independent reviews (Karen + jenny, parallel)
-- [ ] V-2 Triage
-- [ ] V-3 Fast-fix loop (or close)
+- [x] V-1 Independent reviews (Karen + jenny, parallel)
+- [x] V-2 Triage
+- [x] V-3 Fast-fix loop (or close)
 
 LEARN:
 - [ ] L-1 Docs

@@ -7,7 +7,7 @@
 - **design_gap_flag:** false
 
 ## Acceptance criteria (copy)
-1. Server owner POST /servers/:id/invite-code/rotate → 200 `{ invite_code }`, new code ≠ prior.
+1. Server owner POST /servers/:id/invite-code/rotate → 201 Created `{ invite_code }`, new code ≠ prior. *(reconciled at V-3: NestJS @Post default 201; matches sibling create handlers — see V-2/F28-T8a)*
 2. After rotate: GET /invites/<old-code> → 404 AND POST /invites/<old-code>/join → 404 (leaked link dead).
 3. After rotate: GET /invites/<new-code> → 200 preview AND POST /invites/<new-code>/join → 200 (new link admits members).
 4. Non-owner authenticated member → 403 (owner-ONLY; no invite-creator path unlike revoke).
@@ -16,7 +16,7 @@
 7. CSPRNG regenerate (base64url ~128-bit, `generateCode()`); 23505 collision → retry ≤5 then 409.
 
 ## Contracts (copy)
-- **API:** `POST /servers/:id/invite-code/rotate` — AuthGuard; path `:id`; no body; 200 → `{ invite_code: string }`; errors 401/403/404/409.
+- **API:** `POST /servers/:id/invite-code/rotate` — AuthGuard; path `:id`; no body; 201 Created → `{ invite_code: string }`; errors 401/403/404/409.
 - **Data:** no schema delta / no migration — writes existing `servers.invite_code` UNIQUE column in place; old link invalidated implicitly.
 - **Types:** inline response DTO on ServersController (`{ invite_code }`); NOT added to packages/shared (no client consumer this wave).
 - **SDK:** none.
