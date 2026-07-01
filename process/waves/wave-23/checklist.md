@@ -49,8 +49,8 @@ TEST:
 - [x] T-4 Integration (tier green; F23-T-4 Low: new-surface real-DB gap → V-2, reinforces 02fa8011)
 - [x] T-5 E2E (core /me/permissions authz boundary LIVE-verified via HTTP: owner all-true, non-member 403, IDOR-safe; visual BLOCKED by chrome-absent infra 67881a58 → F23-T-5 non-blocking)
 - [x] T-6 Layout (token audit PASS by diff — zero new hex/style/primitive; no canonicalized design; visual harness gap = shared F23-T-5)
-- [ ] T-7 Perf
-- [ ] T-8 Security
+- [x] T-7 Perf (bundle unchanged/0 new deps; /me/permissions mean 0.12s within SLO; no render-path change)
+- [x] T-8 Security (LIVE authz AIRTIGHT — write/read/escalation doors all held via full truth-table probe; secret-grep 0; 0 crit/high/med; 4 Low→V-2)
 - [ ] T-9 Journey
 
 VERIFY:
