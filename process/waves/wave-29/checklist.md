@@ -37,8 +37,8 @@ BUILD:
 - [x] B-6 Review
 
 CI/CD:
-- [ ] C-1 PR, CI & merge
-- [ ] C-2 Deploy & verify (canary armed when real users > 1000)
+- [x] C-1 PR, CI & merge
+- [x] C-2 Deploy & verify (api + web deployed via railway up, verified via deployment-state endpoint serving fd03d27; canary skipped — 0 DAU pre-launch)
 
 TEST:
 - [ ] T-1 Static
