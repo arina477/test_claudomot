@@ -84,3 +84,6 @@ Promoted at L-2 Distill from `process/waves/wave-<N>/blocks/L/observations.md` b
 
 6. B-block specialists run the formatter on all touched files before reporting done, not only typecheck.
    Why: Format drift then surfaces only at the wiring stage or in CI, costing an extra fix cycle.
+
+7. Run the lint/import-organizer check command, not the formatter alone, before reporting a build task done.
+   Why: A formatter can pass while the CI check gate rejects import ordering it never touches.
