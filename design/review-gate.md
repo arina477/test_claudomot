@@ -40,6 +40,8 @@ Two reviewers run in parallel on every staging design. Fresh context per reviewe
 
 If a project replaces one of the reviewers (e.g., `/ui-ux-pro-max` not installed), document the substitution here with a dated edit. The D-loop is reviewer-agnostic — what matters is the dual-reviewer + APPROVE/APPROVE exit contract.
 
+**2026-07-01 (wave-31, voice-study-room):** `/ui-ux-pro-max` skill is not installed in this environment (verified: absent from `~/.claude/skills/`, `command-center/SKILLS.md`, `command-center/AGENTS.md`). Reviewer B substituted with the `ui-ux-tester` sub-agent (closest catalog match — documented user-flow-driven UI/UX audit + structured defect reporting), tasked with the identical Reviewer-B output contract (brief §9 checkbox audit, UX flow audit, DESIGN-SYSTEM token audit, Phosphor icon-name audit, verdict). The mandated dark-theme contrast/focus/keyboard/ARIA audit was additionally run as a fresh `accessibility-tester` spawn per the head-designer accessibility gate, and its findings are read into reconciliation. Dual-reviewer + APPROVE/APPROVE exit contract preserved.
+
 ---
 
 ## Spawning both reviewers in parallel
