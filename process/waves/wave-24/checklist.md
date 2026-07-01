@@ -37,9 +37,9 @@ BUILD:
 - [x] B-6 Review (head-builder APPROVED + /review 0 crit/high/med genuine real-DB tests; false-green wiring verified; 5 Low accepted)
 
 CI/CD:
-- [ ] C-1 PR, CI & merge
-- [ ] C-2 Deploy & verify
-- [ ] C-3 Canary (skip if DAU<1000)
+- [x] C-1 PR, CI - [ ] C-1 PR, CI & merge merge (PR #36 merged 149a081; 7/7 CI jobs success per-job; FALSE-GREEN GUARD HELD — integration tier log confirms 3 new specs executed [presence 2 + member-gate 2 + rbac-authz 6], zero skips)
+- [x] C-2 Deploy & verify (api 0ebf493d + web 31fca925 SUCCESS; no redeploy [test-only, byte-equivalent artifact — test files excluded from dist]; no migration/no-new-route; canary skip)
+- [x] C-3 Canary (skipped — DAU 0 < 1000)
 
 TEST:
 - [ ] T-1 Static
