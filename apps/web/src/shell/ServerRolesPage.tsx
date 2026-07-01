@@ -84,6 +84,11 @@ const PERM_FLAGS: { key: PermFlag; label: string; description: string; sensitive
     label: 'Manage Members',
     description: 'Kick, ban, or assign roles to other members.',
   },
+  {
+    key: 'manage_assignments',
+    label: 'Manage Assignments',
+    description: 'Post, edit, and delete assignments for members to track.',
+  },
 ];
 
 // ---------------------------------------------------------------------------
