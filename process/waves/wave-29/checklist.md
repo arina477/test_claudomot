@@ -16,11 +16,11 @@
 - **Carries (env/tooling):** Railway deploy is CLI-push not git-trigger — run `railway up` per changed service at C-2 (merge to main does NOT deploy). Playwright MCP chrome-absent → bundled-chromium (T-5 rule 1). BUILD rule 7 (biome check not format) + **BUILD rule 8 (pre-commit format gate, promoted wave-28 L-2)**. biome ignores process/**.
 
 PRODUCT:
-- [ ] P-0 Frame (discover + reframe)
-- [ ] P-1 Decompose
-- [ ] P-2 Spec
-- [ ] P-3 Plan
-- [ ] P-4 Gate
+- [x] P-0 Frame (discover + reframe)
+- [x] P-1 Decompose
+- [x] P-2 Spec
+- [x] P-3 Plan
+- [x] P-4 Gate
 
 DESIGN (skip block if non-UI wave):
 - [ ] D-1 Brief
