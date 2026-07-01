@@ -50,6 +50,7 @@ export {
   UpdateRoleSchema,
   AssignRoleSchema,
   UpsertChannelOverrideSchema,
+  EffectivePermissionsSchema,
 } from './rbac.js';
 export type {
   RolePermissions,
@@ -59,6 +60,7 @@ export type {
   UpdateRoleInput,
   AssignRoleInput,
   UpsertChannelOverrideInput,
+  EffectivePermissions,
 } from './rbac.js';
 
 export {

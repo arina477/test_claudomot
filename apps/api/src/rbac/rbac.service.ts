@@ -23,10 +23,10 @@ import {
 } from '../db/schema/index';
 
 // ---------------------------------------------------------------------------
-// Permission key type — the 4 fixed RBAC flags
+// Permission key type — the 5 fixed RBAC flags
 // ---------------------------------------------------------------------------
 
-export type Permission = 'manage_server' | 'manage_roles' | 'manage_channels' | 'manage_members';
+export type Permission = 'manage_server' | 'manage_roles' | 'manage_channels' | 'manage_members' | 'manage_assignments';
 
 // ---------------------------------------------------------------------------
 // RbacService
