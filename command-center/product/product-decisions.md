@@ -352,3 +352,11 @@ First messaging bundle for M3's unshipped core text data plane — the most tech
 **Blocker (current):** the Resend key is NOT yet present in any environment (shell, local .env, or the Railway api service — all `RESEND_*` unset; api logs "RESEND_API_KEY_AUTH is not set"). Per always-on rule 6, account-issued credentials must be founder-supplied — the brain cannot self-generate. The loop re-blocks on this single credential (infra-readiness hard-stop) until the key is set; the strategic fork itself is RESOLVED.
 **Trigger to proceed:** `RESEND_API_KEY_AUTH` set in the api environment (Railway) → the loop decomposes the M5 reminders arc (cron + NotificationsModule via Resend) and builds it end-to-end.
 **By:** founder (park-or-key resolution) + orchestrator (credential-block recording), wave-29 N-block.
+
+[2026-07-01] M5 (Academic tooling: assignments): bundle authored — 3 tasks (due-date reminder arc: cron scan + NotificationsModule via Resend, reminder-tracking table, reminder email template)
+- caller: N-1-next-bundle (automatic mode; resolution of the founder's Path A directive — RESEND_API_KEY_AUTH now set on Railway api + exported locally, M5 reminders UNBLOCKED)
+- seed: Add due-date reminder cron scan + NotificationsModule (4a4c2715) — @nestjs/schedule + @Cron sweep of assignments due within a reminder window; sends each eligible server member a reminder via EmailService (Resend), idempotent + membership-respecting, skips already-done members
+- siblings: Add assignment_reminder tracking table + migration (c5c30363, idempotency substrate — UNIQUE(assignment_id,user_id) + ON CONFLICT DO NOTHING send-once); Add reminder email template + EmailService.sendAssignmentReminder (0ba853e2, branded due-soon email + unit test)
+- scope discipline: bundle held to the buildable core that satisfies M5's success metric ("get a reminder before it is due"). Deliberately OUT: per-user reminder preferences, digest emails, SMS, member-facing "reminder sent" surface — gold-plating at 0 users, future waves.
+- EmailService/Resend wiring already exists (apps/api/src/email/email.service.ts) — no separate wiring sibling needed; the seed only adds the scheduler (@nestjs/schedule is NOT yet a dependency).
+- decomposed by: milestone-decomposer sub-agent
