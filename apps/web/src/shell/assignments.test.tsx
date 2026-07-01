@@ -27,6 +27,7 @@ vi.mock('../auth/api', () => ({
     setAssignmentStatus: vi.fn(),
     listAssignments: vi.fn(),
     getMe: vi.fn(),
+    getMyPermissions: vi.fn(),
     getServerMembers: vi.fn(),
     listRoles: vi.fn(),
     getProfile: vi.fn(),
@@ -38,6 +39,7 @@ const mockApi = api as unknown as {
   setAssignmentStatus: ReturnType<typeof vi.fn>;
   listAssignments: ReturnType<typeof vi.fn>;
   getMe: ReturnType<typeof vi.fn>;
+  getMyPermissions: ReturnType<typeof vi.fn>;
   getServerMembers: ReturnType<typeof vi.fn>;
   listRoles: ReturnType<typeof vi.fn>;
   getProfile: ReturnType<typeof vi.fn>;
@@ -276,6 +278,15 @@ describe('AssignmentsPanel', () => {
       email: 'owner@test.com',
       emailVerified: true,
     });
+    // Default: full owner — gives organizer access so most tests see the CTA.
+    mockApi.getMyPermissions.mockResolvedValue({
+      owner: true,
+      manage_server: true,
+      manage_roles: true,
+      manage_channels: true,
+      manage_members: true,
+      manage_assignments: true,
+    });
     mockApi.getServerMembers.mockResolvedValue([]);
     mockApi.listRoles.mockResolvedValue([]);
     mockApi.getProfile.mockResolvedValue(null);
@@ -314,11 +325,14 @@ describe('AssignmentsPanel', () => {
 
   it('hides "New Assignment" button for non-organizer', async () => {
     mockApi.listAssignments.mockResolvedValue({ assignments: [] });
-    // getMe returns a user who is NOT the server owner
-    mockApi.getMe.mockResolvedValue({
-      userId: 'member-99',
-      email: 'member@test.com',
-      emailVerified: true,
+    // Override: user has no permissions — not owner, no manage_assignments
+    mockApi.getMyPermissions.mockResolvedValue({
+      owner: false,
+      manage_server: false,
+      manage_roles: false,
+      manage_channels: false,
+      manage_members: false,
+      manage_assignments: false,
     });
 
     renderPanel();
@@ -363,5 +377,24 @@ describe('AssignmentsPanel', () => {
     expect(screen.getByTestId('assignment-form-modal')).toBeInTheDocument();
     // Form title heading (h2 inside the modal dialog)
     expect(screen.getByRole('heading', { name: 'New Assignment' })).toBeInTheDocument();
+  });
+
+  it('shows "New Assignment" button for non-owner with manage_assignments permission (wave-23 gate)', async () => {
+    mockApi.listAssignments.mockResolvedValue({ assignments: [] });
+    // Non-owner, but explicitly granted manage_assignments
+    mockApi.getMyPermissions.mockResolvedValue({
+      owner: false,
+      manage_server: false,
+      manage_roles: false,
+      manage_channels: false,
+      manage_members: false,
+      manage_assignments: true,
+    });
+
+    renderPanel();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('new-assignment-btn')).toBeInTheDocument();
+    });
   });
 });
