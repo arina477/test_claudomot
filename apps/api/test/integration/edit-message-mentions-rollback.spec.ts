@@ -38,20 +38,41 @@ const SKIP = !process.env.DATABASE_URL_TEST;
 // ---------------------------------------------------------------------------
 // Pool-query fault injection helpers
 //
-// Mirrors create-server-rollback.spec.ts exactly. The SUT's `db` export is a
-// get-only Proxy (no `set` trap), so vi.spyOn(dbModule.db, 'transaction')
-// throws at the spyOn line. The reliable injection point is the underlying
-// node-postgres Pool: drizzle's transaction() calls pool.connect() to get a
-// PoolClient, then runs BEGIN / writes / COMMIT or ROLLBACK through that
-// client's query() method. Wrapping pool.connect() to return a proxy client
-// whose query() throws at the desired moment causes a real Postgres ROLLBACK,
-// leaving the pre-edit rows intact.
+// The SUT's `db` export is a get-only Proxy (no `set` trap), so
+// vi.spyOn(dbModule.db, 'transaction') throws at the spyOn line. The reliable
+// injection point is the underlying node-postgres Pool: drizzle's
+// transaction() calls pool.connect() (Promise-style, no callback) to get a
+// dedicated PoolClient, then runs BEGIN / writes / COMMIT or ROLLBACK through
+// that client's query() method. Wrapping pool.connect() to return a proxy
+// client whose query() throws at the desired moment causes a real Postgres
+// ROLLBACK, leaving the pre-edit rows intact.
+//
+// IMPORTANT — two calling conventions for pool.connect():
+//
+// (A) Promise-style: drizzle's NodePgSession.transaction() calls
+//     `await this.client.connect()` with NO callback. The patched function
+//     must return a Promise resolving to the patched PoolClient.
+//
+// (B) Callback-style: pg-pool's own pool.query() implementation calls
+//     `this.connect(cb)` with a callback. editMessage's pre-flight db.select()
+//     calls go through pool.query() (not pool.connect() directly), which
+//     internally calls this.connect(cb). If the patched function ignores cb
+//     those pre-flight selects hang forever (cb is never invoked), causing the
+//     test to time out before the transaction even opens.
+//
+// The fix: detect whether a callback was supplied and handle both conventions.
+// When cb is present, call originalConnect() as a Promise, patch the returned
+// client, then invoke cb(null, client, client.release) so pool.query() can
+// proceed. When cb is absent, resolve the Promise directly (drizzle's path).
 // ---------------------------------------------------------------------------
 
 /**
  * Wrap pool.connect() so the returned PoolClient's query() method applies
  * `queryInterceptor` to every query. The interceptor receives the query SQL
  * text and may throw to inject a fault.
+ *
+ * Handles both Promise-style (drizzle transaction) and callback-style
+ * (pg-pool.query internal) callers — see module-level comment above.
  *
  * Returns a restore function that reverts pool.connect() to the original.
  */
@@ -60,7 +81,8 @@ function wrapPoolConnect(queryInterceptor: (sql: string) => void): () => void {
   const pool = dbModule.pool() as any;
   const originalConnect = pool.connect.bind(pool);
 
-  pool.connect = async () => {
+  // biome-ignore lint/suspicious/noExplicitAny: must match pg-pool connect(cb?) dual-mode signature
+  pool.connect = async (cb?: (...args: any[]) => void) => {
     const client: PoolClient = await originalConnect();
     // biome-ignore lint/suspicious/noExplicitAny: patching client.query to intercept all statements
     const originalQuery = (client as any).query.bind(client);
@@ -79,6 +101,16 @@ function wrapPoolConnect(queryInterceptor: (sql: string) => void): () => void {
       return originalQuery(...queryArgs);
     };
 
+    // (B) callback-style caller (pg-pool.query internal): invoke cb so the
+    // caller can proceed. client.release was attached by originalConnect()
+    // via the real pool machinery — pass it as the third argument as
+    // pg-pool expects: cb(err, client, done).
+    if (cb) {
+      cb(null, client, client.release);
+      return;
+    }
+
+    // (A) Promise-style caller (drizzle transaction): return the client.
     return client;
   };
 
