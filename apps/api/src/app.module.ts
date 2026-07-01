@@ -13,6 +13,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { PresenceModule } from './presence/presence.module';
 import { ProfileModule } from './profile/profile.module';
 import { ServersModule } from './servers/servers.module';
+import { VoiceModule } from './voice/voice.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { ServersModule } from './servers/servers.module';
     PresenceModule,
     AssignmentsModule,
     NotificationsModule,
+    VoiceModule,
   ],
   providers: [
     // ThrottlerGuard as APP_GUARD covers all NestJS-handled routes.
