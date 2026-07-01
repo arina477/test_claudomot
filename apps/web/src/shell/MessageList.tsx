@@ -26,7 +26,7 @@ import type {
   MessageResponse,
   ReactionSummary,
 } from '@studyhall/shared';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { PresenceDot } from './PresenceDot';
 import {
   ArrowsOutIcon,
@@ -931,14 +931,15 @@ function InlineEdit({ initialContent, onSave, onCancel }: InlineEditProps) {
 }
 
 // ---------------------------------------------------------------------------
-// AuthorPresenceDot — per-author presence wrapper (CARRY-1 memoization)
+// AuthorPresenceDot — per-author presence wrapper (wave-27: list-level subscription)
 // ---------------------------------------------------------------------------
 
 /**
- * AuthorPresenceDot subscribes to the SHARED presence store (AC4 — no new socket)
- * scoped to a single `authorId`. It only re-renders when THAT author's status
- * changes (state is derived by comparing old vs new value on each notification),
- * so a change for user-B does NOT re-render the dot for user-A.
+ * AuthorPresenceDot renders a presence dot for a single author.
+ * It does NOT subscribe directly — instead the parent SentRow derives the
+ * tri-state from the store on each tick and passes it as a prop. This component
+ * is wrapped in React.memo so it only re-renders when its own prop changes
+ * (per-author render-scoping, CARRY-B).
  *
  * AC3: distinguishes KNOWN (online/offline) from UNKNOWN (absent from store).
  *   - KNOWN online  → PresenceDot online (emerald).
@@ -948,30 +949,21 @@ function InlineEdit({ initialContent, onSave, onCancel }: InlineEditProps) {
  * Callers that only have `authorDisplay` (optimistic PendingRow / FailedRow) do NOT
  * have a stable userId — those rows render NO dot (graceful degrade, AC3, CARRY-2).
  */
-function AuthorPresenceDot({ authorId }: { authorId: string }) {
-  // Tri-state: null = unknown (absent from store), true = online, false = offline.
-  const [status, setStatus] = useState<boolean | null>(() => {
-    if (!hasPresence(authorId)) return null;
-    return getPresenceStatus(authorId) === 'online';
-  });
+type AuthorPresenceDotProps = {
+  /**
+   * Tri-state derived by the parent at render time from the shared store:
+   * null = unknown (absent from store), true = online, false = offline.
+   * The parent recomputes this on every presenceTick change; React.memo bails
+   * out when the value is identical to the previous render (CARRY-B).
+   */
+  status: boolean | null;
+};
 
-  useEffect(() => {
-    // Subscribe to the shared store — same fan-out, no new socket (AC4).
-    const unsub = subscribePresence(() => {
-      const next = hasPresence(authorId) ? getPresenceStatus(authorId) === 'online' : null;
-      // Only call setState when this author's value actually changed (CARRY-1).
-      setStatus((prev) => (prev === next ? prev : next));
-    });
-    // Re-sync on mount in case the store was updated between render and effect.
-    setStatus(hasPresence(authorId) ? getPresenceStatus(authorId) === 'online' : null);
-    return unsub;
-  }, [authorId]);
-
+const AuthorPresenceDot = memo(function AuthorPresenceDotInner({ status }: AuthorPresenceDotProps) {
   // UNKNOWN author (absent from store) — render nothing (AC3).
   if (status === null) return null;
-
   return <PresenceDot online={status} />;
-}
+});
 
 // ---------------------------------------------------------------------------
 // Row components
@@ -988,6 +980,13 @@ type SentRowProps = {
   onOpenThread: ((msg: MessageResponse, triggerEl: HTMLButtonElement) => void) | null;
   /** Whether this message's thread panel is currently open (for aria-expanded). */
   isThreadOpen: boolean;
+  /**
+   * Tick forwarded from the list-level presence subscription (AC1 / CARRY-B).
+   * When this changes SentRow re-renders, derives the author's current tri-state,
+   * and passes it to AuthorPresenceDot. AuthorPresenceDot is memoized and bails
+   * out when the derived status prop is identical to the previous render.
+   */
+  presenceTick: number;
 };
 
 function SentRow({
@@ -999,7 +998,14 @@ function SentRow({
   onReaction,
   onOpenThread,
   isThreadOpen,
+  presenceTick: _presenceTick, // consumed to trigger re-derive; not used directly
 }: SentRowProps) {
+  // Derive this author's presence tri-state from the store snapshot.
+  // SentRow re-renders on every presenceTick change; AuthorPresenceDot
+  // is memoized and only re-renders when this derived value actually changes (CARRY-B).
+  const authorPresenceStatus: boolean | null = hasPresence(msg.authorId)
+    ? getPresenceStatus(msg.authorId) === 'online'
+    : null;
   const abbr = initials(msg.authorId);
   const isOwn = !!currentUserId && msg.authorId === currentUserId;
   const [rowState, setRowState] = useState<'normal' | 'editing' | 'deleting'>('normal');
@@ -1064,8 +1070,8 @@ function SentRow({
         >
           {abbr}
         </div>
-        {/* AuthorPresenceDot reads msg.authorId (userId) — confirmed in scope (CARRY-2). */}
-        <AuthorPresenceDot authorId={msg.authorId} />
+        {/* AuthorPresenceDot is memoized on derived status — bails out unless status changed (CARRY-B). */}
+        <AuthorPresenceDot status={authorPresenceStatus} />
       </div>
 
       {/* Content column */}
@@ -1501,6 +1507,18 @@ export function MessageList({
   const listRef = useRef<HTMLDivElement>(null);
   const prevLengthRef = useRef(0);
 
+  // ── Single list-level presence subscription (AC1) ─────────────────────────
+  // One subscribePresence for the whole list. Each AuthorPresenceDot reads
+  // the store snapshot at render time and only re-renders when ITS author's
+  // status actually changed (CARRY-B: per-author memo comparator).
+  const [presenceTick, setPresenceTick] = useState(0);
+  useEffect(() => {
+    const unsub = subscribePresence(() => {
+      setPresenceTick((n) => n + 1);
+    });
+    return unsub;
+  }, []);
+
   // Scroll to bottom when new messages arrive (not when loading older ones)
   useEffect(() => {
     const prevLen = prevLengthRef.current;
@@ -1615,6 +1633,7 @@ export function MessageList({
               onReaction={onReaction ?? null}
               onOpenThread={onOpenThread ?? null}
               isThreadOpen={openThreadParentId === msg.id}
+              presenceTick={presenceTick}
             />
           );
         }
