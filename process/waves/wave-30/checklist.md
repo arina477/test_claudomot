@@ -42,9 +42,9 @@ TEST:
 - [x] T-9 Journey — gate APPROVED (head-tester abcf3b7a); F6/F9 reminders LIVE; map bf87957
 
 VERIFY:
-- [ ] V-1 Independent reviews (Karen + jenny, parallel)
-- [ ] V-2 Triage
-- [ ] V-3 Fast-fix loop (or close)
+- [x] V-1 Independent reviews (Karen + jenny, parallel)
+- [x] V-2 Triage
+- [x] V-3 Fast-fix loop (or close) — APPROVED (empty queue, closed without fix)
 
 LEARN:
 - [ ] L-1 Docs
