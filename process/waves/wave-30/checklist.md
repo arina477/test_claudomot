@@ -48,7 +48,7 @@ VERIFY:
 
 LEARN:
 - [x] L-1 Docs — CHANGELOG #43 (assignment reminders); M5 metric MET (15 done/6 open), stays in_progress (N closes after disposition); README skipped (no feature list/env table)
-- [ ] L-2 Distill
+- [x] L-2 Distill
 
 NEXT:
 - [ ] N-1 Survey & triggers
