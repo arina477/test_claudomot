@@ -441,4 +441,20 @@ export const api = {
     }).then((res) => {
       if (!res.ok) throw new Error(`Storage PUT failed: ${res.status}`);
     }),
+
+  // ── Voice endpoints (wave-31 M6) ─────────────────────────────────────────
+
+  /**
+   * POST /channels/:channelId/voice/token → { token: string, url: string }.
+   * Returns the LiveKit JWT and wss:// server URL the client needs to connect.
+   * Session + RBAC-gated server-side (AuthGuard + RBAC canViewChannelById).
+   *
+   * Throws: 400 non-voice channel, 401 unauthed, 403 not a member,
+   *         404 channel not found, 503 LiveKit not configured.
+   */
+  getVoiceToken: (channelId: string) =>
+    request<{ token: string; url: string }>(`/channels/${channelId}/voice/token`, {
+      method: 'POST',
+      body: '{}',
+    }),
 };

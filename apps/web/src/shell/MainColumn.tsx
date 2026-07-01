@@ -24,6 +24,7 @@ import { MessageList } from './MessageList';
 import { ProfileContext } from './ProfileContext';
 import { useServers } from './ServerContext';
 import { ThreadPanel } from './ThreadPanel';
+import { VoiceStudyRoom } from './VoiceStudyRoom';
 import { HashIcon, MagnifyingGlassIcon, MenuIcon, PushPinIcon } from './icons';
 import { useMessagesWithRetry } from './useMessages';
 import { useThread } from './useThread';
@@ -35,9 +36,24 @@ type Props = {
 };
 
 export function MainColumn({ connectionState = 'online', onToggleSidebar }: Props) {
-  const { selectedChannelId, selectedChannelName, selectedId, assignmentsOpen, closeAssignments } =
-    useServers();
+  const {
+    selectedChannelId,
+    selectedChannelName,
+    selectedId,
+    assignmentsOpen,
+    closeAssignments,
+    selectedDetail,
+  } = useServers();
   const { profile } = useContext(ProfileContext);
+
+  // Resolve the type of the currently selected channel from the server detail.
+  // This avoids adding selectedChannelType to ServerContext (minimal blast radius).
+  const selectedChannelType: string | null =
+    selectedChannelId && selectedDetail
+      ? (selectedDetail.categories
+          .flatMap((cat) => cat.channels)
+          .find((ch) => ch.id === selectedChannelId)?.type ?? null)
+      : null;
 
   // ── Thread panel state ─────────────────────────────────────────────────────
   const [openThreadParent, setOpenThreadParent] = useState<MessageResponse | null>(null);
@@ -122,6 +138,19 @@ export function MainColumn({ connectionState = 'online', onToggleSidebar }: Prop
         style={{ backgroundColor: '#1c1c1f' }}
       >
         <AssignmentsPanel onClose={closeAssignments} />
+      </main>
+    );
+  }
+
+  // When the selected channel is a voice channel, render VoiceStudyRoom
+  if (selectedChannelType === 'voice' && selectedChannelId && selectedChannelName) {
+    return (
+      <main
+        data-testid="main-column"
+        className="relative flex min-w-0 flex-1"
+        style={{ backgroundColor: '#1c1c1f' }}
+      >
+        <VoiceStudyRoom channelId={selectedChannelId} channelName={selectedChannelName} />
       </main>
     );
   }
