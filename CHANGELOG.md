@@ -55,6 +55,7 @@ All notable changes to StudyHall are documented here. Format follows
 - Owners toggle the new permission per role in the role editor, and the "New Assignment" button now appears for owners or anyone who holds it, where it was owner-only before. (#35)
 - Mentions now render consistently when a handle is followed by punctuation: a message with `@bob.dev` where `bob` is the member shows the mention pill plus `.dev` as plain text, instead of leaving the whole thing as plain text. The app and server now share one rule for what counts as a mention, so the two can't drift apart. (#37)
 - Live presence dots on message author avatars: every message now shows a small green dot on the author's avatar when that person is online, so you can see at a glance who's around in a channel. (#38)
+- Faster presence tracking: indexed the co-member lookup and consolidated the message-list online-status subscription into a single list-level subscription (no visible change). (#40)
 
 ### Fixed
 
