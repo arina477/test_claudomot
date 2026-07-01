@@ -61,6 +61,6 @@ LEARN:
 - [x] L-2 Distill
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers (M5 stays in_progress open=6; decomposition fired → incomplete-scope; head-next APPROVED)
+- [x] N-2 Seed (queue-exhausted — seed null; no bundle-bloat; head-next APPROVED)
+- [x] N-3 Handoff (wave-29 closed status=ok; archived; PAUSE written — founder park-or-key; head-next APPROVED)
