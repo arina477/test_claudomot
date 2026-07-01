@@ -13,15 +13,15 @@
 - P-0 Action 0a MUST open wave-32's `waves` row (INSERT) — N-3 intentionally did NOT.
 
 PRODUCT:
-- [ ] P-0 Frame (discover + reframe)
-- [ ] P-1 Decompose
-- [ ] P-2 Spec
-- [ ] P-3 Plan
-- [ ] P-4 Gate
+- [x] P-0 Frame (discover + reframe)
+- [x] P-1 Decompose
+- [x] P-2 Spec
+- [x] P-3 Plan
+- [x] P-4 Gate
 
 DESIGN (skip block if non-UI wave):
-- [ ] D-1 Brief
-- [ ] D-2 Variants (with bounded iteration)
+- [x] D-1 Brief
+- [x] D-2 Variants (with bounded iteration)
 - [ ] D-3 Review & adopt
 
 BUILD:
