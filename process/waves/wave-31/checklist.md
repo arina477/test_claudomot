@@ -8,11 +8,11 @@
 **Carry-ins for P-0:** design_gap likely TRUE (voice-study-room page + primitives → expect a D-block); livekit-integration + supertokens-integration specialists build; LiveKit Cloud decided (server out of media path, mints short-lived room-scoped tokens); SDK contract at command-center/dev/SDK-Docs/LiveKit/livekit.md. Unassigned queue depth 12 (incl. 6 M5-debt tasks re-homed at wave-30 N-1 — walk at P-0).
 
 PRODUCT:
-- [ ] P-0 Frame (discover + reframe)
-- [ ] P-1 Decompose
-- [ ] P-2 Spec
-- [ ] P-3 Plan
-- [ ] P-4 Gate
+- [x] P-0 Frame (discover + reframe)
+- [x] P-1 Decompose
+- [x] P-2 Spec
+- [x] P-3 Plan
+- [x] P-4 Gate
 
 DESIGN (skip block if non-UI wave):
 - [ ] D-1 Brief
