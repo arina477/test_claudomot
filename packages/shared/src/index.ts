@@ -20,7 +20,6 @@ export {
   CategoryWithChannelsSchema,
   ServerDetailSchema,
   ServerMemberSchema,
-  ServerMembersResponseSchema,
 } from './servers.js';
 export type {
   CreateServerInput,
@@ -31,7 +30,6 @@ export type {
   CategoryWithChannels,
   ServerDetail,
   ServerMember,
-  ServerMembersResponse,
 } from './servers.js';
 
 export {

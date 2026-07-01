@@ -246,7 +246,7 @@ export class ServersService {
 
     return rows.map((r) => ({
       userId: r.userId,
-      displayName: r.displayName ?? r.email.split('@')[0] ?? r.userId,
+      displayName: r.displayName || r.email.split('@')[0] || r.userId,
       avatarUrl: r.avatarUrl ?? null,
       username: r.username ?? null,
     }));

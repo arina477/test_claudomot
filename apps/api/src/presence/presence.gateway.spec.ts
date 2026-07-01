@@ -97,6 +97,7 @@ vi.mock('../db/index', () => ({
 // Import gateway AFTER mocks are declared
 // ---------------------------------------------------------------------------
 
+import { db } from '../db/index';
 import type { RbacService } from '../rbac/rbac.service';
 import { PresenceGateway } from './presence.gateway';
 import { PresenceService } from './presence.service';
@@ -643,5 +644,69 @@ describe('PresenceGateway — emitTypingActive per-recipient fan-out (F-4 regres
         typers: expect.not.arrayContaining([expect.objectContaining({ userId: ACTOR_ID })]),
       }),
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: handleConnection — displayName empty-fallback guard (wave-29)
+//
+// Exercises the || fix on line 125 of presence.gateway.ts:
+//   display_name || email.split('@')[0] || userId
+// The db mock is already registered above; we re-configure it per test.
+// ---------------------------------------------------------------------------
+
+type MockFn = ReturnType<typeof vi.fn>;
+
+describe('PresenceGateway — handleConnection displayName empty-fallback guard (wave-29)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  /**
+   * Build a minimal select chain for the db.select() call inside handleConnection.
+   * handleConnection uses: db.select(...).from(...).where(...).limit(1)
+   */
+  function makeDbSelectChain(resolveWith: unknown[]) {
+    const chain: Record<string, unknown> = {
+      // biome-ignore lint/suspicious/noThenProperty: intentional thenable mock
+      then: (res: (v: unknown) => unknown, rej?: (e: unknown) => unknown) =>
+        Promise.resolve(resolveWith).then(res, rej),
+    };
+    for (const m of ['from', 'where', 'limit']) {
+      chain[m] = vi.fn().mockReturnValue(chain);
+    }
+    return chain;
+  }
+
+  /** Build a minimal gateway with presence + server mocks wired for handleConnection. */
+  function buildGatewayForConnection() {
+    const presenceService = makePresenceService({
+      connect: vi.fn().mockReturnValue({ wentOnline: false }),
+      getServerIdsForUser: vi.fn().mockResolvedValue([]),
+      getCoMemberUserIds: vi.fn().mockResolvedValue([]),
+    });
+    const gateway = new PresenceGateway(presenceService, makeRbacService());
+    // biome-ignore lint/suspicious/noExplicitAny: test server mock
+    (gateway as any).server = {
+      to: vi.fn().mockReturnValue({ emit: vi.fn() }),
+    };
+    return gateway;
+  }
+
+  it('empty email local-part + null display_name → displayName falls through to userId (NOT empty string)', async () => {
+    // email '@example.com' → split('@')[0] === '' → falsy with || → falls through to userId
+    (db.select as unknown as MockFn).mockReturnValue(
+      makeDbSelectChain([{ display_name: null, email: '@example.com' }]),
+    );
+
+    const gateway = buildGatewayForConnection();
+    const socket = makeSocket();
+    socket.data.userId = USER_ID;
+    socket.emit = vi.fn();
+
+    await gateway.handleConnection(socket as unknown as import('socket.io').Socket);
+
+    expect(socket.data.displayName).toBe(USER_ID);
+    expect(socket.data.displayName).not.toBe('');
   });
 });
