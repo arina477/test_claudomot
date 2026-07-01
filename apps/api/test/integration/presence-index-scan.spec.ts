@@ -13,7 +13,7 @@
 // at module-eval time so the lazy db singleton resolves to the test DB.
 import './pg-harness';
 import {
-  harnessQuery,
+  harnessExplainWithSeqscanOff,
   insertFixtureMembership,
   insertFixtureServer,
   insertFixtureUser,
@@ -71,23 +71,32 @@ describe.skipIf(SKIP)(
     //   SELECT server_id FROM server_members WHERE user_id = $1
     // -----------------------------------------------------------------------
     it('EXPLAIN confirms Index Scan on server_members_user_id_idx for WHERE user_id = $1', async () => {
-      // Seed a user + server + membership so the planner sees real rows and
-      // does not short-circuit to a Seq Scan on an empty table.
+      // Seed a user + server + membership so the planner sees real rows.
+      // Table cardinality does NOT determine the outcome: we use
+      // enable_seqscan=off (see below) to force the planner to cost the index
+      // path, making the assertion deterministic regardless of row count.
       await insertFixtureUser(USER_X, 'index-scan-user-x@test.local');
       await insertFixtureServer(SERVER_X, USER_X, 'Index-Scan Server');
       await insertFixtureMembership(SERVER_X, USER_X);
 
-      // EXPLAIN (not EXPLAIN ANALYZE — no execution, deterministic in CI)
+      // EXPLAIN (not EXPLAIN ANALYZE — no execution, deterministic in CI).
       // FORMAT TEXT produces the human-readable plan string.
+      //
+      // `harnessExplainWithSeqscanOff` wraps the EXPLAIN in a single dedicated
+      // connection: BEGIN → SET LOCAL enable_seqscan = off → EXPLAIN → ROLLBACK.
+      // SET LOCAL disables sequential scans for the duration of this transaction
+      // only, forcing the planner to use the index path if one is eligible.
+      // This proves the index is USABLE (not merely cost-preferred on a large
+      // table), which is the correct invariant for a schema migration proof test.
       type ExplainRow = { 'QUERY PLAN': string };
-      const planRows = await harnessQuery<ExplainRow>(
+      const planRows = await harnessExplainWithSeqscanOff<ExplainRow>(
         'EXPLAIN (FORMAT TEXT) SELECT server_id FROM server_members WHERE user_id = $1',
         [USER_X],
       );
 
       const planText = planRows.map((r) => r['QUERY PLAN']).join('\n');
 
-      // Must use the new index — not a sequential scan.
+      // Index must be present and usable — not a sequential scan.
       expect(planText, `Expected "Index Scan" in plan:\n${planText}`).toMatch(/Index Scan/i);
       expect(
         planText,
@@ -95,7 +104,7 @@ describe.skipIf(SKIP)(
       ).toContain('server_members_user_id_idx');
       expect(
         planText,
-        `Expected NO "Seq Scan" in plan (got Seq Scan — index is missing or not used):\n${planText}`,
+        `Expected NO "Seq Scan" in plan (got Seq Scan — index is missing or not usable):\n${planText}`,
       ).not.toMatch(/Seq Scan on server_members/i);
     });
 

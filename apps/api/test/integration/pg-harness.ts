@@ -280,6 +280,44 @@ export async function harnessQuery<T extends Record<string, unknown>>(
 }
 
 /**
+ * Run a SELECT/EXPLAIN query on a dedicated pool client with
+ * `SET LOCAL enable_seqscan = off` active for the duration.
+ *
+ * Use this to assert index ELIGIBILITY in EXPLAIN proofs: `SET LOCAL
+ * enable_seqscan = off` inside a transaction tells the planner "treat every
+ * sequential scan as prohibitively expensive", so if an index is usable the
+ * planner WILL pick it — regardless of table cardinality. This is the
+ * canonical way to prove an index exists and is scan-eligible without needing
+ * hundreds of rows to tip the cost model.
+ *
+ * Implementation: acquires a dedicated PoolClient (not a pool.query() call so
+ * SET LOCAL is guaranteed to apply to the same connection as the EXPLAIN), runs
+ * BEGIN / SET LOCAL enable_seqscan = off / the supplied SQL / ROLLBACK, then
+ * releases the client unconditionally.
+ *
+ * The type parameter T describes the shape of a single result row.
+ */
+export async function harnessExplainWithSeqscanOff<T extends Record<string, unknown>>(
+  sql: string,
+  params?: unknown[],
+): Promise<T[]> {
+  if (!harnessPool) throw new Error('pg-harness: call setupHarness() first');
+  const client = await harnessPool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('SET LOCAL enable_seqscan = off');
+    const result = await client.query<T>(sql, params);
+    await client.query('ROLLBACK');
+    return result.rows;
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+/**
  * Tear down the harness pool after all tests complete.
  * Does NOT drop tables — migrations are idempotent and the test DB persists
  * across CI runs (truncate-between-cases ensures isolation).
