@@ -62,8 +62,3 @@ export const ServerMemberSchema = z.object({
   username: z.string().nullable(),
 });
 export type ServerMember = z.infer<typeof ServerMemberSchema>;
-
-export const ServerMembersResponseSchema = z.object({
-  members: z.array(ServerMemberSchema),
-});
-export type ServerMembersResponse = z.infer<typeof ServerMembersResponseSchema>;
