@@ -29,7 +29,7 @@ DESIGN (skip block if non-UI wave):
 - [ ] D-3 Review & adopt
 
 BUILD:
-- [ ] B-0 Branch & schema
+- [x] B-0 Branch & schema (branch wave-23-manage-assignments; bundle claimed; migration 0011_rainy_wild_child + backfill; no new dep/env; local apply deferred to C-block)
 - [ ] B-1 Contracts
 - [ ] B-2 Backend
 - [ ] B-3 Frontend
