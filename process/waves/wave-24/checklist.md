@@ -28,7 +28,7 @@ DESIGN (skip block if non-UI wave):
 - [ ] D-3 Review & adopt
 
 BUILD:
-- [x] B-0 Branch - [ ] B-0 Branch & schema schema
+- [x] B-0 Branch & schema (branch wave-24-integration-tier; schema SKIP test-only)
 - [x] B-1 Contracts
 - [x] B-2 Backend
 - [x] B-3 Frontend
@@ -37,20 +37,20 @@ BUILD:
 - [x] B-6 Review (head-builder APPROVED + /review 0 crit/high/med genuine real-DB tests; false-green wiring verified; 5 Low accepted)
 
 CI/CD:
-- [x] C-1 PR, CI - [ ] C-1 PR, CI & merge merge (PR #36 merged 149a081; 7/7 CI jobs success per-job; FALSE-GREEN GUARD HELD — integration tier log confirms 3 new specs executed [presence 2 + member-gate 2 + rbac-authz 6], zero skips)
+- [x] C-1 PR, CI & merge (PR #36 merged 149a081; 7/7 CI jobs success per-job; FALSE-GREEN GUARD HELD — integration tier log confirms 3 new specs executed [presence 2 + member-gate 2 + rbac-authz 6], zero skips)
 - [x] C-2 Deploy & verify (api 0ebf493d + web 31fca925 SUCCESS; no redeploy [test-only, byte-equivalent artifact — test files excluded from dist]; no migration/no-new-route; canary skip)
 - [x] C-3 Canary (skipped — DAU 0 < 1000)
 
 TEST:
-- [ ] T-1 Static
-- [ ] T-2 Unit
-- [ ] T-3 Contract
-- [ ] T-4 Integration
-- [ ] T-5 E2E
-- [ ] T-6 Layout
-- [ ] T-7 Perf
-- [ ] T-8 Security
-- [ ] T-9 Journey
+- [x] T-1 Static (CI lint+typecheck green; 0 prod bypass)
+- [x] T-2 Unit (CI 395 api + 216 web; wave adds integration-tier not unit — unchanged)
+- [x] T-3 Contract (SKIP — no contract change, test-only)
+- [x] T-4 Integration (KEY — false-green guard HELD; 3 new specs EXECUTED in CI [2+2+6 passed, 0 skips]; closes F23-T-4)
+- [x] T-5 E2E (SKIP — no user-visible change)
+- [x] T-6 Layout (SKIP — non-UI)
+- [x] T-7 Perf (SKIP — not heavy, no runtime change)
+- [x] T-8 Security (SKIP active probes — no auth-code change, wave ADDS authz test coverage; secret-grep 0)
+- [x] T-9 Journey (head-tester APPROVED; T-4 genuine executed coverage verified [10 new real-PG tests, 0 skips]; regen skipped [no UI change]; 0 findings)
 
 VERIFY:
 - [ ] V-1 Independent reviews (Karen + jenny, parallel)
