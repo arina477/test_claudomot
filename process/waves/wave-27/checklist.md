@@ -36,9 +36,9 @@ BUILD:
 - [x] B-6 Review
 
 CI/CD:
-- [ ] C-1 PR, CI & merge
-- [ ] C-2 Deploy & verify
-- [ ] C-3 Canary (skip if DAU<1000)
+- [x] C-1 PR, CI & merge
+- [x] C-2 Deploy & verify
+- [x] C-3 Canary — SKIPPED (DAU<1000)
 
 TEST:
 - [ ] T-1 Static
