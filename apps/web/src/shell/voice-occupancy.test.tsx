@@ -498,11 +498,18 @@ describe('useVoiceOccupancy', () => {
 
 // Minimal mock of the modules that VoiceStudyRoom pulls in
 
-vi.mock('../auth/api', () => ({
-  api: {
-    getVoiceToken: vi.fn(),
-  },
-}));
+vi.mock('../auth/api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../auth/api')>();
+  return {
+    api: {
+      // getVoiceParticipants calls through to the real implementation so that
+      // useVoiceOccupancy unit tests can intercept it via global fetch mocks.
+      getVoiceParticipants: actual.api.getVoiceParticipants,
+      // getVoiceToken is stubbed for VoiceStudyRoom integration tests.
+      getVoiceToken: vi.fn(),
+    },
+  };
+});
 
 vi.mock('@livekit/components-react', () => ({
   LiveKitRoom: ({ children }: { children: React.ReactNode }) => (

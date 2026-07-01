@@ -469,8 +469,9 @@ export const api = {
    *         503 LiveKit not configured (returns {count:0,participants:[]} when creds absent).
    * Empty / not-yet-created room → { count: 0, participants: [] } (not an error).
    */
-  getVoiceParticipants: (channelId: string) =>
+  getVoiceParticipants: (channelId: string, signal?: AbortSignal) =>
     request<{ count: number; participants: { userId: string; displayName: string }[] }>(
       `/channels/${channelId}/voice/participants`,
+      signal != null ? { signal } : undefined,
     ),
 };

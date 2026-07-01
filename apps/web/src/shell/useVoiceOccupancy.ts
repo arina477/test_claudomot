@@ -16,11 +16,10 @@
  *   - Never throws.
  *
  * API convention (mirrors useVoiceToken / api.ts):
- *   - Uses the shared `request` pattern via the api object (credentials:include,
- *     BASE prefix) — but fetch is called inline here since the api module uses
- *     a module-private `request` helper. We replicate the same headers/credentials.
+ *   - Delegates to `api.getVoiceParticipants(channelId, signal)` which uses the
+ *     shared `request` helper (credentials:include, BASE prefix, typed response).
  *   - Error message format from api.ts: `${status} ${statusText}: ${body}`.
- *     We treat any non-ok response as an error and preserve stale data.
+ *     We treat any thrown error as a fetch failure and preserve stale data.
  *
  * Security note:
  *   - GET — no body, credentials:include (SuperTokens cookie auth).
@@ -28,6 +27,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
+import { api } from '../auth/api';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -57,8 +57,6 @@ interface UseVoiceOccupancyOptions {
 
 /** Poll interval: 10 s. Within the bounded 10–15 s spec window. */
 const POLL_INTERVAL_MS = 10_000;
-
-const BASE = (import.meta as { env?: Record<string, string> }).env?.VITE_API_ORIGIN ?? '';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Hook
@@ -113,23 +111,15 @@ export function useVoiceOccupancy(
       const controller = new AbortController();
       abortRef.current = controller;
 
-      fetch(`${BASE}/channels/${encodeURIComponent(channelId)}/voice/participants`, {
-        credentials: 'include',
-        signal: controller.signal,
-      })
-        .then(async (res) => {
-          if (!res.ok) {
-            const body = await res.text().catch(() => '');
-            throw new Error(`${res.status} ${res.statusText}: ${body}`);
-          }
-          return res.json() as Promise<{ count: number; participants: VoiceParticipant[] }>;
-        })
+      api
+        .getVoiceParticipants(channelId, controller.signal)
         .then(({ count, participants }) => {
           if (!mountedRef.current) return;
           setState({ count, participants, status: 'loaded' });
         })
         .catch((err: unknown) => {
-          // AbortError is not a real error — the next tick will handle it.
+          // AbortError propagates from fetch through request() unchanged.
+          // Not a real error — the next tick will handle it.
           if (err instanceof DOMException && err.name === 'AbortError') return;
           if (!mountedRef.current) return;
           // Fail-soft: preserve last-known data; only change status to error.
