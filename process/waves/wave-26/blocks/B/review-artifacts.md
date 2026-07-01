@@ -1,6 +1,6 @@
 # Wave 26 — B-block review artifacts
 
-**Block:** B (Build) | **Wave topic:** Presence dots on message-row author avatars (extract shared PresenceDot) | **Block exit gate:** B-6 | **Status:** in-progress | **wave_type:** single-spec | **branch:** wave-26-presence-author-dots
+**Block:** B (Build) | **Wave topic:** Presence dots on message-row author avatars (extract shared PresenceDot) | **Block exit gate:** B-6 | **Status:** gate-passed | **wave_type:** single-spec | **branch:** wave-26-presence-author-dots
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
@@ -11,7 +11,7 @@
 | B-3 | stages/B-3-*.md | done | react-specialist: PresenceDot + author dots + member-panel refactor + 15 tests (9056900); CARRY-2 pending/failed no-dot |
 | B-4 | stages/B-4-*.md | done | typecheck 4/4; caught+repaired 2 pre-existing main-CI-red (biome process/** ignore + assignments clock-mock fa6c9e6) |
 | B-5 | stages/B-5-*.md | done | lint 0 err, web 249 + api 395, build 3/3 |
-| B-6 | stages/B-6-review.md | pending | head-builder + /review |
+| B-6 | stages/B-6-review.md | done | head-builder APPROVED (A2, A1 REWORK on AC3); /review P1 a11y fixed; P2 accepted-debt |
 
 ## Block-specific context
 - **Spec contract:** tasks row 10b9d18e (DB); spec at stages/P-2-spec.md (5 ACs).
@@ -30,3 +30,22 @@
 
 ## Open escalations carried into gate: none
 ## Gate verdict log: <appended by head-builder at B-6>
+
+## Block-exit handoff
+```yaml
+build_block_status:    complete
+branch:                wave-26-presence-author-dots
+stages_run:            [B-0, B-3, B-4, B-5, B-6]
+stages_skipped:        [D-block (design_gap_flag=false), B-1 (no contract surface), B-2 (no backend)]
+review_verdict:        APPROVE
+deviations_logged:
+  - "CARRY-2: PendingRow/FailedRow no dot (OptimisticMessage has no authorId) — ACCEPTED"
+  - "AC3 REWORK (A1): unknown collapsed to offline dot → fixed to no-dot (22437a3)"
+  - "P1 a11y regression: aria-hidden over sr-only label → fixed (6c91573)"
+  - "2 pre-existing main-CI-red repaired on-branch (biome process/** ignore; assignments clock-mock fa6c9e6)"
+fix_up_commits:        [22437a3, 6c91573, fa6c9e6, <biome.json>]
+accepted_debt_to_V2:   ["P2 per-row presence subscription (future perf lift)"]
+last_commit_sha:       6c91573
+ready_for_ci:          true
+```
+
