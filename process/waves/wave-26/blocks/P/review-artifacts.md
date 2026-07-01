@@ -11,7 +11,7 @@
 |---|---|---|---|
 | P-0 | stages/P-0-frame.md | done | PROCEED + accepted REFRAME (PresenceDot extraction) + THIN split (sibling fdb444fc); authorId=userId resolved |
 | P-1 | stages/P-1-decompose.md | done | single-spec; under-floor PRECEDENT-APPLICATION override-ship (5th); design_gap_flag=false → skip D |
-| P-2 | stages/P-2-spec.md | pending | full run (no-prior-spec) |
+| P-2 | stages/P-2-spec.md | done | single-spec, 5 ACs to 10b9d18e.desc |
 | P-3 | stages/P-3-plan.md | pending | |
 | P-4 | stages/P-4-gemini-review.md | pending | |
 
