@@ -638,9 +638,9 @@ describe('RbacService.getEffectivePermissions', () => {
   it('server not found → throws ForbiddenException (no enumeration)', async () => {
     mockSelect.mockReturnValue(makeSelectChain([]));
 
-    await expect(
-      service.getEffectivePermissions('any-user', 'nonexistent-server'),
-    ).rejects.toThrow(ForbiddenException);
+    await expect(service.getEffectivePermissions('any-user', 'nonexistent-server')).rejects.toThrow(
+      ForbiddenException,
+    );
   });
 
   it('owner → all flags true + owner:true', async () => {
@@ -668,9 +668,9 @@ describe('RbacService.getEffectivePermissions', () => {
       return makeSelectChain([]); // no server_members row
     });
 
-    await expect(
-      service.getEffectivePermissions('outsider', 'server-1'),
-    ).rejects.toThrow(ForbiddenException);
+    await expect(service.getEffectivePermissions('outsider', 'server-1')).rejects.toThrow(
+      ForbiddenException,
+    );
   });
 
   it('member with null role_id → all flags false + owner:false (default-deny)', async () => {
