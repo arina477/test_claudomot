@@ -30,12 +30,12 @@ export const MENTION_TOKEN_SLUG_SRC = 'a-zA-Z0-9_-' as const;
 /**
  * Anchored regex that matches an entire mention token slug.
  *
- * Pattern: /^[a-zA-Z0-9_-]+$/
+ * Pattern: /^[a-zA-Z0-9_-]+$/  (derived from MENTION_TOKEN_SLUG_SRC)
  *
  * mention TOKEN slug — intentionally broader than the username validation
  * grammar; a token that isn't a real username resolves to nothing (plain text).
  */
-export const MENTION_TOKEN_SLUG_RE: RegExp = /^[a-zA-Z0-9_-]+$/;
+export const MENTION_TOKEN_SLUG_RE: RegExp = new RegExp(`^[${MENTION_TOKEN_SLUG_SRC}]+$`);
 
 /**
  * Extract the mention slug from a raw `@`-prefixed token string.
@@ -60,7 +60,7 @@ export function extractMentionSlug(rawToken: string): string | null {
   // Drop a leading '@' if present.
   const withoutSigil = rawToken.startsWith('@') ? rawToken.slice(1) : rawToken;
 
-  // Match the longest leading run of slug characters.
-  const match = withoutSigil.match(/^([a-zA-Z0-9_-]+)/);
-  return match?.[1] ?? null;
+  // Match the longest leading run of slug characters (derived from MENTION_TOKEN_SLUG_SRC).
+  const match = withoutSigil.match(new RegExp(`^[${MENTION_TOKEN_SLUG_SRC}]+`));
+  return match?.[0] ?? null;
 }

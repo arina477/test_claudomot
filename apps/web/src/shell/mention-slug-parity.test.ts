@@ -51,6 +51,14 @@ const TABLE: Array<[input: string, expected: string | null]> = [
   // Without leading sigil (@ optional per spec)
   ['bob', 'bob'],
   ['bob.dev', 'bob'],
+  // CLASS-BOUNDARY PROBE: dot (.) sits just outside [a-zA-Z0-9_-].
+  // Expected extraction stops at the dot → 'pre'.
+  // If MENTION_TOKEN_SLUG_SRC were changed to include '.' (e.g. 'a-zA-Z0-9_-.'),
+  // extractMentionSlug would return 'pre.fix' instead, making this row RED and
+  // exposing the SRC drift even when the SRC strings still agree letter-for-letter
+  // but the char class boundary has widened.  Ensures the regex is genuinely
+  // wired to SRC, not hardcoded independently of it.
+  ['@pre.fix', 'pre'],
 ];
 
 // ---------------------------------------------------------------------------

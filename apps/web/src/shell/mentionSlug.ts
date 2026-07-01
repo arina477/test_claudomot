@@ -41,7 +41,7 @@ export function extractMentionSlug(rawToken: string): string | null {
   // Drop a leading '@' if present.
   const withoutSigil = rawToken.startsWith('@') ? rawToken.slice(1) : rawToken;
 
-  // Match the longest leading run of slug characters.
-  const match = withoutSigil.match(/^([a-zA-Z0-9_-]+)/);
-  return match?.[1] ?? null;
+  // Match the longest leading run of slug characters (derived from local MENTION_TOKEN_SLUG_SRC).
+  const match = withoutSigil.match(new RegExp(`^[${MENTION_TOKEN_SLUG_SRC}]+`));
+  return match?.[0] ?? null;
 }
