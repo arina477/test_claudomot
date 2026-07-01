@@ -1,5 +1,5 @@
 /**
- * Presence dot tests — wave-26 B-3.
+ * Presence dot tests — wave-26 B-3 / wave-27 Spec-B.
  *
  * Coverage:
  * 1. PresenceDot: online (emerald token), offline (surface-500 token), size variant.
@@ -9,8 +9,10 @@
  *    c. Author NOT in store (unknown) → no dot (graceful degrade, AC3).
  *    d. Live update: author flips online→offline → dot updates without reload.
  * 3. MemberListPanel regression: members still render correct dots via PresenceDot (AC5).
- * 4. Single socket/store assertion (AC4): no second subscribePresence call path from
- *    MessageList that bypasses the module singleton.
+ * 4. Single socket/store assertion (AC4 / wave-27 AC1): the message list holds exactly
+ *    ONE presence subscription regardless of row count (lifted from per-row to list-level).
+ * 5. CARRY-B: per-author render-scoping — a presence event for author-B does not cause
+ *    a functional re-render of author-A's dot when A's status is unchanged.
  */
 
 import type { MessageResponse } from '@studyhall/shared';
@@ -421,22 +423,21 @@ describe('MemberListPanel regression — PresenceDot used for member dots', () =
   });
 
   /**
-   * AC4 / Single presence socket guard.
+   * AC1 (wave-27) / Single presence subscription guard.
    *
-   * Both MemberListPanel (via usePresence) and AuthorPresenceDot (direct
-   * subscribePresence) share the same module-level presenceStore and _socket singleton
-   * in presenceSocket.ts. This test asserts that:
-   *  - subscribePresence may be called multiple times (one per component that subscribes)
-   *  - but the socket itself is never duplicated — all calls go through the same module
-   *    singleton (verified structurally: every import of presenceSocket is the same
-   *    module instance in the ESM/CommonJS module graph).
+   * wave-27 Spec-B lifts the subscription from per-AuthorPresenceDot to a single
+   * list-level useEffect in MessageList. Regardless of how many real-message rows
+   * are rendered, subscribePresence must be called exactly ONCE.
    *
-   * We cannot inspect the raw WebSocket count in a unit test environment (socket.io is
-   * mocked entirely). Instead, we assert the call count is deterministic and bounded:
-   * after rendering one MessageList with N real messages, subscribePresence is called
-   * exactly N times (one AuthorPresenceDot per row), not N+1 or 2N.
+   * Both MemberListPanel (via usePresence) and MessageList (via the list-level
+   * subscription) share the same module-level presenceStore and _socket singleton
+   * in presenceSocket.ts — confirmed by structural ESM module graph sharing.
+   *
+   * We cannot inspect raw WebSocket count in a unit test (socket.io fully mocked).
+   * Instead we assert the call count is exactly 1 for N messages — the subscriber
+   * budget was O(N) in wave-26; it is O(1) in wave-27.
    */
-  it('(AC4) subscribePresence call count is bounded — no extra socket opened', async () => {
+  it('(AC1/wave-27) subscribePresence is called exactly ONCE for a multi-message list', async () => {
     setPresence('u1', 'online');
     setPresence('u2', 'offline');
     const msgs: DisplayMessage[] = [
@@ -444,8 +445,35 @@ describe('MemberListPanel regression — PresenceDot used for member dots', () =
       makeRealMsg({ authorId: 'u2' }),
     ];
     renderMessageList(msgs);
-    // Each AuthorPresenceDot subscribes exactly once on mount.
-    // 2 real messages → 2 subscriptions. No more.
-    expect(subscribePresenceCallCount).toBe(2);
+    // List-level subscription: 2 real messages → 1 subscription, not 2.
+    expect(subscribePresenceCallCount).toBe(1);
+  });
+
+  /**
+   * CARRY-B: per-author render-scoping.
+   *
+   * A presence event for author-B must not functionally change what author-A's dot
+   * renders. After user-B goes offline, user-A's dot still shows the same state it
+   * had before the event (online in this case).
+   *
+   * Implementation: AuthorPresenceDot is wrapped in React.memo with a custom
+   * areEqual that derives the tri-state for the given authorId and bails out
+   * when it has not changed — even though the shared presenceTick incremented.
+   */
+  it('(CARRY-B) presence event for author-B does not change author-A dot output', () => {
+    setPresence('carry-a', 'online');
+    setPresence('carry-b', 'online');
+    renderMessageList([makeRealMsg({ authorId: 'carry-a' }), makeRealMsg({ authorId: 'carry-b' })]);
+    // Both dots online initially.
+    expect(screen.getAllByText('Online')).toHaveLength(2);
+
+    // Only user-B goes offline.
+    act(() => {
+      setPresence('carry-b', 'offline');
+    });
+
+    // user-A's dot is still online; user-B's is now offline.
+    expect(screen.getAllByText('Online')).toHaveLength(1);
+    expect(screen.getAllByText('Offline')).toHaveLength(1);
   });
 });
