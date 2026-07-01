@@ -63,6 +63,6 @@ LEARN:
 - [x] L-2 Distill (2 tasks done; 5 observations; BUILD-PRINCIPLES rule 6 promoted [formatter-before-report, 4x recurrence]; PRODUCT rule 2 karen-REJECTED non-falsifiable)
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers (no closure/promotion/decomp; seed 02fa8011 recommended; 3 founder-digest carries)
+- [x] N-2 Seed (02fa8011 real-PG integration tier; 0 siblings; validated)
+- [x] N-3 Handoff (wave-24 opened; wave-23 archived + closed)
