@@ -48,6 +48,7 @@ All notable changes to StudyHall are documented here. Format follows
 - Everyone sees the server's assignments sorted by due date, with an amber chip when one is due soon and a red chip once it's overdue, so nothing slips past. (#34)
 - Each member gets a personal to-do / done toggle on every assignment that only changes their own status — your progress is yours and never visible to others. (#34)
 - Organizers can edit an assignment's details or remove it; a removed assignment disappears from everyone's list. (#34)
+- Rotate a study server's permanent invite link: the owner can regenerate the link so a leaked one stops working immediately, closing the gap where the default permanent link could never be revoked. Owner-only; no client button yet. (#41)
 
 ### Changed
 
