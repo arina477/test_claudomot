@@ -98,12 +98,13 @@ describe('ProfileController', () => {
   // ── GET /profile ─────────────────────────────────────────────────────────────
 
   describe('getProfile', () => {
-    it('returns all four fields for an existing user', async () => {
+    it('returns all profile fields including userId for an existing user', async () => {
       usersService.findById.mockResolvedValue(
         makeUser({ display_name: 'Bob', username: 'bob_99', accent_color: '#ff0000' }),
       );
       const result = await controller.getProfile(makeReq());
       expect(result).toEqual({
+        userId: 'user-abc',
         displayName: 'Bob',
         username: 'bob_99',
         avatarUrl: null,
@@ -111,10 +112,11 @@ describe('ProfileController', () => {
       });
     });
 
-    it('returns all nulls when all profile fields are null', async () => {
+    it('returns userId with null display fields when all profile fields are null', async () => {
       usersService.findById.mockResolvedValue(makeUser());
       const result = await controller.getProfile(makeReq());
       expect(result).toEqual({
+        userId: 'user-abc',
         displayName: null,
         username: null,
         avatarUrl: null,

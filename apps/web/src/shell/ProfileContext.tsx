@@ -10,6 +10,7 @@
 import type { ProfileResponse } from '@studyhall/shared';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { api } from '../auth/api';
+import { seedSelfPresence } from './presenceSocket';
 import { resetMentionBadges } from './useMentionBadge';
 
 export type ProfileContextValue = {
@@ -54,6 +55,16 @@ export function ProfileProvider({ children }: Props) {
     }
     prevUsernameRef.current = username;
   }, [profile]);
+
+  // Seed the viewer's own presence as 'online' so AuthorPresenceDot correctly
+  // shows an online dot on the viewer's own messages. The server snapshot
+  // excludes self (getCoMemberUserIds filters self), so without this seed
+  // hasPresence(ownUserId) is always false on own-authored rows.
+  useEffect(() => {
+    if (profile?.userId) {
+      seedSelfPresence(profile.userId);
+    }
+  }, [profile?.userId]);
 
   return (
     <ProfileContext.Provider value={{ profile, refresh: fetch_ }}>
