@@ -37,8 +37,8 @@ BUILD:
 - [x] B-6 Review
 
 CI/CD:
-- [ ] C-1 PR, CI & merge
-- [ ] C-2 Deploy & verify (canary armed when real users > 1000)
+- [x] C-1 PR, CI & merge
+- [x] C-2 Deploy & verify — api live (deployment 48c515e9 SUCCESS; /health 200; rotate route 404→401; web untouched; canary skipped, 0 DAU < 1000)
 
 TEST:
 - [ ] T-1 Static

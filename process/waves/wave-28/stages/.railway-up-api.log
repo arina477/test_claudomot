@@ -1,0 +1,223 @@
+Deploy started at 2026-07-01T16:42:21Z
+Indexing...
+Uploading...
+  Build Logs: https://railway.com/project/ae55c191-4631-4224-b7b2-42f329ed48d7/service/7358a103-0a4f-44e6-9468-3d02d045531e?id=48c515e9-cfb8-41db-9a76-5ab07dd7741b&
+CI mode enabled
+scheduling build on Metal builder "builder-jykcqi"
+scheduling build on Metal builder "builder-jykcqi"
+fetched snapshot sha256:13de559f56319da3dfd081391bf17ba354fc76bf1812efb7bd0ec4e1174dfb31 (6.3 MB bytes)
+fetching snapshot
+unpacking archive
+[internal] load build definition from apps/api/Dockerfile
+[internal] load build definition from apps/api/Dockerfile
+[internal] load build definition from apps/api/Dockerfile
+[internal] load build definition from apps/api/Dockerfile
+[internal] load metadata for docker.io/library/node:22-slim
+[internal] load metadata for docker.io/library/node:22-slim
+[internal] load .dockerignore
+[internal] load .dockerignore
+[internal] load .dockerignore
+[internal] load .dockerignore
+[6/6] RUN pnpm build
+[5/6] RUN pnpm install --frozen-lockfile
+[4/6] COPY . .
+[internal] load build context
+[3/6] RUN corepack enable
+[2/6] WORKDIR /app
+[1/6] FROM docker.io/library/node:22-slim@sha256:813a7480f28fdadac1f7f5c824bcdad435b5bc1322a5968bbbdef8d058f9dff4
+[1/6] FROM docker.io/library/node:22-slim@sha256:813a7480f28fdadac1f7f5c824bcdad435b5bc1322a5968bbbdef8d058f9dff4
+[internal] load build context
+[internal] load build context
+[1/6] FROM docker.io/library/node:22-slim@sha256:813a7480f28fdadac1f7f5c824bcdad435b5bc1322a5968bbbdef8d058f9dff4
+[1/6] FROM docker.io/library/node:22-slim@sha256:813a7480f28fdadac1f7f5c824bcdad435b5bc1322a5968bbbdef8d058f9dff4
+[1/6] FROM docker.io/library/node:22-slim@sha256:813a7480f28fdadac1f7f5c824bcdad435b5bc1322a5968bbbdef8d058f9dff4
+[internal] load build context
+[internal] load build context
+[2/6] WORKDIR /app
+[3/6] RUN corepack enable
+[3/6] RUN corepack enable
+[4/6] COPY . .
+[4/6] COPY . .
+[5/6] RUN pnpm install --frozen-lockfile
+Scope: all 4 workspace projects
+
+? Verifying lockfile against supply-chain policies (1033 entries)...
+
+Lockfile is up to date, resolution step is skipped
+
+Progress: resolved 1, reused 0, downloaded 0, added 0
+
+Packages: +905
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Progress: resolved 905, reused 0, downloaded 208, added 48
+
+Progress: resolved 905, reused 0, downloaded 825, added 364
+
+
+   ╭──────────────────────────────────────────────╮
+   │                                              │
+   │      Update available! 11.7.0 → 11.9.0.      │
+   │     Changelog: https://pnpm.io/v/11.9.0      │
+   │   To update, run: corepack use pnpm@11.9.0   │
+   │                                              │
+   ╰──────────────────────────────────────────────╯
+
+
+Progress: resolved 905, reused 0, downloaded 903, added 836
+
+Progress: resolved 905, reused 0, downloaded 903, added 905, done
+
+✓ Lockfile passes supply-chain policies (1033 entries in 5.5s)
+
+.../node_modules/@nestjs/core postinstall$ opencollective || exit 0
+
+.../esbuild@0.28.1/node_modules/esbuild postinstall$ node install.js
+
+.../esbuild@0.25.12/node_modules/esbuild postinstall$ node install.js
+
+.../esbuild@0.18.20/node_modules/esbuild postinstall$ node install.js
+
+.../node_modules/@biomejs/biome postinstall$ node scripts/postinstall.js
+
+.../esbuild@0.28.1/node_modules/esbuild postinstall: Done
+
+.../esbuild@0.25.12/node_modules/esbuild postinstall: Done
+
+.../node_modules/@nestjs/core postinstall:                            Thanks for installing nest 
+
+.../node_modules/@nestjs/core postinstall:                  Please consider donating to our open collective
+
+.../node_modules/@nestjs/core postinstall:                         to help us maintain this package.
+
+.../node_modules/@nestjs/core postinstall:                                          
+
+.../node_modules/@nestjs/core postinstall:                             Number of contributors: 0
+
+.../node_modules/@nestjs/core postinstall:                              Number of backers: 1210
+
+.../esbuild@0.18.20/node_modules/esbuild postinstall: Done
+
+.../node_modules/@nestjs/core postinstall:                              Annual budget: $136,604
+
+.../node_modules/@nestjs/core postinstall:                              Current balance: $18,074
+
+.../node_modules/@nestjs/core postinstall:                                          
+
+.../node_modules/@nestjs/core postinstall:              Become a partner: https://opencollective.com/nest/donate
+
+.../node_modules/@nestjs/core postinstall:                                          
+
+.../node_modules/@biomejs/biome postinstall: Done
+
+.../node_modules/@nestjs/core postinstall: Done
+
+.../node_modules/browser-tabs-lock postinstall$ node scripts/postinstall.js
+
+.../node_modules/browser-tabs-lock postinstall: [93mThank you for using browser-tabs-lock ([34m https://github.com/supertokens/browser-tabs-lock [93m).
+
+.../node_modules/browser-tabs-lock postinstall: [93mThis library was created as a part of a larger project, SuperTokens([34m https://supertokens.io [93m) - an open source auth solution.[0m
+
+.../node_modules/browser-tabs-lock postinstall: [93mYou can also check out our other projects on [34mhttps://github.com/supertokens[93m
+
+.../node_modules/browser-tabs-lock postinstall: [0m
+
+.../node_modules/browser-tabs-lock postinstall: Done
+
+
+devDependencies:
++ @biomejs/biome 1.9.4
++ rimraf 6.1.3
++ turbo 2.10.0
+
+
+Done in 7s using pnpm v11.7.0
+
+[5/6] RUN pnpm install --frozen-lockfile
+[6/6] RUN pnpm build
+$ turbo run build
+
+
+Attention:
+Turborepo now collects completely anonymous telemetry regarding usage.
+This information is used to shape the Turborepo roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://turborepo.dev/docs/telemetry
+
+
+• turbo 2.10.0
+
+
+   • Packages in scope: @studyhall/api, @studyhall/shared, @studyhall/web
+   • Running build in 3 packages
+   • Remote caching disabled
+
+
+@studyhall/shared:build: cache miss, executing c0eeb6b6f88fc732
+
+@studyhall/shared:build: $ tsc --build
+
+@studyhall/web:build: cache miss, executing 45d479fb2656a12d
+
+@studyhall/api:build: cache miss, executing a3b940295606c768
+
+@studyhall/web:build: $ vite build
+
+@studyhall/api:build: $ nest build
+
+@studyhall/web:build: vite v6.4.3 building for production...
+
+@studyhall/web:build: transforming...
+
+@studyhall/web:build: ✓ 373 modules transformed.
+
+@studyhall/web:build: rendering chunks...
+
+@studyhall/web:build: computing gzip size...
+
+@studyhall/web:build: dist/registerSW.js                0.13 kB
+@studyhall/web:build: dist/manifest.webmanifest         0.36 kB
+
+@studyhall/web:build: dist/index.html                   0.89 kB │ gzip:   0.46 kB
+
+@studyhall/web:build: dist/assets/index-CQkQ5FRf.css   41.52 kB │ gzip:   8.45 kB
+
+@studyhall/web:build: dist/assets/index-Dwj8AAF6.js   965.06 kB │ gzip: 256.96 kB │ map: 4,096.74 kB
+
+@studyhall/web:build: 
+
+@studyhall/web:build: (!) Some chunks are larger than 500 kB after minification. Consider:
+@studyhall/web:build: - Using dynamic import() to code-split the application
+@studyhall/web:build: - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+@studyhall/web:build: - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+@studyhall/web:build: ✓ built in 4.73s
+
+@studyhall/web:build: 
+@studyhall/web:build: PWA v0.21.2
+@studyhall/web:build: mode      generateSW
+@studyhall/web:build: precache  5 entries (983.99 KiB)
+@studyhall/web:build: files generated
+@studyhall/web:build:   dist/sw.js.map
+@studyhall/web:build:   dist/sw.js
+@studyhall/web:build:   dist/workbox-ee9d8b34.js.map
+@studyhall/web:build:   dist/workbox-ee9d8b34.js
+
+
+ Tasks:    3 successful, 3 total
+Cached:    0 cached, 3 total
+  Time:    11.192s 
+
+
+[6/6] RUN pnpm build
+exporting to docker image format
+exporting to docker image format
+containerimage.config.digest: sha256:37608a2e76b6a8557f5f30fea1d7ff5038ff7f40ef09f0ff6341f90cac802051
+containerimage.digest: sha256:8008c11815dd84117c5314add2fe89f65cbeb9390c3de419bf60e11e4243b117
+containerimage.descriptor: eyJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvbi92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJkaWdlc3QiOiJzaGEyNTY6ODAwOGMxMTgxNWRkODQxMTdjNTMxNGFkZDJmZTg5ZjY1Y2JlYjkzOTBjM2RlNDE5YmY2MGUxMWU0MjQzYjExNyIsInNpemUiOjIxOTksImFubm90YXRpb25zIjp7Im9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5jcmVhdGVkIjoiMjAyNi0wNy0wMVQxNjo0MzowNFoifSwicGxhdGZvcm0iOnsiYXJjaGl0ZWN0dXJlIjoiYW1kNjQiLCJvcyI6ImxpbnV4In19
+image push
+image push
+image push
+Deploy complete
+EXIT_CODE=0
+Deploy finished at 2026-07-01T16:43:50Z
