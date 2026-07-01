@@ -54,7 +54,10 @@ export const server_members = pgTable(
     role_id: uuid('role_id').references(() => roles.id, { onDelete: 'set null' }),
     joined_at: timestamp('joined_at', { withTimezone: true }).defaultNow().notNull(),
   },
-  (table) => [unique().on(table.server_id, table.user_id)],
+  (table) => [
+    unique().on(table.server_id, table.user_id),
+    index('server_members_user_id_idx').on(table.user_id),
+  ],
 );
 
 export const categories = pgTable('categories', {
