@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export const ProfileResponseSchema = z.object({
+  userId: z.string(),
   displayName: z.string().nullable(),
   username: z.string().nullable(),
   avatarUrl: z.string().nullable(),

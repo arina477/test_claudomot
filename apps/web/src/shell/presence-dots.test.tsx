@@ -45,6 +45,14 @@ vi.mock('./presenceSocket', () => ({
   joinPresenceChannel: vi.fn(),
   emitTypingStart: vi.fn(),
   emitTypingStop: vi.fn(),
+  // seedSelfPresence: mirrors the real implementation — sets userId → 'online' in the
+  // mock store (only when not already present) and notifies subscribers.
+  seedSelfPresence: vi.fn((userId: string) => {
+    if (!_store.has(userId)) {
+      _store.set(userId, 'online');
+      for (const sub of _subscribers) sub();
+    }
+  }),
 }));
 
 /** Helper: set a userId's status in the mock store and notify subscribers. */
@@ -97,9 +105,11 @@ import { MemberListPanel } from './MemberListPanel';
 import { MessageList } from './MessageList';
 import type { DisplayMessage } from './MessageList';
 import { PresenceDot } from './PresenceDot';
+import { seedSelfPresence } from './presenceSocket';
 
 import { api } from '../auth/api';
 const mockApi = api as unknown as { getServerMembers: ReturnType<typeof vi.fn> };
+const mockSeedSelfPresence = seedSelfPresence as unknown as ReturnType<typeof vi.fn>;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -269,6 +279,66 @@ describe('MessageList author-avatar presence dots', () => {
     expect(screen.queryByText('Online')).not.toBeInTheDocument();
     expect(screen.queryByText('Offline')).not.toBeInTheDocument();
     expect(queryByTestId('presence-dot-inner')).not.toBeInTheDocument();
+  });
+
+  /**
+   * Self-author regression guard — the bug this wave's T-5 caught.
+   *
+   * The server's presence snapshot excludes the connecting user's own userId
+   * (getCoMemberUserIds filters self). Without seedSelfPresence(), hasPresence(selfId)
+   * is always false → AuthorPresenceDot returns null for the viewer's own messages.
+   *
+   * After seedSelfPresence(selfId) runs (mirrored by the mock above), the viewer's
+   * own userId IS in the store as 'online', so the dot resolves correctly.
+   *
+   * This test exercises the real reproduction path: the author-id is the viewer's
+   * own userId (normally absent from the snapshot), and it only becomes known after
+   * seedSelfPresence() seeds it.
+   */
+  it('self-author: shows online dot after seedSelfPresence seeds the viewer own userId (T-5 regression)', () => {
+    // Reproduce prod condition: viewer's own userId NOT yet in store (snapshot excludes self).
+    const SELF_ID = 'self-user-00000000-0000-0000-0000-000000000001';
+    // Confirm the store does NOT have self before the seed.
+    expect(_store.has(SELF_ID)).toBe(false);
+
+    // Render a message authored by the viewer (own message row — the failing case on prod).
+    renderMessageList([makeRealMsg({ authorId: SELF_ID })]);
+
+    // Before seed: dot is absent (store doesn't know this author yet).
+    expect(screen.queryByText('Online')).not.toBeInTheDocument();
+
+    // Simulate ProfileContext calling seedSelfPresence (which sets SELF_ID → 'online').
+    act(() => {
+      mockSeedSelfPresence(SELF_ID);
+    });
+
+    // After seed: viewer's own message shows the online dot.
+    expect(screen.getByText('Online')).toBeInTheDocument();
+  });
+
+  /**
+   * Self-author: seedSelfPresence must NOT overwrite an already-known status.
+   *
+   * If the user was included in a snapshot or received an online/offline event
+   * before seedSelfPresence fires (e.g. race between profile load and snapshot),
+   * the existing status must be preserved.
+   */
+  it('self-author: seedSelfPresence does not overwrite existing presence status (idempotent seed)', () => {
+    const SELF_ID = 'self-user-idempotent';
+    // Simulate: server already sent an online event for this userId (unusual but possible).
+    setPresence(SELF_ID, 'offline');
+
+    renderMessageList([makeRealMsg({ authorId: SELF_ID })]);
+    expect(screen.getByText('Offline')).toBeInTheDocument();
+
+    // seedSelfPresence should not overwrite the existing 'offline' status.
+    act(() => {
+      mockSeedSelfPresence(SELF_ID);
+    });
+
+    // Status must remain 'offline' — idempotent seed (store already has the key).
+    expect(screen.getByText('Offline')).toBeInTheDocument();
+    expect(screen.queryByText('Online')).not.toBeInTheDocument();
   });
 
   it('does not render any presence dot on optimistic PendingRow (CARRY-2 degrade)', () => {

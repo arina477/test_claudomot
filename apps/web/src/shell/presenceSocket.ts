@@ -169,6 +169,32 @@ export function getTypers(channelId: string): TypingActive['typers'] {
   return typingStore.get(channelId) ?? [];
 }
 
+/**
+ * Seed the viewer's own presence as 'online' in the local store.
+ *
+ * The server's presence:snapshot deliberately excludes the connecting user
+ * (getCoMemberUserIds filters self out). This means hasPresence(ownUserId)
+ * returns false on the first render and AuthorPresenceDot shows no dot for
+ * the viewer's own messages.
+ *
+ * This function is called once when the profile loads (ProfileContext). It
+ * seeds ownUserId → 'online' directly so own-authored message rows show the
+ * correct online dot. Presence:offline events from the server can still
+ * overwrite this if the server ever emits one for self (it currently does
+ * not, but this is safe either way: offline is also a known state, not
+ * unknown, so a dot is still rendered).
+ *
+ * This preserves AC3 (unknown OTHER authors → no dot) because only the
+ * viewer's own userId is seeded here; all other authorIds remain subject to
+ * normal snapshot / event resolution.
+ */
+export function seedSelfPresence(userId: string): void {
+  if (!presenceStore.has(userId)) {
+    presenceStore.set(userId, 'online');
+    notifyPresence();
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Subscribe / unsubscribe helpers
 // ---------------------------------------------------------------------------

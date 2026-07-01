@@ -36,6 +36,7 @@ export class ProfileController {
     }
 
     return {
+      userId,
       displayName: user.display_name ?? null,
       username: user.username ?? null,
       avatarUrl: user.avatar_url ?? null,
@@ -66,6 +67,7 @@ export class ProfileController {
     }
 
     return {
+      userId,
       displayName: updated.display_name ?? null,
       username: updated.username ?? null,
       avatarUrl: updated.avatar_url ?? null,
