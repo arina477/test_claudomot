@@ -1,0 +1,1 @@
+- [B-2 spec-vs-code] Spec/plan said RoomServiceClient creds via ConfigService; impl used process.env to mirror wave-31 voice-token.service.ts. Both voice services read LIVEKIT_* via process.env. Reconcile at L-1 (amend spec to process.env, OR migrate both to ConfigService in a future wave). Not a bug (VERIFY rule 2 territory: shipped behavior is consistent + correct).

@@ -10,7 +10,7 @@
 |---|---|---|---|
 | B-0 | process/waves/wave-32/stages/B-0-branch-and-schema.md | done | branch wave-32-voice-occupancy; schema SKIP (no migration); task claimed |
 | B-1 | process/waves/wave-32/stages/B-1-contracts.md | skipped | inline {count,participants} DTO — no shared Zod/OpenAPI/SDK contract change (fast-path B-2/B-3 NOT parallel: B-3 depends on B-2 endpoint) |
-| B-2 | process/waves/wave-32/stages/B-2-backend.md | pending | VoiceParticipantsService + GET route (reuse wave-31 gate + RoomServiceClient) |
+| B-2 | process/waves/wave-32/stages/B-2-backend.md | done | livekit-integration; 449 tests green; uniform-403 + RoomServiceClient + `||` fallback + TwirpError→empty |
 | B-3 | process/waves/wave-32/stages/B-3-frontend.md | pending | occupancy indicator + bounded-poll hook to adopted design/voice-occupancy-indicator.html |
 | B-4 | process/waves/wave-32/stages/B-4-wiring.md | pending | |
 | B-5 | process/waves/wave-32/stages/B-5-verify.md | pending | |
