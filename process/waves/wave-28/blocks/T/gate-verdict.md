@@ -1,0 +1,15 @@
+# Wave 28 — T-9 Verdict
+
+**Reviewer:** head-tester (fresh spawn, agentId arina-89ejyn-t9-gate)
+**Reviewed against:** process/waves/wave-28/blocks/T/review-artifacts.md + findings-aggregate.md
+**Attempt:** 1
+
+## Verdict
+APPROVED
+
+## Rationale
+Every non-skipped layer proves a user- or security-observable outcome with concrete, non-fabricated evidence, and every skip is honestly justified against the wave's backend-only/no-UI/no-contract-surface shape. **T-1** shows 0 production static bypasses on the real merge-head (6eb62e4, run 28532913181); the sole `{} as never` is a test-only constructor stub for the unused rbacService arg that rotateInviteCode never touches — not a prod escape hatch. **T-2** is not coverage theater: the 23505-retry unit test captures the per-attempt `.set()` code and asserts `capturedCodes[1] !== capturedCodes[0]` (a regenerated-state assertion that a code-reuse bug would fail — passes mutation-sanity), not a mock-call-count; B-6 corroborates this replaced the prior mock-only P2 version at 42636bc; owner-only 403 + missing-server 404 are covered on both service and controller, and the controller test wires session-derived callerId (getUserId → service) closing IDOR. **The T-4 CI-rule-5 nonzero-execution check is solid, not asserted**: the integration spec is `describe.skipIf(!DATABASE_URL_TEST)`, so a skipped-but-green run would be false-green — the deliverable defeats this by citing per-case nonzero durations from the actual CI test-job log (54/44/46/57/49/103/43ms) for all 7 cases against real postgres:16, proving real query round-trips with the DB unmocked, and old-link invalidation proven through BOTH real resolvers (getInvitePreview 404 + joinViaInvite NotFoundException). **The T-8 live non-owner-403 proof is a genuine load-bearing authz probe, not a mere 401 unauth boundary**: it drove a real two-fixture matrix against prod (owner A + non-owner co-member B on proof server ad62cd12) where the unauthorized non-owner is asserted to get a concrete 403 with its actual error body — not only the owner getting 2xx — plus live old-link invalidation (200→404 preview, 401 join) and CSPRNG distinctness across 5 concrete real rotations; this is the IDOR-tested discipline the security checklist demands. The two skips of note (T-3 no contract surface; T-5 no UI) are correct, and the T-8 live authenticated flow legitimately substitutes for a browser E2E on this backend-only surface. Findings are 2 LOW with no critical/high: F28-T8a (201-vs-200) is a NestJS @Post-default vs spec-text cosmetic mismatch with correct `{invite_code}` body and no client consumer this wave; F28-T8b (403-vs-404 existence oracle) is B-6 accepted-debt, spec-conformant to AC4, non-secret UUIDs, matching the findServerDetail precedent — neither masks a broken product, and both are correctly handed to V-2 for blocking classification (which the T-block does not own). The suite is honest, fast-weighted, free of mock-the-SUT / single-client / false-green / flaky-retry patterns, and does not green-wash a broken product.
+
+## Footer
+- verdict_complete: true
+- rework_attempt_cap_remaining: 3

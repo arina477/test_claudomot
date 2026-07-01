@@ -41,15 +41,15 @@ CI/CD:
 - [x] C-2 Deploy & verify — api live (deployment 48c515e9 SUCCESS; /health 200; rotate route 404→401; web untouched; canary skipped, 0 DAU < 1000)
 
 TEST:
-- [ ] T-1 Static
-- [ ] T-2 Unit
-- [ ] T-3 Contract
-- [ ] T-4 Integration
-- [ ] T-5 E2E
-- [ ] T-6 Layout
-- [ ] T-7 Perf
-- [ ] T-8 Security
-- [ ] T-9 Journey
+- [x] T-1 Static — CI-verified (typecheck+lint green, 0 prod bypasses)
+- [x] T-2 Unit — CI-verified (402 pass; 23505-retry regeneration assertion, not mock-count)
+- [x] T-3 Contract — SKIPPED (no contract surface; inline DTO, B-1 skipped)
+- [x] T-4 Integration — CI-verified (7 real-PG rotate cases EXECUTED nonzero, CI-rule-5 no false-green)
+- [x] T-5 E2E — SKIPPED (no UI; regenerate-link keep-OUT)
+- [x] T-6 Layout — SKIPPED (non-UI wave)
+- [x] T-7 Perf — SKIPPED (not heavy)
+- [x] T-8 Security — LIVE authz matrix: unauth 401, non-owner 403, owner 2xx, old-link 404, new-link 200, CSPRNG proven
+- [x] T-9 Journey — head-tester gate APPROVED; annotation-only regen (wave-9 rotation-gap closed)
 
 VERIFY:
 - [ ] V-1 Independent reviews (Karen + jenny, parallel)
