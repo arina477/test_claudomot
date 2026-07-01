@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AssignmentsModule } from './assignments/assignments.module';
 import { AuthModule } from './auth/auth.module';
@@ -8,6 +9,7 @@ import { FilesModule } from './files/files.module';
 import { HealthModule } from './health/health.module';
 import { MeModule } from './me/me.module';
 import { MessagingModule } from './messaging/messaging.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { PresenceModule } from './presence/presence.module';
 import { ProfileModule } from './profile/profile.module';
 import { ServersModule } from './servers/servers.module';
@@ -27,6 +29,8 @@ import { ServersModule } from './servers/servers.module';
     ]),
     // EventEmitter for domain events (message.created → Socket.IO gateway)
     EventEmitterModule.forRoot(),
+    // Schedule module — enables @Cron decorators (wave-30 B-2 reminder cron)
+    ScheduleModule.forRoot(),
     HealthModule,
     AuthModule,
     MeModule,
@@ -36,6 +40,7 @@ import { ServersModule } from './servers/servers.module';
     MessagingModule,
     PresenceModule,
     AssignmentsModule,
+    NotificationsModule,
   ],
   providers: [
     // ThrottlerGuard as APP_GUARD covers all NestJS-handled routes.
