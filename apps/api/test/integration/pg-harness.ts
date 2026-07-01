@@ -58,9 +58,9 @@ export async function setupHarness(): Promise<void> {
 }
 
 /**
- * Truncate all tables touched by createServer, plus users (fixture).
- * Order matters: children before parents to avoid FK violations.
- * CASCADE handles anything we miss, but explicit order is safer.
+ * Truncate all tables touched by createServer, createMessage, editMessage,
+ * plus users (fixture). Order matters: children before parents to avoid FK
+ * violations. CASCADE handles anything we miss, but explicit order is safer.
  */
 export async function truncateTables(): Promise<void> {
   if (!harnessPool) throw new Error('pg-harness: call setupHarness() first');
@@ -68,6 +68,9 @@ export async function truncateTables(): Promise<void> {
   // RESTART IDENTITY resets sequences; CASCADE catches any missed deps.
   await harnessPool.query(
     `TRUNCATE
+       message_mentions,
+       message_reactions,
+       messages,
        channel_permission_overrides,
        channels,
        categories,
@@ -83,13 +86,20 @@ export async function truncateTables(): Promise<void> {
 /**
  * Insert a minimal real user row sufficient to satisfy the FK on servers.owner_id
  * and server_members.user_id (both reference users.id which is text PK).
+ *
+ * Pass `username` to set the users.username column so resolveMentions can
+ * match @token slugs (e.g. wave-25 editMessage rollback spec).
  */
-export async function insertFixtureUser(id: string, email: string): Promise<void> {
+export async function insertFixtureUser(
+  id: string,
+  email: string,
+  username?: string,
+): Promise<void> {
   if (!harnessPool) throw new Error('pg-harness: call setupHarness() first');
   await harnessPool.query(
-    `INSERT INTO users (id, email) VALUES ($1, $2)
+    `INSERT INTO users (id, email, username) VALUES ($1, $2, $3)
      ON CONFLICT (id) DO NOTHING`,
-    [id, email],
+    [id, email, username ?? null],
   );
 }
 
@@ -175,6 +185,65 @@ export async function insertFixtureMembership(
      VALUES ($1, $2, $3)
      ON CONFLICT DO NOTHING`,
     [serverId, userId, roleId ?? null],
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Fixture helpers — channels, messages, message_mentions (wave-25)
+// ---------------------------------------------------------------------------
+
+/**
+ * Insert a minimal real channels row.
+ * serverId must already exist in servers (FK: channels.server_id → servers.id).
+ */
+export async function insertFixtureChannel(
+  id: string,
+  serverId: string,
+  name: string,
+): Promise<void> {
+  if (!harnessPool) throw new Error('pg-harness: call setupHarness() first');
+  await harnessPool.query(
+    `INSERT INTO channels (id, server_id, name)
+     VALUES ($1, $2, $3)
+     ON CONFLICT DO NOTHING`,
+    [id, serverId, name],
+  );
+}
+
+/**
+ * Insert a minimal real messages row.
+ * channelId and authorId must already exist (FK). messageId is a UUID supplied
+ * by the caller so FKs in message_mentions can reference it deterministically.
+ */
+export async function insertFixtureMessage(
+  id: string,
+  channelId: string,
+  authorId: string,
+  content: string,
+): Promise<void> {
+  if (!harnessPool) throw new Error('pg-harness: call setupHarness() first');
+  await harnessPool.query(
+    `INSERT INTO messages (id, channel_id, author_id, content)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT DO NOTHING`,
+    [id, channelId, authorId, content],
+  );
+}
+
+/**
+ * Insert a minimal real message_mentions row.
+ * messageId and mentionedUserId must already exist (FK).
+ */
+export async function insertFixtureMention(
+  messageId: string,
+  mentionedUserId: string,
+): Promise<void> {
+  if (!harnessPool) throw new Error('pg-harness: call setupHarness() first');
+  await harnessPool.query(
+    `INSERT INTO message_mentions (message_id, mentioned_user_id)
+     VALUES ($1, $2)
+     ON CONFLICT DO NOTHING`,
+    [messageId, mentionedUserId],
   );
 }
 
