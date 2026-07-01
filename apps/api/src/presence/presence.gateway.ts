@@ -122,7 +122,7 @@ export class PresenceGateway implements OnGatewayInit, OnGatewayConnection, OnGa
         .limit(1);
 
       // Fall back to email prefix if display_name is not set
-      const displayName = userRow?.display_name ?? userRow?.email?.split('@')[0] ?? userId;
+      const displayName = userRow?.display_name || userRow?.email?.split('@')[0] || userId;
       socket.data.displayName = displayName;
     } catch {
       socket.data.displayName = userId;

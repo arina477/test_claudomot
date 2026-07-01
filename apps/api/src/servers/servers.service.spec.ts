@@ -1282,3 +1282,85 @@ describe('ServersService.listServerMembers', () => {
     expect(result[0]?.username).toBe('someone');
   });
 });
+
+// ---------------------------------------------------------------------------
+// ServersService — listServerMembers displayName empty-fallback guard (wave-29)
+// Covers the || operator fix: ?? only short-circuits null/undefined, not ''.
+// ---------------------------------------------------------------------------
+
+describe('ServersService.listServerMembers — displayName empty-fallback guard (wave-29)', () => {
+  let service: ServersService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    service = new ServersService(makeRbacServiceMock());
+  });
+
+  function setupMembersQuery(rosterRow: unknown) {
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return makeSelectChain([{ id: 'mem-1' }]);
+      return makeSelectChain([rosterRow]);
+    });
+  }
+
+  it('empty email local-part + null display_name → displayName falls through to userId (NOT empty string)', async () => {
+    // email '@example.com' → split('@')[0] === '' → falsy with || → falls through to userId
+    setupMembersQuery({
+      userId: 'user-ghost',
+      displayName: null,
+      email: '@example.com',
+      avatarUrl: null,
+      username: null,
+    });
+
+    const result = await service.listServerMembers('user-1', 'server-1');
+
+    expect(result[0]?.displayName).toBe('user-ghost');
+    expect(result[0]?.displayName).not.toBe('');
+  });
+
+  it('stored-empty display_name ("") + normal email → falls through to email local-part (|| guards empty string)', async () => {
+    // display_name='' is falsy with || → falls through to email prefix
+    setupMembersQuery({
+      userId: 'user-5',
+      displayName: '',
+      email: 'alice@example.com',
+      avatarUrl: null,
+      username: 'alice',
+    });
+
+    const result = await service.listServerMembers('user-1', 'server-1');
+
+    expect(result[0]?.displayName).toBe('alice');
+  });
+
+  it('normal email + null display_name → displayName is email local-part (happy path unchanged)', async () => {
+    setupMembersQuery({
+      userId: 'user-6',
+      displayName: null,
+      email: 'bob@studyhall.app',
+      avatarUrl: null,
+      username: 'bob',
+    });
+
+    const result = await service.listServerMembers('user-1', 'server-1');
+
+    expect(result[0]?.displayName).toBe('bob');
+  });
+
+  it('non-null display_name → that value is used (unchanged)', async () => {
+    setupMembersQuery({
+      userId: 'user-7',
+      displayName: 'Carol Jones',
+      email: 'carol@example.com',
+      avatarUrl: null,
+      username: 'carolj',
+    });
+
+    const result = await service.listServerMembers('user-1', 'server-1');
+
+    expect(result[0]?.displayName).toBe('Carol Jones');
+  });
+});
