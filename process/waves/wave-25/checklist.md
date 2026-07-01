@@ -16,7 +16,7 @@
 - **M5 backlog (future seeds):** d058283d (invite rotation — head-next runner-up, security), 6a546c7b (presence perf — now test-covered), 10b9d18e (presence dots — chrome-absent-blocked), d23a0740 (cleanup); + cross-cutting 4a92327c (ParseUUIDPipe), 875b97f4 (security hardening), 72cb6ebb (stale-comment sweep), 226c7e42 (integration-tier hardening); + wave-22 V-2 follow-ons. Reminders arc = M5 headline, cred-blocked.
 
 PRODUCT:
-- [ ] P-0 Frame (discover + reframe)
+- [x] P-0 Frame (no-prior-spec; problem-framer PROCEED [both premises code-verified] + ceo-reviewer SCOPE-EXPANSION [shared slug grammar] + mvp-thinner OK → accepted MINIMAL expansion: extract slug regex to packages/shared + editMessage txn wrap + real-PG rollback spec; claimed [c18b8089])
 - [ ] P-1 Decompose
 - [ ] P-2 Spec
 - [ ] P-3 Plan
