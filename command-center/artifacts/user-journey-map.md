@@ -218,7 +218,9 @@ Live: api https://api-production-b93e.up.railway.app/health (200, live-verified 
 - Features: 7, 8, 9
 
 ### F4 — Voice/video study room (P1)
-- Entry: server view → click voice channel → `/servers/:id/voice/:channelId` → mic/cam → screen share → leave
+- Entry: server view → click voice channel → `/servers/:id/voice/:channelId` → **Join voice** (connect-on-demand, not auto) → in-room audio → mic mute/unmute → Leave
+- **Adopted design (wave-31, audio-first first slice):** `design/voice-study-room.html` — 5 states (pre-join / connecting / in-room populated / in-room alone / error). Audio-first avatar-name tiles (camera OFF default, no video), mic toggle + Leave, own presence shown. LiveKit token minted server-side (`POST /channels/:channelId/voice/token`, session + membership gated).
+- **Deferred to later M6 waves (KEEP-OUT this slice):** camera/video grid, screen-share, speaking/voice-presence rings, low-bandwidth downgrade UI, reconnection UI, multi-room switching, who's-in-room occupancy indicator.
 - Features: 13
 
 ### F5 — Offline-first (P1) — the wedge — LIVE (wave-20 spine; wave-21 live connection-state + multi-page catch-up)

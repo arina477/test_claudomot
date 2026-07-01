@@ -51,5 +51,22 @@ All instructions actionable + measurable, cited to brief §X / DESIGN-SYSTEM §Y
 
 **DEFERRED to B-3 (both reviewers agree — NOT design defects, do not block):** full error cause→copy map (§7), narrow-<1024 overlay drawer (shell-owned), mic/Leave 44px touch target, visually-hidden "mic on" label, strip staging eyebrow/labels from the production component. Captured for the adopt notes → B-block handoff.
 
-## Next destination
+## Next destination (attempt 1)
 → **D-2 refine (iteration 1)** via `/aidesigner refine_design` against `design/staging/voice-study-room.html` with the consolidated prompt above. Then re-run Phase 1 dual reviewers.
+
+---
+
+## Attempt 2 — Phase 1 re-review (post-refine iteration 1)
+
+Both matrix reviewers re-ran fresh-context on the refined artifact:
+
+| Reviewer | Verdict | Source |
+|---|---|---|
+| A — `/plan-design-review` | **APPROVE** | voice-study-room-plan-design-review-attempt2.md |
+| B — `ui-ux-tester` (sub for `/ui-ux-pro-max`) | **APPROVE** | voice-study-room-ui-ux-pro-max-attempt2.md |
+
+**Reconciliation matrix → APPROVE / APPROVE = proceed to Phase 2 (fresh head-designer gate spawn).**
+
+Both reviewers confirmed all 11 refine deltas landed with zero regressions and zero KEEP-OUT leakage. All 10 §9 success criteria PASS (Reviewer B); all 6 dimensions ≥8/10 (Reviewer A). Both independently flagged ONE identical non-blocking note: the State-4 empty-state copy `<div>` sits as a non-`<li>` sibling inside the participant `<ul>` (line ~381) — a minor list-semantics tidy. NOT a gate condition (does not break a §9 criterion or a KEEP-OUT rule); carried forward as a B-3 implementation note.
+
+→ **Phase 2: spawn fresh head-designer for the D-3 gate verdict.**

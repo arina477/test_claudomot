@@ -3,7 +3,17 @@
 **Block:** D (Design)
 **Wave topic:** M6 first bundle — voice-study-room client join surface (audio-first first slice)
 **Block exit gate:** D-3
-**Status:** in-progress
+**Status:** gate-passed
+
+## Block-exit handoff
+
+```yaml
+design_block_status:    complete
+gaps_resolved:          [voice-study-room]
+gaps_deferred:          []
+design_system_updates:  []
+canonicalized_at:       2026-07-01T00:00:00Z
+```
 
 ## Stage deliverables
 
@@ -11,7 +21,7 @@
 |---|---|---|---|
 | D-1 | process/waves/wave-31/stages/D-1-brief/voice-study-room-brief.md | done | brief authored; mask_mode PASS |
 | D-2 | process/waves/wave-31/stages/D-2-variants/voice-study-room-variants.md + voice-study-room-iterate.md | done | /aidesigner generate (iter 0, HTTP 200) → design/staging/voice-study-room.html committed; checkpoint skipped-mode-automatic |
-| D-3 | process/waves/wave-31/stages/D-3-review-and-adopt/voice-study-room-{plan-design-review,ui-ux-pro-max,reconciliation,adopt}.md | pending | dual-reviewer gate + fresh head-designer verdict + canonicalization |
+| D-3 | process/waves/wave-31/stages/D-3-review-and-adopt/voice-study-room-{plan-design-review,ui-ux-pro-max,accessibility,reconciliation,adopt}.md (+ *-attempt2 reviews) | done | Phase1 attempt1 APPROVE/REVISE → refine iter1 → attempt2 APPROVE/APPROVE; Phase2 head-designer APPROVED; canonicalized to design/voice-study-room.html |
 
 ## Block-specific context
 
@@ -29,4 +39,4 @@ none
 
 ## Gate verdict log
 
-<appended by fresh head-designer spawn at D-3 Action 1; one entry per attempt>
+- **Attempt 1 (D-3 Phase 2, 2026-07-01):** head-designer (fresh spawn) → **APPROVED**. verdict_complete: true; rework_attempt_cap_remaining: 3. Rationale: all 5 states present + token-clean + KEEP-OUT clean + shell-coherent; accessibility BLOCKER independently recomputed and confirmed a false negative (translucent danger-tint → ~6.2:1 PASS); one valid a11y MAJOR fixed in refine iter1; no new token blessed (Action 8 does not fire). Source: process/waves/wave-31/blocks/D/gate-verdict.md.
