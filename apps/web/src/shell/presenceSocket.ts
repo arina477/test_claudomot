@@ -149,6 +149,16 @@ export function getPresenceStatus(userId: string): PresenceStatus {
   return presenceStore.get(userId) ?? 'offline';
 }
 
+/**
+ * Returns true if the presence store has ever observed this userId
+ * (i.e. a snapshot / online / offline event has been received for them).
+ * Returns false when the userId is absent — the "unknown" case.
+ * Use this to distinguish KNOWN-offline from UNKNOWN before rendering a dot.
+ */
+export function hasPresence(userId: string): boolean {
+  return presenceStore.has(userId);
+}
+
 /** Get the full presence store snapshot (read-only view). */
 export function getPresenceSnapshot(): ReadonlyMap<string, PresenceStatus> {
   return presenceStore;

@@ -29,6 +29,7 @@
 import type { ServerMember } from '@studyhall/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../auth/api';
+import { PresenceDot } from './PresenceDot';
 import { UsersIcon } from './icons';
 import { usePresence } from './usePresence';
 
@@ -88,17 +89,8 @@ function MemberItem({ member, online }: MemberItemProps) {
             {initials}
           </div>
         )}
-        {/* Presence dot */}
-        <div
-          className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full flex items-center justify-center pointer-events-none"
-          style={{ backgroundColor: '#121214' }}
-        >
-          <span className="sr-only">{online ? 'Online' : 'Offline'}</span>
-          <div
-            className="w-1.5 h-1.5 rounded-full"
-            style={{ backgroundColor: online ? '#10b981' : '#52525b' }}
-          />
-        </div>
+        {/* Presence dot — shared PresenceDot component (AC2, AC5) */}
+        <PresenceDot online={online} />
       </div>
 
       {/* Name */}

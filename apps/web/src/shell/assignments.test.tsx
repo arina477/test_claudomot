@@ -11,7 +11,7 @@
 import type { Assignment } from '@studyhall/shared';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getUrgency } from './AssignmentCard';
 import { AssignmentCard } from './AssignmentCard';
 import { AssignmentsPanel } from './AssignmentsPanel';
@@ -138,8 +138,14 @@ describe('AssignmentCard chip states', () => {
   const onClick = vi.fn();
 
   beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
     vi.clearAllMocks();
     mockApi.setAssignmentStatus.mockResolvedValue({ myStatus: 'done' });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('renders overdue chip with --danger-text color when past due', () => {
