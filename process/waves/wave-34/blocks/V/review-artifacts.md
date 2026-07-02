@@ -1,5 +1,5 @@
 # Wave 34 — V-block review artifacts
-**Block:** V · **Wave topic:** voice screen-share + audio-only fallback · **Gate:** V-3 · **Status:** in-progress
+**Block:** V · **Wave topic:** voice screen-share + audio-only fallback · **Gate:** V-3 · **Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Status | Notes |
@@ -18,4 +18,4 @@
 - N-block: close M6→M7 CONDITIONAL on audio-only-reachability resolution.
 
 ## Gate verdict log
-<head-verifier at V-3>
+<head-verifier at V-3> **APPROVED** — both blocking findings resolved. spec-1 screen-share PROVEN-LIVE; spec-2 audio-only PROVEN-LIVE after bounded 1-round fast-fix (false-green deploy caught by karen+jenny, corrected via `railway up`). head-verifier independently re-confirmed served bundle `index-BkNvqunA.js` contains `audio-only-toggle-btn`(1) + `Switch to audio-only`(1), root 200; diff web-only (no regression). karen APPROVE, jenny APPROVE. M6 metric MET → N-block CLOSE M6→M7. Verdict: `blocks/V/gate-verdict.md`.
