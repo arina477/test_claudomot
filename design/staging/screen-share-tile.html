@@ -117,8 +117,8 @@
 <body class="min-h-[100dvh] flex flex-col p-4 md:p-8 gap-16 max-w-7xl mx-auto custom-scrollbar">
 
   <!-- A11y Live Region (invisible visually) -->
-  <div aria-live="polite" class="sr-only" id="voice-room-announcer">
-    <!-- Screen reader announcements map here via JS in production -->
+  <div aria-live="polite" role="status" class="sr-only" id="voice-room-announcer">
+    Alice T. started sharing their screen
   </div>
 
   <header class="pb-4 border-b border-border-hairline">
@@ -208,7 +208,7 @@
     <div class="relative w-full h-[700px] bg-study-800 rounded-xl overflow-hidden border border-border-hairline shadow-inner flex flex-col p-4 md:p-6 gap-4">
       
       <!-- Prominent Screen-Share Region -->
-      <div class="flex-1 min-h-0 bg-study-950 rounded-lg border border-border-hairline shadow-sm relative overflow-hidden group flex flex-col hover:border-border-hover transition-colors duration-200" aria-label="Screen shared by Alice T.">
+      <div class="w-full max-w-[1000px] mx-auto flex-1 min-h-0 bg-study-950 rounded-lg border border-border-hairline shadow-sm relative overflow-hidden group flex flex-col hover:border-border-hover transition-colors duration-200" aria-label="Screen shared by Alice T.">
         <!-- The actual video track (simulated) -->
         <div class="w-full h-full relative">
           <!-- Placeholder for presentation/code -->
@@ -301,7 +301,7 @@
     <div class="relative w-full h-[600px] bg-study-800 rounded-xl overflow-hidden border border-border-hairline shadow-inner flex flex-col p-4 md:p-6 gap-4">
       
       <!-- Prominent Screen-Share Region (LOADING) -->
-      <div class="flex-1 min-h-0 bg-study-900 rounded-lg border border-border-hairline shadow-sm relative overflow-hidden flex flex-col items-center justify-center" aria-label="Loading screen share..." aria-busy="true" aria-live="polite">
+      <div class="w-full max-w-[1000px] mx-auto flex-1 min-h-0 bg-study-900 rounded-lg border border-border-hairline shadow-sm relative overflow-hidden flex flex-col items-center justify-center" aria-label="Loading screen share..." aria-busy="true" aria-live="polite">
         
         <!-- Skeleton base -->
         <div class="absolute inset-0 bg-study-950 animate-shimmer opacity-40"></div>
@@ -341,7 +341,7 @@
     <div class="relative w-full h-[600px] bg-study-800 rounded-xl overflow-hidden border border-border-hairline shadow-inner flex flex-col p-4 md:p-6 gap-4">
       
       <!-- Prominent Screen-Share Region (OWN) -->
-      <div class="flex-1 min-h-0 bg-study-950 rounded-lg border border-accent-emerald/20 shadow-[inset_0_1px_0_rgba(16,185,129,0.1)] relative overflow-hidden flex flex-col items-center justify-center">
+      <div class="w-full max-w-[1000px] mx-auto flex-1 min-h-0 bg-study-950 rounded-lg border border-accent-emerald/20 shadow-glow-subtle relative overflow-hidden flex flex-col items-center justify-center">
         
         <!-- Background Decor -->
         <div class="absolute w-[400px] h-[400px] bg-accent-emerald/5 blur-[120px] rounded-full pointer-events-none"></div>
@@ -385,7 +385,7 @@
         </button>
         <div class="w-px h-6 bg-study-700 mx-1"></div>
         <!-- ACTIVE STATE SHARE BUTTON -->
-        <button class="w-10 h-10 rounded-md bg-accent-emerald text-study-950 shadow-glow-focus hover:bg-emerald-400 transition-colors flex items-center justify-center" aria-label="Stop Screen Sharing" aria-pressed="true">
+        <button class="w-10 h-10 rounded-md bg-accent-emerald text-study-950 shadow-glow-focus hover:opacity-90 transition-opacity flex items-center justify-center" aria-label="Stop Screen Sharing" aria-pressed="true">
           <i class="ph ph-screencast text-[20px]"></i>
         </button>
         <div class="w-px h-6 bg-study-700 mx-1"></div>
