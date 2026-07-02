@@ -37,8 +37,8 @@ BUILD:
 - [x] B-6 Review
 
 CI/CD:
-- [ ] C-1 PR, CI & merge
-- [ ] C-2 Deploy & verify (canary armed when real users > 1000)
+- [x] C-1 PR, CI & merge
+- [x] C-2 Deploy & verify (canary skipped — DAU < 1000; both services SUCCESS on fresh deploy ids, web serves 2026 marker)
 
 TEST:
 - [ ] T-1 Static
