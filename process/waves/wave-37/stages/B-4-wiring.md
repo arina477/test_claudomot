@@ -1,0 +1,2 @@
+# Wave 37 — B-4 Wiring
+Repo typecheck 4/4 clean (no B-2↔B-3 drift). NotificationsModule registered in app.module (pre-existing module, B-2 added controller+service). Routes: GET /me/notifications, PATCH /me/notifications/:id/read, POST /me/notifications/read-all. Web api client + HeaderBell mounted in MainColumn. No new env. Integration tier (if tests added) runs in CI per turbo test:ci DATABASE_URL_TEST passthrough.
