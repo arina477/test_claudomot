@@ -1,6 +1,6 @@
 # Wave 36 — B-block review artifacts
 
-**Block:** B (Build) · **Wave topic:** M7 test-hardening — regression tests for the shipped privacy endpoints + states-AC docs re-scope + stub-date fix · **Block exit gate:** B-6 · **Status:** in-progress
+**Block:** B (Build) · **Wave topic:** M7 test-hardening — regression tests for the shipped privacy endpoints + states-AC docs re-scope + stub-date fix · **Block exit gate:** B-6 · **Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
@@ -11,7 +11,7 @@
 | B-3 | stages/B-3-frontend.md | pending | toUiVisibility unit + date fix (react-specialist) + docs |
 | B-4 | stages/B-4-wiring.md | pending | repo typecheck + run new tests (verify tier executes) |
 | B-5 | stages/B-5-verify.md | pending | |
-| B-6 | stages/B-6-review.md | pending | |
+| B-6 | stages/B-6-review.md | done | head-builder APPROVED; code-reviewer clean; M1+M2 fixed |
 
 ## Block-specific context
 - **Spec contract:** tasks row 622a7bf3 (DB). **Branch:** wave-36-privacy-tests.
