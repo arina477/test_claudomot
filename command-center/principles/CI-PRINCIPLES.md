@@ -146,3 +146,6 @@ pr_conventions:
 
 6. Run CI on every push to main, including docs and bypass pushes, or scope the linter to source files only.
    Why: A direct-to-main push that skips CI hides breakage until the next feature PR runs.
+
+7. For a non-git-connected Railway service, assert a change-unique marker appears in the served bundle after deploy.
+   Why: A redeploy rebuilds the same source to a new digest, so digest-diff passes on stale code.
