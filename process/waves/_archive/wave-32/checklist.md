@@ -57,8 +57,8 @@ LEARN:
 - [x] L-1 Docs
 - [x] L-2 Distill
 
-NEXT: — HALTED (head-next hard-stop, trigger d; loop PAUSED). Wave-32 NOT closed/archived; wave-33 NOT opened.
-- [x] N-1 Survey & triggers — ESCALATE: M6 seed a2dd9f3d unresolvable (wave_id=d25f8c47 fails line-214 seed contract; no clear-to-NULL writer)
-- [x] N-2 Seed — REJECTED: seed picker returns 0 M6 rows; a2dd9f3d excluded by wave_id IS NULL
-- [x] N-3 Handoff — PAUSED: next_wave=paused; STATUS BLOCKED; .loop-paused.yaml written; DB untouched
-- Blocker: latent lifecycle defect — milestone-scoped V-2 follow-up (line 90) can never satisfy the seed contract (line 214) with no clear-to-NULL writer (line 156). Founder/BOARD ruling needed. See blocks/N/gate-verdict.md.
+NEXT: — COMPLETE (head-next APPROVED; loop continues, no pause). Wave-32 closed (status=ok) + archived; wave-33 opened.
+- [x] N-1 Survey & triggers — APPROVED: no triggers fire (no close/decompose/promote/checkpoint); cred-tripwire deferred/not-tripped
+- [x] N-2 Seed — APPROVED: seed a2dd9f3d (validated: todo, wave_id NULL, parent NULL, milestone_id=M6); single-task bundle
+- [x] N-3 Handoff — APPROVED: wave-32 waves row closed (RETURNING wave_number=32 status=ok); dir archived; wave-33 P-0 opened; STATUS RUNNING
+- Resolution: prior latent lifecycle defect (a2dd9f3d.wave_id=d25f8c47) resolved by orchestrator (wave_id -> NULL, rule 15 + rule 17). Systemic fix left to brain maintainers (observations.md). See blocks/N/gate-verdict.md.
