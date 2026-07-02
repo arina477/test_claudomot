@@ -12,6 +12,8 @@ import {
 } from '../db/schema/index';
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
 import { EmailService } from '../email/email.service';
+// biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
+import { NotificationsService } from './notifications.service';
 
 // ---------------------------------------------------------------------------
 // ReminderScanService — wave-30 B-2 (task c5c30363, Refs 4a4c2715)
@@ -31,7 +33,10 @@ import { EmailService } from '../email/email.service';
 export class ReminderScanService {
   private readonly logger = new Logger(ReminderScanService.name);
 
-  constructor(private readonly emailService: EmailService) {}
+  constructor(
+    private readonly emailService: EmailService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   @Cron(CronExpression.EVERY_HOUR)
   async scanAndSendReminders(): Promise<void> {
@@ -254,7 +259,12 @@ export class ReminderScanService {
       return false;
     }
 
-    // Row was just created — this tick owns the send
+    // Row was just created — this tick owns the send.
+    // Persist the in-app notification alongside the email (send-once guard has
+    // already fired above; ON CONFLICT DO NOTHING in createForReminder is a
+    // defensive belt-and-suspenders for any edge-case double-tick).
+    await this.notificationsService.createForReminder(recipient.user_id, assignment.id);
+
     await this.emailService.sendAssignmentReminder(recipient.email, {
       assignmentTitle: assignment.title,
       dueDate: assignment.due_date,
