@@ -60,6 +60,6 @@ LEARN:
 - [x] L-2 Distill
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers — M6 held in_progress (scope not shipped); decomposition SUPPRESSED (cred-blocked, ceo-reviewer flag); park-or-key fork recorded
+- [x] N-2 Seed — queue-exhausted (seed null; decomposition deferred to founder via fork)
+- [x] N-3 Handoff — wave-33 closed (status=ok) + archived; loop PAUSED (trigger f); wave-34 NOT opened
