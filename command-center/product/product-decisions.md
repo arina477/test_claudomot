@@ -455,3 +455,8 @@ These are staged for the next P-0 walk (may re-home to M7 launch-polish or a suc
 
 [2026-07-02] wave-37 P-4 — 404 (not 403) owner-authz convention for per-user private rows
 - Decision: read-state endpoints on per-user PRIVATE notification rows (PATCH /me/notifications/:id/read, POST /me/notifications/read-all) return 404 on a non-owner OR nonexistent id (indistinguishable) — NOT 403. Deliberate new convention: 404 is a stronger IDOR posture (does not confirm another user's notification id exists), consistent with StudyHall's 404-as-non-leak resolvers (wave-8/9 invites, /me/mentions self-scoping). Distinct from the 403 owner-pattern (wave-22/28) which governs SHARED server resources. Enforcement: f3f52d9a AC mandates a real-PG controller authz test asserting 404 (T-8).
+
+[2026-07-02] wave-37 L-1 — M7 progresses (no transition); buildable scope now complete
+- Decision: M7 (Privacy controls, notifications & launch polish, 6e2f68d8) stays in_progress. wave-37 closed 3 in-app-notifications tasks (0b33df33, f3f52d9a, edac03e0); M7 now done_count=10, open_count=2. No transition (open_count>0). Mechanical, no BOARD.
+- Basis: L-1 Action 2 milestone-delta count query. The 2 remaining M7 rows are BOTH status='blocked' credential-blocked founder-ops: a1299e88 (Resend domain for transactional email) + 84e09891 (Railway bucket creds for avatar upload). Deploy-verify/canary already satisfied by wave-37 C-2 (canary skipped <1000 DAU).
+- Forward trigger: M7 has ZERO unblocked buildable tasks left. Flagged for N-1 as a milestone-disposition point — closing M7 needs founder credential-unblocking or an explicit disposition call, not auto-decomposition of a new bundle.

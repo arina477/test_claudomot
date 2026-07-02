@@ -63,6 +63,9 @@ All notable changes to StudyHall are documented here. Format follows
 - Export your account data as JSON so you can review exactly what StudyHall holds about you and download it for your records. (#49)
 - Production error tracking in the live app catches problems early so they can be fixed quickly, with all personal info scrubbed (no student emails, message contents, or tokens). (#49)
 - New /privacy and /terms pages plus friendly empty, loading, and error states throughout the app so no surface ever looks broken. (#49)
+- In-app notifications: a header bell with a panel that collects your @mentions and assignment-due reminders in one place, so a ping is never lost just because you missed the moment it happened. (#51)
+- Notifications persist across devices and sessions — sign in anywhere and your unread mentions and reminders are waiting — with the bell counting only what's genuinely unread. (#51)
+- Mark a single notification read, or clear them all at once; you only ever see your own, enforced server-side so no one can read or clear anyone else's. (#51)
 
 ### Changed
 
