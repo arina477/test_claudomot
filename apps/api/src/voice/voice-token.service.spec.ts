@@ -130,7 +130,7 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('VoiceTokenService.mintToken', () => {
-  it('member on voice channel → returns token + url; decoded JWT has correct identity, video grant, audio-only scope, bounded exp', async () => {
+  it('member on voice channel → returns token + url; decoded JWT has correct identity, video grant, screen-share scope, bounded exp', async () => {
     const result = await sut.mintToken(USER_ID, CHANNEL_ID);
 
     // Shape check
@@ -145,15 +145,17 @@ describe('VoiceTokenService.mintToken', () => {
     // Identity → userId (JWT `sub` claim)
     expect(payload.sub).toBe(USER_ID);
 
-    // Video grant — room-scoped, roomJoin, canPublish, canSubscribe, audio-only scope
+    // Video grant — room-scoped, roomJoin, canPublish, canSubscribe, widened publish sources
     const video = payload.video as Record<string, unknown>;
     expect(video).toBeDefined();
     expect(video.roomJoin).toBe(true);
     expect(video.room).toBe(CHANNEL_ID);
     expect(video.canPublish).toBe(true);
     expect(video.canSubscribe).toBe(true);
-    // Audio-first: canPublishSources serialises to ['microphone'] (TrackSource.MICROPHONE)
-    expect(video.canPublishSources).toEqual(['microphone']);
+    // Wave-34: canPublishSources widened to include screen_share + screen_share_audio.
+    // canPublishSources supersedes canPublish; without SCREEN_SHARE the server rejects
+    // a client screen-share publish even when canPublish=true.
+    expect(video.canPublishSources).toEqual(['microphone', 'screen_share', 'screen_share_audio']);
 
     // Expiry — bounded: exp > now AND exp <= now + 2h (not a fixed timestamp)
     const nowSeconds = Math.floor(Date.now() / 1000);
@@ -231,5 +233,20 @@ describe('VoiceTokenService.mintToken', () => {
 
     expect(mockRbac.canViewChannelById).toHaveBeenCalledWith(USER_ID, CHANNEL_ID);
     expect(mockSelect).toHaveBeenCalled();
+  });
+
+  it('minted grant for a member includes screen_share and screen_share_audio publish sources (wave-34)', async () => {
+    // This tests that the grant widening is present so a client screen-share publish
+    // is not server-rejected. canPublishSources supersedes canPublish when set.
+    const result = await sut.mintToken(USER_ID, CHANNEL_ID);
+    const payload = decodeJwtPayload(result.token);
+    const video = payload.video as Record<string, unknown>;
+
+    const sources = video.canPublishSources as string[];
+    expect(sources).toContain('screen_share');
+    expect(sources).toContain('screen_share_audio');
+    expect(sources).toContain('microphone');
+    // Camera is NOT in the grant (audio + screen-share only; video={false} on client)
+    expect(sources).not.toContain('camera');
   });
 });

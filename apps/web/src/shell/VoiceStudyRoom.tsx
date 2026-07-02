@@ -1,5 +1,5 @@
 /**
- * VoiceStudyRoom — audio-first LiveKit voice channel surface.
+ * VoiceStudyRoom — audio-first LiveKit voice channel surface. (wave-34 extended)
  *
  * Implements the 5 states from design/voice-study-room.html (D-3 adopted):
  *   1. Pre-join   — "Join voice" CTA; no auto-connect on mount.
@@ -8,36 +8,59 @@
  *   4. In-room (alone)     — own tile + empty-state prompt + controls.
  *   5. Error       — danger icon + message + "Try again" CTA.
  *
- * Design constraints (wave-31, Refs: 1dd1f2ca):
+ * Wave-34 additions (screen-share + audio-only fallback):
+ *   - Screen-share publish/subscribe: share button → setScreenShareEnabled();
+ *     remote screen-share rendered as a DISTINCT PROMINENT tile per design/screen-share-tile.html.
+ *     Layout: prominent area (max-w-[1000px] mx-auto) + demoted avatar strip.
+ *   - Audio-only fallback: useAudioOnlyFallback() hook; on Poor quality (debounced) OR
+ *     manual toggle → inbound video/screen-share setSubscribed(false); audio untouched.
+ *     Surface: amber banner (auto mode) or neutral banner (manual) per design/audio-only-state.html.
+ *     Restore button re-subscribes video. a11y: role=status aria-live=polite.
+ *   - Screen-share live region: sr-only aria-live=polite announces start/stop.
+ *
+ * Design constraints:
  *   - Camera OFF: `video={false}` on LiveKitRoom — audio-first, no camera.
- *   - No screen-share, speaking/presence rings, occupancy indicator, reconnection UI.
- *   - Dark-only. Phosphor-style inline SVG icons (MicrophoneIcon etc.).
- *   - Single LiveKitRoom per session; unmount → room.disconnect() via onDisconnected
- *     and the component teardown — LiveKitRoom cleans up on unmount when connect={false}.
- *   - Token is fetched via useVoiceToken (server-minted, RBAC-gated, TTL=1h).
+ *   - Single LiveKitRoom per session; unmount → room.disconnect().
  *   - livekit-server-sdk is NOT imported here (server-only).
  *
- * Routing note (wave-31): VoiceStudyRoom is rendered by MainColumn when
- * selectedChannel.type === 'voice'. Full routing wiring is in MainColumn.tsx.
+ * Screen-share states (design/screen-share-tile.html):
+ *   State 1: No share      — baseline avatar grid, share button idle.
+ *   State 2: Sharing active (remote) — prominent tile + avatar strip.
+ *   State 3: Loading (subscribing) — skeleton prominent area.
+ *   State 4: Own share active — own-share prominent panel + stop button.
+ *
+ * Audio-only states (design/audio-only-state.html):
+ *   State: Auto (poor bandwidth) — amber banner + wifi-low icon + restore.
+ *   State: Manual (opted in)     — neutral banner + video-slash icon + restore.
+ *   State: Restoring             — emerald spinner banner + disabled button.
  */
 
 import {
   LiveKitRoom,
+  VideoTrack,
   useLocalParticipant,
   useParticipants,
   useRoomContext,
+  useTracks,
 } from '@livekit/components-react';
-import { useCallback, useContext, useEffect, useRef } from 'react';
+import { Track } from 'livekit-client';
+import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { ProfileContext } from './ProfileContext';
 import { VoiceOccupancyIndicator } from './VoiceOccupancyIndicator';
 import {
   ArrowCounterClockwiseIcon,
   MicrophoneIcon,
   MicrophoneSlashIcon,
+  MonitorIcon,
+  ScreencastIcon,
   SignOutIcon,
   SpeakerHighIcon,
+  StopIcon,
   UsersIcon,
+  VideoCameraIcon,
+  WifiLowIcon,
 } from './icons';
+import { useAudioOnlyFallback } from './useAudioOnlyFallback';
 import { useVoiceOccupancy } from './useVoiceOccupancy';
 import { useVoiceToken } from './useVoiceToken';
 
@@ -59,11 +82,8 @@ export function VoiceStudyRoom({ channelId, channelName }: Props) {
     useVoiceToken(channelId);
 
   // Occupancy polling: active only on the pre-join surface (status === 'idle').
-  // Polling stops once the user joins (status changes away from 'idle') so stale
-  // intervals never fire during an active LiveKit session.
   const occupancy = useVoiceOccupancy(channelId, { enabled: status === 'idle' });
 
-  // Shared channel header across all states (design pattern from mockup)
   return (
     <div
       data-testid="voice-study-room"
@@ -113,15 +133,10 @@ export function VoiceStudyRoom({ channelId, channelName }: Props) {
           audio={true}
           video={false}
           onDisconnected={() => {
-            // Involuntary network drop → show pre-join (user did not explicitly leave;
-            // if the Leave button triggered this, handleLeave already called reset()
-            // and the LiveKitRoom will have unmounted before onDisconnected fires,
-            // so this is a no-op in that path — idempotent).
+            // Involuntary network drop → show pre-join
             reset();
           }}
           onError={(err) => {
-            // LiveKit connect failure → show the error state with a message, not pre-join.
-            // Routing to reset() (pre-join) would silently swallow the failure.
             const message =
               err instanceof Error ? err.message : 'Connection to the voice room failed.';
             setError(message);
@@ -154,8 +169,6 @@ function PreJoinView({
   occupancyParticipants,
   occupancyStatus,
 }: PreJoinViewProps) {
-  // Derive the join button label: empty room → "Be the First to Join" (D-3 empty state CTA);
-  // error / loading / populated → "Join voice" (standard CTA).
   const isEmptyRoom = occupancyStatus === 'loaded' && occupancyCount === 0;
   const joinLabel = isEmptyRoom ? 'Be the First to Join' : 'Join voice';
 
@@ -183,10 +196,6 @@ function PreJoinView({
         Drop in to connect via audio. The door is always open.
       </p>
 
-      {/* Occupancy indicator — pre-join surface only.
-          Bounded by a top-border panel to match the D-3 design card layout.
-          Error state uses role="status" (not role="alert") per D-3 spec so a
-          transient occupancy failure never hijacks the screen-reader focus from Join. */}
       <div
         data-testid="voice-occupancy-panel"
         className="w-full max-w-sm mb-6 pt-5"
@@ -207,7 +216,6 @@ function PreJoinView({
         style={
           isEmptyRoom
             ? {
-                // Empty state: muted secondary style (D-3 spec — "Be the First to Join")
                 backgroundColor: '#27272a',
                 color: 'rgba(255,255,255,0.92)',
                 border: '1px solid rgba(255,255,255,0.10)',
@@ -215,7 +223,6 @@ function PreJoinView({
                 boxShadow: '0 1px 2px rgba(0,0,0,0.4)',
               }
             : {
-                // Populated / loading / error: primary emerald CTA
                 backgroundColor: '#10b981',
                 color: '#0a0a0b',
                 minWidth: 160,
@@ -280,7 +287,6 @@ function ConnectingView({ channelName }: ConnectingViewProps) {
         Drop in to connect via audio. The door is always open.
       </p>
 
-      {/* Spinner button — pointer-events-none while connecting */}
       <div
         aria-busy="true"
         aria-label="Connecting to voice channel…"
@@ -321,7 +327,6 @@ function ErrorView({ message, onRetry }: ErrorViewProps) {
         }}
         aria-hidden="true"
       >
-        {/* Warning circle — danger-text */}
         <svg
           width={36}
           height={36}
@@ -397,18 +402,82 @@ type RoomViewProps = { onLeave: () => void };
 
 function RoomView({ onLeave }: RoomViewProps) {
   const participants = useParticipants();
-  const { localParticipant } = useLocalParticipant();
+  const { localParticipant, isScreenShareEnabled } = useLocalParticipant();
   const room = useRoomContext();
   const { profile } = useContext(ProfileContext);
+
+  // Audio-only fallback hook (wave-34)
+  // enterManual() available for a future manual-toggle control (not wired to a button this wave —
+  // the design uses only the auto-quality trigger + restore; the hook exports it for future use).
+  const { mode: audioOnlyMode, restoreState, restore } = useAudioOnlyFallback();
+
+  // Screen-share tracks from all participants (wave-34)
+  // useTracks with ScreenShare source returns TrackReference[] for all screen-share publishers
+  const screenShareTracks = useTracks([Track.Source.ScreenShare]);
+
+  // Local screen-share sharing state (for loading skeleton: track requested but not yet published)
+  const [shareRequested, setShareRequested] = useState(false);
+
+  // Screen-share live-region announcer text (wave-34 a11y)
+  const [screenShareAnnouncement, setScreenShareAnnouncement] = useState('');
 
   // Track mic muted state from local participant
   const isMuted = !localParticipant?.isMicrophoneEnabled;
 
+  // Derive the active screen-share track (first in list; design shows one prominent at a time)
+  // Exclude own share from the "remote subscriber" display path when local is sharing.
+  const remoteScreenShareTracks = screenShareTracks.filter(
+    (t) => t.participant?.identity !== localParticipant?.identity,
+  );
+  const activeRemoteShare = remoteScreenShareTracks[0] ?? null;
+
+  // Whether a screen-share region should be shown (own share or remote share)
+  const hasActiveShare = isScreenShareEnabled || activeRemoteShare !== null;
+
+  // Announce screen-share start/stop (wave-34 a11y live region)
+  const prevShareRef = useRef<string | null>(null);
+  useEffect(() => {
+    const sharerIdentity = activeRemoteShare?.participant?.identity ?? null;
+    const sharerName = activeRemoteShare?.participant?.name ?? sharerIdentity ?? 'Someone';
+    if (sharerIdentity !== null && prevShareRef.current === null) {
+      setScreenShareAnnouncement(`${sharerName} started sharing their screen`);
+    } else if (sharerIdentity === null && prevShareRef.current !== null) {
+      setScreenShareAnnouncement('Screen share ended');
+    }
+    prevShareRef.current = sharerIdentity;
+  }, [activeRemoteShare]);
+
+  // ── Screen-share controls ──────────────────────────────────────────────────
+
+  const toggleScreenShare = useCallback(async () => {
+    if (!localParticipant) return;
+    if (isScreenShareEnabled) {
+      // Stop sharing
+      setShareRequested(false);
+      await localParticipant.setScreenShareEnabled(false).catch(() => {
+        // Stop failure is safe to ignore; the button reverts to idle state
+        setShareRequested(false);
+      });
+    } else {
+      // Start sharing — browser native picker; permission denial or cancel is graceful
+      setShareRequested(true);
+      await localParticipant.setScreenShareEnabled(true).catch(() => {
+        // User cancelled picker or permission denied → revert to idle, no error state
+        setShareRequested(false);
+      });
+      // If the publish succeeded, LiveKit fires a track publication event and
+      // isScreenShareEnabled updates via useLocalParticipant; shareRequested becomes
+      // irrelevant as we transition to the own-share state.
+      setShareRequested(false);
+    }
+  }, [localParticipant, isScreenShareEnabled]);
+
+  // ── Mic + leave ───────────────────────────────────────────────────────────
+
   const toggleMic = useCallback(() => {
     if (!localParticipant) return;
     localParticipant.setMicrophoneEnabled(isMuted).catch(() => {
-      // Device permission denial is handled gracefully:
-      // The mic stays muted; no exception propagates to the room view.
+      // Device permission denial handled gracefully; mic stays muted
     });
   }, [localParticipant, isMuted]);
 
@@ -417,7 +486,7 @@ function RoomView({ onLeave }: RoomViewProps) {
     onLeave();
   }, [room, onLeave]);
 
-  // Disconnect on unmount (anti-pattern: never leave a room connection open)
+  // Disconnect on unmount (no leaked LiveKit connection / mic-hot-after-leave)
   const roomRef = useRef(room);
   useEffect(() => {
     roomRef.current = room;
@@ -428,10 +497,11 @@ function RoomView({ onLeave }: RoomViewProps) {
     };
   }, []);
 
+  // ── Layout ────────────────────────────────────────────────────────────────
+
   const participantCount = participants.length;
   const isAlone = participantCount <= 1;
 
-  // Derive initials for a participant display name
   function getInitials(name: string): string {
     const parts = name.trim().split(/\s+/);
     if (parts.length >= 2) {
@@ -445,8 +515,18 @@ function RoomView({ onLeave }: RoomViewProps) {
 
   return (
     <>
-      {/* Participant count badge — in header area via absolute positioning on populated state */}
-      {!isAlone && (
+      {/* Screen-share live region (wave-34 a11y) — sr-only, aria-live=polite */}
+      <div
+        role="status"
+        aria-live="polite"
+        className="sr-only"
+        data-testid="screen-share-announcer"
+      >
+        {screenShareAnnouncement}
+      </div>
+
+      {/* Participant count badge — header right when populated */}
+      {!isAlone && !hasActiveShare && (
         <div
           className="absolute top-3.5 right-4 flex items-center gap-1.5 rounded px-2 py-1 text-xs font-medium"
           style={{
@@ -461,16 +541,57 @@ function RoomView({ onLeave }: RoomViewProps) {
         </div>
       )}
 
-      {/* Participant tile area */}
+      {/* Main content area — switches between avatar grid and screen-share layout */}
       <div
-        className="flex-1 overflow-y-auto p-6 pb-24"
+        className="flex-1 overflow-y-auto p-6 pb-24 flex flex-col gap-4"
         style={{
           scrollbarWidth: 'thin',
           scrollbarColor: '#3f3f46 transparent',
         }}
       >
-        {isAlone ? (
-          /* State 4: alone */
+        {/* ── Audio-only fallback banner (wave-34) ── */}
+        {audioOnlyMode !== null && (
+          <AudioOnlyBanner mode={audioOnlyMode} restoreState={restoreState} onRestore={restore} />
+        )}
+
+        {/* ── Screen-share layout vs avatar grid ── */}
+        {isScreenShareEnabled ? (
+          /* State 4: Own share active — design/screen-share-tile.html §04 */
+          <OwnShareView
+            onStopShare={toggleScreenShare}
+            avatarStrip={
+              <AvatarStrip
+                participants={participants}
+                localIdentity={localParticipant?.identity}
+                myDisplayName={myDisplayName}
+              />
+            }
+          />
+        ) : shareRequested ? (
+          /* State 3: Loading (subscribing to own share in progress) — design §03 */
+          <ScreenShareLoading
+            avatarStrip={
+              <AvatarStrip
+                participants={participants}
+                localIdentity={localParticipant?.identity}
+                myDisplayName={myDisplayName}
+              />
+            }
+          />
+        ) : activeRemoteShare !== null ? (
+          /* State 2: Sharing active (remote) — design/screen-share-tile.html §02 */
+          <RemoteShareView
+            trackRef={activeRemoteShare}
+            avatarStrip={
+              <AvatarStrip
+                participants={participants}
+                localIdentity={localParticipant?.identity}
+                myDisplayName={myDisplayName}
+              />
+            }
+          />
+        ) : isAlone ? (
+          /* State 4: alone (no share) */
           <div className="flex flex-col items-center justify-center h-full gap-8 text-center">
             <ParticipantTile
               initials={getInitials(myDisplayName)}
@@ -488,7 +609,7 @@ function RoomView({ onLeave }: RoomViewProps) {
             </div>
           </div>
         ) : (
-          /* State 3: populated */
+          /* State 3: populated (no share) */
           <ul
             className="w-full max-w-[800px] mx-auto grid gap-4"
             style={{
@@ -568,6 +689,43 @@ function RoomView({ onLeave }: RoomViewProps) {
           aria-hidden="true"
         />
 
+        {/* Screen-share toggle (wave-34) */}
+        <button
+          type="button"
+          aria-pressed={isScreenShareEnabled}
+          aria-label={isScreenShareEnabled ? 'Stop screen sharing' : 'Share screen'}
+          data-testid="screen-share-btn"
+          onClick={toggleScreenShare}
+          className="flex h-[40px] w-[42px] items-center justify-center rounded transition-colors duration-150 focus-visible:outline-none"
+          style={
+            isScreenShareEnabled
+              ? {
+                  // Active state: emerald filled (design §04 control cluster)
+                  backgroundColor: '#10b981',
+                  color: '#0a0a0b',
+                }
+              : {
+                  backgroundColor: 'transparent',
+                  color: 'rgba(255,255,255,0.92)',
+                }
+          }
+          onFocus={(e) => {
+            e.currentTarget.style.boxShadow = '0 0 0 2px rgba(16,185,129,0.4)';
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.boxShadow = 'none';
+          }}
+        >
+          <ScreencastIcon size={20} />
+        </button>
+
+        {/* Divider */}
+        <div
+          className="h-6 w-px mx-1"
+          style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}
+          aria-hidden="true"
+        />
+
         {/* Leave button */}
         <button
           type="button"
@@ -607,6 +765,492 @@ function RoomView({ onLeave }: RoomViewProps) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Screen-share sub-views (wave-34)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** State 2: Remote screen-share active — prominent tile + avatar strip */
+function RemoteShareView({
+  trackRef,
+  avatarStrip,
+}: {
+  trackRef: import('@livekit/components-react').TrackReference;
+  avatarStrip: React.ReactNode;
+}) {
+  const sharerName = trackRef.participant?.name ?? trackRef.participant?.identity ?? 'Someone';
+
+  return (
+    <div className="flex flex-col gap-4 flex-1 min-h-0">
+      {/* Prominent screen-share region — design §02, max-w-[1000px] mx-auto */}
+      <div
+        className="w-full max-w-[1000px] mx-auto flex-1 min-h-0 rounded-lg relative overflow-hidden"
+        aria-label={`Screen shared by ${sharerName}`}
+        role="region"
+        style={{
+          backgroundColor: '#0a0a0b',
+          border: '1px solid rgba(255,255,255,0.06)',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.4)',
+        }}
+      >
+        {/* LiveKit VideoTrack — SDK-managed attach/detach lifecycle; no manual ref needed */}
+        <VideoTrack
+          trackRef={trackRef}
+          className="w-full h-full object-contain"
+          aria-label={`Screen shared by ${sharerName}`}
+        />
+
+        {/* Live share indicator — top-left */}
+        <div className="absolute top-4 left-4 z-10">
+          <div
+            className="flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-medium uppercase tracking-wide"
+            style={{
+              backgroundColor: 'rgba(10,10,11,0.90)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              color: '#10b981',
+            }}
+          >
+            {/* Subtle pulse dot */}
+            <span
+              className="inline-block w-1.5 h-1.5 rounded-full"
+              style={{
+                backgroundColor: '#10b981',
+                animation: 'subtle-pulse 3s cubic-bezier(0.4,0,0.6,1) infinite',
+              }}
+              aria-hidden="true"
+            />
+            Live Share
+          </div>
+        </div>
+
+        {/* Sharer name tag — bottom-left */}
+        <div className="absolute bottom-4 left-4 z-10">
+          <div
+            className="flex items-center gap-2 rounded-md pl-2 pr-3 py-1.5"
+            style={{
+              backgroundColor: 'rgba(18,18,20,0.90)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.4)',
+            }}
+          >
+            <span className="text-[13px] font-medium" style={{ color: 'rgba(255,255,255,0.92)' }}>
+              {sharerName}
+            </span>
+            <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.60)' }}>
+              Presenting
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {avatarStrip}
+    </div>
+  );
+}
+
+/** State 3: Screen-share loading skeleton */
+function ScreenShareLoading({ avatarStrip }: { avatarStrip: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-4 flex-1 min-h-0">
+      <div
+        className="w-full max-w-[1000px] mx-auto flex-1 min-h-0 rounded-lg relative overflow-hidden flex flex-col items-center justify-center"
+        aria-label="Loading screen share..."
+        aria-busy="true"
+        aria-live="polite"
+        style={{
+          backgroundColor: '#121214',
+          border: '1px solid rgba(255,255,255,0.06)',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.4)',
+        }}
+      >
+        <div className="flex flex-col items-center gap-4 z-10">
+          <div
+            className="w-12 h-12 rounded-lg flex items-center justify-center"
+            style={{
+              backgroundColor: '#27272a',
+              border: '1px solid rgba(255,255,255,0.10)',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.4)',
+            }}
+          >
+            <SpinnerSVG />
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.92)' }}>
+              Loading presentation feed...
+            </span>
+          </div>
+        </div>
+      </div>
+      {avatarStrip}
+    </div>
+  );
+}
+
+/** State 4: Own share active — self-monitor panel + stop button */
+function OwnShareView({
+  onStopShare,
+  avatarStrip,
+}: {
+  onStopShare: () => void;
+  avatarStrip: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-4 flex-1 min-h-0">
+      {/* Own share prominent area — design §04, emerald border glow */}
+      <div
+        className="w-full max-w-[1000px] mx-auto flex-1 min-h-0 rounded-lg relative overflow-hidden flex flex-col items-center justify-center"
+        data-testid="own-share-panel"
+        style={{
+          backgroundColor: '#0a0a0b',
+          border: '1px solid rgba(16,185,129,0.20)',
+          boxShadow: '0 0 15px rgba(255,255,255,0.05)',
+        }}
+      >
+        {/* Subtle emerald glow */}
+        <div
+          className="absolute pointer-events-none rounded-full"
+          style={{
+            width: 400,
+            height: 400,
+            backgroundColor: 'rgba(16,185,129,0.05)',
+            filter: 'blur(120px)',
+          }}
+          aria-hidden="true"
+        />
+
+        <div className="z-10 flex flex-col items-center text-center max-w-sm w-full px-6">
+          <div
+            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6"
+            style={{
+              backgroundColor: '#121214',
+              border: '1px solid rgba(255,255,255,0.06)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+            }}
+          >
+            <MonitorIcon size={28} style={{ color: '#10b981' }} />
+          </div>
+
+          <h3 className="text-lg font-semibold mb-2" style={{ color: 'rgba(255,255,255,0.92)' }}>
+            You are sharing your screen
+          </h3>
+          <p className="text-sm mb-8" style={{ color: 'rgba(255,255,255,0.60)' }}>
+            Participants in the room are currently viewing your stream. Audio is picked up from your
+            room mic.
+          </p>
+
+          {/* In-canvas stop control */}
+          <button
+            type="button"
+            data-testid="stop-share-canvas-btn"
+            onClick={onStopShare}
+            className="flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors duration-150 focus-visible:outline-none"
+            style={{
+              backgroundColor: '#27272a',
+              color: 'rgba(255,255,255,0.92)',
+              border: '1px solid rgba(255,255,255,0.10)',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.4)',
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#3f3f46';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#27272a';
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.boxShadow = '0 0 0 2px rgba(239,68,68,0.4)';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.4)';
+            }}
+          >
+            <StopIcon size={14} style={{ color: 'rgba(255,255,255,0.60)' }} />
+            Stop Presenting
+          </button>
+        </div>
+      </div>
+
+      {avatarStrip}
+    </div>
+  );
+}
+
+/** Avatar strip — demoted participant list shown below screen-share prominent tile */
+function AvatarStrip({
+  participants,
+  localIdentity,
+  myDisplayName,
+}: {
+  participants: (
+    | import('livekit-client').LocalParticipant
+    | import('livekit-client').RemoteParticipant
+  )[];
+  localIdentity: string | undefined;
+  myDisplayName: string;
+}) {
+  function getInitials(name: string): string {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase() || '?';
+  }
+
+  return (
+    <div
+      className="h-[64px] shrink-0 rounded-lg px-4 flex items-center gap-3 overflow-x-auto"
+      style={{
+        backgroundColor: 'rgba(18,18,20,0.50)',
+        border: '1px solid rgba(255,255,255,0.06)',
+        scrollbarWidth: 'thin',
+        scrollbarColor: '#3f3f46 transparent',
+      }}
+      aria-label="Participants"
+    >
+      {participants.map((p) => {
+        const isLocalP = p.identity === localIdentity;
+        const displayName = isLocalP ? `${myDisplayName} (You)` : (p.name ?? p.identity);
+        const isMutedP = !p.isMicrophoneEnabled;
+
+        return (
+          <div
+            key={p.identity}
+            className="relative shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium"
+            title={displayName}
+            aria-label={`${displayName}${isMutedP ? ' (muted)' : ''}`}
+            style={{
+              backgroundColor: '#3f3f46',
+              color: 'rgba(255,255,255,0.92)',
+              border: isLocalP ? '2px solid #10b981' : '1px solid rgba(255,255,255,0.10)',
+            }}
+          >
+            {getInitials(displayName ?? '')}
+            {isMutedP && !isLocalP && (
+              <span
+                className="absolute -bottom-1 -right-1 flex items-center justify-center rounded"
+                style={{
+                  width: 14,
+                  height: 14,
+                  backgroundColor: '#121214',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                }}
+                aria-hidden="true"
+              >
+                <MicrophoneSlashIcon size={9} style={{ color: '#f87171' }} />
+              </span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Audio-only fallback banner (wave-34) — design/audio-only-state.html
+// ─────────────────────────────────────────────────────────────────────────────
+
+type AudioOnlyBannerProps = {
+  mode: 'auto' | 'manual';
+  restoreState: 'idle' | 'restoring';
+  onRestore: () => void;
+};
+
+function AudioOnlyBanner({ mode, restoreState, onRestore }: AudioOnlyBannerProps) {
+  const isRestoring = restoreState === 'restoring';
+  const isAuto = mode === 'auto';
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      data-testid="audio-only-banner"
+      className="w-full flex items-center justify-between gap-3 rounded-lg p-2.5"
+      style={
+        isRestoring
+          ? {
+              // Restoring state — emerald-tinted border
+              backgroundColor: '#121214',
+              border: '1px solid rgba(16,185,129,0.20)',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.4)',
+            }
+          : isAuto
+            ? {
+                // Auto (poor bandwidth) — amber-tinted border (design §State Auto)
+                backgroundColor: '#121214',
+                border: '1px solid rgba(245,158,11,0.30)',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.4)',
+              }
+            : {
+                // Manual — neutral border (design §State Manual)
+                backgroundColor: '#121214',
+                border: '1px solid rgba(255,255,255,0.10)',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.4)',
+              }
+      }
+    >
+      {/* Left: icon + text */}
+      <div className="flex items-center gap-3 min-w-0">
+        {/* Status icon */}
+        <div
+          className="shrink-0 flex items-center justify-center w-8 h-8 rounded-full"
+          style={
+            isRestoring
+              ? {
+                  backgroundColor: 'rgba(16,185,129,0.10)',
+                  border: '1px solid rgba(16,185,129,0.20)',
+                  color: '#10b981',
+                }
+              : isAuto
+                ? {
+                    backgroundColor: 'rgba(245,158,11,0.10)',
+                    border: '1px solid rgba(245,158,11,0.20)',
+                    color: '#f59e0b',
+                  }
+                : {
+                    backgroundColor: '#27272a',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    color: 'rgba(255,255,255,0.60)',
+                  }
+          }
+          aria-hidden="true"
+        >
+          {isRestoring ? (
+            <SpinnerSVG />
+          ) : isAuto ? (
+            <WifiLowIcon size={14} />
+          ) : (
+            /* video-slash for manual opt-in */
+            <svg
+              width={14}
+              height={14}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2" />
+              <line x1="1" y1="1" x2="23" y2="23" />
+              <path d="M7 7h6l7.5-4.5v13" />
+            </svg>
+          )}
+        </div>
+
+        {/* Text */}
+        <div className="flex flex-col min-w-0">
+          <div className="flex items-center gap-2">
+            <span
+              className="text-sm font-semibold whitespace-nowrap"
+              style={{ color: 'rgba(255,255,255,0.92)' }}
+            >
+              {isRestoring ? 'Restoring video...' : 'Audio-only'}
+            </span>
+            {/* Mic-active reassurance pill — shown in all states including restoring (design build-fold note) */}
+            <span
+              className="hidden sm:flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+              style={{
+                backgroundColor: '#27272a',
+                border: '1px solid rgba(255,255,255,0.06)',
+                color: 'rgba(255,255,255,0.60)',
+              }}
+              aria-label="Microphone still active"
+            >
+              <MicrophoneIcon size={10} />
+              Mic active
+            </span>
+          </div>
+          {!isRestoring && (
+            <span className="text-xs mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.60)' }}>
+              {isAuto
+                ? 'Video paused locally to protect call quality'
+                : 'You manually paused your video stream'}
+            </span>
+          )}
+          {isRestoring && (
+            <span className="text-xs mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.60)' }}>
+              Re-establishing video connection
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Right: mic-active icon (mobile) + restore button */}
+      <div className="flex items-center gap-2 shrink-0 ml-2">
+        {/* Mobile mic-active badge */}
+        {!isRestoring && (
+          <div
+            className="sm:hidden flex items-center justify-center w-8 h-8 rounded"
+            style={{
+              backgroundColor: '#27272a',
+              border: '1px solid rgba(255,255,255,0.06)',
+              color: 'rgba(255,255,255,0.60)',
+            }}
+            aria-label="Microphone active"
+          >
+            <MicrophoneIcon size={14} />
+          </div>
+        )}
+
+        {/* Restore / restoring button */}
+        <button
+          type="button"
+          data-testid="audio-only-restore-btn"
+          onClick={isRestoring ? undefined : onRestore}
+          disabled={isRestoring}
+          aria-disabled={isRestoring}
+          className="flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold transition-colors duration-200 focus-visible:outline-none"
+          style={
+            isRestoring
+              ? {
+                  backgroundColor: 'rgba(16,185,129,0.05)',
+                  border: '1px solid rgba(16,185,129,0.05)',
+                  color: '#10b981',
+                  opacity: 0.5,
+                  cursor: 'not-allowed',
+                }
+              : isAuto
+                ? {
+                    backgroundColor: 'rgba(16,185,129,0.10)',
+                    border: '1px solid rgba(16,185,129,0.20)',
+                    color: '#10b981',
+                  }
+                : {
+                    backgroundColor: '#27272a',
+                    border: '1px solid rgba(255,255,255,0.10)',
+                    color: 'rgba(255,255,255,0.92)',
+                  }
+          }
+          onMouseEnter={(e) => {
+            if (!isRestoring) {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = isAuto
+                ? 'rgba(16,185,129,0.20)'
+                : '#3f3f46';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isRestoring) {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = isAuto
+                ? 'rgba(16,185,129,0.10)'
+                : '#27272a';
+            }
+          }}
+          onFocus={(e) => {
+            if (!isRestoring) e.currentTarget.style.boxShadow = '0 0 0 2px rgba(16,185,129,0.4)';
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.boxShadow = 'none';
+          }}
+        >
+          <VideoCameraIcon size={14} />
+          <span className="hidden sm:inline">{isRestoring ? 'Restoring' : 'Restore video'}</span>
+          <span className="sm:hidden">{isRestoring ? 'Restoring' : 'Restore'}</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Participant tile — shared by state 3 (populated) and state 4 (alone)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -627,7 +1271,7 @@ function ParticipantTile({ initials, name, isLocal, isMuted }: ParticipantTilePr
         boxShadow: '0 1px 2px rgba(0,0,0,0.4)',
       }}
     >
-      {/* Mute indicator — danger-tinted top-right corner badge */}
+      {/* Mute indicator */}
       {isMuted && !isLocal && (
         <div
           className="absolute top-2.5 right-2.5 flex h-[26px] w-[26px] items-center justify-center rounded"
@@ -651,7 +1295,6 @@ function ParticipantTile({ initials, name, isLocal, isMuted }: ParticipantTilePr
         }}
       >
         {initials}
-        {/* Online presence dot for local participant */}
         {isLocal && (
           <span
             aria-hidden="true"
@@ -676,7 +1319,7 @@ function ParticipantTile({ initials, name, isLocal, isMuted }: ParticipantTilePr
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Spinner SVG — used in connecting state
+// Spinner SVG — used in connecting state and restoring banner
 // ─────────────────────────────────────────────────────────────────────────────
 
 function SpinnerSVG() {
