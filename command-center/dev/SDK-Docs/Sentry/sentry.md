@@ -91,8 +91,15 @@
 ---
 
 ## Integration-Specific Findings
-*(filled at L-1 after implementation)*
+
 ### Our adapter patterns
+`import './instrument'` is the FIRST statement in apps/api main.ts (before any other import) — OTel per-request spans are silently absent otherwise. Used `@SentryExceptionCaptured()` on the EXISTING `SupertokensExceptionFilter.catch()` rather than adding a competing `SentryGlobalFilter` (StudyHall already has a custom global filter; two filters would conflict/double-handle).
+
 ### Env var configuration on our platforms
+apps/api reads `SENTRY_DSN` (+ `SENTRY_ENVIRONMENT=production`) from Railway service env. apps/web MUST use the `VITE_SENTRY_DSN` prefix — a bare `SENTRY_DSN` is invisible in the browser bundle. DSN is deploy-env only (not committed, not in README quick-start).
+
 ### Bugs we hit and how we solved them
+TypeScript `exactOptionalPropertyTypes` rejected the conditional `delete` of `event.request.data`/`cookies` inside `beforeSend`; resolved with an explicit delete + a `biome-ignore` on that line.
+
 ### What differed from the official docs
+Confirmed no-op-when-DSN-unset at build (Node: hooks install, no events, no crash; browser: `undefined` DSN → no events) — the build stays green with credentials absent, which the docs imply but do not assert for a CJS NestJS + Vite dual setup.

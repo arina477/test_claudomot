@@ -59,6 +59,10 @@ All notable changes to StudyHall are documented here. Format follows
 - Rotate a study server's permanent invite link: the owner can regenerate the link so a leaked one stops working immediately, closing the gap where the default permanent link could never be revoked. Owner-only; no client button yet. (#41)
 - Assignment due-date reminders — members are emailed about once, roughly 24 hours before an assignment is due, and anyone who has already marked it done is skipped. (#43)
 - Reminders run automatically on an hourly schedule and remind each member only once per assignment; stronger delivery guarantees under heavy load are tracked as a separate follow-up. (#43)
+- Privacy controls let you choose who can see your profile and who can message you — a student set to Hidden is removed from server member lists for everyone, including organizers, so the restriction is enforced server-side. (#49)
+- Export your account data as JSON so you can review exactly what StudyHall holds about you and download it for your records. (#49)
+- Production error tracking in the live app catches problems early so they can be fixed quickly, with all personal info scrubbed (no student emails, message contents, or tokens). (#49)
+- New /privacy and /terms pages plus friendly empty, loading, and error states throughout the app so no surface ever looks broken. (#49)
 
 ### Changed
 
