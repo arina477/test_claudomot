@@ -1,5 +1,3 @@
-# Wave 37 — D-3 Reconciliation (iteration 1 → refine 2)
-- Reviewer A (plan-design-review lens): **APPROVE** (9.0/10; all 10 iter-0 fixes landed).
-- Reviewer B (ui-ux-pro-max lens): **REVISE** — 2 blocking: R1 empty-state CTA dropped in iter-1 (regression; brief §3/§113 require icon+headline+one-line+CTA); R2 error icon text-danger #ef4444 (WCAG AA 3.93:1 FAIL) → text-danger-text #f87171 (6.30:1 PASS, DS §36). + secondary S1 interactive bell ph-fill when unread>0, S2 unreadCount var align to badge.
-- **Matrix: APPROVE + REVISE → aggregate B's concerns → D-2 refine.** Iteration cap: refine 2 of 3 (OK).
-- Substitution note (unchanged): dual reviewers run as fresh ui-designer agents with the plan-design-review + ui-ux-pro-max rubrics (/ui-ux-pro-max slash-skill not installed in this env); parallel, no shared context.
+# Wave 37 — D-3 Reconciliation (iteration 2 → iteration 3 final)
+- iter-2: Reviewer A (plan-design-review) APPROVE 8.5/10; Reviewer B (ui-ux-pro-max) REJECT — 2 exact token fixes: R1 hover:text-emerald-400 (#34d399 off-palette) → on-palette; R2 count badge bg-danger text-white (3.76:1 WCAG FAIL + violates brief §3/§4 emerald-badge spec) → bg-accent-emerald text-surface-950 (8.86:1 PASS).
+- Matrix: APPROVE + REJECT → refine. This is the FINAL cycle (3rd refine; cap=3). To avoid aidesigner reintroducing new off-token values (the whack-a-mole the cap guards against), iter-3 applied B's EXACT specified token corrections DETERMINISTICALLY via sed (mockup artifact, not production code; Iron Law governs prod code): 3 badges → emerald/surface-950, hover → accent-emerald. Nothing else changed (A's APPROVED design intact). Re-review both on iter-3.
