@@ -1,0 +1,2 @@
+# D-2 Variants: notifications-center (reconstructed)
+Staging: design/staging/notifications-center.html (aidesigner). iter-0 first-pass got REVISE+REVISE at D-3; iter-0 staging was LOST to a restart-reset; regenerated at iteration 1 via aidesigner Recipe-1 with all REVISE fixes folded in (p-4 padding, flat emerald dot, 9+ cap + 3 bell tiles, loaded-state tile, text-2xl empty headline, lg: breakpoint, focus-trap + aria-live + aria-busy). Checkpoint skipped-mode-automatic.

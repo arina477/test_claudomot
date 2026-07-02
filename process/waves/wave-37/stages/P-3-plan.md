@@ -1,0 +1,17 @@
+# Wave 37 — P-3 Plan (reconstructed — B-block reads this)
+Multi-spec: notifications model+API (0b33df33) + read endpoints+authz (f3f52d9a) + web center (edac03e0). design_gap_flag=true → D before B-3(frontend). security_scope user-data-authz → T-8.
+## APPROACH
+- **notifications table (new)** `apps/api/src/db/schema/notifications.ts` mirroring assignment-reminder.ts: id uuid PK, user_id text FK users ON DELETE CASCADE (NOTE: assignment-reminder does NOT cascade user FK — implement cascade deliberately per karen), type text ('mention'|'assignment_reminder', app/Zod validated, no pg enum), nullable message_id/channel_id/server_id/assignment_id (decide their ON DELETE at B-1), created_at, read_at nullable. Index (user_id, read_at, created_at DESC). Partial-unique (user_id, message_id) WHERE type='mention' for dedup. Export schema/index.ts; add `notifications` to pg-harness TRUNCATE list AHEAD of users. Additive drizzle migration.
+- **Persist-on-mention via @OnEvent (KEY):** new `NotificationsService.@OnEvent('mention.created')` persists a row per event (like gateway messaging.gateway.ts:285) — touches NO messages.service (emitted create :611 + edit :764, author excluded :603/:756). Dedup via ON CONFLICT DO NOTHING on the mention partial-unique. Async-after-commit acceptable (bell live-updates from same socket). B-3 acknowledge in-process no-retry failure-domain in handler comment (karen).
+- **Persist-on-reminder:** reminder-scan.service.ts:240 — inside the existing assignment_reminder ON CONFLICT send-once guard (when inserted.length>0), call notificationsService.createForReminder(user_id, assignment_id). No double-write.
+- **NotificationsService:** createForReminder, @OnEvent mention handler, listForUser(userId,cursor)→{items,unreadCount,nextCursor}, markRead(userId,id)→404 if not owned/nonexistent, markAllRead(userId).
+- **NotificationsController (new):** GET /me/notifications, PATCH /me/notifications/:id/read (404 non-owner), POST /me/notifications/read-all — session userId, no param.
+- **Web:** HeaderBell (mount MainColumn.tsx:233 right-actions) + NotificationsPanel (popover/bottom-sheet) + useNotifications hook (bootstrap GET unreadCount + onMention[messagingSocket.ts:175] live-increment + optimistic mark) + api.ts methods. Server read_at = SoT; useMentionBadge untouched (drift NON-GOAL).
+## API: GET /me/notifications?cursor=→{items,unreadCount,nextCursor?}|401; PATCH /me/notifications/:id/read→{unreadCount}|404|401; POST /me/notifications/read-all→{unreadCount}|401.
+## PLAN by B-stage
+- B-1 Schema (postgres-pro): notifications.ts + index.ts + pg-harness truncate; migration.
+- B-2 Contracts (typescript-pro): packages/shared/src/notifications.ts (NotificationSchema, NotificationListResponse, UnreadCountResponse) + index.ts.
+- B-3 Backend (node-specialist): notifications.service.ts (@OnEvent persist+dedup, createForReminder, list, markRead-404, markAllRead) + notifications.controller.ts + notifications.module.ts (register) + reminder-scan.service.ts (call createForReminder in guard).
+- B-4 Frontend (react-specialist, after D): HeaderBell.tsx + NotificationsPanel.tsx + useNotifications.ts + api.ts + MainColumn.tsx mount. Build to design/notifications-center.html (D-block canonical).
+- B-5 Wiring: NotificationsModule in app.module; repo typecheck.
+## Parallelization: B-1→B-2→B-3(backend)∥B-4(frontend, gated on D). Specialists all in AGENTS.md.
