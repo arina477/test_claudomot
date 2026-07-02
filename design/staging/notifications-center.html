@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyHall — Notification Engine</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Geist', '-apple-system', 'Segoe UI', 'sans-serif'],
+                        mono: ['Geist Mono', 'ui-monospace', 'monospace'],
+                    },
+                    colors: {
+                        surface: {
+                            950: '#0a0a0b',
+                            900: '#121214',
+                            800: '#1c1c1f',
+                            700: '#27272a',
+                            600: '#3f3f46',
+                            500: '#52525b',
+                        },
+                        text: {
+                            primary: 'rgba(255,255,255,0.92)',
+                            secondary: 'rgba(255,255,255,0.60)',
+                            muted: 'rgba(255,255,255,0.40)',
+                        },
+                        accent: {
+                            emerald: '#10b981',
+                            amber: '#f59e0b',
+                        },
+                        danger: {
+                            DEFAULT: '#ef4444',
+                            text: '#f87171',
+                        },
+                        border: {
+                            hairline: 'rgba(255,255,255,0.06)',
+                            hover: 'rgba(255,255,255,0.10)',
+                        }
+                    },
+                    boxShadow: {
+                        sm: '0 1px 2px rgba(0,0,0,0.4)',
+                        pop: '0 8px 24px rgba(0,0,0,0.5)',
+                    },
+                    animation: {
+                        'slide-up': 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'fade-in': 'fadeIn 0.2s ease-out forwards',
+                        'shimmer': 'shimmer 2s infinite linear',
+                    },
+                    keyframes: {
+                        slideUp: {
+                            '0%': { transform: 'translateY(100%)' },
+                            '100%': { transform: 'translateY(0)' },
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        shimmer: {
+                            '0%': { backgroundPosition: '-1000px 0' },
+                            '100%': { backgroundPosition: '1000px 0' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body { 
+            background-color: #0a0a0b; 
+            color: rgba(255,255,255,0.92);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Essential Custom Scrollbar for dark theme */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #3f3f46;
+            border-radius: 9999px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background-color: #52525b;
+        }
+
+        /* Focus rings - explicit off-tailwind to match design system requirement */
+        .ring-emerald-focus {
+            box-shadow: 0 0 0 2px rgba(16,185,129,0.4);
+            outline: none;
+        }
+
+        /* Component Label overlay for Spec Board */
+        .spec-label {
+            position: absolute;
+            top: -10px;
+            left: 12px;
+            background: #1c1c1f;
+            padding: 0 8px;
+            font-size: 11px;
+            font-weight: 500;
+            color: rgba(255,255,255,0.40);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Advanced Shimmer implementation for skeleton */
+        .skeleton-row {
+            background: #27272a;
+            background-image: linear-gradient(
+                90deg,
+                rgba(255, 255, 255, 0) 0,
+                rgba(255, 255, 255, 0.02) 20%,
+                rgba(255, 255, 255, 0.05) 60%,
+                rgba(255, 255, 255, 0)
+            );
+            background-size: 1000px 100%;
+        }
+
+        /* Hide scrollbar on modal body on touch devices */
+        @media (max-width: 1023px) {
+            .mobile-bottom-sheet-active {
+                overflow: hidden;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-[100dvh] flex flex-col p-6 md:p-12 max-w-[1400px] mx-auto gap-12 pb-32">
+
+    <!-- Screen Reader Live Region -->
+    <div aria-live="polite" class="sr-only" id="a11y-announcer"></div>
+
+    <header class="flex flex-col gap-2">
+        <h1 class="text-3xl font-semibold tracking-tight text-primary">Notification Engine</h1>
+        <p class="text-base text-secondary max-w-2xl leading-relaxed">
+            Canonical implementation of the StudyHall notification system. Follows v7 strict dark-mode requirements, exact spacing (4px base), and specific typography constraints. Popover converts to bottom-sheet &lt; 1024px.
+        </p>
+    </header>
+
+    <div class="grid grid-cols-1 gap-12">
+
+        <!-- ========================================== -->
+        <!-- SECTION 1: BELL STATES                     -->
+        <!-- ========================================== -->
+        <section class="flex flex-col gap-6">
+            <h2 class="text-lg font-semibold text-primary border-b border-border-hairline pb-2">1. Bell Trigger States</h2>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <!-- 0 Unread -->
+                <div class="relative border border-border-hairline rounded-lg bg-surface-900 p-8 flex items-center justify-center min-h-[120px]">
+                    <span class="spec-label">Empty (0 Unread)</span>
+                    
+                    <button class="w-9 h-9 rounded-md flex items-center justify-center text-text-secondary hover:text-white hover:bg-surface-800 transition-colors focus-visible:ring-emerald-focus" aria-label="Notifications, 0 unread">
+                        <i class="ph ph-bell text-xl"></i>
+                    </button>
+                    <div class="absolute bottom-3 left-0 right-0 text-center text-xs text-text-muted">Standard hover</div>
+                </div>
+
+                <!-- 3 Unread -->
+                <div class="relative border border-border-hairline rounded-lg bg-surface-900 p-8 flex items-center justify-center min-h-[120px]">
+                    <span class="spec-label">Standard (3 Unread)</span>
+                    
+                    <button class="w-9 h-9 rounded-md flex items-center justify-center text-white bg-surface-800 transition-colors focus-visible:ring-emerald-focus relative" aria-label="Notifications, 3 unread">
+                        <i class="ph-fill ph-bell text-xl text-primary"></i>
+                        <span class="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-danger text-[10px] font-semibold flex items-center justify-center px-1 text-white border-2 border-surface-900 leading-none pb-[1px]" aria-hidden="true">3</span>
+                    </button>
+                    <div class="absolute bottom-3 left-0 right-0 text-center text-xs text-text-muted">Solid icon fill</div>
+                </div>
+
+                <!-- 9+ Unread (Capped) -->
+                <div class="relative border border-border-hairline rounded-lg bg-surface-900 p-8 flex items-center justify-center min-h-[120px]">
+                    <span class="spec-label">Capped (10+ Unread)</span>
+                    
+                    <button class="w-9 h-9 rounded-md flex items-center justify-center text-white bg-surface-800 transition-colors focus-visible:ring-emerald-focus relative" aria-label="Notifications, 12 unread">
+                        <i class="ph-fill ph-bell text-xl text-primary"></i>
+                        <span class="absolute -top-1 -right-1 min-w-[20px] h-4 rounded-full bg-danger text-[10px] font-semibold flex items-center justify-center px-1 text-white border-2 border-surface-900 leading-none pb-[1px]" aria-hidden="true">9+</span>
+                    </button>
+                    <div class="absolute bottom-3 left-0 right-0 text-center text-xs text-text-muted">Badge caps at 9+</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- SECTION 2: INTERACTIVE DEMO                -->
+        <!-- ========================================== -->
+        <section class="flex flex-col gap-6 w-full">
+            <h2 class="text-lg font-semibold text-primary border-b border-border-hairline pb-2 flex items-center gap-2">
+                2. Live Component 
+                <span class="px-2 py-0.5 rounded-sm bg-accent-emerald/10 text-accent-emerald text-[10px] uppercase font-semibold tracking-wide">Interactive</span>
+            </h2>
+            <p class="text-sm text-text-secondary">Click the bell. Resize window below <code class="text-xs bg-surface-800 px-1 rounded">1024px</code> to test bottom-sheet conversion.</p>
+            
+            <div class="relative border border-border-hairline rounded-lg bg-surface-950 flex justify-end p-4 min-h-[500px] overflow-hidden" id="demo-environment">
+                <!-- Mock Top Nav Bar Area -->
+                <div class="absolute top-0 left-0 right-0 h-14 border-b border-border-hairline bg-surface-950 flex items-center justify-between px-6 z-10 w-full">
+                    <div class="text-sm font-semibold text-primary flex items-center gap-2">
+                        <div class="w-6 h-6 rounded bg-surface-800 flex items-center justify-center"><i class="ph ph-books text-sm text-accent-emerald"></i></div>
+                        StudyHall App
+                    </div>
+                    
+                    <!-- DEMO BELL TRIGGER -->
+                    <div class="relative z-40">
+                        <button id="interactive-bell" class="w-9 h-9 rounded-md flex items-center justify-center text-white hover:bg-surface-800 transition-colors focus-visible:ring-emerald-focus relative group" aria-haspopup="dialog" aria-expanded="false" aria-label="Notifications, 4 unread">
+                            <i class="ph ph-bell text-xl group-hover:text-white transition-colors" id="interactive-bell-icon"></i>
+                            <span id="interactive-bell-badge" class="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-danger text-[10px] font-semibold flex items-center justify-center px-1 text-white border-2 border-surface-950 leading-none pb-[1px]" aria-hidden="true">4</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Mock Background Content -->
+                <div class="mt-20 w-full grid grid-cols-3 gap-4 opacity-50 px-2 pointer-events-none">
+                    <div class="col-span-1 h-32 rounded-lg bg-surface-900 border border-border-hairline"></div>
+                    <div class="col-span-2 h-32 rounded-lg bg-surface-900 border border-border-hairline"></div>
+                    <div class="col-span-3 h-64 rounded-lg bg-surface-900 border border-border-hairline"></div>
+                </div>
+
+                <!-- SCRIM (Mobile Only - handled by media query classes) -->
+                <div id="interactive-scrim" class="fixed inset-0 bg-black/60 z-30 opacity-0 pointer-events-none transition-opacity duration-300 max-lg:block hidden" aria-hidden="true"></div>
+
+                <!-- ACTUAL NOTIFICATION PANEL (Loaded State Data) -->
+                <div id="interactive-panel" role="dialog" aria-modal="true" aria-label="Notifications Panel" class="
+                    lg:absolute lg:top-14 lg:right-6 lg:w-[380px] lg:border lg:rounded-lg lg:shadow-pop lg:bg-surface-900 
+                    max-lg:fixed max-lg:bottom-0 max-lg:inset-x-0 max-lg:w-full max-lg:h-[80dvh] max-lg:bg-surface-900 max-lg:rounded-t-xl max-lg:shadow-[0_-8px_24px_rgba(0,0,0,0.5)] 
+                    border-border-hairline z-40 flex flex-col overflow-hidden opacity-0 pointer-events-none lg:translate-y-2 transition-all duration-200">
+                    
+                    <!-- Mobile handle -->
+                    <div class="lg:hidden w-full flex justify-center py-2 shrink-0">
+                        <div class="w-12 h-1.5 rounded-full bg-surface-600"></div>
+                    </div>
+
+                    <!-- Header -->
+                    <div class="flex items-center justify-between px-4 py-3 border-b border-border-hairline shrink-0">
+                        <h2 class="text-base font-semibold text-primary">Notifications</h2>
+                        <button id="mark-read-btn" class="text-sm font-medium text-text-secondary hover:text-accent-emerald transition-colors focus-visible:ring-emerald-focus rounded px-1 -mr-1 flex items-center gap-1.5 outline-none">
+                            <i class="ph ph-check hidden" id="mark-read-icon"></i>
+                            <span id="mark-read-text">Mark all as read</span>
+                        </button>
+                    </div>
+
+                    <!-- Body: STRICT Padding 16px (p-4), row gaps 4px (gap-1) -->
+                    <div class="p-4 flex flex-col gap-1 overflow-y-auto custom-scrollbar flex-1 pb-safe" id="notification-list">
+                        
+                        <!-- Item 1: Mention (Unread) -->
+                        <div class="p-3 rounded-md hover:bg-surface-800 transition-colors flex gap-3 cursor-pointer group relative text-left w-full outline-none focus-visible:ring-emerald-focus notification-row" tabindex="0">
+                            <!-- Mandatory Flat Emerald Dot, no glow -->
+                            <div class="w-2 h-2 rounded-full bg-accent-emerald mt-1.5 shrink-0 indicator-dot"></div>
+                            
+                            <div class="flex flex-col gap-1 flex-1 min-w-0">
+                                <div class="flex items-start justify-between w-full gap-2">
+                                    <div class="flex items-center gap-1.5 flex-wrap flex-1 text-sm leading-snug">
+                                        <i class="ph ph-at text-text-muted shrink-0"></i>
+                                        <span class="font-semibold text-primary">Prof. Ockham</span>
+                                        <span class="text-text-secondary">mentioned you in</span>
+                                        <span class="font-medium text-accent-emerald cursor-pointer hover:underline hover:text-emerald-400">#sys-arch-301</span>
+                                    </div>
+                                    <span class="text-xs text-text-muted whitespace-nowrap shrink-0 mt-0.5">2m ago</span>
+                                </div>
+                                <div class="text-sm text-text-secondary truncate border-l-2 border-surface-600 pl-2 mt-0.5">
+                                    "Could you review the latency charts we discussed?"
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Item 2: Assignment Reminder (Unread, amber urgency) -->
+                        <div class="p-3 rounded-md hover:bg-surface-800 transition-colors flex gap-3 cursor-pointer group relative text-left w-full outline-none focus-visible:ring-emerald-focus notification-row" tabindex="0">
+                            <div class="w-2 h-2 rounded-full bg-accent-emerald mt-1.5 shrink-0 indicator-dot"></div>
+                            
+                            <div class="flex flex-col gap-1 flex-1 min-w-0">
+                                <div class="flex items-start justify-between w-full gap-2">
+                                    <div class="flex items-center gap-1.5 flex-wrap flex-1 text-sm leading-snug">
+                                        <div class="w-5 h-5 rounded-sm bg-accent-amber/10 flex items-center justify-center shrink-0">
+                                            <i class="ph ph-calendar-check text-accent-amber text-sm font-bold"></i>
+                                        </div>
+                                        <span class="text-text-secondary">Assignment due soon</span>
+                                    </div>
+                                    <span class="text-xs text-text-muted whitespace-nowrap shrink-0 mt-0.5">1h ago</span>
+                                </div>
+                                <div class="font-semibold text-primary mt-0.5">Algorithms Pset 3</div>
+                                <div class="flex items-center gap-1 text-xs font-medium text-accent-amber mt-0.5">
+                                    <i class="ph ph-clock"></i>
+                                    Due in 2 hours
+                                </div>
+                            </div>
+                        </div>
+
+                         <!-- Item 3: Direct Message (Read) -->
+                         <div class="p-3 rounded-md hover:bg-surface-800 transition-colors flex gap-3 cursor-pointer group relative text-left w-full outline-none focus-visible:ring-emerald-focus notification-row opacity-70" tabindex="0">
+                            <div class="w-2 h-2 rounded-full bg-transparent mt-1.5 shrink-0 indicator-dot"></div>
+                            
+                            <div class="flex flex-col gap-1 flex-1 min-w-0">
+                                <div class="flex items-start justify-between w-full gap-2">
+                                    <div class="flex items-center gap-1.5 flex-wrap flex-1 text-sm leading-snug">
+                                        <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=64&h=64&q=80" alt="Sarah Chen" class="w-5 h-5 rounded-full shrink-0 object-cover">
+                                        <span class="font-semibold text-primary">Sarah Chen</span>
+                                        <span class="text-text-secondary">sent you a message</span>
+                                    </div>
+                                    <span class="text-xs text-text-muted whitespace-nowrap shrink-0 mt-0.5">Yesterday</span>
+                                </div>
+                                <div class="text-sm text-text-secondary truncate border-l-2 border-surface-600 pl-2 mt-0.5">
+                                    "I finished the notes from lab, let me know if..."
+                                </div>
+                            </div>
+                        </div>
+
+                         <!-- Item 4: Assigment Graded (Read) -->
+                         <div class="p-3 rounded-md hover:bg-surface-800 transition-colors flex gap-3 cursor-pointer group relative text-left w-full outline-none focus-visible:ring-emerald-focus notification-row opacity-70" tabindex="0">
+                            <div class="w-2 h-2 rounded-full bg-transparent mt-1.5 shrink-0 indicator-dot"></div>
+                            
+                            <div class="flex flex-col gap-1 flex-1 min-w-0">
+                                <div class="flex items-start justify-between w-full gap-2">
+                                    <div class="flex items-center gap-1.5 flex-wrap flex-1 text-sm leading-snug">
+                                        <div class="w-5 h-5 rounded-sm bg-accent-emerald/10 flex items-center justify-center shrink-0">
+                                            <i class="ph ph-check-circle text-accent-emerald text-sm font-bold"></i>
+                                        </div>
+                                        <span class="text-text-secondary">Assignment graded</span>
+                                    </div>
+                                    <span class="text-xs text-text-muted whitespace-nowrap shrink-0 mt-0.5">Tuesday</span>
+                                </div>
+                                <div class="font-semibold text-primary mt-0.5">Data Structures: Final Project</div>
+                                <div class="flex items-center gap-1 text-sm text-text-secondary mt-0.5">
+                                    Score: <span class="font-semibold text-primary tracking-tight">94/100</span>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ========================================== -->
+        <!-- SECTION 3: PANEL DICTIONARY (STATIC VIEWS) -->
+        <!-- ========================================== -->
+        <section class="flex flex-col gap-6">
+            <h2 class="text-lg font-semibold text-primary border-b border-border-hairline pb-2">3. Panel States Dictionary</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                
+                <!-- STATE: LOADED -->
+                <div class="relative bg-surface-900 border border-border-hairline rounded-lg shadow-pop overflow-hidden flex flex-col h-[400px]">
+                    <span class="spec-label z-10">State: Loaded</span>
+                    <div class="flex items-center justify-between px-4 py-3 border-b border-border-hairline shrink-0">
+                        <h2 class="text-base font-semibold text-primary">Notifications</h2>
+                        <span class="text-sm font-medium text-text-secondary">Mark all as read</span>
+                    </div>
+                    <!-- Reuse structural layout mapping exact requirements -->
+                    <div class="p-4 flex flex-col gap-1 overflow-y-auto">
+                        <div class="p-3 rounded-md bg-surface-800 flex gap-3 cursor-pointer">
+                            <div class="w-2 h-2 rounded-full bg-accent-emerald mt-1.5 shrink-0"></div>
+                            <div class="flex flex-col gap-1 flex-1 min-w-0">
+                                <div class="flex items-start justify-between w-full gap-2">
+                                    <div class="flex items-center gap-1.5 text-sm">
+                                        <i class="ph ph-at text-text-muted"></i>
+                                        <span class="font-semibold text-primary">Alex</span>
+                                        <span class="text-text-secondary">mentioned you in</span>
+                                        <span class="font-medium text-accent-emerald hover:underline">#general</span>
+                                    </div>
+                                    <span class="text-xs text-text-muted whitespace-nowrap">Just now</span>
+                                </div>
+                                <div class="text-sm text-text-secondary truncate border-l-2 border-surface-600 pl-2 mt-0.5">"Check this out!"</div>
+                            </div>
+                        </div>
+                        <div class="p-3 rounded-md bg-surface-800 flex gap-3 cursor-pointer">
+                            <div class="w-2 h-2 rounded-full bg-accent-emerald mt-1.5 shrink-0"></div>
+                            <div class="flex flex-col gap-1 flex-1 min-w-0">
+                                <div class="flex items-start justify-between w-full gap-2">
+                                    <div class="flex items-center gap-1.5 text-sm">
+                                        <div class="w-5 h-5 rounded-sm bg-accent-amber/10 flex items-center justify-center"><i class="ph ph-calendar-check text-accent-amber"></i></div>
+                                        <span class="text-text-secondary">Assignment due soon</span>
+                                    </div>
+                                    <span class="text-xs text-text-muted whitespace-nowrap">1m</span>
+                                </div>
+                                <div class="font-semibold text-primary mt-0.5">Physics Lab Report</div>
+                                <div class="flex items-center gap-1 text-xs font-medium text-accent-amber mt-0.5"><i class="ph ph-clock"></i> Due tomorrow</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STATE: LOADING -->
+                <div class="relative bg-surface-900 border border-border-hairline rounded-lg shadow-pop overflow-hidden flex flex-col h-[400px]">
+                    <span class="spec-label z-10">State: Loading</span>
+                    <div class="flex items-center justify-between px-4 py-3 border-b border-border-hairline shrink-0">
+                        <h2 class="text-base font-semibold text-primary">Notifications</h2>
+                        <div class="w-24 h-4 bg-surface-700 rounded animate-shimmer skeleton-row opacity-50"></div>
+                    </div>
+                    <div class="p-4 flex flex-col gap-1 overflow-y-auto">
+                        <!-- Strict constraint: shimmers/skeletons of surface-700, no spinners -->
+                        <div class="p-3 flex gap-3">
+                            <div class="w-2 h-2 rounded-full bg-surface-700 mt-1.5 shrink-0 animate-shimmer skeleton-row"></div>
+                            <div class="flex flex-col gap-2 flex-1 pt-1">
+                                <div class="flex items-center justify-between w-full">
+                                    <div class="h-3 w-40 bg-surface-700 rounded animate-shimmer skeleton-row"></div>
+                                    <div class="h-2 w-8 bg-surface-700 rounded animate-shimmer skeleton-row"></div>
+                                </div>
+                                <div class="h-3 w-5/6 bg-surface-700 rounded animate-shimmer skeleton-row"></div>
+                                <div class="h-3 w-2/4 bg-surface-700 rounded animate-shimmer skeleton-row"></div>
+                            </div>
+                        </div>
+                        <div class="p-3 flex gap-3 opacity-80">
+                            <div class="w-2 h-2 rounded-full bg-surface-700 mt-1.5 shrink-0 animate-shimmer skeleton-row"></div>
+                            <div class="flex flex-col gap-2 flex-1 pt-1">
+                                <div class="flex items-center justify-between w-full">
+                                    <div class="h-3 w-32 bg-surface-700 rounded animate-shimmer skeleton-row"></div>
+                                    <div class="h-2 w-8 bg-surface-700 rounded animate-shimmer skeleton-row"></div>
+                                </div>
+                                <div class="h-3 w-4/6 bg-surface-700 rounded animate-shimmer skeleton-row"></div>
+                            </div>
+                        </div>
+                        <div class="p-3 flex gap-3 opacity-60">
+                            <div class="w-2 h-2 rounded-full bg-surface-700 mt-1.5 shrink-0 animate-shimmer skeleton-row"></div>
+                            <div class="flex flex-col gap-2 flex-1 pt-1">
+                                <div class="flex items-center justify-between w-full">
+                                    <div class="h-3 w-48 bg-surface-700 rounded animate-shimmer skeleton-row"></div>
+                                    <div class="h-2 w-8 bg-surface-700 rounded animate-shimmer skeleton-row"></div>
+                                </div>
+                                <div class="h-3 w-full bg-surface-700 rounded animate-shimmer skeleton-row"></div>
+                                <div class="h-3 w-3/4 bg-surface-700 rounded animate-shimmer skeleton-row"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STATE: EMPTY -->
+                <div class="relative bg-surface-900 border border-border-hairline rounded-lg shadow-pop overflow-hidden flex flex-col h-[350px]">
+                    <span class="spec-label z-10">State: Empty</span>
+                    <div class="flex items-center justify-between px-4 py-3 border-b border-border-hairline shrink-0">
+                        <h2 class="text-base font-semibold text-primary">Notifications</h2>
+                    </div>
+                    <div class="p-4 flex-1 flex flex-col items-center justify-center text-center">
+                        <div class="w-16 h-16 rounded-full bg-surface-800 flex items-center justify-center mb-4 border border-border-hairline shadow-sm">
+                            <i class="ph ph-bell-z text-3xl text-text-muted"></i>
+                        </div>
+                        <!-- Empty Headline strictly requires text-2xl per requirement 6 -->
+                        <h3 class="text-2xl font-semibold text-primary mb-1">You're all caught up</h3>
+                        <p class="text-sm text-text-secondary max-w-[200px] leading-relaxed">No new notifications. Go ace your classes.</p>
+                    </div>
+                </div>
+
+                <!-- STATE: ERROR -->
+                <div class="relative bg-surface-900 border border-border-hairline rounded-lg shadow-pop overflow-hidden flex flex-col h-[350px]">
+                    <span class="spec-label z-10">State: Error</span>
+                    <div class="flex items-center justify-between px-4 py-3 border-b border-border-hairline shrink-0">
+                        <h2 class="text-base font-semibold text-primary">Notifications</h2>
+                    </div>
+                    <div class="p-4 flex-1 flex flex-col items-center justify-center text-center">
+                        <div class="w-16 h-16 rounded-full bg-danger/10 flex items-center justify-center mb-4">
+                            <i class="ph ph-warning-circle text-3xl text-danger"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-primary mb-1">Couldn't load data</h3>
+                        <p class="text-sm text-text-secondary mb-5">There was a problem syncing. Please reconnect.</p>
+                        <button class="h-9 px-4 rounded-md bg-surface-800 hover:bg-surface-700 border border-border-hairline text-sm font-semibold text-primary transition-colors focus-visible:ring-emerald-focus outline-none">
+                            Retry connection
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </div>
+
+    <!-- JavaScript for exact micro-interactions & accessibility requirements -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const bell = document.getElementById('interactive-bell');
+            const panel = document.getElementById('interactive-panel');
+            const bellIcon = document.getElementById('interactive-bell-icon');
+            const bellBadge = document.getElementById('interactive-bell-badge');
+            const scrim = document.getElementById('interactive-scrim');
+            const markReadBtn = document.getElementById('mark-read-btn');
+            const markReadText = document.getElementById('mark-read-text');
+            const markReadIcon = document.getElementById('mark-read-icon');
+            const announcer = document.getElementById('a11y-announcer');
+            const dots = document.querySelectorAll('.indicator-dot');
+            const rows = document.querySelectorAll('.notification-row');
+            
+            let isOpen = false;
+            let unreadCount = 2; // matches initial mocked unread dots above
+            
+            function togglePanel() {
+                isOpen = !isOpen;
+                
+                if (isOpen) {
+                    // Open logic
+                    panel.classList.remove('opacity-0', 'pointer-events-none', 'lg:translate-y-2');
+                    panel.classList.add('opacity-100', 'lg:translate-y-0');
+                    if(window.innerWidth < 1024) {
+                        panel.classList.add('animate-slide-up');
+                        scrim.classList.remove('hidden');
+                        // Small timeout to allow display:block to paint before opacity transition
+                        setTimeout(() => scrim.classList.remove('opacity-0'), 10);
+                        document.body.classList.add('mobile-bottom-sheet-active');
+                    }
+                    
+                    bell.setAttribute('aria-expanded', 'true');
+                    bellIcon.classList.remove('ph');
+                    bellIcon.classList.add('ph-fill', 'text-primary'); // Filled icon state on active
+                    
+                    // Focus Trap Logic initiation
+                    setTimeout(() => {
+                        const firstFocusable = panel.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+                        if (firstFocusable) firstFocusable.focus();
+                    }, 50);
+
+                } else {
+                    // Close logic
+                    panel.classList.remove('opacity-100', 'lg:translate-y-0');
+                    panel.classList.add('opacity-0', 'pointer-events-none', 'lg:translate-y-2');
+                    
+                    if(window.innerWidth < 1024) {
+                        panel.classList.remove('animate-slide-up');
+                        scrim.classList.add('opacity-0');
+                        setTimeout(() => scrim.classList.add('hidden'), 300); // match duration
+                        document.body.classList.remove('mobile-bottom-sheet-active');
+                    }
+
+                    bell.setAttribute('aria-expanded', 'false');
+                    if(unreadCount === 0) {
+                        bellIcon.classList.remove('ph-fill', 'text-primary');
+                        bellIcon.classList.add('ph');
+                    }
+                    
+                    bell.focus();
+                }
+            }
+
+            // Bind click events
+            bell.addEventListener('click', togglePanel);
+            scrim.addEventListener('click', togglePanel);
+
+            // Escape key handler for dialog
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && isOpen) {
+                    togglePanel();
+                }
+            });
+
+            // Focus trap explicitly inside the dialog role
+            panel.addEventListener('keydown', (e) => {
+                if (e.key === 'Tab') {
+                    const focusableElements = panel.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+                    const firstElement = focusableElements[0];
+                    const lastElement = focusableElements[focusableElements.length - 1];
+
+                    if (e.shiftKey) { // Shift + Tab
+                        if (document.activeElement === firstElement) {
+                            lastElement.focus();
+                            e.preventDefault();
+                        }
+                    } else { // Tab
+                        if (document.activeElement === lastElement) {
+                            firstElement.focus();
+                            e.preventDefault();
+                        }
+                    }
+                }
+            });
+
+            // Handle Mark all as Read interaction strictly
+            markReadBtn.addEventListener('click', () => {
+                if(unreadCount === 0) return;
+
+                // Set Aria-busy
+                markReadBtn.setAttribute('aria-busy', 'true');
+                markReadText.textContent = 'Marking...';
+                markReadBtn.classList.add('opacity-70', 'pointer-events-none');
+                
+                // Simulate network latency (no literal generic spinner as per guidelines on lists, but okay to text-change button)
+                setTimeout(() => {
+                    // Update visual dots
+                    dots.forEach(dot => {
+                        dot.classList.remove('bg-accent-emerald');
+                        dot.classList.add('bg-transparent');
+                    });
+                    
+                    // Dim rows slightly
+                    rows.forEach(row => {
+                        row.classList.add('opacity-70');
+                    });
+
+                    // Remove bell badge
+                    if(bellBadge) bellBadge.style.display = 'none';
+                    
+                    // Reset Button
+                    markReadBtn.removeAttribute('aria-busy');
+                    markReadText.textContent = 'All read';
+                    markReadIcon.classList.remove('hidden');
+                    markReadBtn.classList.remove('text-text-secondary', 'hover:text-accent-emerald');
+                    markReadBtn.classList.add('text-accent-emerald');
+                    
+                    // Announce to screen reader
+                    unreadCount = 0;
+                    bell.setAttribute('aria-label', 'Notifications, 0 unread');
+                    announcer.textContent = 'All notifications marked as read.';
+                    
+                    // Clean icon state if panel closes
+                    if(!isOpen) {
+                        bellIcon.classList.remove('ph-fill', 'text-primary');
+                        bellIcon.classList.add('ph');
+                    }
+
+                }, 800);
+            });
+
+            // Responsive watcher
+            window.addEventListener('resize', () => {
+                if(window.innerWidth >= 1024 && isOpen) {
+                    scrim.classList.add('hidden', 'opacity-0');
+                    document.body.classList.remove('mobile-bottom-sheet-active');
+                } else if (window.innerWidth < 1024 && isOpen) {
+                    scrim.classList.remove('hidden');
+                    scrim.classList.remove('opacity-0');
+                    document.body.classList.add('mobile-bottom-sheet-active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
