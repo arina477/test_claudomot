@@ -52,9 +52,9 @@ TEST:
 - [x] T-9 Journey (APPROVED; journey regen v0.23)
 
 VERIFY:
-- [ ] V-1 Independent reviews (Karen + jenny, parallel)
-- [ ] V-2 Triage
-- [ ] V-3 Fast-fix loop (or close)
+- [x] V-1 Independent reviews (Karen + jenny, parallel)
+- [x] V-2 Triage
+- [x] V-3 Fast-fix loop (0 blocking; head-verifier APPROVED)
 
 LEARN:
 - [ ] L-1 Docs
