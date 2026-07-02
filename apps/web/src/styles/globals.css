@@ -206,6 +206,66 @@ body {
   }
 }
 
+/* ── Notifications center (wave-37 M7) ── */
+
+@keyframes sh-shimmer {
+  0% {
+    background-position: -800px 0;
+  }
+  100% {
+    background-position: 800px 0;
+  }
+}
+.sh-skeleton {
+  background: #27272a;
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.03) 20%,
+    rgba(255, 255, 255, 0.06) 60%,
+    rgba(255, 255, 255, 0)
+  );
+  background-size: 800px 100%;
+  animation: sh-shimmer 2s infinite linear;
+}
+
+@keyframes sh-slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+.sh-animate-slide-up {
+  animation: sh-slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes sh-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.sh-animate-fade-in {
+  animation: sh-fade-in 0.15s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sh-skeleton {
+    animation: none;
+    background-image: none;
+  }
+  .sh-animate-slide-up,
+  .sh-animate-fade-in {
+    animation: none;
+  }
+}
+
 /* ── Message lifecycle (wave-13 §8 MessageRow) ── */
 
 /* Row-action bar: hidden at rest; revealed on row hover OR keyboard focus-within

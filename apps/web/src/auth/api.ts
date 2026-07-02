@@ -24,6 +24,7 @@ import type {
   MessageResponse,
   MessagesAfterResponse,
   MyMentionsResponse,
+  NotificationListResponse,
   PrivacySettingsResponse,
   ProfileResponse,
   ReactionToggleInput,
@@ -33,6 +34,7 @@ import type {
   ServerMember,
   ServerResponse,
   ServerSummary,
+  UnreadCountResponse,
   UpdateAssignmentInput,
   UpdatePrivacyInput,
   UpdateProfileInput,
@@ -503,6 +505,40 @@ export const api = {
    * authenticated user. Throws: 401 unauthed.
    */
   getAccountData: (): Promise<AccountDataResponse> => request<AccountDataResponse>('/profile/data'),
+
+  // ── Notification endpoints (wave-37 M7) ─────────────────────────────────────
+
+  /**
+   * GET /me/notifications?cursor= → NotificationListResponse.
+   * Returns paginated in-app notifications (newest first) with total unreadCount.
+   * Throws: 401 unauthed.
+   */
+  getNotifications: (cursor?: string): Promise<NotificationListResponse> => {
+    const qs = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
+    return request<NotificationListResponse>(`/me/notifications${qs}`);
+  },
+
+  /**
+   * POST /me/notifications/:id/read → UnreadCountResponse.
+   * Marks a single notification as read. Idempotent.
+   * Throws: 401 unauthed, 404 not found or not owned.
+   */
+  markNotificationRead: (id: string): Promise<UnreadCountResponse> =>
+    request<UnreadCountResponse>(`/me/notifications/${id}/read`, {
+      method: 'POST',
+      body: '{}',
+    }),
+
+  /**
+   * POST /me/notifications/read-all → UnreadCountResponse.
+   * Marks every notification for the authenticated user as read.
+   * Throws: 401 unauthed.
+   */
+  markAllNotificationsRead: (): Promise<UnreadCountResponse> =>
+    request<UnreadCountResponse>('/me/notifications/read-all', {
+      method: 'POST',
+      body: '{}',
+    }),
 
   /**
    * GET /profile/data/export → triggers a file download of the user's data as

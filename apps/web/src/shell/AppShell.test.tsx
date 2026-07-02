@@ -24,6 +24,11 @@ vi.mock('../auth/api', () => ({
     getProfile: vi.fn().mockReturnValue(new Promise(() => {})),
     getServers: vi.fn().mockReturnValue(new Promise(() => {})),
     getServerDetail: vi.fn().mockReturnValue(new Promise(() => {})),
+    getMyMentions: vi.fn().mockResolvedValue({ items: [], nextCursor: null }),
+    // wave-37 notification endpoints
+    getNotifications: vi.fn().mockResolvedValue({ items: [], unreadCount: 0, nextCursor: null }),
+    markNotificationRead: vi.fn().mockResolvedValue({ unreadCount: 0 }),
+    markAllNotificationsRead: vi.fn().mockResolvedValue({ unreadCount: 0 }),
   },
 }));
 
@@ -39,6 +44,8 @@ vi.mock('./messagingSocket', () => ({
   joinChannel: vi.fn(),
   leaveChannel: vi.fn(),
   onMessageNew: vi.fn(() => () => {}),
+  // wave-15 mention / wave-37 notification socket events
+  onMention: vi.fn(() => () => {}),
   getSocketState: vi.fn(() => 'offline'),
 }));
 
