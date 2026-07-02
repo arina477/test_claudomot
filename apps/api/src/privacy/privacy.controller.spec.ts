@@ -194,3 +194,59 @@ describe('PrivacyController.getPrivacy — GET /profile/privacy', () => {
     expect(privacyService.getPrivacy).toHaveBeenCalledWith('reader-user-42');
   });
 });
+
+// ---------------------------------------------------------------------------
+// GET /profile/data — IDOR defense: userId comes from session, not attacker input
+// ---------------------------------------------------------------------------
+
+describe('PrivacyController.getAccountData — GET /profile/data', () => {
+  it('derives userId from session (not body/query) — structural IDOR proof', async () => {
+    const { controller, accountDataService } = makeController();
+
+    // biome-ignore lint/suspicious/noExplicitAny: test cast
+    await controller.getAccountData(makeReq('session-scoped-id-99') as any);
+
+    // An attacker-supplied id in the request body/query cannot substitute the
+    // session-scoped id — the controller reads only req.session.getUserId().
+    expect(accountDataService.getAccountData).toHaveBeenCalledWith('session-scoped-id-99');
+    expect(accountDataService.getAccountData).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns AccountDataResponse from accountDataService.getAccountData', async () => {
+    const { controller, accountDataService } = makeController();
+
+    // biome-ignore lint/suspicious/noExplicitAny: test cast
+    const result = await controller.getAccountData(makeReq('reader-user-42') as any);
+
+    expect(result).toEqual(expect.objectContaining({ profile: expect.any(Object) }));
+    expect(accountDataService.getAccountData).toHaveBeenCalledWith('reader-user-42');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /profile/data/export — IDOR defense: userId comes from session, not attacker input
+// ---------------------------------------------------------------------------
+
+describe('PrivacyController.exportAccountData — GET /profile/data/export', () => {
+  it('derives userId from session (not body/query) — structural IDOR proof', async () => {
+    const { controller, accountDataService } = makeController();
+
+    // biome-ignore lint/suspicious/noExplicitAny: test cast
+    await controller.exportAccountData(makeReq('session-scoped-id-99') as any);
+
+    // Mirror of the getAccountData IDOR proof — exportAccountData also reads
+    // only req.session.getUserId(), preventing cross-account data export.
+    expect(accountDataService.exportAccountData).toHaveBeenCalledWith('session-scoped-id-99');
+    expect(accountDataService.exportAccountData).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns AccountDataResponse from accountDataService.exportAccountData', async () => {
+    const { controller, accountDataService } = makeController();
+
+    // biome-ignore lint/suspicious/noExplicitAny: test cast
+    const result = await controller.exportAccountData(makeReq('exporter-user-77') as any);
+
+    expect(result).toEqual(expect.objectContaining({ profile: expect.any(Object) }));
+    expect(accountDataService.exportAccountData).toHaveBeenCalledWith('exporter-user-77');
+  });
+});

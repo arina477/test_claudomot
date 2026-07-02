@@ -1,15 +1,18 @@
 /**
- * PrivacyService unit tests + beforeSend PII-scrubbing contract — wave-35.
+ * PrivacyService unit tests + scrubPii PII-scrubbing contract — wave-35/36.
  *
  * Covers:
  *   - PrivacyService.getPrivacy: returns mapped PrivacySettingsResponse; defensive default
  *   - PrivacyService.updatePrivacy: persists BOTH profile_visibility AND who_can_dm columns;
  *     includes updated_at; returns result of getPrivacy (re-read after write)
- *   - beforeSend (Sentry): replicated verbatim from instrument.ts (not exported);
+ *   - scrubPii (Sentry): imported from the REAL instrument.ts (not a replica);
  *     strips user.{email,username,ip_address} + request.{data,cookies}; returns the event
  *
  * db is mocked via vi.mock — no real Postgres. Integration coverage is in
  * test/integration/privacy-visibility-authz.spec.ts.
+ *
+ * Side-effect note: importing instrument.ts loads @sentry/nestjs but does NOT
+ * call Sentry.init — the NODE_ENV!=='test' guard prevents it. Confirmed clean.
  */
 
 // ---------------------------------------------------------------------------
@@ -25,6 +28,7 @@ vi.mock('../db/index', () => ({
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '../db/index';
+import { scrubPii } from '../instrument';
 import { PrivacyService } from './privacy.service';
 
 // Typed references to mocked db methods — avoids per-test casting noise.
@@ -198,44 +202,16 @@ describe('PrivacyService.updatePrivacy', () => {
 });
 
 // ---------------------------------------------------------------------------
-// beforeSend — PII scrubbing contract (instrument.ts replica)
+// scrubPii — PII scrubbing contract (imported from instrument.ts)
 //
-// The function is inlined inside Sentry.init() in apps/api/src/instrument.ts
-// and is NOT exported. It is replicated verbatim here to test the PII deletion
-// contract in isolation, without triggering Sentry.init() side-effects or
-// requiring SENTRY_DSN in the test environment.
-//
-// If instrument.ts ever exports beforeSend, this replica should be removed and
-// replaced with a direct import.
+// scrubPii is exported from apps/api/src/instrument.ts and passed to
+// Sentry.init({ beforeSend: scrubPii }). Importing it here exercises the REAL
+// SUT — any drift in instrument.ts (e.g. dropping a delete) will immediately
+// break these tests. Sentry.init is NOT called because instrument.ts guards it
+// behind `if (process.env.NODE_ENV !== 'test')`.
 // ---------------------------------------------------------------------------
 
-/**
- * Exact replica of the beforeSend callback from apps/api/src/instrument.ts.
- * Sync any changes to that function with this replica.
- */
-function beforeSend(event: {
-  user?: Record<string, unknown>;
-  request?: Record<string, unknown>;
-  [key: string]: unknown;
-}): typeof event {
-  if (event.user) {
-    // biome-ignore lint/performance/noDelete: exactOptionalPropertyTypes — same rationale as instrument.ts
-    delete event.user.email;
-    // biome-ignore lint/performance/noDelete: exactOptionalPropertyTypes — same rationale as instrument.ts
-    delete event.user.username;
-    // biome-ignore lint/performance/noDelete: exactOptionalPropertyTypes — same rationale as instrument.ts
-    delete event.user.ip_address;
-  }
-  if (event.request) {
-    // biome-ignore lint/performance/noDelete: exactOptionalPropertyTypes — same rationale as instrument.ts
-    delete event.request.data;
-    // biome-ignore lint/performance/noDelete: exactOptionalPropertyTypes — same rationale as instrument.ts
-    delete event.request.cookies;
-  }
-  return event;
-}
-
-describe('beforeSend — PII scrubbing contract (instrument.ts verbatim replica)', () => {
+describe('scrubPii — PII scrubbing contract (imported from instrument.ts)', () => {
   it('removes user.email, user.username, and user.ip_address; keeps non-PII user fields', () => {
     const event = {
       user: {
@@ -248,7 +224,7 @@ describe('beforeSend — PII scrubbing contract (instrument.ts verbatim replica)
       message: 'test error',
     };
 
-    const result = beforeSend(event);
+    const result = scrubPii(event);
 
     expect(result.user).not.toHaveProperty('email');
     expect(result.user).not.toHaveProperty('username');
@@ -268,7 +244,7 @@ describe('beforeSend — PII scrubbing contract (instrument.ts verbatim replica)
       },
     };
 
-    const result = beforeSend(event);
+    const result = scrubPii(event);
 
     expect(result.request).not.toHaveProperty('data');
     expect(result.request).not.toHaveProperty('cookies');
@@ -280,28 +256,28 @@ describe('beforeSend — PII scrubbing contract (instrument.ts verbatim replica)
   it('returns the same event object reference (mutation in-place, not a copy)', () => {
     const event = {
       user: { email: 'x@y.com', username: 'x', ip_address: '1.2.3.4' },
-      request: { data: 'body', cookies: 'c=1' },
+      request: { data: 'body', cookies: { c: '1' } },
     };
 
-    const result = beforeSend(event);
+    const result = scrubPii(event);
 
     // beforeSend mutates and returns the same object — no defensive copy
     expect(result).toBe(event);
   });
 
   it('is a no-op (no throw) when event has neither user nor request', () => {
-    const event = { message: 'no pii here', level: 'info' };
+    const event = { message: 'no pii here', level: 'info' as const };
 
-    expect(() => beforeSend(event)).not.toThrow();
+    expect(() => scrubPii(event)).not.toThrow();
 
-    const result = beforeSend(event);
+    const result = scrubPii(event);
     expect(result.message).toBe('no pii here');
   });
 
   it('handles user-only event (no request field) without throwing', () => {
     const event = { user: { email: 'pii@test.com', username: 'pii_user', ip_address: '10.0.0.1' } };
 
-    const result = beforeSend(event);
+    const result = scrubPii(event);
 
     expect(result.user).not.toHaveProperty('email');
     expect(result.user).not.toHaveProperty('username');
@@ -311,10 +287,10 @@ describe('beforeSend — PII scrubbing contract (instrument.ts verbatim replica)
 
   it('handles request-only event (no user field) without throwing', () => {
     const event = {
-      request: { data: '{"password":"s3cret"}', cookies: 'auth=tok' },
+      request: { data: '{"password":"s3cret"}', cookies: { auth: 'tok' } },
     };
 
-    const result = beforeSend(event);
+    const result = scrubPii(event);
 
     expect(result.request).not.toHaveProperty('data');
     expect(result.request).not.toHaveProperty('cookies');
@@ -325,9 +301,9 @@ describe('beforeSend — PII scrubbing contract (instrument.ts verbatim replica)
     // If email is already missing, delete is a no-op — must not throw
     const event = { user: { id: 'no-email-user', username: 'noe' } };
 
-    expect(() => beforeSend(event)).not.toThrow();
+    expect(() => scrubPii(event)).not.toThrow();
 
-    const result = beforeSend(event);
+    const result = scrubPii(event);
     expect(result.user).not.toHaveProperty('username');
     expect(result.user).toHaveProperty('id', 'no-email-user');
   });
