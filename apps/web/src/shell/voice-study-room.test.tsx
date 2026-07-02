@@ -574,4 +574,80 @@ describe('VoiceStudyRoom', () => {
     expect(announcer).toHaveAttribute('role', 'status');
     expect(announcer).toHaveAttribute('aria-live', 'polite');
   });
+
+  // ── V-3 fast-fix: Audio-only manual toggle wired to enterManual() ─────────
+  // Spec-2 AC1: user can opt in to audio-only via a manual toggle in the control cluster.
+  // AC2/AC3/AC5: banner renders, toggle shows pressed, restore reverts.
+
+  it('audio-only toggle button renders in the control cluster when in-room', async () => {
+    mockApi.getVoiceToken.mockResolvedValue({ token: 'jwt', url: 'wss://lk.example.com' });
+    const user = userEvent.setup();
+    renderVoice();
+
+    await user.click(screen.getByTestId('join-voice-btn'));
+    await waitFor(() => expect(screen.getByTestId('voice-controls')).toBeInTheDocument());
+
+    expect(screen.getByTestId('audio-only-toggle-btn')).toBeInTheDocument();
+  });
+
+  it('clicking the audio-only toggle calls enterManual() when mode=null', async () => {
+    mockAudioOnlyMode = null;
+    mockApi.getVoiceToken.mockResolvedValue({ token: 'jwt', url: 'wss://lk.example.com' });
+    const user = userEvent.setup();
+    renderVoice();
+
+    await user.click(screen.getByTestId('join-voice-btn'));
+    await waitFor(() => expect(screen.getByTestId('audio-only-toggle-btn')).toBeInTheDocument());
+
+    await user.click(screen.getByTestId('audio-only-toggle-btn'));
+
+    expect(mockEnterManual).toHaveBeenCalledTimes(1);
+    expect(mockRestore).not.toHaveBeenCalled();
+  });
+
+  it('audio-only toggle shows aria-pressed=false and label="Switch to audio-only" when mode=null', async () => {
+    mockAudioOnlyMode = null;
+    mockApi.getVoiceToken.mockResolvedValue({ token: 'jwt', url: 'wss://lk.example.com' });
+    const user = userEvent.setup();
+    renderVoice();
+
+    await user.click(screen.getByTestId('join-voice-btn'));
+    await waitFor(() => expect(screen.getByTestId('audio-only-toggle-btn')).toBeInTheDocument());
+
+    const btn = screen.getByTestId('audio-only-toggle-btn');
+    expect(btn).toHaveAttribute('aria-pressed', 'false');
+    expect(btn).toHaveAttribute('aria-label', 'Switch to audio-only');
+  });
+
+  it('audio-only toggle shows aria-pressed=true and banner renders when mode=manual', async () => {
+    // Simulate: user has toggled audio-only (hook returns mode='manual')
+    mockAudioOnlyMode = 'manual';
+    mockApi.getVoiceToken.mockResolvedValue({ token: 'jwt', url: 'wss://lk.example.com' });
+    const user = userEvent.setup();
+    renderVoice();
+
+    await user.click(screen.getByTestId('join-voice-btn'));
+    await waitFor(() => expect(screen.getByTestId('audio-only-toggle-btn')).toBeInTheDocument());
+
+    const btn = screen.getByTestId('audio-only-toggle-btn');
+    expect(btn).toHaveAttribute('aria-pressed', 'true');
+    expect(btn).toHaveAttribute('aria-label', 'Restore video');
+    // Banner is also visible (AC3: visual indicator of audio-only state)
+    expect(screen.getByTestId('audio-only-banner')).toBeInTheDocument();
+  });
+
+  it('clicking the audio-only toggle calls restore() when mode=manual (toggle off = restore)', async () => {
+    mockAudioOnlyMode = 'manual';
+    mockApi.getVoiceToken.mockResolvedValue({ token: 'jwt', url: 'wss://lk.example.com' });
+    const user = userEvent.setup();
+    renderVoice();
+
+    await user.click(screen.getByTestId('join-voice-btn'));
+    await waitFor(() => expect(screen.getByTestId('audio-only-toggle-btn')).toBeInTheDocument());
+
+    await user.click(screen.getByTestId('audio-only-toggle-btn'));
+
+    expect(mockRestore).toHaveBeenCalledTimes(1);
+    expect(mockEnterManual).not.toHaveBeenCalled();
+  });
 });
