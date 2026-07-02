@@ -38,6 +38,17 @@ export function HeaderBell() {
   const badgeText = unreadCount > 9 ? '9+' : unreadCount > 0 ? String(unreadCount) : null;
 
   // ---------------------------------------------------------------------------
+  // Reload on panel open — reconciles items + count against the server each time
+  // the panel transitions from closed to open. Keeps list in sync with live
+  // mention events that only incremented unreadCount between opens.
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    if (panelOpen) {
+      notifications.reload();
+    }
+  }, [panelOpen, notifications.reload]);
+
+  // ---------------------------------------------------------------------------
   // Toggle panel
   // ---------------------------------------------------------------------------
   const openPanel = useCallback(() => setPanelOpen(true), []);

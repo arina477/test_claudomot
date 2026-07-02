@@ -519,14 +519,13 @@ export const api = {
   },
 
   /**
-   * POST /me/notifications/:id/read → UnreadCountResponse.
+   * PATCH /me/notifications/:id/read → UnreadCountResponse.
    * Marks a single notification as read. Idempotent.
    * Throws: 401 unauthed, 404 not found or not owned.
    */
   markNotificationRead: (id: string): Promise<UnreadCountResponse> =>
     request<UnreadCountResponse>(`/me/notifications/${id}/read`, {
-      method: 'POST',
-      body: '{}',
+      method: 'PATCH',
     }),
 
   /**
