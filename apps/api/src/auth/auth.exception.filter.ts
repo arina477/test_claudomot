@@ -1,5 +1,6 @@
 import { Catch, HttpException, HttpStatus } from '@nestjs/common';
 import type { ArgumentsHost, ExceptionFilter } from '@nestjs/common';
+import { isInvalidTextRepresentation } from './pg-error-utils';
 
 // Minimal response interface — avoids @types/express dependency.
 // headersSent: true when SuperTokens' own errorHandler already sent the response
@@ -34,10 +35,37 @@ export class SupertokensExceptionFilter implements ExceptionFilter {
     // NestJS-style validation errors return the correct 4xx status instead of crashing.
     // Registering this filter via app.useGlobalFilters(new ...) means BaseExceptionFilter
     // cannot be used (no HttpAdapterHost injected), so we handle HttpException directly.
+    //
+    // IMPORTANT: this check runs BEFORE the 22P02 check below so that any
+    // HttpException (including app-thrown BadRequestException / ForbiddenException /
+    // NotFoundException) is always forwarded unchanged — a DrizzleQueryError is never
+    // an HttpException, so the ordering is safe and the two branches never overlap.
     if (err instanceof HttpException) {
       const status = err.getStatus();
       const body = err.getResponse();
       res.status(status).json(body);
+      return;
+    }
+
+    // Postgres SQLSTATE 22P02 (invalid_text_representation) — thrown when a
+    // malformed non-UUID string is cast to uuid in a parameterised WHERE clause.
+    // Drizzle wraps the PG error inside DrizzleQueryError, so we walk .cause
+    // (and .cause.cause) to find the code — same layered walk as isUniqueViolation
+    // in users.service.ts:23-38.
+    //
+    // We map this to 400 Bad Request with a clean generic body (no stack/DB detail).
+    // This covers all ~30 UUID route params across 7 controllers in one place.
+    //
+    // Auth boundary: AuthGuard runs BEFORE the controller method (and therefore
+    // before any DB query). A 401/403 from SuperTokens is sent by the SDK's own
+    // errorHandler (headersSent=true, caught above) or reaches this filter as an
+    // HttpException (forwarded above). 22P02 can only fire AFTER auth succeeds —
+    // an unauthenticated request never reaches the parameterised DB query.
+    if (isInvalidTextRepresentation(err)) {
+      res.status(HttpStatus.BAD_REQUEST).json({
+        statusCode: HttpStatus.BAD_REQUEST,
+        message: 'Bad Request',
+      });
       return;
     }
 

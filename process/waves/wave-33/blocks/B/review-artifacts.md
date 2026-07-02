@@ -10,7 +10,7 @@
 |---|---|---|---|
 | B-0 | process/waves/wave-33/stages/B-0-branch-and-schema.md | done | branch wave-33-uuid-param-validation; schema SKIP; task claimed |
 | B-1 | process/waves/wave-33/stages/B-1-contracts.md | skipped | no new type/Zod/OpenAPI |
-| B-2 | process/waves/wave-33/stages/B-2-backend.md | pending | node-specialist: 22P02→400 in SupertokensExceptionFilter + isInvalidTextRepresentation helper + tests |
+| B-2 | process/waves/wave-33/stages/B-2-backend.md | done | node-specialist; 22P02→400 in filter + helper mirroring 23505 walk; 18 unit + 10 real-DB integration; no 2nd catch-all |
 | B-3 | process/waves/wave-33/stages/B-3-frontend.md | skipped | backend-only (design_gap FALSE) |
 | B-4 | process/waves/wave-33/stages/B-4-wiring.md | pending | |
 | B-5 | process/waves/wave-33/stages/B-5-verify.md | pending | |
