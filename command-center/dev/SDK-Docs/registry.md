@@ -36,3 +36,4 @@ Each row points at the SDK doc at `command-center/dev/SDK-Docs/<Name>/<name>.md`
 | `Official Docs` | Markdown link to live URL | Version-specific landing page |
 | `Version` | Semver / CLI version / "MCP" | The exact installed version this doc was verified against |
 | `Last verified` | YYYY-MM-DD | Date the research process last ran for this SDK |
+| `@sentry/nestjs` · `@sentry/react` | [Sentry/sentry.md](Sentry/sentry.md) | https://docs.sentry.io/platforms/javascript/guides/nestjs/ | @sentry/nestjs@^10.63.0 · @sentry/react@^10.63.0 | 2026-07-02 |
