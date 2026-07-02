@@ -56,7 +56,9 @@ const DM_OPTIONS = [
  * Maps the server-side 3-value enum → the honest 2-option UI value.
  * `server-members` is absorbed into `everyone` (they behave identically).
  */
-function toUiVisibility(v: PrivacySettingsResponse['profileVisibility']): 'everyone' | 'nobody' {
+export function toUiVisibility(
+  v: PrivacySettingsResponse['profileVisibility'],
+): 'everyone' | 'nobody' {
   return v === 'nobody' ? 'nobody' : 'everyone';
 }
 
