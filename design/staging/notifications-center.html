@@ -219,7 +219,8 @@
                     <!-- DEMO BELL TRIGGER -->
                     <div class="relative z-40">
                         <button id="interactive-bell" class="w-9 h-9 rounded-md flex items-center justify-center text-white hover:bg-surface-800 transition-colors focus-visible:ring-emerald-focus relative group" aria-haspopup="dialog" aria-expanded="false" aria-label="Notifications, 4 unread">
-                            <i class="ph ph-bell text-xl group-hover:text-white transition-colors" id="interactive-bell-icon"></i>
+                            <!-- Icon defaults to solid fill (ph-fill) since unread > 0 -->
+                            <i class="ph-fill ph-bell text-xl text-primary transition-colors" id="interactive-bell-icon"></i>
                             <span id="interactive-bell-badge" class="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-danger text-[10px] font-semibold flex items-center justify-center px-1 text-white border-2 border-surface-950 leading-none pb-[1px]" aria-hidden="true">4</span>
                         </button>
                     </div>
@@ -362,7 +363,6 @@
                         <h2 class="text-base font-semibold text-primary">Notifications</h2>
                         <span class="text-sm font-medium text-text-secondary">Mark all as read</span>
                     </div>
-                    <!-- Reuse structural layout mapping exact requirements -->
                     <div class="p-4 flex flex-col gap-1 overflow-y-auto">
                         <div class="p-3 rounded-md bg-surface-800 flex gap-3 cursor-pointer">
                             <div class="w-2 h-2 rounded-full bg-accent-emerald mt-1.5 shrink-0"></div>
@@ -404,7 +404,6 @@
                         <div class="w-24 h-4 bg-surface-700 rounded animate-shimmer skeleton-row opacity-50"></div>
                     </div>
                     <div class="p-4 flex flex-col gap-1 overflow-y-auto">
-                        <!-- Strict constraint: shimmers/skeletons of surface-700, no spinners -->
                         <div class="p-3 flex gap-3">
                             <div class="w-2 h-2 rounded-full bg-surface-700 mt-1.5 shrink-0 animate-shimmer skeleton-row"></div>
                             <div class="flex flex-col gap-2 flex-1 pt-1">
@@ -450,9 +449,12 @@
                         <div class="w-16 h-16 rounded-full bg-surface-800 flex items-center justify-center mb-4 border border-border-hairline shadow-sm">
                             <i class="ph ph-bell-z text-3xl text-text-muted"></i>
                         </div>
-                        <!-- Empty Headline strictly requires text-2xl per requirement 6 -->
                         <h3 class="text-2xl font-semibold text-primary mb-1">You're all caught up</h3>
                         <p class="text-sm text-text-secondary max-w-[200px] leading-relaxed">No new notifications. Go ace your classes.</p>
+                        <!-- ADDED CTA for R1 -->
+                        <button class="mt-5 h-9 px-4 rounded-md bg-surface-800 hover:bg-surface-700 border border-border-hairline text-sm font-semibold text-primary transition-colors focus-visible:ring-emerald-focus outline-none">
+                            Browse channels
+                        </button>
                     </div>
                 </div>
 
@@ -464,7 +466,8 @@
                     </div>
                     <div class="p-4 flex-1 flex flex-col items-center justify-center text-center">
                         <div class="w-16 h-16 rounded-full bg-danger/10 flex items-center justify-center mb-4">
-                            <i class="ph ph-warning-circle text-3xl text-danger"></i>
+                            <!-- FIXED WCAG AA CONTRAST text-danger-text -->
+                            <i class="ph ph-warning-circle text-3xl text-danger-text"></i>
                         </div>
                         <h3 class="text-lg font-semibold text-primary mb-1">Couldn't load data</h3>
                         <p class="text-sm text-text-secondary mb-5">There was a problem syncing. Please reconnect.</p>
@@ -494,8 +497,9 @@
             const dots = document.querySelectorAll('.indicator-dot');
             const rows = document.querySelectorAll('.notification-row');
             
+            // Adjusted counter to equal html badge logic perfectly [Fix S2]
             let isOpen = false;
-            let unreadCount = 2; // matches initial mocked unread dots above
+            let unreadCount = 4;
             
             function togglePanel() {
                 isOpen = !isOpen;
@@ -507,14 +511,13 @@
                     if(window.innerWidth < 1024) {
                         panel.classList.add('animate-slide-up');
                         scrim.classList.remove('hidden');
-                        // Small timeout to allow display:block to paint before opacity transition
                         setTimeout(() => scrim.classList.remove('opacity-0'), 10);
                         document.body.classList.add('mobile-bottom-sheet-active');
                     }
                     
                     bell.setAttribute('aria-expanded', 'true');
                     bellIcon.classList.remove('ph');
-                    bellIcon.classList.add('ph-fill', 'text-primary'); // Filled icon state on active
+                    bellIcon.classList.add('ph-fill', 'text-primary'); 
                     
                     // Focus Trap Logic initiation
                     setTimeout(() => {
@@ -585,7 +588,7 @@
                 markReadText.textContent = 'Marking...';
                 markReadBtn.classList.add('opacity-70', 'pointer-events-none');
                 
-                // Simulate network latency (no literal generic spinner as per guidelines on lists, but okay to text-change button)
+                // Simulate network latency
                 setTimeout(() => {
                     // Update visual dots
                     dots.forEach(dot => {
@@ -613,7 +616,7 @@
                     bell.setAttribute('aria-label', 'Notifications, 0 unread');
                     announcer.textContent = 'All notifications marked as read.';
                     
-                    // Clean icon state if panel closes
+                    // Clean icon state if panel closed meanwhile, or clean it anyway and open state keeps it solid.
                     if(!isOpen) {
                         bellIcon.classList.remove('ph-fill', 'text-primary');
                         bellIcon.classList.add('ph');
