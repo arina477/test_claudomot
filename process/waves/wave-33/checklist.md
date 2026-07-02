@@ -44,16 +44,16 @@ TEST:
 - [x] T-2 Unit
 - [x] T-3 Contract
 - [x] T-4 Integration
-- [ ] T-5 E2E
+- [x] T-5 E2E
 - [x] T-6 Layout
 - [x] T-7 Perf
-- [ ] T-8 Security
-- [ ] T-9 Journey
+- [x] T-8 Security
+- [x] T-9 Journey
 
 VERIFY:
-- [ ] V-1 Independent reviews (Karen + jenny, parallel)
-- [ ] V-2 Triage
-- [ ] V-3 Fast-fix loop (or close)
+- [x] V-1 Independent reviews (Karen + jenny, parallel)
+- [x] V-2 Triage
+- [x] V-3 Fast-fix loop (or close) — head-verifier APPROVED; queue empty, Phase 2 skipped
 
 LEARN:
 - [ ] L-1 Docs
