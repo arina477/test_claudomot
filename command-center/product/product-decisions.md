@@ -408,3 +408,19 @@ These are staged for the next P-0 walk (may re-home to M7 launch-polish or a suc
 [2026-07-02] M6 (Voice/video study rooms): bundle authored — 2 tasks (screen-share publish/subscribe + audio-only low-bandwidth fallback — the two success-metric-load-bearing pieces of remaining voice scope, now credential-unblocked + live-verifiable)
 - caller: N-1-next-bundle
 - decomposed by: milestone-decomposer sub-agent (seed e9cd341a-a093-459a-8ffb-72ba82e7a1ab, sibling 61e52c3e-689a-4837-9cec-a08f1b051171)
+
+## 2026-07-02 — M6 CLOSED (voice study rooms COMPLETE) + M7 promoted — wave-34 N-block
+**Category**: Process / Data Model
+**Status**: Active
+**Context**: wave-34 shipped + PROVEN-LIVE the last two M6 pieces — screen-share publish/subscribe and audio-only low-bandwidth fallback — on prod (all gates APPROVE; head-verifier V-3 confirmed talk + screen-share + audio-only all live). M6 child tasks: 6 done / 0 open. L-1 emitted an m6_close_ready flag; the close was deferred to the N-block by a standing ceo-reviewer flag + head-verifier V-3 carry.
+**Decision:**
+- **M6 (8702a335) — `in_progress → done`.** Success metric ("Students drop into a Study Room voice channel, talk + screen-share, and the room degrades to audio-only gracefully on poor bandwidth") is fully MET: talk (w31 token-mint + join, w32 occupancy, w33 param-hardening) + screen-share (w34, PROVEN-LIVE) + audio-only fallback (w34, PROVEN-LIVE). Voice study rooms — the Discord-displacement wedge, the founder-bet "study room door left open" must-have — are COMPLETE end-to-end.
+- **M7 (6e2f68d8) — `todo → in_progress`.** Active slot emptied by the M6 close → promoted the highest-priority `todo` milestone: M7 (Privacy controls, notifications & launch polish). Chosen because M7 is the only remaining H1, finishes the MVP (deploy-verified end-to-end for one class cohort), and is credential-independent (no park-or-key concern). Milestone invariant holds: exactly one `in_progress` = M7.
+**Rationale:** M6's mechanical close condition (open_count=0) AND its metric were both satisfied and independently verified LIVE — not a premature close. M7 is the natural MVP-completing successor per its ## Tier (T4, H1) and the roadmap sequence; the other todo milestones (M8 educator tools, M9 monetization, M10 compliance, M11 growth, M12 offline moat, M13 partnerships) are all later-horizon or non-MVP-blocking.
+**Residual M6 scope:** any non-metric M6 nice-to-haves (speaking/voice-presence rings, mic/cam-toggle refinement) were never decomposed into open child tasks — nothing to dispose. They are future work under a re-opened milestone or a successor, not blocking this close.
+**By:** orchestrator (automatic mode) + head-next gate (N-1 APPROVED), wave-34 N-block.
+
+[2026-07-02] M7 (Privacy controls, notifications & launch polish): bundle authored — 4 tasks (student-side privacy controls settings-privacy page — the success-metric-load-bearing slice: profile visibility + who-can-DM gating seed, + account data view/download, Sentry error tracking, privacy/terms stubs + empty/error/loading states)
+- caller: N-1-next-bundle
+- decomposed by: milestone-decomposer sub-agent (seed 56a50862-790e-4868-a5c5-305b08b81e40; siblings a4169fac-a6d8-4f76-9d46-87c5207615e2, d40ece71-bf8c-4266-b921-b06ef3e12086, 13b7ebfd-6ae1-486b-87f2-d84894ed779d)
+- note: M7's 2 pre-existing open tasks (a1299e88 Resend domain, 84e09891 Railway Bucket creds) are credential-blocked founder-ops actions — PARKED, untouched; this bundle is independent top-level (seed parent_task_id NULL), credential-independent, buildable now.
