@@ -99,6 +99,13 @@
       "when": 1782933794662,
       "tag": "0013_smooth_tattoo",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1783002829406,
+      "tag": "0014_sparkling_gorgon",
+      "breakpoints": true
     }
   ]
 }

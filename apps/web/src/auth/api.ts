@@ -5,6 +5,7 @@
  */
 
 import type {
+  AccountDataResponse,
   Assignment,
   AssignmentListResponse,
   AssignmentPresignResponse,
@@ -23,6 +24,7 @@ import type {
   MessageResponse,
   MessagesAfterResponse,
   MyMentionsResponse,
+  PrivacySettingsResponse,
   ProfileResponse,
   ReactionToggleInput,
   ReactionToggleResponse,
@@ -32,6 +34,7 @@ import type {
   ServerResponse,
   ServerSummary,
   UpdateAssignmentInput,
+  UpdatePrivacyInput,
   UpdateProfileInput,
   ValidatedAttachment,
 } from '@studyhall/shared';
@@ -474,4 +477,53 @@ export const api = {
       `/channels/${channelId}/voice/participants`,
       signal != null ? { signal } : undefined,
     ),
+
+  // ── Privacy endpoints (wave-35 M7) ──────────────────────────────────────
+
+  /**
+   * GET /profile/privacy → PrivacySettingsResponse {profileVisibility, whoCanDm}.
+   * Throws: 401 unauthed.
+   */
+  getPrivacy: (): Promise<PrivacySettingsResponse> =>
+    request<PrivacySettingsResponse>('/profile/privacy'),
+
+  /**
+   * PUT /profile/privacy {profileVisibility, whoCanDm} → updated PrivacySettingsResponse.
+   * Full-replace semantics (PUT, not PATCH). Throws: 401 unauthed, 400 bad input.
+   */
+  putPrivacy: (body: UpdatePrivacyInput): Promise<PrivacySettingsResponse> =>
+    request<PrivacySettingsResponse>('/profile/privacy', {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+
+  /**
+   * GET /profile/data → AccountDataResponse.
+   * Returns profile fields, membership list, and activity summary held on the
+   * authenticated user. Throws: 401 unauthed.
+   */
+  getAccountData: (): Promise<AccountDataResponse> => request<AccountDataResponse>('/profile/data'),
+
+  /**
+   * GET /profile/data/export → triggers a file download of the user's data as
+   * a JSON blob. Fetches with credentials, creates an object URL, and clicks a
+   * temporary anchor with download="studyhall-account-data.json".
+   * Throws on non-2xx response.
+   */
+  exportAccountData: async (): Promise<void> => {
+    const res = await fetch(`${BASE}/profile/data/export`, { credentials: 'include' });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`${res.status} ${res.statusText}: ${body}`);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'studyhall-account-data.json';
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  },
 };

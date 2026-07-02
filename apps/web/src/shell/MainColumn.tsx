@@ -95,12 +95,19 @@ export function MainColumn({ connectionState = 'online', onToggleSidebar }: Prop
     errorInitial,
     hasOlderMessages,
     loadOlder,
+    reloadMessages,
     sendMessage,
     retryMessage,
     editMessage,
     deleteMessage,
     toggleReaction,
   } = useMessagesWithRetry(selectedChannelId);
+
+  // Ref to the composer wrapper — used so the empty-channel CTA can focus the textarea.
+  const composerContainerRef = useRef<HTMLDivElement>(null);
+  const focusComposer = useCallback(() => {
+    composerContainerRef.current?.querySelector<HTMLTextAreaElement>('textarea')?.focus();
+  }, []);
 
   // Typing presence — self-exclusion is enforced server-side via getTypers(excludeUserId).
   const { onComposerKeyPress, stopTyping, typingLabel } = useTyping(selectedChannelId);
@@ -281,6 +288,8 @@ export function MainColumn({ connectionState = 'online', onToggleSidebar }: Prop
             hasOlderMessages={hasOlderMessages}
             onLoadOlder={loadOlder}
             onRetry={retryMessage}
+            onRetryLoad={reloadMessages}
+            onFocusComposer={focusComposer}
             onEdit={editMessage}
             onDelete={deleteMessage}
             onReaction={toggleReaction}
@@ -294,7 +303,7 @@ export function MainColumn({ connectionState = 'online', onToggleSidebar }: Prop
 
         {/* Typing indicator + Composer — always visible when a channel is selected */}
         {selectedChannelId && (
-          <div className="shrink-0 relative">
+          <div ref={composerContainerRef} className="shrink-0 relative">
             {/* Typing indicator — zero-height container so it floats above the composer */}
             <output
               className="relative block w-full pointer-events-none"

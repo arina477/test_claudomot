@@ -1,5 +1,6 @@
 import { Catch, HttpException, HttpStatus } from '@nestjs/common';
 import type { ArgumentsHost, ExceptionFilter } from '@nestjs/common';
+import { SentryExceptionCaptured } from '@sentry/nestjs';
 import { isInvalidTextRepresentation } from './pg-error-utils';
 
 // Minimal response interface — avoids @types/express dependency.
@@ -13,6 +14,7 @@ interface HttpResponse {
 
 @Catch()
 export class SupertokensExceptionFilter implements ExceptionFilter {
+  @SentryExceptionCaptured()
   catch(err: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const res = ctx.getResponse<HttpResponse>();

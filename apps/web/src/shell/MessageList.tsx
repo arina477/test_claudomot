@@ -27,6 +27,7 @@ import type {
   ReactionSummary,
 } from '@studyhall/shared';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { ErrorState } from '../components/states/ErrorState';
 import { PresenceDot } from './PresenceDot';
 import {
   ArrowsOutIcon,
@@ -123,6 +124,16 @@ type Props = {
    * Used to set aria-expanded on the affordance button of the open thread.
    */
   openThreadParentId?: string | null;
+  /**
+   * Called when the error-state retry button is clicked.
+   * Typically wired to reloadMessages() from useMessagesWithRetry.
+   */
+  onRetryLoad?: () => void;
+  /**
+   * Called when the empty-state primary CTA is clicked.
+   * Typically focuses the message composer so the user can start typing.
+   */
+  onFocusComposer?: () => void;
 };
 
 // ---------------------------------------------------------------------------
@@ -1450,7 +1461,13 @@ function FailedRow({
 // Empty channel state
 // ---------------------------------------------------------------------------
 
-function EmptyChannelState({ channelName }: { channelName?: string }) {
+function EmptyChannelState({
+  channelName,
+  onFocusComposer,
+}: {
+  channelName?: string;
+  onFocusComposer?: () => void;
+}) {
   return (
     <div
       data-testid="empty-channel-state"
@@ -1478,6 +1495,22 @@ function EmptyChannelState({ channelName }: { channelName?: string }) {
         )}
         .
       </p>
+      {/* §113 primary CTA — focuses the composer so the user can start writing */}
+      <button
+        type="button"
+        onClick={onFocusComposer}
+        data-testid="empty-channel-cta"
+        className="mt-5 flex items-center gap-1.5 rounded-md px-4 py-2 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70"
+        style={{ backgroundColor: '#10b981', color: '#0a0a0b' }}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(16,185,129,0.85)';
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#10b981';
+        }}
+      >
+        Send a message
+      </button>
     </div>
   );
 }
@@ -1502,6 +1535,8 @@ export function MessageList({
   channelName,
   onOpenThread,
   openThreadParentId,
+  onRetryLoad,
+  onFocusComposer,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -1555,32 +1590,76 @@ export function MessageList({
     return () => el.removeEventListener('scroll', handleScroll);
   }, [hasOlderMessages, loadingOlder, onLoadOlder]);
 
-  // ── Loading initial fetch ──────────────────────────────────────────────────
+  // ── Loading initial fetch — §113 skeleton rows (surface-700 shimmer) ────────
   if (loadingInitial) {
     return (
       <div
-        className="flex flex-1 items-center justify-center"
-        style={{ color: 'rgba(255,255,255,0.30)' }}
+        className="flex flex-1 flex-col gap-1 px-1 py-4 animate-pulse"
+        aria-busy="true"
+        aria-label="Loading messages"
+        data-testid="message-list-skeleton"
       >
-        <SpinnerIcon size={24} className="animate-spin" />
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="flex gap-3.5 rounded-md px-4 py-2">
+            {/* Avatar skeleton */}
+            <div
+              className="mt-0.5 h-10 w-10 shrink-0 rounded-full"
+              style={{ backgroundColor: '#27272a' }}
+              aria-hidden="true"
+            />
+            <div className="flex flex-1 flex-col gap-2 pt-1">
+              {/* Author + timestamp line */}
+              <div className="flex items-center gap-2">
+                <div
+                  className="h-[10px] w-24 rounded-md"
+                  style={{ backgroundColor: '#27272a' }}
+                  aria-hidden="true"
+                />
+                <div
+                  className="h-[10px] w-10 rounded-md"
+                  style={{ backgroundColor: '#1c1c1f' }}
+                  aria-hidden="true"
+                />
+              </div>
+              {/* Body lines */}
+              <div
+                className="h-[10px] w-full rounded-md"
+                style={{ backgroundColor: '#27272a' }}
+                aria-hidden="true"
+              />
+              <div
+                className={`h-[10px] rounded-md ${i % 2 === 0 ? 'w-3/4' : 'w-5/6'}`}
+                style={{ backgroundColor: '#27272a' }}
+                aria-hidden="true"
+              />
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
 
-  // ── Error state ────────────────────────────────────────────────────────────
+  // ── Error state — §113: danger icon + cause + retry ───────────────────────
   if (errorInitial) {
     return (
-      <div className="flex flex-1 items-center justify-center px-6">
-        <p className="text-center text-sm" style={{ color: 'rgba(255,255,255,0.40)' }}>
-          Couldn&apos;t load messages. Check your connection and try again.
-        </p>
+      <div className="flex flex-1 items-center justify-center">
+        <ErrorState
+          data-testid="message-list-error"
+          message="Couldn't load messages. Check your connection and try again."
+          {...(onRetryLoad ? { onRetry: onRetryLoad } : {})}
+        />
       </div>
     );
   }
 
   // ── Empty state — rendered IN PLACE of the list ───────────────────────────
   if (messages.length === 0) {
-    return <EmptyChannelState {...(channelName ? { channelName } : {})} />;
+    return (
+      <EmptyChannelState
+        {...(channelName ? { channelName } : {})}
+        {...(onFocusComposer ? { onFocusComposer } : {})}
+      />
+    );
   }
 
   // ── Message list ──────────────────────────────────────────────────────────

@@ -239,17 +239,24 @@ export class ServersService {
         email: users.email,
         avatarUrl: users.avatar_url,
         username: users.username,
+        profileVisibility: users.profile_visibility,
       })
       .from(server_members)
       .innerJoin(users, eq(users.id, server_members.user_id))
       .where(eq(server_members.server_id, serverId));
 
-    return rows.map((r) => ({
-      userId: r.userId,
-      displayName: r.displayName || r.email.split('@')[0] || r.userId,
-      avatarUrl: r.avatarUrl ?? null,
-      username: r.username ?? null,
-    }));
+    // Enforce profile_visibility: exclude 'nobody' members unless they are the
+    // caller (a student always sees themselves in the roster regardless of their
+    // own visibility setting). 'everyone' and 'server-members' are both visible
+    // here because the viewer is already a verified co-member.
+    return rows
+      .filter((r) => r.profileVisibility !== 'nobody' || r.userId === userId)
+      .map((r) => ({
+        userId: r.userId,
+        displayName: r.displayName || r.email.split('@')[0] || r.userId,
+        avatarUrl: r.avatarUrl ?? null,
+        username: r.username ?? null,
+      }));
   }
 
   // -------------------------------------------------------------------------

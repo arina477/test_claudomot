@@ -238,6 +238,28 @@ export function LandingPage() {
                 Sign in
               </Link>
             </div>
+            <div className="flex flex-col gap-3">
+              <span
+                className="text-xs font-semibold uppercase tracking-wider"
+                style={{ color: 'rgba(255,255,255,0.92)' }}
+              >
+                Legal
+              </span>
+              <Link
+                to="/privacy"
+                className="transition-colors hover:opacity-90"
+                style={{ color: 'rgba(255,255,255,0.60)' }}
+              >
+                Privacy
+              </Link>
+              <Link
+                to="/terms"
+                className="transition-colors hover:opacity-90"
+                style={{ color: 'rgba(255,255,255,0.60)' }}
+              >
+                Terms
+              </Link>
+            </div>
           </div>
         </div>
       </footer>

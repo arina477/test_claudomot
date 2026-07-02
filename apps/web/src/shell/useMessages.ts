@@ -64,6 +64,8 @@ type UseMessagesResult = {
   errorInitial: boolean;
   hasOlderMessages: boolean;
   loadOlder: () => void;
+  /** Re-triggers the initial channel fetch — use for error-state retry affordances. */
+  reloadMessages: () => void;
   sendMessage: (
     content: string,
     attachments?: ValidatedAttachment[],
@@ -82,6 +84,8 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [errorInitial, setErrorInitial] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
+  // Incrementing reload key — changing this forces the initial-fetch effect to re-run.
+  const [reloadKey, setReloadKey] = useState(0);
 
   const subscribedChannelRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
@@ -226,6 +230,7 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
   }, [channelId, runDrainAndCatchup]);
 
   // ── Fetch initial + socket room join on channel change ─────────────────────
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reloadKey is an intentional force-re-fetch trigger, not used inside the effect body
   useEffect(() => {
     if (!channelId) {
       setRealMessages([]);
@@ -328,7 +333,7 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
           // Cold-start hydration failure is non-fatal.
         });
     }
-  }, [channelId]);
+  }, [channelId, reloadKey]);
 
   // ── Socket listener — real-time message:new ────────────────────────────────
   useEffect(() => {
@@ -811,6 +816,11 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
     ...optimisticMessages.map((m): DisplayMessage => ({ kind: 'optimistic', ...m })),
   ];
 
+  const reloadMessages = useCallback(() => {
+    // Incrementing reloadKey triggers the initial-fetch useEffect to re-run.
+    setReloadKey((k) => k + 1);
+  }, []);
+
   return {
     messages,
     loadingInitial,
@@ -818,6 +828,7 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
     errorInitial,
     hasOlderMessages: nextCursor !== null,
     loadOlder,
+    reloadMessages,
     sendMessage,
     retryMessage,
     editMessage,
