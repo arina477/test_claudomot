@@ -60,6 +60,8 @@ vi.mock('./messagingSocket', () => ({
     if (mockSocketActive) return 'reconnecting';
     return 'offline';
   }),
+  // wave-15 mention / wave-37 notification events
+  onMention: vi.fn(() => () => {}),
 }));
 
 import { useConnectionState } from './useConnectionState';
@@ -265,6 +267,10 @@ vi.mock('../auth/api', () => ({
     editMessage: vi.fn(),
     deleteMessage: vi.fn(),
     toggleReaction: vi.fn(),
+    // wave-37 notification endpoints
+    getNotifications: vi.fn().mockResolvedValue({ items: [], unreadCount: 0, nextCursor: null }),
+    markNotificationRead: vi.fn().mockResolvedValue({ unreadCount: 0 }),
+    markAllNotificationsRead: vi.fn().mockResolvedValue({ unreadCount: 0 }),
   },
 }));
 

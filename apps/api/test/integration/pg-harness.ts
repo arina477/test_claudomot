@@ -68,6 +68,7 @@ export async function truncateTables(): Promise<void> {
   // RESTART IDENTITY resets sequences; CASCADE catches any missed deps.
   await harnessPool.query(
     `TRUNCATE
+       notifications,
        message_mentions,
        message_reactions,
        messages,
@@ -78,6 +79,8 @@ export async function truncateTables(): Promise<void> {
        roles,
        invites,
        servers,
+       assignment_reminder,
+       assignments,
        users
      RESTART IDENTITY CASCADE`,
   );

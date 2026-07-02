@@ -124,6 +124,8 @@ vi.mock('./messagingSocket', () => ({
       return existing.map((r, i) => (i === idx ? { emoji, count, reactedByMe } : r));
     },
   ),
+  // wave-15 mention events
+  onMention: vi.fn(() => () => {}),
   // wave-18 thread events
   onThreadReplyCreated: vi.fn(() => () => {}),
   onThreadReplyDeleted: vi.fn(
@@ -161,6 +163,10 @@ vi.mock('../auth/api', () => ({
     getProfile: vi.fn().mockReturnValue(new Promise(() => {})),
     getServers: vi.fn().mockReturnValue(new Promise(() => {})),
     getServerDetail: vi.fn().mockReturnValue(new Promise(() => {})),
+    // wave-37 notification endpoints
+    getNotifications: vi.fn().mockResolvedValue({ items: [], unreadCount: 0, nextCursor: null }),
+    markNotificationRead: vi.fn().mockResolvedValue({ unreadCount: 0 }),
+    markAllNotificationsRead: vi.fn().mockResolvedValue({ unreadCount: 0 }),
   },
 }));
 

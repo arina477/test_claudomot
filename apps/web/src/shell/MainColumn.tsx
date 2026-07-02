@@ -19,6 +19,7 @@ import type { MessageResponse, ValidatedAttachment } from '@studyhall/shared';
 import { useCallback, useContext, useRef, useState } from 'react';
 import { AssignmentsPanel } from './AssignmentsPanel';
 import { type ConnectionState, ConnectionStateIndicator } from './ConnectionStateIndicator';
+import { HeaderBell } from './HeaderBell';
 import { MessageComposer } from './MessageComposer';
 import { MessageList } from './MessageList';
 import { ProfileContext } from './ProfileContext';
@@ -231,23 +232,24 @@ export function MainColumn({ connectionState = 'online', onToggleSidebar }: Prop
 
           {/* Right actions */}
           <div
-            className="ml-auto flex shrink-0 items-center gap-4"
+            className="ml-auto flex shrink-0 items-center gap-1"
             style={{ color: 'rgba(255,255,255,0.40)' }}
           >
             <button
               type="button"
               aria-label="Search in channel"
-              className="transition-colors duration-150 hover:text-white/90 focus-visible:outline-none focus-visible:ring-2 rounded"
+              className="flex h-9 w-9 items-center justify-center rounded-md transition-colors duration-150 hover:text-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70"
             >
               <MagnifyingGlassIcon size={18} />
             </button>
             <button
               type="button"
               aria-label="View pinned messages"
-              className="transition-colors duration-150 hover:text-white/90 focus-visible:outline-none focus-visible:ring-2 rounded"
+              className="flex h-9 w-9 items-center justify-center rounded-md transition-colors duration-150 hover:text-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70"
             >
               <PushPinIcon size={18} />
             </button>
+            <HeaderBell />
           </div>
         </header>
 

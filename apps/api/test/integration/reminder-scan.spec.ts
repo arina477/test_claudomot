@@ -26,6 +26,7 @@ import {
 // SUT imports AFTER harness so the lazy db proxy resolves to the test DB.
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { EmailService } from '../../src/email/email.service';
+import type { NotificationsService } from '../../src/notifications/notifications.service';
 import { ReminderScanService } from '../../src/notifications/reminder-scan.service';
 
 const SKIP = !process.env.DATABASE_URL_TEST;
@@ -151,7 +152,12 @@ describe.skipIf(SKIP)(
       ) => {
         reminderCalls.push({ to, opts });
       };
-      sut = new ReminderScanService(emailService);
+      // NotificationsService stub: this test suite covers email reminder logic;
+      // notification persistence is a wave-37 concern tested separately.
+      const notificationsSvcStub = {
+        createForReminder: async () => {},
+      } as unknown as NotificationsService;
+      sut = new ReminderScanService(emailService, notificationsSvcStub);
     });
 
     // -----------------------------------------------------------------------
