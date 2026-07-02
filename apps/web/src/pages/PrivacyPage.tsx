@@ -37,7 +37,7 @@ export function PrivacyPage() {
           Privacy Policy
         </h1>
         <p className="mt-2 text-sm" style={{ color: 'rgba(255,255,255,0.40)' }}>
-          Last updated: 2024
+          Last updated: 2026
         </p>
 
         <div className="mt-8 space-y-8 text-base leading-relaxed" style={{ lineHeight: '1.5' }}>

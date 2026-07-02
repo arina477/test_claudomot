@@ -17,10 +17,10 @@ Note: Backend/test-hardening-led polish wave (privacy endpoint tests + 2 tiny UI
 
 PRODUCT:
 - [x] P-0 Frame (discover + reframe)
-- [ ] P-1 Decompose
-- [ ] P-2 Spec
-- [ ] P-3 Plan
-- [ ] P-4 Gate
+- [x] P-1 Decompose
+- [x] P-2 Spec
+- [x] P-3 Plan
+- [x] P-4 Gate
 
 DESIGN (skip block if non-UI wave):
 - [ ] D-1 Brief
@@ -28,13 +28,13 @@ DESIGN (skip block if non-UI wave):
 - [ ] D-3 Review & adopt
 
 BUILD:
-- [ ] B-0 Branch & schema
-- [ ] B-1 Contracts
-- [ ] B-2 Backend
-- [ ] B-3 Frontend
-- [ ] B-4 Wiring
-- [ ] B-5 Verify
-- [ ] B-6 Review
+- [x] B-0 Branch & schema
+- [x] B-1 Contracts
+- [x] B-2 Backend
+- [x] B-3 Frontend
+- [x] B-4 Wiring
+- [x] B-5 Verify
+- [x] B-6 Review
 
 CI/CD:
 - [ ] C-1 PR, CI & merge
