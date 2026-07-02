@@ -1,5 +1,5 @@
 # Wave 37 — B-block review artifacts
-**Block:** B (Build) · **Wave topic:** persistent in-app notifications (model + owner-404 API + web bell/panel) · **Gate:** B-6 · **Status:** in-progress · **Branch:** wave-37-notifications
+**Block:** B (Build) · **Wave topic:** persistent in-app notifications (model + owner-404 API + web bell/panel) · **Gate:** B-6 · **Status:** gate-passed · **Branch:** wave-37-notifications
 ## Stage deliverables
 | Stage | Deliverable | Status | Notes |
 |---|---|---|---|
