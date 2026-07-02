@@ -71,6 +71,7 @@ All notable changes to StudyHall are documented here. Format follows
 - Mentions now render consistently when a handle is followed by punctuation: a message with `@bob.dev` where `bob` is the member shows the mention pill plus `.dev` as plain text, instead of leaving the whole thing as plain text. The app and server now share one rule for what counts as a mention, so the two can't drift apart. (#37)
 - Live presence dots on message author avatars: every message now shows a small green dot on the author's avatar when that person is online, so you can see at a glance who's around in a channel. (#38)
 - Faster presence tracking: indexed the co-member lookup and consolidated the message-list online-status subscription into a single list-level subscription (no visible change). (#40)
+- The privacy protections shipped last release — hiding a Hidden student from every member list, keeping data export scoped to your own account, and stripping personal info from error reports — are now covered by durable automated tests that run against a real database on every change, so the enforcement can't silently regress. (no visible change) (#50)
 
 ### Fixed
 
@@ -80,3 +81,4 @@ All notable changes to StudyHall are documented here. Format follows
 - A member whose email has an unusual format and who hasn't set a display name no longer shows as a blank name in the member list and presence — it now falls back to a stable identifier; also removed an unused internal response schema. (#42)
 - A bad or mistyped link that used to trigger a server error now returns a clean "that's not a valid link" response instead — so a malformed id in the address bar or a stale bookmark no longer looks like the app is broken. (#46)
 - This applies everywhere ids appear in a link across the app, and the friendlier response is now consistent instead of surfacing an internal error. (#46)
+- The "Last updated" date on the /privacy and /terms pages now reads 2026, correcting a stale year on the published policy pages. (#50)

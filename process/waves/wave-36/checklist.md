@@ -57,8 +57,8 @@ VERIFY:
 - [x] V-3 Fast-fix loop (0 blocking; head-verifier APPROVED)
 
 LEARN:
-- [ ] L-1 Docs
-- [ ] L-2 Distill
+- [x] L-1 Docs (CHANGELOG +2 bullets; M7 progresses, no close — open_count=2 both parked cred-blocked)
+- [x] L-2 Distill (3 tasks done; 3 observations; promote ZERO — both new warnings 1st-instance HOLD)
 
 NEXT:
 - [ ] N-1 Survey & triggers
