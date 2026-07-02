@@ -61,6 +61,6 @@ LEARN:
 - [x] L-2 Distill (3 tasks done; 3 observations; promote ZERO — both new warnings 1st-instance HOLD)
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers (M7 stays in_progress; milestone-decomposition fired → in-app notifications bundle; 2 founder-ops tasks reclassified todo→blocked)
+- [x] N-2 Seed (bundle 0b33df33 + siblings f3f52d9a, edac03e0; DB-validated)
+- [x] N-3 Handoff (wave-36 closed ok + archived; wave-37 opened)
