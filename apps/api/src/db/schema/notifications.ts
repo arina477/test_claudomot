@@ -80,6 +80,13 @@ export const notifications = pgTable(
     uniqueIndex('notifications_user_message_mention_uidx')
       .on(table.user_id, table.message_id)
       .where(sql`type = 'mention'`),
+    // PARTIAL UNIQUE(user_id, assignment_id) WHERE type = 'assignment_reminder'
+    // Makes the ON CONFLICT DO NOTHING in createForReminder real — without this
+    // index the ON CONFLICT clause can never fire, allowing duplicate in-app
+    // notifications to accumulate if the upstream send-once guard is bypassed.
+    uniqueIndex('notifications_user_assignment_reminder_uidx')
+      .on(table.user_id, table.assignment_id)
+      .where(sql`type = 'assignment_reminder'`),
   ],
 );
 

@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "notifications_user_assignment_reminder_uidx" ON "notifications" USING btree ("user_id","assignment_id") WHERE type = 'assignment_reminder';

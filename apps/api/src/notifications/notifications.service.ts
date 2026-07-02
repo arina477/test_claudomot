@@ -5,7 +5,7 @@ import type {
   NotificationListResponse,
   UnreadCountResponse,
 } from '@studyhall/shared';
-import { and, count, eq, isNull, lt, or, sql } from 'drizzle-orm';
+import { and, count, eq, isNull, or, sql } from 'drizzle-orm';
 import { db } from '../db/index';
 import { assignments, channels, messages, notifications, users } from '../db/schema/index';
 
@@ -33,21 +33,32 @@ import { assignments, channels, messages, notifications, users } from '../db/sch
 const PAGE_SIZE = 30;
 const EXCERPT_MAX = 150;
 
-/** Opaque cursor: base64url(createdAt_iso|id) — mirrors messages.service.ts */
-function encodeCursor(createdAt: Date, id: string): string {
-  return Buffer.from(`${createdAt.toISOString()}|${id}`).toString('base64url');
+// Regex to sanity-check a raw pg timestamptz ::text value before embedding it
+// into a parameterised ::timestamptz cast — e.g. "2024-01-01 00:00:00.001234+00".
+// This rejects obviously-malformed strings and prevents unexpected DB errors on
+// cursor replay; it does NOT fully validate the date (pg will do that on cast).
+const PG_TIMESTAMP_SHAPE = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/;
+
+/** Opaque cursor: base64url(createdAt_pg_text|id)
+ *
+ * createdAt_pg_text is the raw ::text cast of notifications.created_at as
+ * returned by pg (e.g. "2024-01-01 00:00:00.001234+00"), preserving full
+ * microsecond precision.  Date.toISOString() truncates to milliseconds and
+ * would silently drop rows sharing a millisecond across a page boundary.
+ */
+function encodeCursor(createdAtRaw: string, id: string): string {
+  return Buffer.from(`${createdAtRaw}|${id}`).toString('base64url');
 }
 
-function decodeCursor(cursor: string): { createdAt: Date; id: string } | null {
+function decodeCursor(cursor: string): { createdAtRaw: string; id: string } | null {
   try {
     const raw = Buffer.from(cursor, 'base64url').toString('utf8');
     const sep = raw.indexOf('|');
     if (sep === -1) return null;
-    const iso = raw.slice(0, sep);
+    const createdAtRaw = raw.slice(0, sep);
     const id = raw.slice(sep + 1);
-    const createdAt = new Date(iso);
-    if (Number.isNaN(createdAt.getTime())) return null;
-    return { createdAt, id };
+    if (!createdAtRaw || !PG_TIMESTAMP_SHAPE.test(createdAtRaw)) return null;
+    return { createdAtRaw, id };
   } catch {
     return null;
   }
@@ -124,15 +135,20 @@ export class NotificationsService {
   async listForUser(userId: string, cursor?: string): Promise<NotificationListResponse> {
     const baseWhere = eq(notifications.user_id, userId);
 
-    // Build cursor predicate: rows strictly older than the cursor position
-    let cursorCondition: ReturnType<typeof and> | undefined;
+    // Build cursor predicate: rows strictly older than the cursor position.
+    // Both comparisons use the raw pg timestamptz string (::timestamptz cast) so
+    // microsecond precision is preserved end-to-end.  Using decoded.createdAtRaw
+    // directly (not re-parsed through a JS Date) avoids the ms-truncation bug
+    // where Date.toISOString() would silently drop sub-ms digits and skip rows
+    // sharing a millisecond bucket across the page boundary.
+    let cursorCondition: ReturnType<typeof or> | undefined;
     if (cursor) {
       const decoded = decodeCursor(cursor);
       if (decoded) {
         cursorCondition = or(
-          lt(notifications.created_at, decoded.createdAt),
+          sql`${notifications.created_at} < ${decoded.createdAtRaw}::timestamptz`,
           and(
-            sql`${notifications.created_at} = ${decoded.createdAt.toISOString()}`,
+            sql`${notifications.created_at} = ${decoded.createdAtRaw}::timestamptz`,
             sql`${notifications.id} < ${decoded.id}`,
           ),
         );
@@ -162,6 +178,10 @@ export class NotificationsService {
           // assignment_reminder enrichment
           assignment_title: assignments.title,
           assignment_due_date: assignments.due_date,
+          // Raw pg text of created_at — carries full µs precision for cursor encoding.
+          // JS Date (returned by the driver for timestamp columns) truncates to ms,
+          // which can silently skip rows sharing a ms at a page boundary.
+          created_at_raw: sql<string>`${notifications.created_at}::text`,
         })
         .from(notifications)
         // mention: LEFT JOIN messages → users → channels
@@ -185,7 +205,7 @@ export class NotificationsService {
 
     const lastRow = rows[rows.length - 1];
     const nextCursor =
-      hasMore && lastRow !== undefined ? encodeCursor(lastRow.created_at, lastRow.id) : null;
+      hasMore && lastRow !== undefined ? encodeCursor(lastRow.created_at_raw, lastRow.id) : null;
 
     const unreadCount = countRow?.value ?? 0;
 
