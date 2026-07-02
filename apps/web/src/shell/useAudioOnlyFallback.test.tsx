@@ -293,6 +293,34 @@ describe('useAudioOnlyFallback', () => {
     expect(result.current.mode).toBe(null);
   });
 
+  // ── Restore timer cleared on unmount (RW-2 regression guard) ────────────────
+
+  it('restore() timeout is cleared on unmount — no setState on unmounted component', () => {
+    const { result, unmount } = renderHook(() => useAudioOnlyFallback());
+
+    // Enter manual first so restore() is meaningful
+    act(() => {
+      result.current.enterManual();
+    });
+
+    // Trigger restore — restoreTimerRef now holds a 1 s timer
+    act(() => {
+      result.current.restore();
+    });
+    expect(result.current.restoreState).toBe('restoring');
+
+    // Unmount BEFORE the 1 s timer fires (simulates user leaving within 1 s of restoring)
+    unmount();
+
+    // Advance past the 1 s mark — the timer should have been cleared and must not throw
+    // (React would warn/throw on setState after unmount if the timer fired)
+    expect(() => {
+      act(() => {
+        vi.advanceTimersByTime(2000);
+      });
+    }).not.toThrow();
+  });
+
   // ── Audio invariant ────────────────────────────────────────────────────────
 
   it('audio publications are NEVER touched by pause or restore (audio invariant)', () => {

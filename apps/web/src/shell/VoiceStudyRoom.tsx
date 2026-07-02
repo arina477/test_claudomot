@@ -37,6 +37,7 @@
 
 import {
   LiveKitRoom,
+  VideoTrack,
   useLocalParticipant,
   useParticipants,
   useRoomContext,
@@ -790,17 +791,10 @@ function RemoteShareView({
           boxShadow: '0 1px 2px rgba(0,0,0,0.4)',
         }}
       >
-        {/* LiveKit VideoTrack renders the screen-share stream */}
-        <video
-          ref={(el) => {
-            if (el && trackRef.publication?.track) {
-              trackRef.publication.track.attach(el);
-            }
-          }}
+        {/* LiveKit VideoTrack — SDK-managed attach/detach lifecycle; no manual ref needed */}
+        <VideoTrack
+          trackRef={trackRef}
           className="w-full h-full object-contain"
-          autoPlay
-          playsInline
-          muted
           aria-label={`Screen shared by ${sharerName}`}
         />
 
@@ -1152,34 +1146,18 @@ function AudioOnlyBanner({ mode, restoreState, onRestore }: AudioOnlyBannerProps
               {isRestoring ? 'Restoring video...' : 'Audio-only'}
             </span>
             {/* Mic-active reassurance pill — shown in all states including restoring (design build-fold note) */}
-            {!isRestoring && (
-              <span
-                className="hidden sm:flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                style={{
-                  backgroundColor: '#27272a',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  color: 'rgba(255,255,255,0.60)',
-                }}
-                aria-label="Microphone still active"
-              >
-                <MicrophoneIcon size={10} />
-                Mic active
-              </span>
-            )}
-            {isRestoring && (
-              <span
-                className="hidden sm:flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
-                style={{
-                  backgroundColor: '#27272a',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  color: 'rgba(255,255,255,0.60)',
-                }}
-                aria-label="Microphone still active"
-              >
-                <MicrophoneIcon size={10} />
-                Mic active
-              </span>
-            )}
+            <span
+              className="hidden sm:flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider"
+              style={{
+                backgroundColor: '#27272a',
+                border: '1px solid rgba(255,255,255,0.06)',
+                color: 'rgba(255,255,255,0.60)',
+              }}
+              aria-label="Microphone still active"
+            >
+              <MicrophoneIcon size={10} />
+              Mic active
+            </span>
           </div>
           {!isRestoring && (
             <span className="text-xs mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.60)' }}>

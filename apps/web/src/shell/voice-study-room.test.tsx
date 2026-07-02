@@ -74,6 +74,14 @@ vi.mock('@livekit/components-react', () => ({
       {children}
     </div>
   ),
+  // Stub for RemoteShareView — not exercised in unit tests (useTracks returns [])
+  VideoTrack: ({
+    className,
+    'aria-label': ariaLabel,
+  }: { className?: string; 'aria-label'?: string }) => (
+    // biome-ignore lint/a11y/useMediaCaption: test stub — never rendered; captions N/A
+    <video className={className} aria-label={ariaLabel} data-testid="video-track-stub" />
+  ),
   useLocalParticipant: () => ({
     // isScreenShareEnabled is controlled per-test via mockIsScreenShareEnabled
     isScreenShareEnabled: mockIsScreenShareEnabled,

@@ -68,6 +68,10 @@ export function useAudioOnlyFallback(): AudioOnlyFallbackState {
   // Debounce timer ref for poor quality transitions
   const poorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Restore-transition timer ref — clears the restoring→null timeout to prevent
+  // setState on an unmounted component when the user leaves within 1 s of restoring.
+  const restoreTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // ---------------------------------------------------------------------------
   // Subscription helpers
   // ---------------------------------------------------------------------------
@@ -84,8 +88,8 @@ export function useAudioOnlyFallback(): AudioOnlyFallbackState {
     }
   }, [room]);
 
-  /** Re-subscribe to remote video + screen-share publications (only those already subscribed
-   *  prior — does not force-subscribe new tracks). */
+  /** Re-subscribe to all remote video + screen-share publications by calling
+   *  setSubscribed(true) on each. LiveKit ignores the call if already subscribed. */
   const resumeVideoSubscriptions = useCallback(() => {
     for (const participant of room.remoteParticipants.values()) {
       for (const pub of (participant as RemoteParticipant).trackPublications.values()) {
@@ -141,6 +145,11 @@ export function useAudioOnlyFallback(): AudioOnlyFallbackState {
         clearTimeout(poorTimerRef.current);
         poorTimerRef.current = null;
       }
+      // Clear any outstanding restore-transition timer on unmount
+      if (restoreTimerRef.current !== null) {
+        clearTimeout(restoreTimerRef.current);
+        restoreTimerRef.current = null;
+      }
     };
   }, [room, pauseVideoSubscriptions, resumeVideoSubscriptions]);
 
@@ -159,12 +168,18 @@ export function useAudioOnlyFallback(): AudioOnlyFallbackState {
   }, [pauseVideoSubscriptions]);
 
   const restore = useCallback(() => {
+    // Cancel any previous restore timer before starting a new one (idempotent calls)
+    if (restoreTimerRef.current !== null) {
+      clearTimeout(restoreTimerRef.current);
+      restoreTimerRef.current = null;
+    }
     setRestoreState('restoring');
     resumeVideoSubscriptions();
     // Re-subscription is async over WebRTC; give it a brief moment then clear state.
     // The tracks will arrive when the SFU delivers them. We clear restoring after 1 s
     // (a conservative but non-blocking UI signal — actual track arrival is via useTracks).
-    setTimeout(() => {
+    restoreTimerRef.current = setTimeout(() => {
+      restoreTimerRef.current = null;
       setMode(null);
       setRestoreState('idle');
     }, 1000);
