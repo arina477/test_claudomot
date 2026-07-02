@@ -11,7 +11,7 @@
  */
 
 import type { ProfileResponse } from '@studyhall/shared';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../auth/api';
 import { ErrorBanner } from '../components/ErrorBanner';
@@ -113,15 +113,24 @@ export function ProfilePage() {
 
   // ── Load profile ──────────────────────────────────────────────────────────
 
-  useEffect(() => {
+  const loadProfile = useCallback(() => {
+    setInitialLoading(true);
+    setLoadError('');
     api
       .getProfile()
       .then((data) => {
         applyFromProfile(data);
         setProfile(data);
       })
-      .catch(() => setLoadError('Could not load your profile. Please refresh.'))
+      .catch(() =>
+        setLoadError('Could not load your profile. Check your connection and try again.'),
+      )
       .finally(() => setInitialLoading(false));
+  }, []);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: loadProfile is stable (useCallback with []) — intentional one-shot mount call
+  useEffect(() => {
+    loadProfile();
   }, []);
 
   function applyFromProfile(data: ProfileResponse) {
@@ -277,19 +286,71 @@ export function ProfilePage() {
     }
   }
 
-  // ── Loading skeleton ──────────────────────────────────────────────────────
+  // ── Loading skeleton — §113: skeleton rows (surface-700 shimmer) ────────────
 
   if (initialLoading) {
     return (
-      <div
-        className="flex min-h-screen items-center justify-center"
-        style={{ backgroundColor: '#0a0a0b' }}
-      >
-        <span
-          className="h-8 w-8 rounded-full border-2 border-current border-t-transparent sh-animate-spin"
-          style={{ color: accentColor }}
-          aria-label="Loading profile"
-        />
+      <div className="min-h-screen animate-pulse" style={{ backgroundColor: '#0a0a0b' }}>
+        {/* Header skeleton */}
+        <div
+          className="flex h-14 items-center border-b px-6"
+          style={{ borderColor: 'rgba(255,255,255,0.06)' }}
+          aria-hidden="true"
+        >
+          <div className="h-4 w-36 rounded-md" style={{ backgroundColor: '#27272a' }} />
+        </div>
+        <div className="mx-auto max-w-2xl px-6 py-10" aria-busy="true" aria-label="Loading profile">
+          {/* Avatar section */}
+          <div className="mb-10 flex items-center gap-6">
+            <div
+              className="h-20 w-20 shrink-0 rounded-full"
+              style={{ backgroundColor: '#27272a' }}
+              aria-hidden="true"
+            />
+            <div className="flex flex-col gap-3">
+              <div className="h-4 w-32 rounded-md" style={{ backgroundColor: '#27272a' }} />
+              <div className="h-3 w-48 rounded-md" style={{ backgroundColor: '#1c1c1f' }} />
+              <div className="h-3 w-20 rounded-md" style={{ backgroundColor: '#27272a' }} />
+            </div>
+          </div>
+          <div
+            className="mb-10 border-t"
+            style={{ borderColor: 'rgba(255,255,255,0.06)' }}
+            aria-hidden="true"
+          />
+          {/* Form section skeleton (display name + username) */}
+          {[0, 1].map((i) => (
+            <div key={i} className="mb-10">
+              <div
+                className="mb-4 h-[10px] w-24 rounded-md"
+                style={{ backgroundColor: '#3f3f46' }}
+                aria-hidden="true"
+              />
+              <div
+                className="mb-5 h-3 w-64 rounded-md"
+                style={{ backgroundColor: '#27272a' }}
+                aria-hidden="true"
+              />
+              <div
+                className="h-10 w-full rounded-md"
+                style={{ backgroundColor: '#27272a' }}
+                aria-hidden="true"
+              />
+              <div
+                className="mt-4 h-8 w-16 rounded-md"
+                style={{ backgroundColor: '#27272a' }}
+                aria-hidden="true"
+              />
+              {i < 1 && (
+                <div
+                  className="mt-10 border-t"
+                  style={{ borderColor: 'rgba(255,255,255,0.06)' }}
+                  aria-hidden="true"
+                />
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -324,6 +385,27 @@ export function ProfilePage() {
         {loadError && (
           <div className="mb-6">
             <ErrorBanner message={loadError} />
+            {/* §113 retry affordance for the profile load error */}
+            <button
+              type="button"
+              onClick={loadProfile}
+              className="mt-3 flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[13px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70"
+              style={{
+                backgroundColor: 'rgba(239,68,68,0.08)',
+                borderColor: 'rgba(239,68,68,0.30)',
+                color: '#f87171',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+                  'rgba(239,68,68,0.14)';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+                  'rgba(239,68,68,0.08)';
+              }}
+            >
+              Retry
+            </button>
           </div>
         )}
 

@@ -19,10 +19,11 @@
 import type { Assignment } from '@studyhall/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../auth/api';
+import { ErrorState } from '../components/states/ErrorState';
 import { AssignmentCard } from './AssignmentCard';
 import { AssignmentForm } from './AssignmentForm';
 import { useServers } from './ServerContext';
-import { ClipboardTextIcon, PlusIcon, SpinnerIcon } from './icons';
+import { ClipboardTextIcon, PlusIcon } from './icons';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -278,31 +279,50 @@ export function AssignmentsPanel({ onClose }: Props) {
       {/* Scrolling content */}
       <div className="flex-1 overflow-y-auto px-4 py-8">
         <div className="max-w-4xl mx-auto flex flex-col gap-8">
-          {/* Loading */}
+          {/* Loading — §113 skeleton rows (surface-700 shimmer) */}
           {loadStatus === 'loading' && (
             <div
-              className="flex items-center justify-center py-12"
-              style={{ color: 'rgba(255,255,255,0.30)' }}
+              className="flex flex-col gap-3 animate-pulse"
+              aria-busy="true"
+              aria-label="Loading assignments"
+              data-testid="assignments-skeleton"
             >
-              <SpinnerIcon size={24} className="sh-animate-spin" />
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="rounded-lg border p-4"
+                  style={{
+                    backgroundColor: '#27272a',
+                    borderColor: 'rgba(63,63,70,0.40)',
+                  }}
+                  aria-hidden="true"
+                >
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="h-4 w-48 rounded-md" style={{ backgroundColor: '#3f3f46' }} />
+                      <div
+                        className="h-5 w-20 shrink-0 rounded-full"
+                        style={{ backgroundColor: '#3f3f46' }}
+                      />
+                    </div>
+                    <div className="h-3 w-full rounded-md" style={{ backgroundColor: '#3f3f46' }} />
+                    <div
+                      className={`h-3 rounded-md ${i % 2 === 0 ? 'w-2/3' : 'w-3/4'}`}
+                      style={{ backgroundColor: '#3f3f46' }}
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
-          {/* Error */}
+          {/* Error — §113: danger icon + cause + retry */}
           {loadStatus === 'error' && (
-            <div className="flex flex-col items-center gap-3 py-12 text-center">
-              <p className="text-sm" style={{ color: 'rgba(255,255,255,0.40)' }}>
-                Couldn't load assignments.
-              </p>
-              <button
-                type="button"
-                onClick={loadAssignments}
-                className="text-xs underline"
-                style={{ color: '#10b981' }}
-              >
-                Retry
-              </button>
-            </div>
+            <ErrorState
+              data-testid="assignments-error"
+              message="Couldn't load assignments. Check your connection and try again."
+              onRetry={loadAssignments}
+            />
           )}
 
           {/* Empty state */}
