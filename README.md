@@ -13,7 +13,7 @@
 | Web app | https://web-production-bce1a8.up.railway.app |
 | API health check | https://api-production-b93e.up.railway.app/health |
 
-Accounts are live: sign up, log in, verify email, reset password, and customize your profile — display name, unique @username, and accent color — through the app. You can also create a study server — it starts with a #general channel — and see it in the server rail with its channels in the sidebar. Share an invite link to bring others in, and join a server from an invite after previewing it.
+Accounts are live: sign up, log in, verify email, reset password, and customize your profile — display name, unique @username, and accent color — through the app. You can also create a study server — it starts with a #general channel — and see it in the server rail with its channels in the sidebar. Share an invite link to bring others in, and join a server from an invite after previewing it. Voice/video study rooms are live end-to-end too — talk, screen-share, and a graceful audio-only fallback for shaky connections.
 
 ---
 
