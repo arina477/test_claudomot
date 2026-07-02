@@ -163,7 +163,7 @@ export function SettingsPrivacyPage() {
       const updated = await api.putPrivacy({
         profileVisibility: value,
         // Preserve the existing whoCanDm — this PUT updates both fields
-        whoCanDm: privacy?.whoCanDm ?? 'server-members',
+        whoCanDm: privacy?.whoCanDm ?? 'everyone',
       });
       setPrivacy(updated);
       setUiVisibility(toUiVisibility(updated.profileVisibility));
@@ -358,8 +358,8 @@ export function SettingsPrivacyPage() {
                   color: 'rgba(255,255,255,0.40)',
                 }}
               >
-                Even in stricter modes, Server Organizers maintain visibility over member lists to
-                manage academic roles.
+                When set to Hidden, your profile is removed from the member list for everyone in the
+                server — including organizers and owners.
               </p>
             </section>
 
