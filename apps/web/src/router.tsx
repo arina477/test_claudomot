@@ -11,6 +11,9 @@
  *   /verify-email    EmailVerifyPage (public — works with or without session)
  *   /app             AppHome    (auth-required)
  *   /settings/profile ProfilePage (auth-required)
+ *   /settings/privacy SettingsPrivacyPage (auth-required)
+ *   /privacy        PrivacyPage (public)
+ *   /terms          TermsPage (public)
  *   *               → /  (fallback)
  *
  * Login-return flow (/invite/:code):
@@ -27,9 +30,12 @@ import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { InviteJoinPage } from './pages/InviteJoinPage';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
+import { PrivacyPage } from './pages/PrivacyPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
+import { SettingsPrivacyPage } from './pages/SettingsPrivacyPage';
 import { SignupPage } from './pages/SignupPage';
+import { TermsPage } from './pages/TermsPage';
 
 export function AppRouter() {
   return (
@@ -84,6 +90,18 @@ export function AppRouter() {
             </AuthGuard>
           }
         />
+        <Route
+          path="/settings/privacy"
+          element={
+            <AuthGuard>
+              <SettingsPrivacyPage />
+            </AuthGuard>
+          }
+        />
+
+        {/* Public legal */}
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
