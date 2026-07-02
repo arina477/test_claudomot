@@ -72,3 +72,6 @@ Promoted at L-2 Distill from `process/waves/wave-<N>/blocks/L/observations.md` b
 
 2. Verify at P-0 that the seed's named entity is the real cost source or output boundary, not merely that it exists.
    Why: An existing but wrong-target entity sends the wave to fix nothing.
+
+3. Build an external-SDK feature's credential-independent ACs now with a placeholder key; defer live verify to T-5/C-2.
+   Why: Waiting on a founder-supplied credential stalls work that is verifiable without it.
