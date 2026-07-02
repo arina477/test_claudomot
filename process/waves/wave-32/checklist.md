@@ -49,9 +49,9 @@ TEST:
 - [x] T-9 Journey
 
 VERIFY:
-- [ ] V-1 Independent reviews (Karen + jenny, parallel)
-- [ ] V-2 Triage
-- [ ] V-3 Fast-fix loop (or close)
+- [x] V-1 Independent reviews (Karen + jenny, parallel)
+- [x] V-2 Triage
+- [x] V-3 Fast-fix loop (or close) — head-verifier APPROVED; fast-fix queue empty (0 cycles); F-32-T-8-1 non-blocking → task a2dd9f3d
 
 LEARN:
 - [ ] L-1 Docs
