@@ -3,7 +3,7 @@
 **Block:** D (Design)
 **Wave topic:** voice in-room — screen-share prominent tile + audio-only-state UI
 **Block exit gate:** D-3
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable | Status | Notes |
@@ -23,3 +23,6 @@
 
 ## Gate verdict log
 <appended by head-designer at D-3>
+
+## Block-exit handoff
+
