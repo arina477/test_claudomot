@@ -3,7 +3,7 @@
 **Block:** B (Build)
 **Wave topic:** M7 privacy controls — settings-privacy (profile-visibility enforced + who-can-DM persisted) + data view/download + Sentry + privacy/terms stubs & states
 **Block exit gate:** B-6
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
@@ -14,7 +14,7 @@
 | B-3 | process/waves/wave-35/stages/B-3-frontend.md | done | page+stubs+states+Sentry web |
 | B-4 | process/waves/wave-35/stages/B-4-wiring.md | done | PrivacyModule registered; repo typecheck clean |
 | B-5 | process/waves/wave-35/stages/B-5-verify.md | done | lint+test+build green; 1 pre-existing flake |
-| B-6 | process/waves/wave-35/stages/B-6-review.md | pending | |
+| B-6 | process/waves/wave-35/stages/B-6-review.md | done | head-builder APPROVED; code-reviewer no crit/high; L1+L2 fixed |
 
 ## Block-specific context
 - **Spec contract:** `tasks` row 56a50862-790e-4868-a5c5-305b08b81e40 (DB); pointer process/waves/wave-35/stages/P-2-spec.md
@@ -34,3 +34,16 @@ none
 
 ## Gate verdict log
 <appended by fresh head-builder spawn at B-6>
+
+
+## Block-exit handoff
+```yaml
+build_block_status: complete
+branch: wave-35-privacy-controls
+stages_run: [B-0, B-1, B-2, B-3, B-4, B-5, B-6]
+stages_skipped: []
+review_verdict: APPROVE
+deviations_logged: ["@Header export", "post-query roster filter", "delete+biome-ignore Sentry", "activitySummary minimal", "ThreadPanel/MemberList not in named-5", "notifications-panel absent N/A"]
+last_commit_sha: c27c4ae
+ready_for_ci: true
+```
