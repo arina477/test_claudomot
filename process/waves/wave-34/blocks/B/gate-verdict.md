@@ -94,3 +94,74 @@ head_signoff:
   verdict_complete: true
   rework_attempt_cap_remaining: 2
 ```
+
+---
+
+# B-6 Review — ATTEMPT 2 (re-gate after REWORK)
+
+**Verdict:** APPROVED
+**Scope of this attempt:** confirm resolution of RW-1 (media-element leak) + RW-2 (restore-timer leak) + the two fold-in nits. Everything PASSED at attempt-1 (2-layer screen-share, member-scoped grant, RBAC-before-mint, audio-never-dropped invariant, design fidelity, debounce/manual-wins, no gold-plating, independent review) stands — re-confirmed, not re-litigated.
+
+## RW-1 — remote-share `<video>` attach() without detach() — RESOLVED
+- Manual `<video ref={attach}>` with hand-rolled `track.attach(el)` is **GONE**. Codebase-wide grep for `.attach(` under `apps/web/src/shell/` returns zero matches — no manual attach without detach remains anywhere.
+- Replaced by the SDK-managed `<VideoTrack trackRef={trackRef}>` from `@livekit/components-react` (import `VoiceStudyRoom.tsx:40`; used `:795-799` inside `RemoteShareView`). The component owns the attach/detach lifecycle — no leaked DOM node on remote-share start/stop cycles. Matches the documented lifecycle-managed path (`livekit.md:269`).
+- **Prominent-tile design fidelity intact:** `RemoteShareView` still renders the dominant region `max-w-[1000px] mx-auto` (:784-785), surface `#0a0a0b`, border `rgba(255,255,255,0.06)`, emerald `#10b981` "Live Share" indicator with subtle-pulse — per `design/screen-share-tile.html`. `object-contain` on the video. Zero invented tokens. The swap is lifecycle-only; the tile is unchanged visually.
+
+## RW-2 — restore() setTimeout not ref-tracked / not cleared — RESOLVED
+- `restoreTimerRef` declared (`useAudioOnlyFallback.ts:73`).
+- **Cleared before a new one is armed** at the top of `restore()` (:172-175) — idempotent re-entrancy safe.
+- **Nulled on fire** inside the timer callback (:182).
+- **Cleared on unmount** in the effect cleanup (:149-152), alongside the existing `poorTimerRef` clear — the lone exception attempt-1 flagged is now consistent with every other timer in the file.
+- **New regression test present + green:** `useAudioOnlyFallback.test.tsx:298` — `'restore() timeout is cleared on unmount — no setState on unmounted component'`: enters manual → restore() → unmount before the 1 s fires → `vi.advanceTimersByTime(2000)` asserted `.not.toThrow()`. Directly guards the update-on-unmounted path.
+
+## Fold-in nits — RESOLVED
+- **"Mic active" pill:** the pointless duplicate-in-both-branches conditional is collapsed. The two remaining elements (`VoiceStudyRoom.tsx:1149-1160` desktop text pill `hidden sm:flex`; `:1180+` mobile icon badge `sm:hidden`) are legitimate responsive-variant siblings, not the duplication flagged at attempt-1. Correctly resolved.
+- **`resumeVideoSubscriptions` docstring:** now reads "Re-subscribe to all remote video + screen-share publications … LiveKit ignores the call if already subscribed" (`useAudioOnlyFallback.ts:91-92`) — matches actual behavior; the misleading "only prior-subscribed" claim is gone.
+
+## Audio-never-dropped invariant — RE-CONFIRMED (still load-bearing, still guarded)
+- Both pause/resume loops still gate on `rPub.kind === Track.Kind.Video && VIDEO_SOURCES.includes(rPub.source)` (Camera + ScreenShare only); audio publications never enumerated for `setSubscribed` (`useAudioOnlyFallback.ts:84,97`). The negative-path invariant test survives at `useAudioOnlyFallback.test.tsx:324`. The RW-2 fix is timer-lifecycle only — no change to the invariant logic.
+
+## Authoritative checks (re-run this attempt)
+- `pnpm -w typecheck` → **4/4 packages successful** (shared + web + api), zero errors.
+- `cd apps/web && npx vitest run` → **322 passed / 322 (19 files)**, zero failures. Includes the new RW-2 unmount guard and the audio invariant test. The single `act(...)` stderr in `voice-occupancy.test.tsx` is a pre-existing non-fatal warning in an unrelated test (test passes) — not introduced by this rework, not a regression.
+
+## Carries into T / V / N (unchanged from attempt-1, re-stated for handoff)
+- **T-block LIVE-VERIFY MANDATORY (ceo NON-NEGOTIABLE):** 2-participant real test against live Railway LiveKit — one publishes real screen-share, the other sees the prominent tile; sharer stops → tile reverts cleanly with no orphan/leak (RW-1 now fixed — verify no leaked media element across start→stop→revert cycles); poor-bandwidth degrade → audio continues → restore re-subscribes video.
+- **T-8 token-grant re-probe:** members mint a grant including `screen_share`[+`_audio`]; non-member still uniform-403; secret stays server-side.
+- **V-block:** manual-toggle disposition (wire `enterManual` to a control-cluster button + reachability of the manual-mode banner branch) — accepted V-carry, small follow-up / V-3 fast-fix, founder-facing UX call if surfaced.
+- **N-block:** after live-verify passes, M6 metric MET → close M6 (in_progress→done, dispose non-metric child tasks to unassigned queue) → pivot to M7.
+
+## Next
+Phase 2 `/review` runs next.
+
+```yaml
+head_signoff:
+  verdict: APPROVED
+  stage: B-6
+  attempt: 2
+  reviewers:
+    code-reviewer: "attempt-1 findings (2 MAJOR resource leaks) both resolved; no new defect introduced by the lifecycle-only fixes"
+    code-quality-pragmatist: "attempt-1 nits (Mic-active dup conditional, misleading resume docstring) resolved; no new over-engineering"
+  resolved_this_attempt:
+    - "RW-1: manual <video> attach()-without-detach GONE (zero .attach( in apps/web/src/shell); replaced by SDK-managed <VideoTrack> at VoiceStudyRoom.tsx:795; prominent-tile design fidelity intact"
+    - "RW-2: restore() timer ref-tracked (restoreTimerRef), cleared-before-arm + nulled-on-fire + cleared-on-unmount (useAudioOnlyFallback.ts:73,149-152,172-175,182); new unmount regression test at :298 green"
+    - "fold-in: Mic-active pointless conditional collapsed (remaining desktop/mobile pair are responsive variants); resumeVideoSubscriptions docstring corrected to match behavior"
+  re_confirmed:
+    - "audio-never-dropped invariant holds; negative-path test intact (useAudioOnlyFallback.test.tsx:324)"
+    - "2-layer screen-share, member-scoped grant, RBAC-before-mint, debounce/manual-wins, design fidelity, no gold-plating — all attempt-1 PASSES stand"
+  checks:
+    typecheck: "PASS — 4/4 packages, zero errors"
+    web_tests: "PASS — 322/322 (19 files); includes RW-2 unmount guard + audio invariant"
+  rationale: >
+    Both attempt-1 REWORK items are genuinely resolved in code, not just claimed. RW-1: the hand-rolled
+    attach()-without-detach is gone entirely (grep-verified zero manual attach in the shell tree), replaced
+    by the SDK's lifecycle-managed <VideoTrack> — no media-element leak into the mandatory T-block live test;
+    prominent-tile design tokens unchanged. RW-2: the restore timer is now ref-tracked and cleared on every
+    exit path (arm, fire, unmount) consistent with the file's other timers, with a dedicated regression test
+    proving no setState-on-unmounted. Both fold-in nits fixed; the audio invariant and all attempt-1 passes
+    re-confirmed. Typecheck clean, 322/322 web tests green. No new issue surfaced. Both leaks off the
+    live-verify-critical path — APPROVED.
+  next_action: PROCEED_TO_C (Phase 2 /review runs next; then C-block PR & CI)
+  verdict_complete: true
+  rework_attempt_cap_remaining: 1
+```

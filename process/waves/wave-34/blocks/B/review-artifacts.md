@@ -3,7 +3,7 @@
 **Block:** B (Build)
 **Wave topic:** voice finish — screen-share (2-layer grant+client) + audio-only fallback (client)
 **Block exit gate:** B-6
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable | Status | Notes |
@@ -30,3 +30,14 @@
 
 ## Gate verdict log
 <appended by head-builder at B-6>
+
+## Block-exit handoff
+```yaml
+build_block_status: complete
+branch: wave-34-voice-screenshare-fallback
+stages_run: [B-0,B-2,B-3,B-4,B-5,B-6]
+stages_skipped: [B-1]
+review_verdict: APPROVE
+last_commit_sha: 36018ad
+ready_for_ci: true
+```
