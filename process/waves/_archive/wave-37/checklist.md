@@ -64,6 +64,6 @@ LEARN:
 - [x] L-2 Distill
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers   (BOARD 7/7 APPROVE A — M7 held in_progress; trigger=pause; head-next APPROVED)
+- [x] N-2 Seed                 (queue-exhausted; seed=null; no auto-seed of blocked founder-ops; head-next APPROVED)
+- [x] N-3 Handoff              (wave-37 closed ok + archived; loop paused on trigger f; head-next APPROVED)
