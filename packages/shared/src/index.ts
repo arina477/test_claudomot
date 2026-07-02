@@ -142,6 +142,19 @@ export { AccountDataResponseSchema } from './account-data.js';
 export type { AccountDataResponse } from './account-data.js';
 
 export {
+  NOTIFICATION_TYPES,
+  NotificationSchema,
+  NotificationListResponseSchema,
+  UnreadCountResponseSchema,
+} from './notifications.js';
+export type {
+  NotificationType,
+  Notification,
+  NotificationListResponse,
+  UnreadCountResponse,
+} from './notifications.js';
+
+export {
   PresenceStatusSchema,
   PresenceStateSchema,
   PresenceSnapshotSchema,
