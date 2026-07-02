@@ -1,6 +1,6 @@
 # Wave 36 — P-block review artifacts
 
-**Block:** P (Product) · **Wave topic:** M7 privacy-polish + test-hardening (regression tests for the shipped wave-35 privacy endpoints + 2 tiny follow-up fixes) · **Block exit gate:** P-4 · **Status:** in-progress
+**Block:** P (Product) · **Wave topic:** M7 privacy-polish + test-hardening (regression tests for the shipped wave-35 privacy endpoints + 2 tiny follow-up fixes) · **Block exit gate:** P-4 · **Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
@@ -9,7 +9,7 @@
 | P-1 | process/waves/wave-36/stages/P-1-decompose.md | pending | |
 | P-2 | stages/P-2-spec.md | done (spec in 622a7bf3) |
 | P-3 | stages/P-3-plan.md | done |
-| P-4 | process/waves/wave-36/blocks/P/gate-verdict.md | pending | |
+| P-4 | blocks/P/gate-verdict.md | done (APPROVED; karen+jenny APPROVE, Gemini UNAVAILABLE) |
 
 ## Block-specific context
 - **Wave topic:** M7 test-hardening (seed 622a7bf3: automated tests for the wave-35 privacy endpoints — authz roster filter, data-export self-scoping, beforeSend PII scrub, enum-400) + siblings 73e96a9d (re-scope states-AC off non-existent notifications surface) + b7feab30 (fix stub Last-updated date).
