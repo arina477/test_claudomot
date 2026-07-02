@@ -12,8 +12,8 @@
 | B-1 | process/waves/wave-33/stages/B-1-contracts.md | skipped | no new type/Zod/OpenAPI |
 | B-2 | process/waves/wave-33/stages/B-2-backend.md | done | node-specialist; 22P02→400 in filter + helper mirroring 23505 walk; 18 unit + 10 real-DB integration; no 2nd catch-all |
 | B-3 | process/waves/wave-33/stages/B-3-frontend.md | skipped | backend-only (design_gap FALSE) |
-| B-4 | process/waves/wave-33/stages/B-4-wiring.md | pending | |
-| B-5 | process/waves/wave-33/stages/B-5-verify.md | pending | |
+| B-4 | process/waves/wave-33/stages/B-4-wiring.md | done | repo typecheck clean; no route drift |
+| B-5 | process/waves/wave-33/stages/B-5-verify.md | done | lint+build clean; api 467 green; smoke 401; integration runs in CI |
 | B-6 | process/waves/wave-33/stages/B-6-review.md | pending | |
 
 ## Block-specific context
