@@ -1,0 +1,27 @@
+# Wave 33 — P-0 Frame
+
+## Discover section
+- **wave_db_id:** 9ac979f5-26a0-4e9b-ba7e-208b2bf21bac (wave_number 33, running).
+- **Prior-work:** wave-32 V-2 produced this seed (finding F-32-T-8-1). Both voice endpoints (wave-31 token-mint, wave-32 occupancy) share the :channelId param gap.
+- **Roadmap milestone:** M6 (8702a335) in_progress, Class=product-feature, Tier=T4. waves.milestone_id backfilled to M6. M6 success metric (talk + screen-share + audio-fallback) already functionally MET by w31/w32; this is post-metric hardening.
+- **Spec-contract short-circuit:** no-prior-spec (a2dd9f3d is a prose V-2 finding) → full P-1..P-3.
+- **Product decision (Action 4):** none Tier-3 (robustness fix; no money/security-leak/major-UX). Security-ADJACENT (input validation on auth-gated routes) → T-8 applies but no new security decision.
+
+## Reframe section
+**Original framing:** add ParseUUIDPipe to :channelId on the 2 voice routes → 400 not 500 on malformed id + unit test (from V-2 finding F-32-T-8-1).
+
+**problem-framer: RESCOPE-AUTO-SPLIT** (matched antipattern #1 symptom-vs-cause, #5 scope-too-narrow). EVIDENCE-BASED (read the code): ZERO ParseUUIDPipe usages anywhere; ~30 UUID-typed @Param bindings across 7 controllers (servers, rbac, channel-override, messages, assignments, voice-participants, voice-token, attachments) all bind raw string; no global ValidationPipe; no cast-error→400 filter (only SupertokensExceptionFilter at main.ts:120). So the malformed-UUID→500 reproduces IDENTICALLY on GET /channels/junk/messages, /servers/junk/roles, etc. The 2 voice routes are just where T-8 happened to probe. Root cause = missing project-wide param-validation convention; fixing only 2 routes is whack-a-mole (leaves the same 500 live on 5+ controllers, a future T-8 probe re-files it). Recommends framing around the convention; P-3 owns the mechanism (per-param ParseUUIDPipe vs a global invalid-uuid-cast→400 filter); wants ≥1 non-voice regression test. NOTE: PRODUCT-PRINCIPLES has no §Antipatterns section (used fallback catalog) — minor doc gap.
+
+**ceo-reviewer: PROCEED (HOLD-SCOPE).** a2dd9f3d is the ONLY credential-independent M6 work → shipping it keeps the loop productive + improves the already-live voice endpoints. Tight 2-endpoint fix is correctly sized; do NOT expand to an all-:id-routes sweep (evidence-free gold-plating); the disproportionate lever (real voice) is credential-blocked not code-blocked. Do NOT re-escalate LiveKit this wave (ask already live + correctly framed in the 2026-07-01 digest; founder's own tripwire not tripped — this is hardening, not a new can't-connect feature). **CRITICAL forward flag:** after a2dd9f3d ships, ZERO credential-independent M6 work remains → the wave-33 **N-block MUST treat the LiveKit park-or-key decision as the mandatory next move** (park M6 + pivot to a fully-buildable milestone [M7 privacy/notifications, M4 offline-first] vs. hold for keys) — NOT another cred-blocked voice wave.
+
+**mvp-thinner: OK** (floor_constraint_active). Atomic — the 2 ParseUUIDPipe ACs are two halves of ONE shared-pattern defect; splitting ships the fix on one route + leaves the identical gap on the twin (anti-value). No sibling split. keep-OUT (gold-plating): (1) do NOT expand to ALL :id params app-wide; (2) do NOT introduce a global exception filter / error-normalization layer; (3) do NOT over-test (one unit test per route sufficient). Sub-floor hardening clears only via the wave-16 test-debt exemption.
+
+**Mediation (orchestrator):** genuine tension — problem-framer (evidence-based: bug is project-wide, expand to convention) vs ceo-reviewer + mvp-thinner (hold to 2 voice routes, no sweep, no global filter). The FACTUAL question resolves toward problem-framer: it verified in code that the 500 reproduces on 5+ other controllers; "observed only on voice" reflects where T-8 *probed*, not where the bug *is*. The SCOPING/VALUE question (fix-all-now vs. fix-voice-now-+-track-rest) is ceo/mvp's authority: a sprawling 30-param 7-controller per-route sweep is NOT warranted as one low-impact wave. **Disposition: RESCOPE-AUTO-SPLIT → P-1 owns the sizing.** Steer for P-1: the bug is project-wide (verified); size whether to (a) fix the root cause this wave via the SMALLEST correct mechanism that also covers the finding, OR (b) fix the 2 voice routes this wave + author a sibling task for the broader convention so the whack-a-mole is TRACKED not silently left. Respect ceo/mvp keep-OUT (no unbounded per-route sweep); if P-3 finds a bounded global invalid-uuid→400 mechanism is SMALLER than per-route patching AND changes no error contract except the current-500 case, that reconciles root-cause + minimal (re-evaluate mvp's global-filter keep-OUT against that evidence at P-3). Do NOT re-escalate LiveKit. **Carry ceo's N-block park-or-key mandatory-next flag.**
+
+**Disposition: RESCOPE-AUTO-SPLIT** (→ P-1 split protocol + sizing rubric).
+
+## Open escalation carried into gate
+- N-block park-or-key: after this wave, no credential-independent M6 work remains → N-block MUST fork (park M6 + pivot vs. hold for LiveKit keys). ceo-reviewer flag.
+
+## Exit
+Discovery + reframe complete. Disposition RESCOPE-AUTO-SPLIT (bug is project-wide per problem-framer's code evidence; ceo/mvp hold-scope caution carried). → P-1 Decompose (owns the split: root-cause-this-wave vs. voice-now-+-sibling-for-convention; sizing rubric + keep-OUT). N-block park-or-key flagged.

@@ -15,11 +15,11 @@
 - Prior lifecycle note: a2dd9f3d was resolved from wave_id=d25f8c47 → NULL by the orchestrator (rule 15 + rule 17) so it could seed this wave. Systemic fix (milestone-scoped V-2 follow-up wave_id disposition) documented in wave-32 observations.md for brain maintainers.
 
 PRODUCT:
-- [ ] P-0 Frame (discover + reframe)
-- [ ] P-1 Decompose
-- [ ] P-2 Spec
-- [ ] P-3 Plan
-- [ ] P-4 Gate
+- [x] P-0 Frame (discover + reframe)
+- [x] P-1 Decompose
+- [x] P-2 Spec
+- [x] P-3 Plan
+- [x] P-4 Gate
 
 DESIGN (skip block if non-UI wave):
 - [ ] D-1 Brief
