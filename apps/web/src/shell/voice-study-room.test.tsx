@@ -1,17 +1,21 @@
 /**
  * VoiceStudyRoom — render + state tests.
  *
- * Testing surface (wave-31 B-3, Refs: 1dd1f2ca):
+ * Testing surface (wave-31 B-3 + wave-34 B-3):
  *   - Pre-join renders a "Join voice" button; no auto-connect on mount.
  *   - Clicking Join triggers the token fetch (POST .../voice/token).
  *   - Connect uses video={false} (audio-first — camera OFF).
  *   - Error state renders on fetch failure with a human-readable message.
  *   - Error state renders a "Try again" retry button.
+ *   - Screen-share button renders; toggle changes aria-pressed (wave-34).
+ *   - Screen-share start → OwnShareView renders; stop → reverts to avatar grid (wave-34).
+ *   - Audio-only banner renders on manual toggle; restore button clears it (wave-34).
  *
  * NOT tested here (by design — media plane is not testable in headless):
  *   - ICE/DTLS negotiation, SFU track routing, audio levels.
  *   - mic toggle connected to a real microphone.
  *   - LiveKit connection state progression (requires a live SFU).
+ *   - Real ConnectionQuality.Poor events from the SFU (tested via manual-toggle path).
  *
  * LiveKit is mocked to isolate wiring from SFU connectivity.
  */
@@ -40,6 +44,11 @@ vi.mock('../auth/api', () => ({
 // every useRoomContext() call (a fresh vi.fn() per render would never have
 // been called from the perspective of our expect()).
 const mockDisconnect = vi.fn();
+const mockSetScreenShareEnabled = vi.fn().mockResolvedValue(undefined);
+const mockSetMicrophoneEnabled = vi.fn().mockResolvedValue(undefined);
+
+// Controls for wave-34 tests: screen-share enabled state
+let mockIsScreenShareEnabled = false;
 
 vi.mock('@livekit/components-react', () => ({
   LiveKitRoom: ({
@@ -66,10 +75,15 @@ vi.mock('@livekit/components-react', () => ({
     </div>
   ),
   useLocalParticipant: () => ({
+    // isScreenShareEnabled is controlled per-test via mockIsScreenShareEnabled
+    isScreenShareEnabled: mockIsScreenShareEnabled,
+    isMicrophoneEnabled: true,
     localParticipant: {
       identity: 'user-123',
       isMicrophoneEnabled: true,
-      setMicrophoneEnabled: vi.fn().mockResolvedValue(undefined),
+      isScreenShareEnabled: mockIsScreenShareEnabled,
+      setMicrophoneEnabled: mockSetMicrophoneEnabled,
+      setScreenShareEnabled: mockSetScreenShareEnabled,
     },
   }),
   useParticipants: () => [
@@ -79,10 +93,35 @@ vi.mock('@livekit/components-react', () => ({
       isMicrophoneEnabled: true,
     },
   ],
+  // useTracks returns [] by default (no screen-share tracks in unit tests)
+  useTracks: () => [],
   // Returns the SAME stable mockDisconnect reference on every call so teardown
   // assertions accumulate calls on a single spy, not a fresh one per render.
   useRoomContext: () => ({
     disconnect: mockDisconnect,
+    localParticipant: {
+      identity: 'user-123',
+    },
+    remoteParticipants: new Map(),
+    on: vi.fn(),
+    off: vi.fn(),
+  }),
+}));
+
+// ── Mock useAudioOnlyFallback ────────────────────────────────────────────────
+// The real hook depends on useRoomContext() + RoomEvent.ConnectionQualityChanged.
+// We mock it so the component tests can control audio-only state directly.
+let mockAudioOnlyMode: 'auto' | 'manual' | null = null;
+let mockRestoreState: 'idle' | 'restoring' = 'idle';
+const mockEnterManual = vi.fn();
+const mockRestore = vi.fn();
+
+vi.mock('./useAudioOnlyFallback', () => ({
+  useAudioOnlyFallback: () => ({
+    mode: mockAudioOnlyMode,
+    restoreState: mockRestoreState,
+    enterManual: mockEnterManual,
+    restore: mockRestore,
   }),
 }));
 
@@ -108,8 +147,14 @@ function renderVoice(props = { channelId: 'ch-voice-1', channelName: 'study-room
 describe('VoiceStudyRoom', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // clearAllMocks resets call history on mockDisconnect (it's a module-level vi.fn(),
-    // so clearAllMocks covers it — no need to manually call mockDisconnect.mockClear()).
+    // clearAllMocks resets call history on stable mocks (mockDisconnect, mockSetScreenShareEnabled, etc.)
+    // Reset wave-34 controlled state to defaults
+    mockIsScreenShareEnabled = false;
+    mockAudioOnlyMode = null;
+    mockRestoreState = 'idle';
+    // Re-apply resolved mock to setScreenShareEnabled after clearAllMocks resets implementation
+    mockSetScreenShareEnabled.mockResolvedValue(undefined);
+    mockSetMicrophoneEnabled.mockResolvedValue(undefined);
   });
 
   // ── Pre-join state ─────────────────────────────────────────────────────────
@@ -331,5 +376,194 @@ describe('VoiceStudyRoom', () => {
     // error (since livekit-server-sdk is not in apps/web deps).
     // The component rendered without error = anti-pattern is absent.
     expect(screen.queryByTestId('voice-study-room')).toBeDefined();
+  });
+
+  // ── Wave-34: Screen-share controls ────────────────────────────────────────
+
+  it('renders a screen-share button in the control cluster when in-room', async () => {
+    mockApi.getVoiceToken.mockResolvedValue({ token: 'jwt', url: 'wss://lk.example.com' });
+    const user = userEvent.setup();
+    renderVoice();
+
+    await user.click(screen.getByTestId('join-voice-btn'));
+    await waitFor(() => expect(screen.getByTestId('voice-controls')).toBeInTheDocument());
+
+    expect(screen.getByTestId('screen-share-btn')).toBeInTheDocument();
+  });
+
+  it('screen-share button has aria-pressed=false when not sharing', async () => {
+    mockApi.getVoiceToken.mockResolvedValue({ token: 'jwt', url: 'wss://lk.example.com' });
+    const user = userEvent.setup();
+    renderVoice();
+
+    await user.click(screen.getByTestId('join-voice-btn'));
+    await waitFor(() => expect(screen.getByTestId('screen-share-btn')).toBeInTheDocument());
+
+    expect(screen.getByTestId('screen-share-btn')).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByTestId('screen-share-btn')).toHaveAttribute('aria-label', 'Share screen');
+  });
+
+  it('clicking screen-share button calls setScreenShareEnabled(true)', async () => {
+    mockApi.getVoiceToken.mockResolvedValue({ token: 'jwt', url: 'wss://lk.example.com' });
+    const user = userEvent.setup();
+    renderVoice();
+
+    await user.click(screen.getByTestId('join-voice-btn'));
+    await waitFor(() => expect(screen.getByTestId('screen-share-btn')).toBeInTheDocument());
+
+    await user.click(screen.getByTestId('screen-share-btn'));
+
+    expect(mockSetScreenShareEnabled).toHaveBeenCalledWith(true);
+  });
+
+  it('own-share panel renders when isScreenShareEnabled=true (state 4 own-share)', async () => {
+    // Set mock so useLocalParticipant reports sharing active
+    mockIsScreenShareEnabled = true;
+
+    mockApi.getVoiceToken.mockResolvedValue({ token: 'jwt', url: 'wss://lk.example.com' });
+    const user = userEvent.setup();
+    renderVoice();
+
+    await user.click(screen.getByTestId('join-voice-btn'));
+    await waitFor(() => expect(screen.getByTestId('own-share-panel')).toBeInTheDocument());
+  });
+
+  it('screen-share button has aria-pressed=true and aria-label=Stop when sharing', async () => {
+    mockIsScreenShareEnabled = true;
+    mockApi.getVoiceToken.mockResolvedValue({ token: 'jwt', url: 'wss://lk.example.com' });
+    const user = userEvent.setup();
+    renderVoice();
+
+    await user.click(screen.getByTestId('join-voice-btn'));
+    await waitFor(() => expect(screen.getByTestId('screen-share-btn')).toBeInTheDocument());
+
+    expect(screen.getByTestId('screen-share-btn')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('screen-share-btn')).toHaveAttribute(
+      'aria-label',
+      'Stop screen sharing',
+    );
+  });
+
+  it('clicking stop share canvas button calls setScreenShareEnabled(false)', async () => {
+    mockIsScreenShareEnabled = true;
+    mockApi.getVoiceToken.mockResolvedValue({ token: 'jwt', url: 'wss://lk.example.com' });
+    const user = userEvent.setup();
+    renderVoice();
+
+    await user.click(screen.getByTestId('join-voice-btn'));
+    await waitFor(() => expect(screen.getByTestId('stop-share-canvas-btn')).toBeInTheDocument());
+
+    await user.click(screen.getByTestId('stop-share-canvas-btn'));
+
+    expect(mockSetScreenShareEnabled).toHaveBeenCalledWith(false);
+  });
+
+  it('avatar grid renders (not own-share panel) when isScreenShareEnabled=false', async () => {
+    mockIsScreenShareEnabled = false;
+    mockApi.getVoiceToken.mockResolvedValue({ token: 'jwt', url: 'wss://lk.example.com' });
+    const user = userEvent.setup();
+    renderVoice();
+
+    await user.click(screen.getByTestId('join-voice-btn'));
+    await waitFor(() => expect(screen.getByTestId('voice-controls')).toBeInTheDocument());
+
+    expect(screen.queryByTestId('own-share-panel')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('stop-share-canvas-btn')).not.toBeInTheDocument();
+  });
+
+  // ── Wave-34: Audio-only fallback ──────────────────────────────────────────
+
+  it('audio-only banner is NOT rendered when mode=null (normal state)', async () => {
+    mockAudioOnlyMode = null;
+    mockApi.getVoiceToken.mockResolvedValue({ token: 'jwt', url: 'wss://lk.example.com' });
+    const user = userEvent.setup();
+    renderVoice();
+
+    await user.click(screen.getByTestId('join-voice-btn'));
+    await waitFor(() => expect(screen.getByTestId('voice-controls')).toBeInTheDocument());
+
+    expect(screen.queryByTestId('audio-only-banner')).not.toBeInTheDocument();
+  });
+
+  it('audio-only banner renders when mode=auto (simulated poor bandwidth)', async () => {
+    mockAudioOnlyMode = 'auto';
+    mockApi.getVoiceToken.mockResolvedValue({ token: 'jwt', url: 'wss://lk.example.com' });
+    const user = userEvent.setup();
+    renderVoice();
+
+    await user.click(screen.getByTestId('join-voice-btn'));
+    await waitFor(() => expect(screen.getByTestId('audio-only-banner')).toBeInTheDocument());
+
+    const banner = screen.getByTestId('audio-only-banner');
+    expect(banner).toHaveAttribute('role', 'status');
+    expect(banner).toHaveAttribute('aria-live', 'polite');
+    // Banner shows "Audio-only" text
+    expect(screen.getByText('Audio-only')).toBeInTheDocument();
+  });
+
+  it('audio-only banner renders when mode=manual (user opted in)', async () => {
+    mockAudioOnlyMode = 'manual';
+    mockApi.getVoiceToken.mockResolvedValue({ token: 'jwt', url: 'wss://lk.example.com' });
+    const user = userEvent.setup();
+    renderVoice();
+
+    await user.click(screen.getByTestId('join-voice-btn'));
+    await waitFor(() => expect(screen.getByTestId('audio-only-banner')).toBeInTheDocument());
+  });
+
+  it('clicking restore button calls restore() handler', async () => {
+    mockAudioOnlyMode = 'auto';
+    mockApi.getVoiceToken.mockResolvedValue({ token: 'jwt', url: 'wss://lk.example.com' });
+    const user = userEvent.setup();
+    renderVoice();
+
+    await user.click(screen.getByTestId('join-voice-btn'));
+    await waitFor(() => expect(screen.getByTestId('audio-only-restore-btn')).toBeInTheDocument());
+
+    await user.click(screen.getByTestId('audio-only-restore-btn'));
+
+    expect(mockRestore).toHaveBeenCalledTimes(1);
+  });
+
+  it('restore button is disabled and shows "Restoring" when restoreState=restoring', async () => {
+    mockAudioOnlyMode = 'auto';
+    mockRestoreState = 'restoring';
+    mockApi.getVoiceToken.mockResolvedValue({ token: 'jwt', url: 'wss://lk.example.com' });
+    const user = userEvent.setup();
+    renderVoice();
+
+    await user.click(screen.getByTestId('join-voice-btn'));
+    await waitFor(() => expect(screen.getByTestId('audio-only-restore-btn')).toBeInTheDocument());
+
+    const restoreBtn = screen.getByTestId('audio-only-restore-btn');
+    expect(restoreBtn).toBeDisabled();
+    // Text shows "Restoring" / "Restoring video..." in banner heading
+    expect(screen.getByText('Restoring video...')).toBeInTheDocument();
+  });
+
+  it('audio-only banner has mic-active reassurance text (audio is never dropped invariant)', async () => {
+    mockAudioOnlyMode = 'auto';
+    mockApi.getVoiceToken.mockResolvedValue({ token: 'jwt', url: 'wss://lk.example.com' });
+    const user = userEvent.setup();
+    renderVoice();
+
+    await user.click(screen.getByTestId('join-voice-btn'));
+    await waitFor(() => expect(screen.getByTestId('audio-only-banner')).toBeInTheDocument());
+
+    // "Mic active" pill is present (audio never dropped invariant)
+    expect(screen.getByLabelText('Microphone still active')).toBeInTheDocument();
+  });
+
+  it('screen-share live region is present with role=status aria-live=polite', async () => {
+    mockApi.getVoiceToken.mockResolvedValue({ token: 'jwt', url: 'wss://lk.example.com' });
+    const user = userEvent.setup();
+    renderVoice();
+
+    await user.click(screen.getByTestId('join-voice-btn'));
+    await waitFor(() => expect(screen.getByTestId('screen-share-announcer')).toBeInTheDocument());
+
+    const announcer = screen.getByTestId('screen-share-announcer');
+    expect(announcer).toHaveAttribute('role', 'status');
+    expect(announcer).toHaveAttribute('aria-live', 'polite');
   });
 });

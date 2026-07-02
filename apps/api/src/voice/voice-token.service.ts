@@ -16,7 +16,8 @@
  *   Flag for L-1 spec reconciliation.
  *
  * Token is room-scoped (room = channelId), identity = userId, TTL = 1h.
- * Grant is audio-first: canPublishSources = [TrackSource.MICROPHONE] only.
+ * Grant: canPublishSources = [TrackSource.MICROPHONE, TrackSource.SCREEN_SHARE,
+ *   TrackSource.SCREEN_SHARE_AUDIO] — members may publish mic + screen-share (wave-34).
  *
  * ESM note: livekit-server-sdk v2.x is ESM-only. This file compiles under
  * "module": "CommonJS" (NestJS default tsconfig), so the module is loaded
@@ -27,7 +28,7 @@
  *   - LIVEKIT_API_SECRET never leaves this service.
  *   - Token is never minted before the RBAC check passes.
  *   - Token grant is scoped to the specific room (channelId).
- *   - canPublishSources restricts publish to microphone only (audio-first).
+ *   - canPublishSources: MICROPHONE + SCREEN_SHARE + SCREEN_SHARE_AUDIO (wave-34 widening).
  */
 
 import {
@@ -132,9 +133,15 @@ export class VoiceTokenService {
       roomJoin: true,
       room: channelId, // scoped to this channel only — prevents cross-room joins
       canPublish: true,
-      // Audio-first: restrict publish to microphone only. canPublishSources supersedes
-      // canPublish when set — camera and screen-share are excluded from this token.
-      canPublishSources: [TrackSource.MICROPHONE],
+      // canPublishSources supersedes canPublish when set. Wave-34 widens the grant to
+      // include SCREEN_SHARE and SCREEN_SHARE_AUDIO: without these, a client publish of
+      // a screen-share track is server-rejected even when canPublish=true.
+      // Camera is still excluded (audio + screen-share only; video={false} on client).
+      canPublishSources: [
+        TrackSource.MICROPHONE,
+        TrackSource.SCREEN_SHARE,
+        TrackSource.SCREEN_SHARE_AUDIO,
+      ],
       canSubscribe: true,
     });
 
