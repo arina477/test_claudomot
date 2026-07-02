@@ -23,6 +23,15 @@ none
 ## Gate verdict log
 <appended by fresh head-verifier at V-3>
 
-
 ## Block-exit handoff
-
+```yaml
+verify_block_status: complete
+karen_verdict: APPROVE
+jenny_verdict: APPROVE
+triaged_findings:
+  blocking_resolved: []
+  non_blocking_task_ids: [622a7bf3, 73e96a9d, b7feab30]
+  noise_suppressed: 4
+fast_fix_cycles: 0
+ready_for_learn: true
+```
