@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en" class="antialiased dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyHall — Voice Study Room Staging: Audio-only State</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- 
+  aesthetic_dna: {"palette": "zinc-emerald-amber", "radius": "md-lg", "vibe": "academic-calm"}
+  ui_paradigm: "multi-pane-workspace (server-channel-view with multi-state staging)"
+  -->
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Geist', 'system-ui', '-apple-system', '"Segoe UI"', 'sans-serif'] },
+          colors: {
+            study: {
+              950: '#0a0a0b',
+              900: '#121214',
+              800: '#1c1c1f',
+              700: '#27272a',
+              600: '#3f3f46',
+              500: '#52525b',
+            },
+            accent: {
+              emerald: '#10b981',
+              amber: '#f59e0b', /* Adopted from §1 + §4 of the Design System brief */
+            },
+            danger: {
+              DEFAULT: '#ef4444',
+              text: '#f87171',
+              tint: 'rgba(239, 68, 68, 0.10)' 
+            },
+            text: {
+              primary: 'rgba(255,255,255,0.92)',
+              secondary: 'rgba(255,255,255,0.60)',
+              muted: 'rgba(255,255,255,0.40)'
+            },
+            border: {
+              hairline: 'rgba(255,255,255,0.06)',
+              hover: 'rgba(255,255,255,0.10)'
+            }
+          },
+          boxShadow: {
+            sm: '0 1px 2px rgba(0,0,0,0.4)',
+            pop: '0 8px 24px rgba(0,0,0,0.5)',
+            'glow-focus': '0 0 0 2px rgba(16,185,129,0.4)',
+            'glow-danger': '0 0 0 2px rgba(239,68,68,0.4)'
+          },
+          transitionTimingFunction: {
+            DEFAULT: 'cubic-bezier(0.25, 0.1, 0.25, 1)',
+          },
+          animation: {
+            'slide-in': 'slideInDown 200ms cubic-bezier(0.25, 0.1, 0.25, 1) forwards',
+            'fade-in': 'fadeIn 300ms ease-out forwards',
+          },
+          keyframes: {
+            slideInDown: {
+              '0%': { opacity: '0', transform: 'translateY(-10px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+            fadeIn: {
+              '0%': { opacity: '0' },
+              '100%': { opacity: '1' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* System Global Overrides */
+    body { background-color: #0a0a0b; color: rgba(255,255,255,0.92); }
+    
+    /* Layout Architecture */
+    .layout-grid {
+      display: grid;
+      grid-template-columns: 72px 240px minmax(0, 1fr);
+    }
+    @media (max-width: 1024px) {
+      .layout-grid { grid-template-columns: 72px minmax(0, 1fr); }
+      .channel-sidebar { display: none !important; }
+    }
+
+    /* Minimal dark scrollbar */
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #52525b; }
+  </style>
+</head>
+<body class="min-h-[100dvh] bg-study-950 font-sans custom-scrollbar selection:bg-accent-emerald/30">
+
+  <!-- Staging Environment Shell -->
+  <main class="w-full max-w-7xl mx-auto px-4 py-12 md:py-16">
+    
+    <!-- Meta/Header Review Info -->
+    <header class="mb-16 max-w-3xl">
+      <h1 class="text-3xl lg:text-4xl font-semibold tracking-tighter leading-tight text-text-primary mb-3">
+        Audio-only-state banner + restore control
+      </h1>
+      <p class="text-base text-text-secondary leading-relaxed mb-6">
+        <strong class="text-text-primary px-1.5 py-0.5 rounded bg-study-900 border border-border-hairline">Wave 34</strong> 
+        &middot; In-room state permutations showing calm degradation when bandwidth drops (auto) or when manually toggled. Implements <code class="font-mono text-xs">role="status"</code> and precise token coherence across narrow viewports.
+      </p>
+      
+      <!-- Architectural Checkmarks -->
+      <div class="flex flex-wrap gap-3">
+        <span class="flex items-center gap-1.5 text-xs text-accent-emerald bg-accent-emerald/10 border border-accent-emerald/20 px-2 py-1 rounded-md">
+          <i class="ph-fill ph-check-circle"></i> a11y Live Regions
+        </span>
+        <span class="flex items-center gap-1.5 text-xs text-text-primary bg-study-800 border border-border-hairline px-2 py-1 rounded-md">
+          <i class="ph-fill ph-magic-wand"></i> Amber Semantic Reuse
+        </span>
+        <span class="flex items-center gap-1.5 text-xs text-text-primary bg-study-800 border border-border-hairline px-2 py-1 rounded-md">
+          <i class="ph ph-device-mobile"></i> Strict Collapse Contract
+        </span>
+      </div>
+    </header>
+
+    <!-- State Environments Stack -->
+    <div class="flex flex-col gap-12 lg:gap-16">
+
+      <!-- ========================================== -->
+      <!-- STATE 2: AUTO (POOR BANDWIDTH) -->
+      <!-- ========================================== -->
+      <section class="flex flex-col gap-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+             <div class="w-2 h-2 rounded-full bg-accent-amber animate-pulse"></div>
+            <h2 class="text-sm font-semibold tracking-wide text-text-primary uppercase">State: Auto (Bandwidth Degraded)</h2>
+          </div>
+          <span class="text-xs text-text-muted">Trigger: <code class="font-mono">ConnectionQuality &rarr; Poor</code></span>
+        </div>
+
+        <!-- The Room Context Viewer -->
+        <div class="relative w-full h-[480px] bg-study-800 rounded-xl border border-study-700 shadow-sm overflow-hidden flex flex-col">
+          
+          <!-- Mock Room Header -->
+          <header class="h-14 flex-shrink-0 bg-study-900 border-b border-border-hairline px-4 flex items-center justify-between z-10 w-full relative">
+            <div class="flex items-center gap-3">
+              <div class="flex items-center justify-center w-8 h-8 rounded-md bg-study-800 border border-border-hairline text-text-secondary cursor-not-allowed">
+                <i class="ph ph-hash"></i>
+              </div>
+              <div class="flex flex-col">
+                <span class="text-sm font-semibold text-text-primary leading-tight">Biochem Review Group</span>
+                <span class="text-xs text-accent-amber flex items-center gap-1">
+                   <div class="w-1.5 h-1.5 rounded-full bg-accent-amber"></div>
+                   Poor connection
+                </span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+               <div class="w-8 h-8 rounded-full bg-study-800 border border-border-hairline flex items-center justify-center text-text-secondary cursor-not-allowed">
+                 <i class="ph ph-users"></i>
+               </div>
+            </div>
+          </header>
+
+          <!-- Main Stage / Video Area -->
+          <div class="flex-1 p-4 overflow-y-auto custom-scrollbar relative flex flex-col items-center gap-4">
+            
+            <!-- [TARGET IMPLEMENTATION] The Auto Audio-Only Banner -->
+            <!-- Placed at the top of the content area to act as an unobtrusive inline status -->
+            <div role="status" aria-live="polite" class="animate-slide-in w-full max-w-3xl flex-shrink-0 z-20 flex items-center justify-between gap-3 bg-study-900 border border-accent-amber/30 shadow-pop rounded-lg p-2.5 md:p-3 sm:pl-4 transition-all hover:border-accent-amber/50">
+              
+              <!-- Left side: Status Definition -->
+              <div class="flex items-center gap-3.5 min-w-0">
+                <!-- Degraded Visual Indicator -->
+                <div class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-accent-amber/10 border border-accent-amber/20 text-accent-amber shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
+                  <i class="ph ph-wifi-low text-base"></i>
+                </div>
+                
+                <!-- Text Container -->
+                <div class="flex flex-col min-w-0">
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm font-semibold text-text-primary whitespace-nowrap">Audio-only</span>
+                    
+                    <!-- Audio still active invariant check (Desktop/Tablet) -->
+                    <div class="hidden sm:flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-study-800 border border-study-700 text-[11px] font-medium text-text-secondary uppercase tracking-wider tooltip-trigger">
+                      <i class="ph-fill ph-microphone text-text-muted"></i> Mic active
+                    </div>
+                  </div>
+                  <!-- Explanatory Text (Collapses cleanly on narrow viewports) -->
+                  <span class="text-xs text-text-secondary truncate mt-0.5 sm:hidden">Saving bandwidth</span>
+                  <span class="hidden sm:block text-xs text-text-secondary truncate mt-0.5">Video paused locally to protect call quality</span>
+                </div>
+              </div>
+
+              <!-- Right side: Actions & Fallbacks -->
+              <div class="flex items-center gap-2 flex-shrink-0 ml-2">
+                <!-- Audio invariant (Mobile fallback) -->
+                <div class="sm:hidden flex items-center justify-center w-8 h-8 rounded-md bg-study-800 border border-study-700 text-text-secondary tooltip" aria-label="Microphone active">
+                  <i class="ph-fill ph-microphone"></i>
+                </div>
+                
+                <!-- Restore Action Affordance - Base Button Primitive Extended -->
+                <button class="relative group flex items-center justify-center gap-1.5 px-3 md:px-4 py-2 text-sm font-semibold text-accent-emerald bg-accent-emerald/10 border border-accent-emerald/20 hover:bg-accent-emerald/20 hover:border-accent-emerald/30 transition-all duration-200 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-emerald/40 active:scale-[0.98]">
+                  <i class="ph ph-video-camera text-base group-hover:scale-110 transition-transform"></i>
+                  <span class="hidden sm:inline">Restore video</span>
+                  <span class="sm:hidden">Restore</span>
+                </button>
+              </div>
+            </div>
+            <!-- [/TARGET IMPLEMENTATION] -->
+
+            <!-- Mock Video Tiles to prove layout stability -->
+            <div class="w-full max-w-3xl grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+              <div class="aspect-video bg-study-900 border border-border-hairline rounded-xl flex items-center justify-center relative overflow-hidden group">
+                 <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10 pointer-events-none"></div>
+                 <div class="w-16 h-16 rounded-full bg-study-700 border-2 border-study-800 flex items-center justify-center z-0">
+                    <span class="text-xl font-semibold text-text-primary">You</span>
+                 </div>
+                 <div class="absolute bottom-3 left-3 z-20 flex items-center gap-2">
+                    <div class="bg-study-900/80 backdrop-blur border border-border-hairline px-2 py-1 rounded-md text-xs font-semibold text-text-primary flex items-center gap-1.5">
+                      <div class="w-1.5 h-1.5 rounded-full bg-accent-emerald relative"><div class="absolute inset-0 bg-accent-emerald rounded-full animate-ping opacity-50"></div></div>
+                      Speaking
+                    </div>
+                 </div>
+              </div>
+              <div class="aspect-video bg-study-900 border border-border-hairline rounded-xl flex items-center justify-center relative overflow-hidden">
+                <img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80" alt="Study partner on video" class="absolute inset-0 w-full h-full object-cover opacity-60 grayscale-[20%] mix-blend-luminosity">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10 pointer-events-none"></div>
+                <div class="absolute bottom-3 left-3 z-20 flex items-center gap-2">
+                    <div class="bg-study-900/80 backdrop-blur border border-border-hairline px-2 py-1 rounded-md text-xs font-medium text-text-primary">
+                      Elena V.
+                    </div>
+                 </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- STATE 3: MANUAL OPT-IN -->
+      <!-- ========================================== -->
+      <section class="flex flex-col gap-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+             <div class="w-2 h-2 rounded-full bg-text-secondary"></div>
+            <h2 class="text-sm font-semibold tracking-wide text-text-primary uppercase">State: Manual (Opt-In)</h2>
+          </div>
+          <span class="text-xs text-text-muted">Trigger: User toggled video off</span>
+        </div>
+
+        <div class="relative w-full h-auto bg-study-800/50 rounded-xl border border-study-700 overflow-hidden flex flex-col items-center justify-center p-8 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wMikiLz48L3N2Zz4=')]">
+            
+            <!-- [TARGET IMPLEMENTATION] The Manual Audio-Only Banner -->
+            <div role="status" aria-live="polite" class="w-full max-w-3xl flex-shrink-0 flex items-center justify-between gap-3 bg-study-900 border border-study-700 shadow-sm rounded-lg p-2.5 md:p-3 sm:pl-4 transition-all">
+              
+              <div class="flex items-center gap-3.5 min-w-0">
+                <!-- Neutral Visual Indicator -->
+                <div class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-study-800 border border-border-hairline text-text-secondary">
+                  <i class="ph ph-video-slash text-base"></i>
+                </div>
+                
+                <div class="flex flex-col min-w-0">
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm font-semibold text-text-primary whitespace-nowrap">Audio-only</span>
+                    <div class="hidden sm:flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-study-800 border border-border-hairline text-[11px] font-medium text-text-secondary uppercase tracking-wider">
+                      <i class="ph-fill ph-microphone text-text-muted"></i> Mic active
+                    </div>
+                  </div>
+                  <span class="text-xs text-text-secondary truncate mt-0.5 sm:hidden">Video paused</span>
+                  <span class="hidden sm:block text-xs text-text-secondary truncate mt-0.5">You manually paused your video stream</span>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2 flex-shrink-0 ml-2">
+                <div class="sm:hidden flex items-center justify-center w-8 h-8 rounded-md bg-study-800 border border-study-700 text-text-secondary tooltip">
+                  <i class="ph-fill ph-microphone"></i>
+                </div>
+                
+                <!-- Turn on affordance -->
+                <button class="relative group flex items-center justify-center gap-1.5 px-3 md:px-4 py-2 text-sm font-semibold text-text-primary bg-study-800 border border-border-hairline hover:bg-study-700 hover:border-border-hover transition-all duration-200 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-emerald/40 active:scale-[0.98]">
+                  <i class="ph ph-video-camera text-base text-accent-emerald group-hover:scale-110 transition-transform"></i>
+                  <span class="hidden sm:inline">Turn on video</span>
+                  <span class="sm:hidden">Video</span>
+                </button>
+              </div>
+            </div>
+            <!-- [/TARGET IMPLEMENTATION] -->
+
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- STATE 4: RESTORING -->
+      <!-- ========================================== -->
+      <section class="flex flex-col gap-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+             <div class="w-2 h-2 rounded-full bg-accent-emerald animate-pulse"></div>
+            <h2 class="text-sm font-semibold tracking-wide text-text-primary uppercase">State: Restoring (Processing)</h2>
+          </div>
+          <span class="text-xs text-text-muted">Trigger: User clicked 'Restore', awaiting RTC sub</span>
+        </div>
+
+        <div class="relative w-full h-auto bg-study-800/50 rounded-xl border border-study-700 overflow-hidden flex flex-col items-center justify-center p-8 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wMikiLz48L3N2Zz4=')]">
+            
+            <!-- [TARGET IMPLEMENTATION] The Restoring Banner -->
+            <div role="status" aria-live="polite" class="w-full max-w-3xl flex-shrink-0 flex items-center justify-between gap-3 bg-study-900 border border-accent-emerald/20 shadow-sm rounded-lg p-2.5 md:p-3 sm:pl-4 transition-all">
+              
+              <div class="flex items-center gap-3.5 min-w-0">
+                <!-- Loading Visual Indicator -->
+                <div class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-accent-emerald/10 border border-accent-emerald/20 text-accent-emerald shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+                  <i class="ph ph-spinner animate-spin text-base"></i>
+                </div>
+                
+                <div class="flex flex-col min-w-0">
+                  <span class="text-sm font-semibold text-text-primary whitespace-nowrap mt-0.5">Restoring video...</span>
+                  <span class="text-xs text-text-secondary truncate mt-[1px]">Re-establishing camera connection</span>
+                </div>
+              </div>
+
+              <!-- Action disabled conceptually during inflight request -->
+              <div class="flex items-center gap-2 flex-shrink-0 ml-2">
+                <button disabled aria-disabled="true" class="flex items-center justify-center gap-1.5 px-3 md:px-4 py-2 text-sm font-semibold text-accent-emerald bg-accent-emerald/5 border border-accent-emerald/5 rounded-md opacity-50 cursor-not-allowed">
+                  <i class="ph ph-video-camera text-base"></i>
+                  <span class="hidden sm:inline">Restoring</span>
+                  <span class="sm:hidden">Restoring</span>
+                </button>
+              </div>
+            </div>
+            <!-- [/TARGET IMPLEMENTATION] -->
+
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- MOBILE / NARROW CONTRACT PROOF -->
+      <!-- ========================================== -->
+      <section class="flex flex-col gap-4">
+         <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+             <div class="w-2 h-2 rounded-full bg-study-500"></div>
+            <h2 class="text-sm font-semibold tracking-wide text-text-primary uppercase">Responsive Proof (< 640px)</h2>
+          </div>
+          <span class="text-xs text-text-muted">Demonstrates layout collapse per §5</span>
+        </div>
+
+        <div class="flex justify-center bg-study-800/30 rounded-xl border border-study-700 py-8">
+            <!-- Simulated max-width of a small phone -->
+            <div class="w-full max-w-[375px] mx-4">
+                
+                <!-- Duplicated AUTO block, forced into small container -->
+                <div role="status" aria-live="polite" class="w-full flex items-center justify-between gap-3 bg-study-900 border border-accent-amber/30 shadow-pop rounded-lg p-2.5 transition-all">
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-accent-amber/10 border border-accent-amber/20 text-accent-amber">
+                      <i class="ph ph-wifi-low text-base"></i>
+                    </div>
+                    <div class="flex flex-col min-w-0">
+                      <span class="text-sm font-semibold text-text-primary whitespace-nowrap leading-tight">Audio-only</span>
+                      <span class="text-[11px] text-text-secondary truncate leading-tight mt-0.5">Saving bandwidth</span>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center gap-2 flex-shrink-0">
+                    <div class="flex items-center justify-center w-7 h-7 rounded bg-study-800 border border-study-700 text-text-secondary">
+                      <i class="ph-fill ph-microphone text-sm"></i>
+                    </div>
+                    <button class="flex items-center justify-center px-2.5 py-1.5 text-xs font-semibold text-accent-emerald bg-accent-emerald/10 border border-accent-emerald/20 hover:bg-accent-emerald/20 transition-all rounded-md focus:outline-none">
+                      Restore
+                    </button>
+                  </div>
+                </div>
+
+            </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</body>
+</html>

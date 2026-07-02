@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en" class="antialiased dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyHall — Screen-Share Prominent Tile</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- 
+  aesthetic_dna: {"palette": "zinc-emerald-danger", "radius": "md-lg", "vibe": "academic-calm"}
+  ui_paradigm: "multi-pane-workspace (server-channel-view with multi-state staging)"
+  -->
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Geist', 'system-ui', '-apple-system', '"Segoe UI"', 'sans-serif'] },
+          colors: {
+            study: {
+              950: '#0a0a0b',
+              900: '#121214',
+              800: '#1c1c1f',
+              700: '#27272a',
+              600: '#3f3f46',
+              500: '#52525b',
+            },
+            accent: {
+              emerald: '#10b981',
+              amber: '#f59e0b',
+            },
+            danger: {
+              DEFAULT: '#ef4444',
+              text: '#f87171',
+              tint: 'rgba(239, 68, 68, 0.10)' 
+            },
+            text: {
+              primary: 'rgba(255,255,255,0.92)',
+              secondary: 'rgba(255,255,255,0.60)',
+              muted: 'rgba(255,255,255,0.40)'
+            },
+            border: {
+              hairline: 'rgba(255,255,255,0.06)',
+              hover: 'rgba(255,255,255,0.10)'
+            }
+          },
+          boxShadow: {
+            sm: '0 1px 2px rgba(0,0,0,0.4)',
+            pop: '0 8px 24px rgba(0,0,0,0.5)',
+            'glow-focus': '0 0 0 2px rgba(16,185,129,0.4)',
+            'glow-danger': '0 0 0 2px rgba(239,68,68,0.4)',
+            'glow-subtle': '0 0 15px rgba(255,255,255,0.05)',
+            'inner-hairline': 'inset 0 1px 0 rgba(255,255,255,0.05)'
+          },
+          transitionTimingFunction: {
+            DEFAULT: 'cubic-bezier(0.25, 0.1, 0.25, 1)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* System Global Overrides */
+    body { background-color: #0a0a0b; color: rgba(255,255,255,0.92); }
+    
+    /* Minimal dark scrollbar */
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #52525b; }
+
+    /* Respect Reduced Motion */
+    @media (prefers-reduced-motion: reduce) {
+      *, ::before, ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+
+    /* Calmer Pulse for Sharing Active Indicator (no aggressive blinking) */
+    @keyframes subtle-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    .animate-subtle-pulse {
+      animation: subtle-pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    /* Shimmer for skeleton loading */
+    @keyframes shimmer-pan {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    .animate-shimmer::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.02), transparent);
+      animation: shimmer-pan 2s infinite linear;
+    }
+  </style>
+</head>
+<body class="min-h-[100dvh] flex flex-col p-4 md:p-8 gap-16 max-w-7xl mx-auto custom-scrollbar">
+
+  <!-- A11y Live Region (invisible visually) -->
+  <div aria-live="polite" class="sr-only" id="voice-room-announcer">
+    <!-- Screen reader announcements map here via JS in production -->
+  </div>
+
+  <header class="pb-4 border-b border-border-hairline">
+    <h1 class="text-xl font-semibold tracking-[0.01em] text-text-primary">Voice Room Component States (Screen-Share Feature)</h1>
+    <p class="text-text-secondary text-sm mt-1">Design System strict adherence. 4 required states.</p>
+  </header>
+
+  <!-- ==============================================
+       STATE 1: NO-SHARE (Default Grid)
+       ============================================== -->
+  <section aria-labelledby="state-1-title" class="flex flex-col gap-4">
+    <header class="flex justify-between items-center px-2">
+      <h2 id="state-1-title" class="text-text-primary text-sm font-medium"><span class="text-text-muted mr-2">01 /</span> State: Baseline (No Share)</h2>
+    </header>
+    
+    <!-- Room Canvas Area -->
+    <div class="relative w-full h-[600px] bg-study-800 rounded-xl overflow-hidden border border-border-hairline shadow-inner flex flex-col">
+      <!-- Grid Container -->
+      <div class="flex-1 p-6 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-fr">
+        
+        <!-- Tile 1 (Self) -->
+        <div class="bg-study-900 border border-border-hairline rounded-lg flex items-center justify-center relative overflow-hidden group">
+          <div class="w-20 h-20 rounded-full border border-study-700 bg-study-800 overflow-hidden shadow-glow-focus ring-2 ring-transparent ring-offset-2 ring-offset-study-900">
+            <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80" alt="Your Avatar" class="w-full h-full object-cover">
+          </div>
+          <div class="absolute bottom-3 left-3 right-3 flex justify-between items-center">
+            <div class="bg-study-950/80 backdrop-blur px-2 py-1 rounded-md text-xs font-medium text-text-primary border border-border-hairline shadow-sm">You</div>
+            <div class="w-6 h-6 rounded-full bg-study-950/80 backdrop-blur border border-border-hairline flex items-center justify-center">
+              <i class="ph ph-microphone text-text-secondary text-[12px]"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tile 2 -->
+        <div class="bg-study-900 border border-border-hairline rounded-lg flex items-center justify-center relative overflow-hidden group">
+          <div class="w-20 h-20 rounded-full border border-study-700 bg-study-800 overflow-hidden shadow-glow-focus ring-2 ring-accent-emerald ring-offset-2 ring-offset-study-900">
+            <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80" alt="Alice Avatar" class="w-full h-full object-cover">
+          </div>
+          <div class="absolute bottom-3 left-3 right-3 flex justify-between items-center">
+            <div class="bg-study-950/80 backdrop-blur px-2 py-1 rounded-md text-xs font-medium text-text-primary border border-border-hairline shadow-sm">Alice T.</div>
+          </div>
+        </div>
+
+        <!-- Tile 3 (Camera off, silent) -->
+        <div class="bg-study-900 border border-border-hairline rounded-lg flex items-center justify-center relative overflow-hidden group">
+          <div class="w-20 h-20 rounded-full border border-study-700 bg-study-700 flex items-center justify-center text-xl font-medium text-text-secondary">MB</div>
+          <div class="absolute bottom-3 left-3 right-3 flex justify-between items-center">
+            <div class="bg-study-950/80 backdrop-blur px-2 py-1 rounded-md text-xs font-medium text-text-primary border border-border-hairline shadow-sm">Marc B.</div>
+            <div class="w-6 h-6 rounded-full bg-study-950/80 backdrop-blur border border-border-hairline flex items-center justify-center">
+              <i class="ph ph-microphone-slash text-danger text-[12px]"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Control Cluster (Bottom Center) -->
+      <div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-study-900/95 backdrop-blur-md px-3 py-2 rounded-xl border border-border-hairline shadow-pop">
+        <button class="w-10 h-10 rounded-md bg-study-800 hover:bg-study-700 hover:border-border-hover border border-transparent transition-colors text-text-primary flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-study-900 focus-visible:ring-accent-emerald" aria-label="Toggle Microphone">
+          <i class="ph ph-microphone text-[20px]"></i>
+        </button>
+        <button class="w-10 h-10 rounded-md bg-study-800 hover:bg-study-700 hover:border-border-hover border border-transparent transition-colors text-text-primary flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-study-900 focus-visible:ring-accent-emerald" aria-label="Toggle Camera">
+          <i class="ph ph-video-camera text-[20px]"></i>
+        </button>
+        <div class="w-px h-6 bg-study-700 mx-1"></div>
+        <!-- Share button: Default state -->
+        <button class="w-10 h-10 rounded-md bg-study-800 hover:bg-study-700 hover:border-border-hover border border-transparent transition-colors text-text-primary flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-study-900 focus-visible:ring-accent-emerald" aria-label="Share Screen" aria-pressed="false">
+          <i class="ph ph-screencast text-[20px]"></i>
+        </button>
+        <div class="w-px h-6 bg-study-700 mx-1"></div>
+        <button class="w-10 h-10 rounded-md bg-danger/10 hover:bg-danger/20 border border-transparent transition-colors text-danger-text flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-study-900 focus-visible:ring-danger" aria-label="Leave Voice Room">
+          <i class="ph ph-phone-disconnect text-[20px]"></i>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==============================================
+       STATE 2: SHARING-ACTIVE (Viewing someone else's share)
+       ============================================== -->
+  <section aria-labelledby="state-2-title" class="flex flex-col gap-4">
+    <header class="flex justify-between items-center px-2">
+      <h2 id="state-2-title" class="text-text-primary text-sm font-medium"><span class="text-text-muted mr-2">02 /</span> State: Sharing Active (Viewing)</h2>
+      <span class="text-xs text-text-secondary">Avatars demote to strip. Prominent tile takes focus.</span>
+    </header>
+    
+    <!-- Room Canvas Area -->
+    <div class="relative w-full h-[700px] bg-study-800 rounded-xl overflow-hidden border border-border-hairline shadow-inner flex flex-col p-4 md:p-6 gap-4">
+      
+      <!-- Prominent Screen-Share Region -->
+      <div class="flex-1 min-h-0 bg-study-950 rounded-lg border border-border-hairline shadow-sm relative overflow-hidden group flex flex-col hover:border-border-hover transition-colors duration-200" aria-label="Screen shared by Alice T.">
+        <!-- The actual video track (simulated) -->
+        <div class="w-full h-full relative">
+          <!-- Placeholder for presentation/code -->
+          <img src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80" alt="Code snippet being shared" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-300">
+          <!-- Subtle inner shadow to mimic screen edge depth -->
+          <div class="absolute inset-0 shadow-inner-hairline pointer-events-none rounded-lg"></div>
+          
+          <!-- Sharing Overlay Info -->
+          <div class="absolute top-4 left-4">
+            <div class="flex items-center gap-2 bg-study-950/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-border-hairline shadow-sm">
+              <div class="w-1.5 h-1.5 rounded-full bg-accent-emerald animate-subtle-pulse"></div>
+              <span class="text-[11px] font-medium text-accent-emerald tracking-wide uppercase">Live Share</span>
+            </div>
+          </div>
+          
+          <!-- Sharer Name Tag (always visible so folks know who is driving) -->
+          <div class="absolute bottom-4 left-4 translate-y-0 opacity-90 group-hover:opacity-100 transition-all duration-200">
+            <div class="flex items-center gap-2.5 bg-study-900/90 backdrop-blur-md pl-1.5 pr-3 py-1.5 rounded-md border border-border-hairline shadow-sm">
+              <div class="w-6 h-6 rounded border border-study-700 bg-study-800 overflow-hidden">
+                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80" alt="Alice Avatar" class="w-full h-full object-cover">
+              </div>
+              <div class="flex flex-col">
+                <span class="text-[13px] leading-tight font-medium text-text-primary">Alice T.</span>
+                <span class="text-[10px] leading-tight text-text-secondary">Presenting</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Presenter Audio Indicator (pops up right side if speaking) -->
+          <div class="absolute bottom-4 right-4 group-hover:translate-y-0 transition-transform duration-200">
+            <div class="w-7 h-7 rounded-md bg-study-900/90 backdrop-blur border border-border-hairline flex items-center justify-center">
+              <i class="ph ph-speaker-high text-accent-emerald text-sm"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Demoted Avatar Strip -->
+      <div class="h-[60px] md:h-[72px] shrink-0 bg-study-900/50 rounded-lg border border-border-hairline px-4 flex items-center gap-3 overflow-x-auto custom-scrollbar">
+        <!-- Self -->
+        <button class="relative shrink-0 group focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-study-900 focus-visible:ring-accent-emerald rounded-full" aria-label="You">
+          <div class="w-10 h-10 md:w-12 md:h-12 rounded-full border border-study-600 group-hover:border-study-500 overflow-hidden bg-study-800 transition-colors">
+            <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80" alt="Your Avatar" class="w-full h-full object-cover">
+          </div>
+        </button>
+
+        <!-- Other Participant (Silent) -->
+        <button class="relative shrink-0 group focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-study-900 focus-visible:ring-accent-emerald rounded-full" aria-label="Marc B. (muted)">
+          <div class="w-10 h-10 md:w-12 md:h-12 rounded-full border border-study-700 overflow-hidden flex items-center justify-center bg-study-800 text-sm font-medium text-text-secondary transition-colors group-hover:bg-study-700 hover:text-text-primary">
+            MB
+          </div>
+          <div class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-study-900 border border-study-700 flex items-center justify-center z-10">
+            <i class="ph ph-microphone-slash text-danger text-[10px]"></i>
+          </div>
+        </button>
+
+        <!-- Overflow Badge -->
+        <button class="relative shrink-0 group focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-study-900 focus-visible:ring-accent-emerald rounded-full" aria-label="View 4 more participants">
+          <div class="w-10 h-10 md:w-12 md:h-12 rounded-full border border-border-hairline overflow-hidden flex items-center justify-center bg-study-800 text-sm font-medium text-text-primary transition-colors hover:bg-study-700">
+            +4
+          </div>
+        </button>
+      </div>
+
+      <!-- Control Cluster (re-rendered here to show context) -->
+      <div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-study-900/95 backdrop-blur-md px-3 py-2 rounded-xl border border-border-hairline shadow-pop">
+        <button class="w-10 h-10 rounded-md bg-study-800 hover:bg-study-700 border border-transparent text-text-primary flex items-center justify-center transition-colors">
+          <i class="ph ph-microphone text-[20px]"></i>
+        </button>
+        <button class="w-10 h-10 rounded-md bg-study-800 hover:bg-study-700 border border-transparent text-text-primary flex items-center justify-center transition-colors">
+          <i class="ph ph-video-camera text-[20px]"></i>
+        </button>
+        <div class="w-px h-6 bg-study-700 mx-1"></div>
+        <button class="w-10 h-10 rounded-md bg-study-800 hover:bg-study-700 border border-transparent text-text-primary flex items-center justify-center transition-colors" aria-label="Share Screen" aria-pressed="false">
+          <i class="ph ph-screencast text-[20px]"></i>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==============================================
+       STATE 3: SHARE-LOADING (Subscribing to track)
+       ============================================== -->
+  <section aria-labelledby="state-3-title" class="flex flex-col gap-4">
+    <header class="flex justify-between items-center px-2">
+      <h2 id="state-3-title" class="text-text-primary text-sm font-medium"><span class="text-text-muted mr-2">03 /</span> State: Share Loading (Subscribing)</h2>
+      <span class="text-xs text-text-secondary">Network request active. Calm structural skeleton.</span>
+    </header>
+    
+    <div class="relative w-full h-[600px] bg-study-800 rounded-xl overflow-hidden border border-border-hairline shadow-inner flex flex-col p-4 md:p-6 gap-4">
+      
+      <!-- Prominent Screen-Share Region (LOADING) -->
+      <div class="flex-1 min-h-0 bg-study-900 rounded-lg border border-border-hairline shadow-sm relative overflow-hidden flex flex-col items-center justify-center" aria-label="Loading screen share..." aria-busy="true" aria-live="polite">
+        
+        <!-- Skeleton base -->
+        <div class="absolute inset-0 bg-study-950 animate-shimmer opacity-40"></div>
+        <div class="absolute inset-0 shadow-inner-hairline pointer-events-none rounded-lg z-10"></div>
+        
+        <!-- Loading UI -->
+        <div class="z-10 flex flex-col items-center gap-4">
+          <div class="w-12 h-12 rounded-lg bg-study-800 border border-study-700 flex items-center justify-center shadow-sm">
+            <i class="ph ph-spinner text-text-muted text-2xl animate-spin"></i>
+          </div>
+          <div class="flex flex-col items-center">
+            <span class="text-sm font-medium text-text-primary">Loading presentation feed...</span>
+            <span class="text-xs text-text-secondary mt-1">Connecting to Alice T.</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Avatar Strip -->
+      <div class="h-[60px] shrink-0 bg-study-900/50 rounded-lg border border-border-hairline px-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full border border-study-700 overflow-hidden bg-study-800">
+           <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80" alt="Your Avatar" class="w-full h-full object-cover">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==============================================
+       STATE 4: OWN-SHARE (You are the active sharer)
+       ============================================== -->
+  <section aria-labelledby="state-4-title" class="flex flex-col gap-4">
+    <header class="flex justify-between items-center px-2">
+      <h2 id="state-4-title" class="text-text-primary text-sm font-medium"><span class="text-text-muted mr-2">04 /</span> State: Own Share Active</h2>
+      <span class="text-xs text-text-secondary">Indicator in canvas + stop button injected + screencast button toggled.</span>
+    </header>
+    
+    <div class="relative w-full h-[600px] bg-study-800 rounded-xl overflow-hidden border border-border-hairline shadow-inner flex flex-col p-4 md:p-6 gap-4">
+      
+      <!-- Prominent Screen-Share Region (OWN) -->
+      <div class="flex-1 min-h-0 bg-study-950 rounded-lg border border-accent-emerald/20 shadow-[inset_0_1px_0_rgba(16,185,129,0.1)] relative overflow-hidden flex flex-col items-center justify-center">
+        
+        <!-- Background Decor -->
+        <div class="absolute w-[400px] h-[400px] bg-accent-emerald/5 blur-[120px] rounded-full pointer-events-none"></div>
+
+        <!-- UI Content -->
+        <div class="z-10 flex flex-col items-center text-center max-w-sm w-full">
+          
+          <div class="w-16 h-16 rounded-2xl bg-study-900 border border-border-hairline flex items-center justify-center mb-6 shadow-pop">
+            <i class="ph ph-monitor text-accent-emerald text-3xl"></i>
+          </div>
+
+          <h3 class="text-lg font-semibold text-text-primary mb-2">You are sharing your screen</h3>
+          <p class="text-sm text-text-secondary mb-8">Participants in the room are currently viewing your stream. Audio is picked up from your room mic.</p>
+
+          <!-- In-canvas stop control -->
+          <button class="bg-study-800 hover:bg-study-700 text-text-primary text-sm font-medium border border-border-hairline hover:border-border-hover px-4 py-2 rounded-md transition-colors shadow-sm flex items-center gap-2 group">
+            <i class="ph ph-stop text-text-muted group-hover:text-danger transition-colors"></i>
+            Stop Presenting
+          </button>
+        </div>
+      </div>
+
+      <!-- Demoted Avatar Strip -->
+      <div class="h-[60px] shrink-0 bg-study-900/50 rounded-lg border border-border-hairline px-4 flex items-center gap-3">
+        <div class="relative w-10 h-10 rounded-full border border-study-700 overflow-hidden bg-study-800">
+           <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80" alt="Your Avatar" class="w-full h-full object-cover">
+           <div class="absolute inset-0 ring-2 ring-accent-emerald ring-offset-2 ring-offset-study-900 rounded-full"></div>
+        </div>
+        <div class="w-10 h-10 rounded-full border border-border-hairline overflow-hidden flex items-center justify-center bg-study-800 text-sm font-medium text-text-secondary">
+          AT
+        </div>
+      </div>
+
+      <!-- Control Cluster (Shows ACTIVE Share Button) -->
+      <div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-study-900/95 backdrop-blur-md px-3 py-2 rounded-xl border border-border-hairline shadow-pop">
+        <button class="w-10 h-10 rounded-md bg-study-800 hover:bg-study-700 border border-transparent text-text-primary flex items-center justify-center transition-colors">
+          <i class="ph ph-microphone text-[20px]"></i>
+        </button>
+        <button class="w-10 h-10 rounded-md bg-study-800 hover:bg-study-700 border border-transparent text-text-primary flex items-center justify-center transition-colors">
+          <i class="ph ph-video-camera text-[20px]"></i>
+        </button>
+        <div class="w-px h-6 bg-study-700 mx-1"></div>
+        <!-- ACTIVE STATE SHARE BUTTON -->
+        <button class="w-10 h-10 rounded-md bg-accent-emerald text-study-950 shadow-glow-focus hover:bg-emerald-400 transition-colors flex items-center justify-center" aria-label="Stop Screen Sharing" aria-pressed="true">
+          <i class="ph ph-screencast text-[20px]"></i>
+        </button>
+        <div class="w-px h-6 bg-study-700 mx-1"></div>
+        <button class="w-10 h-10 rounded-md bg-danger/10 hover:bg-danger/20 border border-transparent transition-colors text-danger-text flex items-center justify-center">
+          <i class="ph ph-phone-disconnect text-[20px]"></i>
+        </button>
+      </div>
+    </div>
+  </section>
+
+</body>
+</html>
