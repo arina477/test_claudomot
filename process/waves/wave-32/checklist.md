@@ -57,7 +57,8 @@ LEARN:
 - [x] L-1 Docs
 - [x] L-2 Distill
 
-NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+NEXT: — HALTED (head-next hard-stop, trigger d; loop PAUSED). Wave-32 NOT closed/archived; wave-33 NOT opened.
+- [x] N-1 Survey & triggers — ESCALATE: M6 seed a2dd9f3d unresolvable (wave_id=d25f8c47 fails line-214 seed contract; no clear-to-NULL writer)
+- [x] N-2 Seed — REJECTED: seed picker returns 0 M6 rows; a2dd9f3d excluded by wave_id IS NULL
+- [x] N-3 Handoff — PAUSED: next_wave=paused; STATUS BLOCKED; .loop-paused.yaml written; DB untouched
+- Blocker: latent lifecycle defect — milestone-scoped V-2 follow-up (line 90) can never satisfy the seed contract (line 214) with no clear-to-NULL writer (line 156). Founder/BOARD ruling needed. See blocks/N/gate-verdict.md.
