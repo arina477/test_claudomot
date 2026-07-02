@@ -3,7 +3,7 @@
 **Block:** B (Build)
 **Wave topic:** malformed-UUID route param → 400 (global 22P02→BadRequest via .cause.code walk)
 **Block exit gate:** B-6
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
@@ -14,7 +14,7 @@
 | B-3 | process/waves/wave-33/stages/B-3-frontend.md | skipped | backend-only (design_gap FALSE) |
 | B-4 | process/waves/wave-33/stages/B-4-wiring.md | done | repo typecheck clean; no route drift |
 | B-5 | process/waves/wave-33/stages/B-5-verify.md | done | lint+build clean; api 467 green; smoke 401; integration runs in CI |
-| B-6 | process/waves/wave-33/stages/B-6-review.md | pending | |
+| B-6 | process/waves/wave-33/stages/B-6-review.md | done | Phase1 head-builder APPROVED (negative-path real, CI-wired) + Phase2 /review no findings → APPROVE |
 
 ## Block-specific context
 - **Spec contract:** tasks row a2dd9f3d (DB); spec at process/waves/wave-33/stages/P-2-spec.md
@@ -32,3 +32,15 @@
 
 ## Gate verdict log
 <appended by fresh head-builder spawn at B-6 Action 1>
+
+## Block-exit handoff
+```yaml
+build_block_status:    complete
+branch:                wave-33-uuid-param-validation
+stages_run:            [B-0, B-2, B-4, B-5, B-6]
+stages_skipped:        [B-1 (no contracts), B-3 (backend-only)]
+review_verdict:        APPROVE
+deviations_logged:     []
+last_commit_sha:       2fa9778
+ready_for_ci:          true
+```
