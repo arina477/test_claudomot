@@ -126,6 +126,22 @@ export {
 } from './mentions.js';
 
 export {
+  PROFILE_VISIBILITY,
+  WHO_CAN_DM,
+  PrivacySettingsResponseSchema,
+  UpdatePrivacySchema,
+} from './privacy.js';
+export type {
+  ProfileVisibility,
+  WhoCanDm,
+  PrivacySettingsResponse,
+  UpdatePrivacyInput,
+} from './privacy.js';
+
+export { AccountDataResponseSchema } from './account-data.js';
+export type { AccountDataResponse } from './account-data.js';
+
+export {
   PresenceStatusSchema,
   PresenceStateSchema,
   PresenceSnapshotSchema,
