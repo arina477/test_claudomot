@@ -407,9 +407,7 @@ function RoomView({ onLeave }: RoomViewProps) {
   const { profile } = useContext(ProfileContext);
 
   // Audio-only fallback hook (wave-34)
-  // enterManual() available for a future manual-toggle control (not wired to a button this wave —
-  // the design uses only the auto-quality trigger + restore; the hook exports it for future use).
-  const { mode: audioOnlyMode, restoreState, restore } = useAudioOnlyFallback();
+  const { mode: audioOnlyMode, restoreState, restore, enterManual } = useAudioOnlyFallback();
 
   // Screen-share tracks from all participants (wave-34)
   // useTracks with ScreenShare source returns TrackReference[] for all screen-share publishers
@@ -726,6 +724,59 @@ function RoomView({ onLeave }: RoomViewProps) {
           aria-hidden="true"
         />
 
+        {/* Audio-only toggle — V-3 fast-fix: wire enterManual() to a reachable control */}
+        <button
+          type="button"
+          aria-pressed={audioOnlyMode === 'manual'}
+          aria-label={audioOnlyMode === 'manual' ? 'Restore video' : 'Switch to audio-only'}
+          data-testid="audio-only-toggle-btn"
+          onClick={audioOnlyMode === 'manual' ? restore : enterManual}
+          className="flex h-[40px] w-[42px] items-center justify-center rounded transition-colors duration-150 focus-visible:outline-none"
+          style={
+            audioOnlyMode === 'manual'
+              ? {
+                  // Active (in manual audio-only) — neutral pressed state
+                  backgroundColor: '#27272a',
+                  color: 'rgba(255,255,255,0.92)',
+                  border: '1px solid rgba(255,255,255,0.10)',
+                }
+              : {
+                  backgroundColor: 'transparent',
+                  color: 'rgba(255,255,255,0.92)',
+                }
+          }
+          onFocus={(e) => {
+            e.currentTarget.style.boxShadow = '0 0 0 2px rgba(16,185,129,0.4)';
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.boxShadow = 'none';
+          }}
+        >
+          {/* Video-slash icon — signals "no video" / audio-only */}
+          <svg
+            width={20}
+            height={20}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2" />
+            <line x1="1" y1="1" x2="23" y2="23" />
+            <path d="M7 7h6l7.5-4.5v13" />
+          </svg>
+        </button>
+
+        {/* Divider */}
+        <div
+          className="h-6 w-px mx-1"
+          style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}
+          aria-hidden="true"
+        />
+
         {/* Leave button */}
         <button
           type="button"
@@ -776,7 +827,8 @@ function RemoteShareView({
   trackRef: import('@livekit/components-react').TrackReference;
   avatarStrip: React.ReactNode;
 }) {
-  const sharerName = trackRef.participant?.name ?? trackRef.participant?.identity ?? 'Someone';
+  // Use || (not ??) to catch empty-string identity in addition to null/undefined
+  const sharerName = trackRef.participant?.name || trackRef.participant?.identity || 'Someone';
 
   return (
     <div className="flex flex-col gap-4 flex-1 min-h-0">
