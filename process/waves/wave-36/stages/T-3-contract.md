@@ -1,0 +1,2 @@
+# W36 T-3 Contract (ci-verified) — PASS
+New contract tests for the privacy controller ran green in CI: PUT /profile/privacy invalid-enum→400 (before DB write, 5 invalid-body cases) + valid→200 + **session-scoping proof for updatePrivacy AND getAccountData/exportAccountData** (userId from session, not body — the real IDOR defense, added at B-6 M2). Closes the wave-35 T-3 coverage-gap on these endpoints. `mask_mode_signoff: PASS`.

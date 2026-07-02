@@ -1,0 +1,2 @@
+# W36 T-5 E2E (active) — PASS
+User-visible change = the /privacy + /terms "Last updated" date. C-2 served-content assertion (LIVE): served web bundle index-BDKrrUxG.js shows `Last updated: 2026` ×2, `2024` ×0 (baseline was 2024 → deploy flipped it). Regression: /settings/privacy 200 (toUiVisibility export didn't break the page), /terms 200, unauth GET /profile/privacy → 401. No new user flow. PASS.

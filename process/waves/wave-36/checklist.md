@@ -41,15 +41,15 @@ CI/CD:
 - [x] C-2 Deploy & verify (canary skipped — DAU < 1000; both services SUCCESS on fresh deploy ids, web serves 2026 marker)
 
 TEST:
-- [ ] T-1 Static
-- [ ] T-2 Unit
-- [ ] T-3 Contract
-- [ ] T-4 Integration
-- [ ] T-5 E2E
-- [ ] T-6 Layout
-- [ ] T-7 Perf
-- [ ] T-8 Security
-- [ ] T-9 Journey
+- [x] T-1 Static
+- [x] T-2 Unit
+- [x] T-3 Contract
+- [x] T-4 Integration
+- [x] T-5 E2E
+- [x] T-6 Layout
+- [x] T-7 Perf (skipped — not heavy)
+- [x] T-8 Security
+- [x] T-9 Journey (gate APPROVED; journey-regen skipped — date-string-only on already-inventoried pages)
 
 VERIFY:
 - [ ] V-1 Independent reviews (Karen + jenny, parallel)
