@@ -91,7 +91,7 @@ verdict_evidence:
   - "CHANGELOG.md:45-48"
   - "README.md: Live-section prose line (voice/video study rooms live end-to-end)"
   - "milestones row UPDATE: NONE (M6 close deferred to N by design — ceo-reviewer flag + head-verifier V-3 carry)"
-  - "commit: <sha post-push>"
+  - "commit: 6f9b286 (pushed to main)"
 changelog_entry_added: true
 changelog_range: "CHANGELOG.md:45-48"
 roadmap_milestones_progressed:
