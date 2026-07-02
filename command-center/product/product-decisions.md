@@ -424,3 +424,17 @@ These are staged for the next P-0 walk (may re-home to M7 launch-polish or a suc
 - caller: N-1-next-bundle
 - decomposed by: milestone-decomposer sub-agent (seed 56a50862-790e-4868-a5c5-305b08b81e40; siblings a4169fac-a6d8-4f76-9d46-87c5207615e2, d40ece71-bf8c-4266-b921-b06ef3e12086, 13b7ebfd-6ae1-486b-87f2-d84894ed779d)
 - note: M7's 2 pre-existing open tasks (a1299e88 Resend domain, 84e09891 Railway Bucket creds) are credential-blocked founder-ops actions — PARKED, untouched; this bundle is independent top-level (seed parent_task_id NULL), credential-independent, buildable now.
+
+---
+
+## [2026-07-02] wave-35 P-0 — Privacy controls scope: profile-visibility ships enforced; "who can DM you" waits for direct messages (BOARD 6/7)
+
+**Plain-language summary (founder-facing):** We started building the student privacy-controls page. It was supposed to let a student control both (a) who can see their profile and (b) who can send them a direct message. But StudyHall doesn't have direct messages yet — that's a deliberately-later feature. So a "who can DM you" switch would be a switch that does nothing, which is worse than not having it (it's the kind of fake privacy control we're trying to beat Discord on).
+
+**What we decided:** Ship the **profile-visibility** control now, fully working (a hidden profile is actually hidden, enforced on the server — not just visually). For **who-can-DM**, quietly save the student's preference now so nothing is lost, but don't show a fake switch — and turn on real enforcement the moment direct messages ship. We also amended M7's success target to say exactly this, so we're measuring against what's really being built.
+
+**Why it matters:** Keeps our privacy-first promise honest (no dead toggles), keeps the launch on track (we're not pausing to build a whole direct-messages system early), and records the who-can-DM enforcement as a required piece of the future direct-messages feature so it can't be forgotten.
+
+**How it was decided:** wave-35 BOARD, automatic mode. 6 of 7 seats approved this path; the 7th (our devil's-advocate seat) agreed on the core point — no fake toggle — and its guardrail is baked into the build. Also flagged for the build: our error-tracking (Sentry) must strip out personal data so it never leaks student info.
+
+**Trigger to revisit:** when direct messages (feature #21) are built, the saved who-can-DM preference must be wired to actually block unwanted senders. If real cohort demand for DMs appears sooner, that's a roadmap conversation, not an automatic pull-in.

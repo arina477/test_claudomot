@@ -25,3 +25,6 @@ We've now shipped several rounds of solid engineering while the ONE remaining as
 - **Option A — send the Resend key** (create a free resend.com account + API key, paste it): the team builds and ships reminders next, and the assignments milestone finishes.
 - **Option B — defer reminders** to a later release: we mark the assignments milestone "feature-complete for now" (reminders parked), close it, and move on to the next milestone (voice/video study rooms).
 Either way the loop keeps moving; this just decides whether the next wave is *reminders* (Option A) or the *next milestone* (Option B). No wrong answer — your call on priority.
+
+## (append) descope-who-can-dm-w35 — Path A adopted 6/7
+Ship profile-visibility enforced now; persist who-can-DM preference without an active toggle; enforce when direct messages (feature #21) ship. M7 success metric amended to match the roadmap. Sentry PII-scrub flagged for the build. Dissent (counter-thinker): preferred clean drop; guardrail folded in.

@@ -40,7 +40,7 @@ Complexity: S / M / L / XL.
 | 18 | Deeper assignment management (collect/return; **no grading**) | academic | grading/LMS out of scope |
 | 19 | Class scheduling / calendar integration | academic | the brief's "class scheduling integration" |
 | 20 | Study-group tools (shared timers/Pomodoro, study sessions, whiteboard) | academic | study-group differentiation |
-| 21 | Direct messages + group DMs | comms | likely pulls earlier if cohort demands |
+| 21 | Direct messages + group DMs | comms | likely pulls earlier if cohort demands. **AC (from wave-35 BOARD descope-who-can-dm-w35):** must enforce the who-can-DM preference (enum everyone/server-members/nobody) captured in M7 settings-privacy — reject a blocked sender server-side at DM-send / thread-open, not merely hide in UI. |
 | 22 | Freemium billing + paid school/server tiers (storage, call capacity, admin tools) | monetization | the brief's business model |
 | 23 | Server discovery / public study communities | growth | network-effect leg |
 | 24 | **Compliance: privacy-rights UI, consent, data export/delete, audit log** | compliance | self-use-mvp → H2 default; promote to H1 if a paying school/partner requires |
