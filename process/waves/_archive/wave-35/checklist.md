@@ -61,6 +61,6 @@ LEARN:
 - [x] L-2 Distill
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers (M7 stays in_progress; no rituals; loop ready)
+- [x] N-2 Seed (seed 622a7bf3 + siblings 73e96a9d, b7feab30)
+- [x] N-3 Handoff (wave-35 closed ok + archived; wave-36 opened)
