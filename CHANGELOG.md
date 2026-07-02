@@ -40,6 +40,8 @@ All notable changes to StudyHall are documented here. Format follows
 - A "my mentions" view collects every message that mentions you in one place, and it only ever shows your own — no one can peek at anyone else's. (#27)
 - Voice study rooms — first slice: members can drop into a voice channel from an audio-first join surface, with the server minting a short-lived, single-room access pass only after it confirms you're signed in and a member of that channel. (#44)
 - This is the foundation (the join surface plus the server-side access-pass service); turning on live audio still needs voice-service credentials, which are being set up, and later waves add screen-share and a who's-here indicator. (#44)
+- Pre-join "who's studying" indicator on the voice study-room entry surface: before you join, see how many people are already in the room and who they are, so you know whether to drop in. (#45)
+- The count and member identities are readable only by fellow channel members, refresh on a light poll, and fail quietly to an empty state if the read hiccups — so the entry surface never breaks. Live occupancy fills in once voice-service credentials are configured. (#45)
 - Thread replies: reply in a thread off any message, with a reply-count affordance on the original and a thread panel that shows the parent message and its replies. (#30)
 - Replies appear and disappear live for everyone viewing the thread, and a reply you send while offline is queued and sent once you're back online. (#30)
 - Attach files and images to a message: pick from the composer (up to 10MB each), with an image thumbnail or file chip preview and a progress-and-retry indicator while it uploads. (#31)

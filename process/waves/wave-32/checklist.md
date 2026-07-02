@@ -54,7 +54,7 @@ VERIFY:
 - [x] V-3 Fast-fix loop (or close) — head-verifier APPROVED; fast-fix queue empty (0 cycles); F-32-T-8-1 non-blocking → task a2dd9f3d
 
 LEARN:
-- [ ] L-1 Docs
+- [x] L-1 Docs
 - [ ] L-2 Distill
 
 NEXT:
