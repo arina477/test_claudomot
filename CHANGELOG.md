@@ -70,3 +70,5 @@ All notable changes to StudyHall are documented here. Format follows
 - Editing a message now updates its mentions all-or-nothing, so a mid-edit failure can no longer leave a message with stale or half-updated mentions. (#37)
 - Presence dots now show for your own messages too, so you no longer appear offline on the very messages you just sent. (#39)
 - A member whose email has an unusual format and who hasn't set a display name no longer shows as a blank name in the member list and presence — it now falls back to a stable identifier; also removed an unused internal response schema. (#42)
+- A bad or mistyped link that used to trigger a server error now returns a clean "that's not a valid link" response instead — so a malformed id in the address bar or a stale bookmark no longer looks like the app is broken. (#46)
+- This applies everywhere ids appear in a link across the app, and the friendlier response is now consistent instead of surfacing an internal error. (#46)
