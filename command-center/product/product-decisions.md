@@ -404,3 +404,7 @@ These are staged for the next P-0 walk (may re-home to M7 launch-polish or a suc
 **Action:** Founder pasted the 3 LiveKit values; orchestrator set them on Railway (api: LIVEKIT_API_KEY/SECRET/URL; web: VITE_LIVEKIT_URL) — env-only, never committed. Both services auto-redeployed clean: api 12f792ae SUCCESS, web c34c3bd1 SUCCESS (VITE_LIVEKIT_URL is build-time → web rebuild required + done).
 **Effect:** the credential block that has shadowed M6 since wave-31 is CLEARED. The shipped voice features (token-mint, join, who's-in-room occupancy) can now connect + show live data (occupancy endpoint no longer 503s creds-unset for authed members). Full live voice verification (2 users hear each other, occupancy populates) happens in wave-34 T-block. M6 remaining scope (screen-share + audio-fallback) is now credential-UNBLOCKED and buildable WITH live verification.
 **Loop:** resume Path A. Fire the previously-suppressed M6 decomposition → wave-34 (screen-share + audio-fallback). STATUS → RUNNING.
+
+[2026-07-02] M6 (Voice/video study rooms): bundle authored — 2 tasks (screen-share publish/subscribe + audio-only low-bandwidth fallback — the two success-metric-load-bearing pieces of remaining voice scope, now credential-unblocked + live-verifiable)
+- caller: N-1-next-bundle
+- decomposed by: milestone-decomposer sub-agent (seed e9cd341a-a093-459a-8ffb-72ba82e7a1ab, sibling 61e52c3e-689a-4837-9cec-a08f1b051171)
