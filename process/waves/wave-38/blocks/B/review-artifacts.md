@@ -10,11 +10,11 @@
 | Stage | Deliverable file | Status | Notes |
 |---|---|---|---|
 | B-0 | process/waves/wave-38/stages/B-0-branch-and-schema.md | in-progress | schema: add users.avatar_key |
-| B-1 | process/waves/wave-38/stages/B-1-contracts.md | pending | likely no-op (no new shared Zod type) |
-| B-2 | process/waves/wave-38/stages/B-2-backend.md | pending | resolveAvatarUrl + confirm + GET /users/:id/avatar + users.service |
-| B-3 | process/waves/wave-38/stages/B-3-frontend.md | pending | SKIP — backend-only (zero frontend change) |
-| B-4 | process/waves/wave-38/stages/B-4-wiring.md | pending | typecheck + route reg + PUBLIC_API_URL |
-| B-5 | process/waves/wave-38/stages/B-5-verify.md | pending | typecheck/lint/unit |
+| B-1 | process/waves/wave-38/stages/B-1-contracts.md | done | done — no-op (no contract surface) |
+| B-2 | process/waves/wave-38/stages/B-2-backend.md | done | done — resolveAvatarUrl+confirm+GET /users/:id/avatar |
+| B-3 | process/waves/wave-38/stages/B-3-frontend.md | done | SKIP — backend-only |
+| B-4 | process/waves/wave-38/stages/B-4-wiring.md | done | done — typecheck clean |
+| B-5 | process/waves/wave-38/stages/B-5-verify.md | done | done — 524 unit pass |
 | B-6 | process/waves/wave-38/stages/B-6-review.md | pending | head-builder gate |
 
 ## Block-specific context
@@ -25,9 +25,9 @@
 - **New deps added this wave:** none (aws-sdk already installed)
 - **New env vars added this wave:** PUBLIC_API_URL (api self base URL for stable avatar redirect URLs)
 - **Schema changes this wave:** add users.avatar_key TEXT NULL (Drizzle migration)
-- **B-1 fast-path approved:** pending
-- **Files implemented (cumulative):** (updated at B-2)
-- **Deviations from plan logged this block:** none
+- **B-1 fast-path approved:** n/a (single-specialist serial chain)
+- **Files implemented (cumulative):** files.service.ts, files.controller.ts, files.module.ts, users.service.ts, users.controller.ts(NEW), users.module.ts, db/schema/users.ts, migration 0017, +3 test files
+- **Deviations from plan logged this block:** forwardRef circular dep; @Redirect() vs @Res; @SkipThrottle()+T-8 anti-enum follow-up
 
 ## Open escalations carried into gate
 
