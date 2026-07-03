@@ -31,7 +31,9 @@ import {
   message_mentions,
   message_reactions,
   messages,
+  roles,
   server_members,
+  servers,
   users,
 } from '../db/schema/index';
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
@@ -454,25 +456,9 @@ export class MessagesService {
 
     // -----------------------------------------------------------------------
     // wave-41 send-gate: refuse if the sender's server_members.muted_until > now().
-    // Time-based expiry — no cron needed; past muted_until → allowed.
-    // NULL muted_until → not muted → allowed.
-    // serverId resolved from channel (never from request).
+    // Delegated to assertNotMuted (shared with createReply).
     // -----------------------------------------------------------------------
-    const [senderMembership] = await db
-      .select({ muted_until: server_members.muted_until })
-      .from(server_members)
-      .where(
-        and(eq(server_members.server_id, channel.server_id), eq(server_members.user_id, authorId)),
-      )
-      .limit(1);
-
-    if (
-      senderMembership?.muted_until !== null &&
-      senderMembership?.muted_until !== undefined &&
-      senderMembership.muted_until > new Date()
-    ) {
-      throw new ForbiddenException('You are currently muted in this server');
-    }
+    await this.assertNotMuted(authorId, channel.server_id);
 
     // Attempt insert; idempotency_key may be null (no dedup) or a client key
     const idempotencyKey = input.idempotencyKey ?? null;
@@ -850,6 +836,17 @@ export class MessagesService {
       throw new ForbiddenException('Insufficient permissions to delete this message');
     }
 
+    // -----------------------------------------------------------------------
+    // wave-41 B-6 rank guard (Fix 2): when the deleter acts via moderate_members
+    // (not as the message author), refuse if the message's AUTHOR is the server
+    // owner or holds manage_server / manage_roles — same rule as the timeout rank
+    // guard in ModerationService.assertRankGuard.
+    // Author-deleting-own-message bypasses this (isAuthor path, isModerator=false).
+    // -----------------------------------------------------------------------
+    if (isModerator) {
+      await this.assertDeleteRankGuard(serverId, message.author_id);
+    }
+
     const now = new Date();
 
     // -----------------------------------------------------------------------
@@ -1045,6 +1042,24 @@ export class MessagesService {
     if (parent.is_deleted) {
       throw new ConflictException('Cannot reply to a deleted message');
     }
+
+    // -----------------------------------------------------------------------
+    // wave-41 B-6 send-gate (Fix 1): refuse if the reply author is currently
+    // muted in the server that owns this channel.  Same semantics as
+    // createMessage — muted_until > now() → 403; past or NULL → allowed.
+    // serverId resolved from the channel row (never from request).
+    // -----------------------------------------------------------------------
+    const [replyChannel] = await db
+      .select({ server_id: channels.server_id })
+      .from(channels)
+      .where(eq(channels.id, channelId))
+      .limit(1);
+
+    if (!replyChannel) {
+      throw new NotFoundException('Channel not found');
+    }
+
+    await this.assertNotMuted(authorId, replyChannel.server_id);
 
     const idempotencyKey = input.idempotencyKey ?? null;
     const rawAttachmentDescriptors: ValidatedAttachment[] = input.attachments ?? [];
@@ -1714,5 +1729,92 @@ export class MessagesService {
       ),
       nextCursor,
     };
+  }
+
+  // -------------------------------------------------------------------------
+  // assertNotMuted — shared send-gate helper (Fix 1, wave-41 B-6)
+  //
+  // Throws ForbiddenException(403) when server_members.muted_until > now().
+  // Time-based expiry — no cron needed; past muted_until → allowed.
+  // NULL muted_until → not muted → allowed (membership row absent → allowed).
+  // Called from BOTH createMessage AND createReply before any DB write.
+  // serverId MUST be resolved from the channel row — never from a request param.
+  // -------------------------------------------------------------------------
+
+  private async assertNotMuted(userId: string, serverId: string): Promise<void> {
+    const [membership] = await db
+      .select({ muted_until: server_members.muted_until })
+      .from(server_members)
+      .where(and(eq(server_members.server_id, serverId), eq(server_members.user_id, userId)))
+      .limit(1);
+
+    if (
+      membership?.muted_until !== null &&
+      membership?.muted_until !== undefined &&
+      membership.muted_until > new Date()
+    ) {
+      throw new ForbiddenException('You are currently muted in this server');
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // assertDeleteRankGuard — rank guard for moderator-delete path (Fix 2, wave-41 B-6)
+  //
+  // A moderator acting via moderate_members CANNOT soft-delete a message whose
+  // AUTHOR is the server owner OR holds manage_server OR manage_roles.
+  // Mirrors ModerationService.assertRankGuard but applied to the MESSAGE AUTHOR,
+  // not to the action target user (which is the moderator themselves there).
+  //
+  // Author-deleting-own-message bypasses this entirely (isAuthor path in caller).
+  // Moderator deleting a peer-or-below member's message: passes (ranks not above).
+  //
+  // Throws ForbiddenException(403) when the authorship rank guard fails.
+  // -------------------------------------------------------------------------
+
+  private async assertDeleteRankGuard(serverId: string, authorId: string): Promise<void> {
+    // Load server to check ownership
+    const [server] = await db
+      .select({ owner_id: servers.owner_id })
+      .from(servers)
+      .where(eq(servers.id, serverId))
+      .limit(1);
+
+    if (!server) {
+      throw new NotFoundException('Server not found');
+    }
+
+    // Guard 1: cannot delete messages from the server owner
+    if (server.owner_id === authorId) {
+      throw new ForbiddenException('Cannot delete messages from the server owner');
+    }
+
+    // Guards 2+3: load author's role and check manage_server / manage_roles
+    const [authorMember] = await db
+      .select({ role_id: server_members.role_id })
+      .from(server_members)
+      .where(and(eq(server_members.server_id, serverId), eq(server_members.user_id, authorId)))
+      .limit(1);
+
+    if (!authorMember?.role_id) {
+      // No role → no elevated permissions → rank guard passes
+      return;
+    }
+
+    const [authorRole] = await db
+      .select({ manage_server: roles.manage_server, manage_roles: roles.manage_roles })
+      .from(roles)
+      .where(eq(roles.id, authorMember.role_id))
+      .limit(1);
+
+    if (!authorRole) {
+      // Role row missing (data inconsistency) — treat as no perms, guard passes
+      return;
+    }
+
+    if (authorRole.manage_server || authorRole.manage_roles) {
+      throw new ForbiddenException(
+        'Cannot delete messages from a member with manage_server or manage_roles permissions',
+      );
+    }
   }
 }
