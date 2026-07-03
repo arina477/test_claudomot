@@ -54,7 +54,7 @@ roadmap_milestones_progressed:
 roadmap_skip_reason: ""
 readme_skip: true
 readme_sections_touched: []
-commit_sha: "<filled post-commit>"
+commit_sha: "b768615"
 note: "M7 stays open: 12 done / 2 open (a1299e88 Resend-domain BLOCKED + 7525b759 avatar-hardening TODO). Avatar feature now user-reachable end-to-end; launch-readiness advanced."
 head_signoff:
   verdict: APPROVED
