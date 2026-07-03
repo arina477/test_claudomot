@@ -1,12 +1,12 @@
 # Wave 40 — P-block review artifacts
-**Block:** P (Product) · **Wave topic:** Harden avatar endpoints (2 LOW 500s → 4xx) — ParseUUIDPipe + catch NoSuchKey · **Block exit gate:** P-4 · **Status:** in-progress
+**Block:** P (Product) · **Wave topic:** Harden avatar endpoints (2 LOW 500s → 4xx) — ParseUUIDPipe + catch NoSuchKey · **Block exit gate:** P-4 · **Status:** gate-passed
 | Stage | Deliverable | Status | Notes |
 |---|---|---|---|
 | P-0 | stages/P-0-frame.md | done | REFRAMED: fix#1 not ParseUUIDPipe (breaks non-UUID ids); NUL-byte boundary-reject + catch NoSuchKey |
 | P-1 | stages/P-1-decompose.md | done | single-spec backend; floor-merge override-ship; design_gap_flag=false |
 | P-2 | stages/P-2-spec.md | done | spec in 7525b759 |
 | P-3 | stages/P-3-plan.md | done | boundary guard (not ParseUUIDPipe) + catch NoSuchKey; node-specialist |
-| P-4 | blocks/P/gate-verdict.md | pending | |
+| P-4 | blocks/P/gate-verdict.md | done | Phase1 head-product APPROVED; Phase2 Karen+jenny APPROVE, Gemini UNAVAILABLE |
 ## Block-specific context
 - **Wave topic:** harden avatar endpoints (7525b759)
 - **Spec-contract short-circuit verdict:** no-prior-spec (P-0 Action 3)
