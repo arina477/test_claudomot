@@ -452,6 +452,28 @@ export class MessagesService {
       throw new NotFoundException('Channel not found');
     }
 
+    // -----------------------------------------------------------------------
+    // wave-41 send-gate: refuse if the sender's server_members.muted_until > now().
+    // Time-based expiry — no cron needed; past muted_until → allowed.
+    // NULL muted_until → not muted → allowed.
+    // serverId resolved from channel (never from request).
+    // -----------------------------------------------------------------------
+    const [senderMembership] = await db
+      .select({ muted_until: server_members.muted_until })
+      .from(server_members)
+      .where(
+        and(eq(server_members.server_id, channel.server_id), eq(server_members.user_id, authorId)),
+      )
+      .limit(1);
+
+    if (
+      senderMembership?.muted_until !== null &&
+      senderMembership?.muted_until !== undefined &&
+      senderMembership.muted_until > new Date()
+    ) {
+      throw new ForbiddenException('You are currently muted in this server');
+    }
+
     // Attempt insert; idempotency_key may be null (no dedup) or a client key
     const idempotencyKey = input.idempotencyKey ?? null;
     const rawAttachmentDescriptors: ValidatedAttachment[] = input.attachments ?? [];
@@ -817,11 +839,12 @@ export class MessagesService {
     // Author may always delete their own message
     const isAuthor = message.author_id === userId;
 
-    // Moderator path: can(userId, serverId, 'manage_channels')
-    // serverId resolved from channel row above — never from request body
+    // Moderator path: can(userId, serverId, 'moderate_members') — widened from manage_channels
+    // (wave-41 spec 6ddddc2d: delete-any-message gated on moderate_members, not manage_channels).
+    // serverId resolved from channel row above — never from request body.
     const isModerator = isAuthor
       ? false
-      : await this.rbacService.can(userId, serverId, 'manage_channels');
+      : await this.rbacService.can(userId, serverId, 'moderate_members');
 
     if (!isAuthor && !isModerator) {
       throw new ForbiddenException('Insufficient permissions to delete this message');
