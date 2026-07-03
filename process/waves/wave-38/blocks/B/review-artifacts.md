@@ -3,7 +3,7 @@
 **Block:** B (Build)
 **Wave topic:** Avatar storage go-live — presigned-GET redirect for avatars (Tigris bucket empirically private) + attachment activation-verify
 **Block exit gate:** B-6
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 
@@ -15,7 +15,7 @@
 | B-3 | process/waves/wave-38/stages/B-3-frontend.md | done | SKIP — backend-only |
 | B-4 | process/waves/wave-38/stages/B-4-wiring.md | done | done — typecheck clean |
 | B-5 | process/waves/wave-38/stages/B-5-verify.md | done | done — 524 unit pass |
-| B-6 | process/waves/wave-38/stages/B-6-review.md | pending | head-builder gate |
+| B-6 | process/waves/wave-38/stages/B-6-review.md | done | head-builder APPROVED; code-reviewer 1 HIGH+1 MED fixed (1780b75) |
 
 ## Block-specific context
 
@@ -36,3 +36,15 @@ none
 ## Gate verdict log
 
 <appended by fresh head-builder spawn at B-6 Action 1>
+
+## Block exit / handoff
+```yaml
+build_block_status:    complete
+branch:                wave-38-avatar-storage
+stages_run:            [B-0, B-1, B-2, B-4, B-5, B-6]
+stages_skipped:        [B-3 (backend-only, zero frontend change)]
+review_verdict:        APPROVE
+deviations_logged:     [forwardRef circular dep, "@Redirect() vs @Res", "@SkipThrottle()->@Throttle at B-6 fix-up"]
+last_commit_sha:       1780b75
+ready_for_ci:          true
+```
