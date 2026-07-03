@@ -19,6 +19,7 @@ import type {
   AssignmentPresignResponse,
   AssignmentSubmission,
   AssignmentSubmissionPresignResponse,
+  AssignmentSubmissionsListResponse,
 } from '@studyhall/shared';
 import {
   AssignmentStatusSchema,
@@ -31,7 +32,7 @@ import { AuthGuard } from '../auth/auth.guard';
 import { AssignmentsService } from './assignments.service';
 
 // ---------------------------------------------------------------------------
-// AssignmentsController — wave-22 M5 (task 01fcefb8) + wave-42 (task db8e082a)
+// AssignmentsController — wave-22 M5 (task 01fcefb8) + wave-42 (tasks db8e082a, 1746f72a)
 //
 // Routes:
 //   POST   /servers/:serverId/assignments                              — organizer create
@@ -43,6 +44,7 @@ import { AssignmentsService } from './assignments.service';
 //   DELETE /assignments/:id                                           — organizer soft-delete (serverId derived from row)
 //   PUT    /assignments/:id/status                                    — member toggle state
 //   POST   /assignments/:id/submit                                    — member submit (wave-42)
+//   GET    /assignments/:id/submissions                               — educator roster (wave-42)
 //
 // Security:
 //   - @UseGuards(AuthGuard) on every route.
@@ -243,5 +245,22 @@ export class AssignmentsController {
 
     const userId = req.session.getUserId();
     return this.assignmentsService.submitAssignment(id, userId, parsed.data);
+  }
+
+  // -------------------------------------------------------------------------
+  // GET /assignments/:id/submissions
+  // Educator roster (wave-42 task 1746f72a). Organizer-only.
+  // serverId derived from assignment row.
+  // -------------------------------------------------------------------------
+
+  @Get('assignments/:id/submissions')
+  @UseGuards(AuthGuard)
+  async listSubmissions(
+    @Param('id') id: string,
+    @Req() req: SessionAugmentedRequest,
+  ): Promise<AssignmentSubmissionsListResponse> {
+    const userId = req.session.getUserId();
+    const submissions = await this.assignmentsService.listSubmissions(id, userId);
+    return { submissions };
   }
 }

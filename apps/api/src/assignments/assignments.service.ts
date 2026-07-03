@@ -12,11 +12,12 @@ import type {
   AssignmentPresignResponse,
   AssignmentSubmission,
   AssignmentSubmissionPresignResponse,
+  AssignmentSubmissionRosterRow,
   CreateAssignmentInput,
   SubmitAssignmentInput,
   UpdateAssignmentInput,
 } from '@studyhall/shared';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq } from 'drizzle-orm';
 import { db } from '../db/index';
 import {
   assignment_attachments,
@@ -24,6 +25,7 @@ import {
   assignment_submissions,
   assignments,
   server_members,
+  users,
 } from '../db/schema/index';
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
 import { ATTACHMENT_ALLOWED_MIME, FilesService } from '../files/files.service';
@@ -682,5 +684,60 @@ export class AssignmentsService {
     if (!upserted) throw new Error('Submission upsert failed unexpectedly');
 
     return this.submissionRowToDto(upserted);
+  }
+
+  // -------------------------------------------------------------------------
+  // listSubmissions — GET /assignments/:id/submissions
+  //
+  // Organizer authz derived from the assignment row's server_id (IDOR-safe).
+  // Returns all submission rows JOINed to the submitter's user identity,
+  // with resolved attachment URL. Ordered submitted_at DESC.
+  // 404 unknown/soft-deleted assignment; 403 non-organizer; 200 + [] when none.
+  // -------------------------------------------------------------------------
+
+  async listSubmissions(
+    assignmentId: string,
+    userId: string,
+  ): Promise<AssignmentSubmissionRosterRow[]> {
+    const [row] = await db
+      .select()
+      .from(assignments)
+      .where(and(eq(assignments.id, assignmentId), eq(assignments.is_deleted, false)))
+      .limit(1);
+
+    if (!row) throw new NotFoundException('Assignment not found');
+
+    await this.assertOrganizer(userId, row.server_id);
+
+    // JOIN submissions → users to resolve submitter profile fields
+    const submissionRows = await db
+      .select({
+        submission: assignment_submissions,
+        user: {
+          id: users.id,
+          display_name: users.display_name,
+          username: users.username,
+          avatar_url: users.avatar_url,
+        },
+      })
+      .from(assignment_submissions)
+      .innerJoin(users, eq(assignment_submissions.user_id, users.id))
+      .where(eq(assignment_submissions.assignment_id, assignmentId))
+      .orderBy(desc(assignment_submissions.submitted_at));
+
+    return Promise.all(
+      submissionRows.map(async ({ submission, user }) => {
+        const dto = await this.submissionRowToDto(submission);
+        return {
+          ...dto,
+          submitter: {
+            userId: user.id,
+            displayName: user.display_name ?? '',
+            username: user.username ?? '',
+            avatarUrl: user.avatar_url ?? null,
+          },
+        };
+      }),
+    );
   }
 }
