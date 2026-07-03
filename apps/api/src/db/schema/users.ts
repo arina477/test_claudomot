@@ -10,6 +10,7 @@ export const users = pgTable(
     display_name: text('display_name'),
     username: text('username'),
     avatar_url: text('avatar_url'),
+    avatar_key: text('avatar_key'),
     accent_color: text('accent_color'),
     profile_visibility: text('profile_visibility').notNull().default('everyone'),
     who_can_dm: text('who_can_dm').notNull().default('everyone'),
