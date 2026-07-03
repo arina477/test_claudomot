@@ -32,7 +32,8 @@ export type Permission =
   | 'manage_roles'
   | 'manage_channels'
   | 'manage_members'
-  | 'manage_assignments';
+  | 'manage_assignments'
+  | 'moderate_members';
 
 // ---------------------------------------------------------------------------
 // RbacService
@@ -131,6 +132,7 @@ export class RbacService {
         manage_channels: input.manage_channels ?? false,
         manage_members: input.manage_members ?? false,
         manage_assignments: input.manage_assignments ?? false,
+        moderate_members: input.moderate_members ?? false,
         is_default: false,
       })
       .returning();
@@ -164,6 +166,7 @@ export class RbacService {
     if (input.manage_channels !== undefined) patch.manage_channels = input.manage_channels;
     if (input.manage_members !== undefined) patch.manage_members = input.manage_members;
     if (input.manage_assignments !== undefined) patch.manage_assignments = input.manage_assignments;
+    if (input.moderate_members !== undefined) patch.moderate_members = input.moderate_members;
 
     const updated = await db
       .update(roles)
@@ -294,6 +297,7 @@ export class RbacService {
         manage_channels: true,
         manage_members: true,
         manage_assignments: true,
+        moderate_members: true,
       };
     }
 
@@ -315,6 +319,7 @@ export class RbacService {
         manage_channels: false,
         manage_members: false,
         manage_assignments: false,
+        moderate_members: false,
       };
     }
 
@@ -328,6 +333,7 @@ export class RbacService {
         manage_channels: false,
         manage_members: false,
         manage_assignments: false,
+        moderate_members: false,
       };
     }
 
@@ -338,6 +344,7 @@ export class RbacService {
       manage_channels: role.manage_channels,
       manage_members: role.manage_members,
       manage_assignments: role.manage_assignments,
+      moderate_members: role.moderate_members,
     };
   }
 
@@ -636,6 +643,7 @@ function roleToDto(row: {
   manage_channels: boolean;
   manage_members: boolean;
   manage_assignments: boolean;
+  moderate_members: boolean;
   is_default: boolean;
   created_at: Date;
 }): Role {
@@ -650,6 +658,7 @@ function roleToDto(row: {
       manage_channels: row.manage_channels,
       manage_members: row.manage_members,
       manage_assignments: row.manage_assignments,
+      moderate_members: row.moderate_members,
     },
     isDefault: row.is_default,
     createdAt: row.created_at.toISOString(),

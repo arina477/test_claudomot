@@ -89,6 +89,12 @@ const PERM_FLAGS: { key: PermFlag; label: string; description: string; sensitive
     label: 'Manage Assignments',
     description: 'Post, edit, and delete assignments for members to track.',
   },
+  {
+    key: 'moderate_members',
+    label: 'Moderate Members',
+    description:
+      'Time out members and delete any message in channels this role can access. Grants the Educator/Facilitator moderation capability.',
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -682,6 +688,7 @@ export function ServerRolesPage({
     manage_channels: false,
     manage_members: false,
     manage_assignments: false,
+    moderate_members: false,
   });
   const [overrides, setOverrides] = useState<ChannelOverride[]>([]);
   const [overridesLoading, setOverridesLoading] = useState(false);

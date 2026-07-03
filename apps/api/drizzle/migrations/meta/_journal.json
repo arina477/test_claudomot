@@ -127,6 +127,13 @@
       "when": 1783068115709,
       "tag": "0017_dapper_squadron_sinister",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1783088874851,
+      "tag": "0018_daffy_miracleman",
+      "breakpoints": true
     }
   ]
 }

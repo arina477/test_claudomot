@@ -10,6 +10,7 @@ export const RolePermissionsSchema = z.object({
   manage_channels: z.boolean(),
   manage_members: z.boolean(),
   manage_assignments: z.boolean(),
+  moderate_members: z.boolean(),
 });
 export type RolePermissions = z.infer<typeof RolePermissionsSchema>;
 
@@ -52,6 +53,7 @@ export const CreateRoleSchema = z.object({
   manage_channels: z.boolean().optional(),
   manage_members: z.boolean().optional(),
   manage_assignments: z.boolean().optional(),
+  moderate_members: z.boolean().optional(),
 });
 export type CreateRoleInput = z.infer<typeof CreateRoleSchema>;
 
@@ -67,6 +69,7 @@ export const UpdateRoleSchema = z.object({
   manage_channels: z.boolean().optional(),
   manage_members: z.boolean().optional(),
   manage_assignments: z.boolean().optional(),
+  moderate_members: z.boolean().optional(),
 });
 export type UpdateRoleInput = z.infer<typeof UpdateRoleSchema>;
 
@@ -101,5 +104,15 @@ export const EffectivePermissionsSchema = z.object({
   manage_channels: z.boolean(),
   manage_members: z.boolean(),
   manage_assignments: z.boolean(),
+  moderate_members: z.boolean(),
 });
 export type EffectivePermissions = z.infer<typeof EffectivePermissionsSchema>;
+
+// ---------------------------------------------------------------------------
+// MemberTimeout — input for POST /servers/:id/members/:userId/timeout
+// ---------------------------------------------------------------------------
+
+export const MemberTimeoutSchema = z.object({
+  durationMinutes: z.number().int().min(1).max(10080), // max 7 days
+});
+export type MemberTimeoutInput = z.infer<typeof MemberTimeoutSchema>;

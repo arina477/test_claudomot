@@ -233,10 +233,12 @@ describe('MessagesService.createMessage', () => {
     let callCount = 0;
     mockSelect.mockImplementation(() => {
       callCount++;
-      // 1: channel exists (with server_id); 2: fetch inserted message;
-      // 3: fetchMentionRows (no mentions in "Hello wave 12"); further: reactions etc.
-      if (callCount === 1) return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID }]);
-      if (callCount === 2) return makeSelectChain([mockMessage]);
+      // 1: channel exists (with server_id); 2: muted_until check (wave-41 send-gate);
+      // 3: fetch inserted message; further: fetchMentionRows, reactions etc.
+      if (callCount === 1)
+        return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID, name: 'general' }]);
+      if (callCount === 2) return makeSelectChain([]); // muted_until: not a member → no mute
+      if (callCount === 3) return makeSelectChain([mockMessage]);
       return makeSelectChain([]);
     });
     mockInsert.mockReturnValue(makeInsertChain());
@@ -261,8 +263,11 @@ describe('MessagesService.createMessage', () => {
     let callCount = 0;
     mockSelect.mockImplementation(() => {
       callCount++;
-      if (callCount === 1) return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID }]);
-      if (callCount === 2) return makeSelectChain([mockMessage]);
+      // 1: channel; 2: muted_until check; 3: fetch inserted message; further: mentions/reactions
+      if (callCount === 1)
+        return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID, name: 'general' }]);
+      if (callCount === 2) return makeSelectChain([]); // muted_until: not muted
+      if (callCount === 3) return makeSelectChain([mockMessage]);
       return makeSelectChain([]); // resolveMentions (early exit for no tokens) / fetchMentionRows
     });
     mockInsert.mockReturnValue(makeInsertChain());
@@ -275,8 +280,10 @@ describe('MessagesService.createMessage', () => {
     callCount = 0;
     mockSelect.mockImplementation(() => {
       callCount++;
-      if (callCount === 1) return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID }]);
-      if (callCount === 2) return makeSelectChain([mockMessage]); // same row
+      if (callCount === 1)
+        return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID, name: 'general' }]);
+      if (callCount === 2) return makeSelectChain([]); // muted_until: not muted
+      if (callCount === 3) return makeSelectChain([mockMessage]); // same row
       return makeSelectChain([]);
     });
 
@@ -295,8 +302,11 @@ describe('MessagesService.createMessage', () => {
     const capturedMessages: { author_id: string }[] = [];
     mockSelect.mockImplementation(() => {
       callCount++;
-      if (callCount === 1) return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID }]);
-      if (callCount === 2) return makeSelectChain([{ ...mockMessage, author_id: AUTHOR_ID }]);
+      // 1: channel; 2: muted_until check; 3: fetch inserted message; further: mentions/reactions
+      if (callCount === 1)
+        return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID, name: 'general' }]);
+      if (callCount === 2) return makeSelectChain([]); // muted_until: not muted
+      if (callCount === 3) return makeSelectChain([{ ...mockMessage, author_id: AUTHOR_ID }]);
       return makeSelectChain([]); // fetchMentionRows
     });
     const insertChain = makeInsertChain();
@@ -322,8 +332,11 @@ describe('MessagesService.createMessage', () => {
     let callCount = 0;
     mockSelect.mockImplementation(() => {
       callCount++;
-      if (callCount === 1) return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID }]);
-      if (callCount === 2) return makeSelectChain([mockMessage]);
+      // 1: channel; 2: muted_until check; 3: fetch inserted message; further: mentions/reactions
+      if (callCount === 1)
+        return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID, name: 'general' }]);
+      if (callCount === 2) return makeSelectChain([]); // muted_until: not muted
+      if (callCount === 3) return makeSelectChain([mockMessage]);
       return makeSelectChain([]); // fetchMentionRows
     });
     mockInsert.mockReturnValue(makeInsertChain());
@@ -495,7 +508,8 @@ describe('MessagesService.deleteMessage', () => {
     await service.deleteMessage(CHANNEL_ID, MESSAGE_ID, MODERATOR_ID);
 
     // rbacService.can must be called with resolved serverId (from channel row)
-    expect(rbacService.can).toHaveBeenCalledWith(MODERATOR_ID, SERVER_ID, 'manage_channels');
+    // wave-41: widened from manage_channels → moderate_members
+    expect(rbacService.can).toHaveBeenCalledWith(MODERATOR_ID, SERVER_ID, 'moderate_members');
     expect(mockUpdate).toHaveBeenCalledOnce();
     expect(eventEmitter.emit).toHaveBeenCalledWith(
       'message.deleted',
@@ -799,17 +813,19 @@ const mockChannelWithName = { id: CHANNEL_ID, server_id: SERVER_ID, name: CHANNE
 function setupCreateWithMentions(mentionedUserIds: string[]) {
   let callCount = 0;
 
-  // The service calls:
+  // The service calls (wave-41: muted_until check added at position 2):
   //   1. SELECT channel (with server_id + name)
-  //   2. SELECT message after insert
-  //   3. SELECT in resolveMentions (for @username → user_id lookup)
-  //   4. SELECT fetchMentionRows (username join)
+  //   2. SELECT server_members for muted_until (wave-41 send-gate) → [] = not muted
+  //   3. SELECT message after insert (inside transaction)
+  //   4. SELECT in resolveMentions (for @username → user_id lookup)
+  //   5. SELECT fetchMentionRows (username join)
   mockSelect.mockImplementation(() => {
     callCount++;
     if (callCount === 1) return makeSelectChain([mockChannelWithName]);
-    if (callCount === 2) return makeSelectChain([mockMessage]);
+    if (callCount === 2) return makeSelectChain([]); // muted_until: not muted → proceed
+    if (callCount === 3) return makeSelectChain([mockMessage]);
     // resolveMentions result — return one row per mentioned user
-    if (callCount === 3) return makeSelectChain(mentionedUserIds.map((id) => ({ user_id: id })));
+    if (callCount === 4) return makeSelectChain(mentionedUserIds.map((id) => ({ user_id: id })));
     // fetchMentionRows — return mention rows with usernames
     return makeSelectChain(
       mentionedUserIds.map((id) => ({
@@ -919,7 +935,8 @@ describe('MessagesService.createMessage — wave-15 mention.created events', () 
     mockSelect.mockImplementation(() => {
       callCount++;
       if (callCount === 1) return makeSelectChain([mockChannelWithName]);
-      if (callCount === 2) return makeSelectChain([mockMessage]);
+      if (callCount === 2) return makeSelectChain([]); // muted_until: not muted
+      if (callCount === 3) return makeSelectChain([mockMessage]);
       return makeSelectChain([]); // no mentions
     });
     mockInsert.mockReturnValue(makeInsertChain());
@@ -2026,10 +2043,12 @@ describe('MessagesService.createMessage — wave-19 M3 attachment row-at-send', 
       // 1: channel check (outside txn, before db.transaction() call)
       if (selectCallCount === 1)
         return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID, name: 'general' }]);
-      // 2: fetchMentionRows (resolveMentions returns early — no @tokens in content)
+      // 2: muted_until check (wave-41 send-gate) — [] = not muted, proceed
       if (selectCallCount === 2) return makeSelectChain([]);
-      // 3: fetchAttachmentRows — returns the persisted attachment row
-      if (selectCallCount === 3) return makeSelectChain([mockAttachmentRow]);
+      // 3: fetchMentionRows (resolveMentions returns early — no @tokens in content)
+      if (selectCallCount === 3) return makeSelectChain([]);
+      // 4: fetchAttachmentRows — returns the persisted attachment row
+      if (selectCallCount === 4) return makeSelectChain([mockAttachmentRow]);
       return makeSelectChain([]);
     });
 
@@ -2090,9 +2109,11 @@ describe('MessagesService.createMessage — wave-19 M3 attachment row-at-send', 
       // 1: channel check
       if (selectCallCount === 1)
         return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID, name: 'general' }]);
-      // 2: replay fetch by idempotency key
-      if (selectCallCount === 2) return makeSelectChain([mockMessage]);
-      // 3+: resolveMentions / fetchMentionRows / fetchAttachmentRows → empty
+      // 2: muted_until check (wave-41 send-gate) — [] = not muted
+      if (selectCallCount === 2) return makeSelectChain([]);
+      // 3: replay fetch by idempotency key (inside tx — ON CONFLICT DO NOTHING returned [])
+      if (selectCallCount === 3) return makeSelectChain([mockMessage]);
+      // 4+: resolveMentions / fetchMentionRows / fetchAttachmentRows → empty
       return makeSelectChain([]);
     });
 
@@ -2506,5 +2527,286 @@ describe('MessagesService.listMessagesAfter — wave-20 M4 forward catch-up curs
     // Decode and verify: base64url(createdAt|id)
     const raw = Buffer.from(result.nextCursor as string, 'base64url').toString('utf8');
     expect(raw).toContain('msg-p2');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: wave-41 B-6 Fix 1 — mute-gate on createMessage and createReply
+//
+// Covers:
+//   - createMessage: muted member (muted_until > now) → ForbiddenException
+//   - createMessage: expired mute (muted_until <= now) → allowed
+//   - createReply: muted member → ForbiddenException (the regression fix)
+//   - createReply: not muted → allowed through
+// ---------------------------------------------------------------------------
+
+const MUTED_USER_ID = 'user-muted-111';
+const MUTED_UNTIL_FUTURE = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+const MUTED_UNTIL_PAST = new Date(Date.now() - 60 * 60 * 1000); // 1 hour ago (expired)
+
+describe('MessagesService.createMessage — wave-41 B-6 mute send-gate', () => {
+  let service: MessagesService;
+  let eventEmitter: ReturnType<typeof makeEventEmitter>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    eventEmitter = makeEventEmitter();
+    service = new MessagesService(
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      eventEmitter as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeRbacService() as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeFilesService() as any,
+    );
+    // biome-ignore lint/suspicious/noExplicitAny: test transaction mock
+    mockTransaction.mockImplementation(async (cb: (tx: any) => Promise<unknown>) =>
+      cb({ select: mockSelect, insert: mockInsert, update: mockUpdate, delete: mockDelete }),
+    );
+  });
+
+  it('muted member (muted_until > now) → ForbiddenException, no message inserted', async () => {
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1)
+        return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID, name: 'general' }]);
+      // assertNotMuted: membership row with active mute
+      if (callCount === 2) return makeSelectChain([{ muted_until: MUTED_UNTIL_FUTURE }]);
+      return makeSelectChain([]);
+    });
+
+    await expect(
+      service.createMessage(CHANNEL_ID, MUTED_USER_ID, { content: 'sneaky send' }),
+    ).rejects.toThrow(ForbiddenException);
+
+    // No insert should have occurred
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it('expired mute (muted_until <= now) → allowed through, message inserted', async () => {
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1)
+        return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID, name: 'general' }]);
+      // assertNotMuted: expired mute → passes
+      if (callCount === 2) return makeSelectChain([{ muted_until: MUTED_UNTIL_PAST }]);
+      if (callCount === 3) return makeSelectChain([mockMessage]);
+      return makeSelectChain([]);
+    });
+    mockInsert.mockReturnValue(makeInsertChain());
+
+    const result = await service.createMessage(CHANNEL_ID, MUTED_USER_ID, {
+      content: 'allowed after mute expired',
+    });
+
+    expect(result.id).toBe(MESSAGE_ID);
+    expect(mockInsert).toHaveBeenCalled();
+  });
+});
+
+describe('MessagesService.createReply — wave-41 B-6 mute send-gate (Fix 1 regression guard)', () => {
+  let service: MessagesService;
+  let eventEmitter: ReturnType<typeof makeEventEmitter>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    eventEmitter = makeEventEmitter();
+    service = new MessagesService(
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      eventEmitter as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeRbacService(false, true) as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeFilesService() as any,
+    );
+  });
+
+  it('muted member createReply → ForbiddenException (mute bypass closed)', async () => {
+    // Pre-flight selects:
+    //   1. parent message (top-level, not deleted, belongs to CHANNEL_ID)
+    //   2. canViewChannelById → true (rbac mock default)
+    //   3. channel for server_id (replyChannel fetch)
+    //   4. assertNotMuted membership row → active mute
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return makeSelectChain([mockParentMessage]); // parent
+      if (callCount === 2) return makeSelectChain([{ server_id: SERVER_ID }]); // replyChannel
+      if (callCount === 3) return makeSelectChain([{ muted_until: MUTED_UNTIL_FUTURE }]); // muted
+      return makeSelectChain([]);
+    });
+
+    await expect(
+      service.createReply(CHANNEL_ID, PARENT_ID, MUTED_USER_ID, { content: 'sneaky reply' }),
+    ).rejects.toThrow(ForbiddenException);
+
+    // No transaction (and therefore no insert) should have been initiated
+    expect(mockTransaction).not.toHaveBeenCalled();
+  });
+
+  it('not-muted member createReply → passes mute check, enters transaction', async () => {
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return makeSelectChain([mockParentMessage]); // parent
+      if (callCount === 2) return makeSelectChain([{ server_id: SERVER_ID }]); // replyChannel
+      if (callCount === 3) return makeSelectChain([]); // not muted (no membership row → passes)
+      return makeSelectChain([]);
+    });
+
+    // Transaction: return the reply row directly (new insert path)
+    mockTransaction.mockImplementation(async (cb: Parameters<typeof mockTransaction>[0]) => {
+      const txInsert = vi.fn().mockImplementation(() => {
+        const chain = makeInsertChain();
+        (chain.returning as MockFn).mockResolvedValue([mockReplyMessage]);
+        return chain;
+      });
+      const txUpdate = vi.fn().mockReturnValue(makeUpdateChain([]));
+      const tx = { insert: txInsert, update: txUpdate, select: vi.fn(), delete: vi.fn() };
+      return cb(tx);
+    });
+
+    const result = await service.createReply(CHANNEL_ID, PARENT_ID, AUTHOR_ID, {
+      content: 'allowed reply',
+    });
+
+    expect(result.id).toBe(REPLY_ID);
+    expect(mockTransaction).toHaveBeenCalledOnce();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: wave-41 B-6 Fix 2 — delete-any rank guard in deleteMessage
+//
+// Covers:
+//   - moderator deleting OWNER's message → ForbiddenException (rank guard fires)
+//   - moderator deleting manage_server holder's message → ForbiddenException
+//   - moderator deleting a regular member's message → allowed
+//   - author deleting own message → always allowed (rank guard not consulted)
+// ---------------------------------------------------------------------------
+
+const OWNER_ID = 'server-owner-user';
+const MANAGE_SERVER_USER_ID = 'manage-server-holder';
+const REGULAR_MEMBER_ID = 'regular-member-user';
+const MODERATOR_ID_RANK = 'moderator-doing-delete';
+const ROLE_ID_ELEVATED = 'role-elevated-001';
+
+describe('MessagesService.deleteMessage — wave-41 B-6 rank guard (Fix 2)', () => {
+  let service: MessagesService;
+  let eventEmitter: ReturnType<typeof makeEventEmitter>;
+  let rbacService: ReturnType<typeof makeRbacService>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    eventEmitter = makeEventEmitter();
+    // rbacService.can returns true → every caller is treated as a moderator by default in this suite
+    rbacService = makeRbacService(true);
+    service = new MessagesService(
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      eventEmitter as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      rbacService as any,
+      // biome-ignore lint/suspicious/noExplicitAny: test mock
+      makeFilesService() as any,
+    );
+  });
+
+  it('moderator deleting server OWNER message → ForbiddenException (rank guard: owner)', async () => {
+    const ownerMessage = { ...mockMessage, author_id: OWNER_ID };
+
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return makeSelectChain([ownerMessage]); // fetch message
+      if (callCount === 2) return makeSelectChain([mockChannelWithServer]); // fetch channel
+      // assertDeleteRankGuard: servers row → OWNER_ID is the owner
+      if (callCount === 3) return makeSelectChain([{ owner_id: OWNER_ID }]);
+      return makeSelectChain([]);
+    });
+
+    await expect(service.deleteMessage(CHANNEL_ID, MESSAGE_ID, MODERATOR_ID_RANK)).rejects.toThrow(
+      ForbiddenException,
+    );
+
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it('moderator deleting manage_server holder message → ForbiddenException (rank guard: manage_server)', async () => {
+    const elevatedMessage = { ...mockMessage, author_id: MANAGE_SERVER_USER_ID };
+
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return makeSelectChain([elevatedMessage]); // fetch message
+      if (callCount === 2) return makeSelectChain([mockChannelWithServer]); // fetch channel
+      // assertDeleteRankGuard: servers row → different owner (not the author)
+      if (callCount === 3) return makeSelectChain([{ owner_id: 'some-other-owner' }]);
+      // server_members for author: has a role
+      if (callCount === 4) return makeSelectChain([{ role_id: ROLE_ID_ELEVATED }]);
+      // roles row: manage_server = true
+      if (callCount === 5) return makeSelectChain([{ manage_server: true, manage_roles: false }]);
+      return makeSelectChain([]);
+    });
+
+    await expect(service.deleteMessage(CHANNEL_ID, MESSAGE_ID, MODERATOR_ID_RANK)).rejects.toThrow(
+      ForbiddenException,
+    );
+
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it('moderator deleting regular member message → allowed (rank guard passes)', async () => {
+    const regularMessage = { ...mockMessage, author_id: REGULAR_MEMBER_ID };
+    const softDeletedMessage = { ...regularMessage, is_deleted: true, content: '' };
+
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return makeSelectChain([regularMessage]); // fetch message
+      if (callCount === 2) return makeSelectChain([mockChannelWithServer]); // fetch channel
+      // assertDeleteRankGuard: servers row → different owner
+      if (callCount === 3) return makeSelectChain([{ owner_id: OWNER_ID }]);
+      // server_members for author: no role (regular member)
+      if (callCount === 4) return makeSelectChain([{ role_id: null }]);
+      return makeSelectChain([]);
+    });
+    mockUpdate.mockReturnValue(makeUpdateChain([softDeletedMessage]));
+
+    await service.deleteMessage(CHANNEL_ID, MESSAGE_ID, MODERATOR_ID_RANK);
+
+    expect(mockUpdate).toHaveBeenCalledOnce();
+    expect(eventEmitter.emit).toHaveBeenCalledWith(
+      'message.deleted',
+      expect.objectContaining({ isDeleted: true }),
+    );
+  });
+
+  it('author deleting own message → always allowed (rank guard NOT consulted)', async () => {
+    // AUTHOR_ID is both the moderator and message author
+    const ownMessage = { ...mockMessage, author_id: AUTHOR_ID };
+    const softDeletedMessage = { ...ownMessage, is_deleted: true, content: '' };
+
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return makeSelectChain([ownMessage]); // fetch message
+      if (callCount === 2) return makeSelectChain([mockChannelWithServer]); // fetch channel
+      return makeSelectChain([]);
+    });
+    // rbacService.can is NOT called when isAuthor=true (short-circuit)
+    rbacService.can.mockResolvedValue(false); // ensure it's not being relied on
+    mockUpdate.mockReturnValue(makeUpdateChain([softDeletedMessage]));
+
+    await service.deleteMessage(CHANNEL_ID, MESSAGE_ID, AUTHOR_ID);
+
+    expect(mockUpdate).toHaveBeenCalledOnce();
+    // rbacService.can should NOT have been called (isAuthor path bypasses it)
+    expect(rbacService.can).not.toHaveBeenCalled();
+    expect(eventEmitter.emit).toHaveBeenCalledWith(
+      'message.deleted',
+      expect.objectContaining({ isDeleted: true }),
+    );
   });
 });

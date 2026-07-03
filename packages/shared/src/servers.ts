@@ -60,5 +60,12 @@ export const ServerMemberSchema = z.object({
   displayName: z.string(),
   avatarUrl: z.string().nullable(),
   username: z.string().nullable(),
+  /**
+   * ISO-8601 timestamp until which the member is timed out (muted), or null.
+   * Public — all viewers receive this field so the muted indicator renders for
+   * every member regardless of the viewer's permissions.
+   * wave-41 M8.
+   */
+  mutedUntil: z.string().nullable(),
 });
 export type ServerMember = z.infer<typeof ServerMemberSchema>;

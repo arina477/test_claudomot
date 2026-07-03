@@ -506,6 +506,30 @@ export const api = {
    */
   getAccountData: (): Promise<AccountDataResponse> => request<AccountDataResponse>('/profile/data'),
 
+  // ── Moderation endpoints (wave-41 M8) ────────────────────────────────────
+
+  /**
+   * POST /servers/:serverId/members/:userId/timeout {durationMinutes} → 200 { mutedUntil: string }.
+   * Requires moderate_members + rank guard. Throws: 401, 403.
+   */
+  timeoutMember: (
+    serverId: string,
+    userId: string,
+    durationMinutes: number,
+  ): Promise<{ mutedUntil: string }> =>
+    request<{ mutedUntil: string }>(`/servers/${serverId}/members/${userId}/timeout`, {
+      method: 'POST',
+      body: JSON.stringify({ durationMinutes }),
+    }),
+
+  /**
+   * DELETE /servers/:serverId/members/:userId/timeout → 204 void.
+   * Removes an active timeout. Requires moderate_members + rank guard.
+   * Throws: 401, 403.
+   */
+  removeTimeout: (serverId: string, userId: string): Promise<void> =>
+    requestNoContent(`/servers/${serverId}/members/${userId}/timeout`, { method: 'DELETE' }),
+
   // ── Notification endpoints (wave-37 M7) ─────────────────────────────────────
 
   /**

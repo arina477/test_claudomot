@@ -112,7 +112,8 @@ export async function insertFixtureUser(
 
 /**
  * Permission flags for a role row (all default false when omitted).
- * Covers all 5 RBAC boolean columns incl manage_assignments (wave-23).
+ * Covers all 6 RBAC boolean columns incl manage_assignments (wave-23)
+ * and moderate_members (wave-41).
  */
 export interface RolePerms {
   manage_server?: boolean;
@@ -120,6 +121,7 @@ export interface RolePerms {
   manage_channels?: boolean;
   manage_members?: boolean;
   manage_assignments?: boolean;
+  moderate_members?: boolean;
 }
 
 /**
@@ -156,8 +158,8 @@ export async function insertFixtureRole(
     `INSERT INTO roles
        (id, server_id, name, position,
         manage_server, manage_roles, manage_channels, manage_members, manage_assignments,
-        is_default)
-     VALUES ($1, $2, $3, 0, $4, $5, $6, $7, $8, false)
+        moderate_members, is_default)
+     VALUES ($1, $2, $3, 0, $4, $5, $6, $7, $8, $9, false)
      ON CONFLICT DO NOTHING`,
     [
       id,
@@ -168,6 +170,7 @@ export async function insertFixtureRole(
       perms.manage_channels ?? false,
       perms.manage_members ?? false,
       perms.manage_assignments ?? false,
+      perms.moderate_members ?? false,
     ],
   );
 }

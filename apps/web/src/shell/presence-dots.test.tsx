@@ -81,6 +81,7 @@ vi.mock('../auth/api', () => ({
     getProfile: vi.fn().mockReturnValue(new Promise(() => {})),
     getServers: vi.fn().mockReturnValue(new Promise(() => {})),
     getServerDetail: vi.fn().mockReturnValue(new Promise(() => {})),
+    getMyPermissions: vi.fn().mockReturnValue(new Promise(() => {})),
   },
 }));
 
@@ -110,7 +111,10 @@ import { PresenceDot } from './PresenceDot';
 import { seedSelfPresence } from './presenceSocket';
 
 import { api } from '../auth/api';
-const mockApi = api as unknown as { getServerMembers: ReturnType<typeof vi.fn> };
+const mockApi = api as unknown as {
+  getServerMembers: ReturnType<typeof vi.fn>;
+  getMyPermissions: ReturnType<typeof vi.fn>;
+};
 const mockSeedSelfPresence = seedSelfPresence as unknown as ReturnType<typeof vi.fn>;
 
 // ---------------------------------------------------------------------------
@@ -377,7 +381,13 @@ describe('MemberListPanel regression — PresenceDot used for member dots', () =
   it('renders Online sr-only label for an online member and exposes it to the a11y tree', async () => {
     setPresence('member-1', 'online');
     mockApi.getServerMembers.mockResolvedValue([
-      { userId: 'member-1', displayName: 'Alice', avatarUrl: null },
+      {
+        userId: 'member-1',
+        displayName: 'Alice',
+        avatarUrl: null,
+        username: null,
+        mutedUntil: null,
+      },
     ]);
     const { container } = render(<MemberListPanel serverId="srv-1" />);
     // Wait for members to load
@@ -395,7 +405,7 @@ describe('MemberListPanel regression — PresenceDot used for member dots', () =
   it('renders Offline sr-only label for an offline member and exposes it to the a11y tree', async () => {
     setPresence('member-2', 'offline');
     mockApi.getServerMembers.mockResolvedValue([
-      { userId: 'member-2', displayName: 'Bob', avatarUrl: null },
+      { userId: 'member-2', displayName: 'Bob', avatarUrl: null, username: null, mutedUntil: null },
     ]);
     const { container } = render(<MemberListPanel serverId="srv-2" />);
     await screen.findByText('Bob');
@@ -413,8 +423,20 @@ describe('MemberListPanel regression — PresenceDot used for member dots', () =
     setPresence('m-online', 'online');
     setPresence('m-offline', 'offline');
     mockApi.getServerMembers.mockResolvedValue([
-      { userId: 'm-online', displayName: 'Carol', avatarUrl: null },
-      { userId: 'm-offline', displayName: 'Dave', avatarUrl: null },
+      {
+        userId: 'm-online',
+        displayName: 'Carol',
+        avatarUrl: null,
+        username: null,
+        mutedUntil: null,
+      },
+      {
+        userId: 'm-offline',
+        displayName: 'Dave',
+        avatarUrl: null,
+        username: null,
+        mutedUntil: null,
+      },
     ]);
     render(<MemberListPanel serverId="srv-3" />);
     await screen.findByText('Carol');

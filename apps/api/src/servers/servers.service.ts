@@ -240,6 +240,9 @@ export class ServersService {
         avatarUrl: users.avatar_url,
         username: users.username,
         profileVisibility: users.profile_visibility,
+        // wave-41 M8: public mute state — all viewers see mutedUntil so the
+        // amber indicator renders for everyone regardless of permissions.
+        mutedUntil: server_members.muted_until,
       })
       .from(server_members)
       .innerJoin(users, eq(users.id, server_members.user_id))
@@ -256,6 +259,7 @@ export class ServersService {
         displayName: r.displayName || r.email.split('@')[0] || r.userId,
         avatarUrl: r.avatarUrl ?? null,
         username: r.username ?? null,
+        mutedUntil: r.mutedUntil ? r.mutedUntil.toISOString() : null,
       }));
   }
 

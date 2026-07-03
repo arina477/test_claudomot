@@ -601,7 +601,7 @@ describe('RbacService.assignRole — no self-promote / manage_members gate', () 
 describe('RbacService.getEffectivePermissions', () => {
   let service: RbacService;
 
-  // Full role fixture including manage_assignments (added in wave-23)
+  // Full role fixture including manage_assignments (wave-23) + moderate_members (wave-41)
   const mockRoleAssignmentsOnly = {
     id: 'role-assign',
     server_id: 'server-1',
@@ -612,6 +612,7 @@ describe('RbacService.getEffectivePermissions', () => {
     manage_channels: false,
     manage_members: false,
     manage_assignments: true,
+    moderate_members: false,
     is_default: false,
     created_at: new Date(),
   };
@@ -626,6 +627,7 @@ describe('RbacService.getEffectivePermissions', () => {
     manage_channels: false,
     manage_members: false,
     manage_assignments: false,
+    moderate_members: false,
     is_default: true,
     created_at: new Date(),
   };
@@ -656,6 +658,7 @@ describe('RbacService.getEffectivePermissions', () => {
       manage_channels: true,
       manage_members: true,
       manage_assignments: true,
+      moderate_members: true,
     });
   });
 
@@ -691,6 +694,7 @@ describe('RbacService.getEffectivePermissions', () => {
       manage_channels: false,
       manage_members: false,
       manage_assignments: false,
+      moderate_members: false,
     });
   });
 
@@ -713,6 +717,7 @@ describe('RbacService.getEffectivePermissions', () => {
       manage_channels: false,
       manage_members: false,
       manage_assignments: false,
+      moderate_members: false,
     });
   });
 
@@ -736,6 +741,7 @@ describe('RbacService.getEffectivePermissions', () => {
       manage_channels: false,
       manage_members: false,
       manage_assignments: true,
+      moderate_members: false,
     });
   });
 
@@ -758,6 +764,7 @@ describe('RbacService.getEffectivePermissions', () => {
       manage_channels: false,
       manage_members: false,
       manage_assignments: false,
+      moderate_members: false,
     });
   });
 });
