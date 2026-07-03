@@ -27,3 +27,11 @@ Both reviewers: iter-1 resolved 7/10 (grade copy, dialog role, glow-focus var, 1
 3. File input has aria-hidden="true" — removes it from a11y tree; drop it so the labelled input is reachable.
 4. "Mark Done" toggle is a decorative div — needs a real <input>/button with programmatic role+state (WCAG 1.3.1).
 5. No aria-live region — async submit/return DOM changes must announce (aria-live="polite" on the roster/status region).
+
+---
+# Iteration 2 review → REVISE / REVISE → D-2 refine (iteration 3; counter 2→3, within cap)
+All iter-1 a11y blockers RESOLVED (dialog role+focus-trap+restore, real checkbox toggle, file-input reachable, aria-live, return-failure state, WCAG-AA). Remaining = 3 small design-direction fixes:
+A1. Spring easing on slideUpFade (cubic-bezier(0.175,0.885,0.32,1.275)) violates DS §6 "no bouncy easing" → use the smooth cubic-bezier(0.4,0,0.2,1).
+A2. Student submitted-note body text uses --text-secondary (l.291) — DS §1 body = --text-primary (secondary is metadata) → change to --text-primary.
+B. Resubmit-after-return path not discoverable (brief §3 "resubmit still possible") → add a visible "Edit submission" affordance/label on the returned card.
+Non-blocking React-build notes (do NOT block adoption): peer-CSS toggle thumb, shadow var, hardcoded timeline node positions.

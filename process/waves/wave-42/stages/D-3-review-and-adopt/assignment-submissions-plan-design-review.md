@@ -1,172 +1,258 @@
-# D-3 Phase-1 Design Critique — Reviewer A (iter 1 re-review)
-## Artifact: `design/staging/assignment-submissions.html` (iteration 1, refined)
+# D-3 Reviewer A — Plan Design Review
+## Artifact: `design/staging/assignment-submissions.html` (iteration 2, refined)
 ## Reviewer: ui-designer — independent; no knowledge of Reviewer B
-## Prior verdict: REVISE (iter 0) — 10 concerns enumerated
+## Cycle: 3 (iter 2 re-review — cap cycle)
 
 ---
 
-## Iter 0 Concern Disposition (what was fixed)
+## Iter 1 Concern Disposition (what was fixed before this review)
 
-| Prior concern | Status in iter 1 |
+| Prior concern (iter 1) | Status in iter 2 |
 |---|---|
-| C1 — §10 grade/rubric copy in assignment body | FIXED — body copy replaced with neutral submission language |
-| C2 — `role="menu"` semantic error | FIXED — changed to `role="dialog" aria-modal="true" aria-label="Return submission"` |
-| C3 — Focus not restored to trigger on close | FIXED — `currentTriggerButton.focus()` called in `closePopover()` |
-| C4 — Responsive breakpoint `xl:` instead of `lg:` | FIXED — grid uses `lg:grid-cols-12`, spans use `lg:col-span-5` / `lg:col-span-7` |
-| C5 — Broken CSS var `--glow-focus` in `.input-ring` | FIXED — `--glow-focus` declared in `:root` |
-| C6 — `--text-muted` used on metadata/sub-labels | FIXED — `--text-muted` now restricted to placeholders only; metadata uses `--text-secondary` |
-| C7 — Missing POST-submit-failure and 403 error states | FIXED — `#submit-error` (role=alert) and `#forbidden-state` both present |
-| C8 — Student state conflation (form + timeline simultaneous) | Persists — intentional staging artifact; downgraded to non-blocking |
-| C9 — Badge text 11px below DS minimum | FIXED — all status badges now `text-xs` (12px) |
-| C10 — Broken icon class `ph ph- graduation-cap` | FIXED — corrected to `ph-graduation-cap` |
+| C1 — Missing return-action failure error state (Brief §3) | FIXED — `#return-error` role=alert present in return popover (l.489); failure branch in `submitReturn()` shows error then allows retry (l.654–666) |
+| C2 — No focus trap in `role="dialog" aria-modal="true"` | FIXED — `popover.addEventListener('keydown')` traps Tab/Shift+Tab and fires Esc close (l.690–707) |
+| C3 — `aria-hidden="true"` on `#attachment-input` severing AT file path | FIXED — file input at l.265 uses `class="sr-only"` only; no `aria-hidden`; label wraps it with `focus-within` ring |
+| C4 — "Mark Done" toggle inert (decorative div, no `<input>`) | FIXED — real `<input type="checkbox" class="sr-only peer" aria-label="Mark assignment done">` at l.221 |
+| C5 — No aria-live region for roster state changes | FIXED — global `#a11y-announcer` aria-live=polite at l.132; `announce()` called in `submitReturn()` after row flip (l.681) |
 
-Seven of ten iter 0 concerns resolved. Three new issues introduced or now surfaced by the role change to `dialog`.
+All five iter 1 blockers are resolved. The review below evaluates iter 2 from scratch.
+
+---
+
+## Mandatory checklist verification (pre-score)
+
+| Requirement | Location in HTML | Verdict |
+|---|---|---|
+| §3 — student not-submitted (submit form) | `#submit-form-container` l.229 | PASS |
+| §3 — student submitting (spinner + disabled) | `#submit-spinner`, `submitAssignment()` loading path l.550–584 | PASS |
+| §3 — student submitted-not-returned | Timeline "Your submission" card l.286 | PASS |
+| §3 — student returned (emerald badge + educator comment) | Returned state card l.307 | PASS |
+| §3 — educator roster loaded | Roster rows l.355–442 | PASS |
+| §3 — educator roster empty ("No submissions yet") | `#empty-state` l.446; structurally present, `hidden` class | PASS |
+| §3 — return popover open | `#return-popover` l.470 | PASS |
+| §3 — loading skeleton | `.roster-loader` shimmer row l.436 | PASS |
+| Error: student submit-failure | `#submit-error` role=alert l.255; `announce()` called l.573 | PASS |
+| Error: upload over-size | `#upload-error` role=alert l.250; `announce()` called l.533 | PASS |
+| Error: educator return-failure | `#return-error` role=alert l.489; failure branch in `submitReturn()` l.658–665; `announce()` called l.663 | PASS |
+| Error: 403 over-permission | `#forbidden-state` l.455; structurally present | PASS |
+| §10 — zero grade / score / rubric anywhere | Full scan: no numeric grade field, no score column, no rubric affordance. Educator comment in returned card is plain text acknowledgement. Return popover label is "Acknowledgement comment (optional)" / "Mark Returned". | PASS |
+| Returned = calm emerald acknowledgement, unmistakably NOT a grade | Emerald check-circle + "Returned" text only; no value attached | PASS |
+| Awaiting = calm amber, unmistakably NOT a grade | Amber dot + "Awaiting" text only; no value attached | PASS |
+| Return popover: `role="dialog"` | l.470 | PASS |
+| Return popover: `aria-modal="true"` | l.470 | PASS |
+| Return popover: accessible name | l.470 `aria-label="Return submission"` | PASS |
+| Focus trap while popover open | Tab/Shift+Tab cycle over `focusableElements` within `#return-popover` (l.690–707) | PASS |
+| Focus restored to trigger on close | `currentTriggerButton.focus()` in `closePopover()` l.635 | PASS |
+| Real interactive Mark-Done control (not decorative div) | `<input type="checkbox" class="sr-only peer" aria-label="Mark assignment done">` l.221 | PASS |
+| aria-live region announces async changes | `#a11y-announcer` aria-live=polite aria-atomic=true l.132; `announce()` called on all async paths | PASS |
+| File input reachable, no aria-hidden | `<input type="file" id="attachment-input" class="sr-only">` l.265; no aria-hidden; label wraps with focus-within ring | PASS |
+| Responsive inline ≥1024 (`lg:`) | `grid grid-cols-1 lg:grid-cols-12` l.212; `lg:col-span-5` / `lg:col-span-7` | PASS |
+| No invented hex values | All Tailwind config colors and `:root` vars map to DS §1 tokens exactly; full audit below | PASS |
+| Body text not `--text-muted` | Submission note l.291: `text-[var(--text-secondary)]` (0.60) — not muted (0.40) — literal PASS; see brand-coherence score for DS §1 token concern | PASS (literal) |
+| Badge text ≥ 12px | All status/badge labels use `text-xs` (12px) | PASS |
+
+---
+
+## Token audit (spot-check for invented values)
+
+| Usage | Value in HTML | DS token | Match |
+|---|---|---|---|
+| Surface 950 (body bg) | `#0a0a0b` | DS §1 `--surface-950` | PASS |
+| Surface 900 (sidebar, popover bg) | `#121214` | DS §1 `--surface-900` | PASS |
+| Surface 800 (canvas) | `#1c1c1f` | DS §1 `--surface-800` | PASS |
+| Surface 700 (hover fills, borders) | `#27272a` | DS §1 `--surface-700` | PASS |
+| Surface 600 (stronger borders) | `#3f3f46` | DS §1 `--surface-600` | PASS |
+| Emerald accent | `#10b981` | DS §1 `--accent-emerald` | PASS |
+| Amber accent | `#f59e0b` | DS §1 `--accent-amber` | PASS |
+| Danger fill | `#ef4444` | DS §1 `--danger` | PASS |
+| Danger text | `#f87171` | DS §1 `--danger-text` | PASS |
+| --border-hairline | `rgba(255,255,255,0.06)` | DS §1 | PASS |
+| --border-hover | `rgba(255,255,255,0.10)` | DS §1 | PASS |
+| --text-primary | `rgba(255,255,255,0.92)` | DS §1 | PASS |
+| --text-secondary | `rgba(255,255,255,0.60)` | DS §1 | PASS |
+| --text-muted | `rgba(255,255,255,0.40)` | DS §1 | PASS |
+| --glow-focus | `0 0 0 2px rgba(16,185,129,0.4)` | DS §5 | PASS |
+| shadow-sm | `0 1px 2px rgba(0,0,0,0.4)` (Tailwind config) | DS §5 `--shadow-sm` | PASS (value match) |
+| shadow-pop | `0 8px 24px rgba(0,0,0,0.5)` (Tailwind config) | DS §5 `--shadow-pop` | PASS (value match) |
+
+No invented hex values found. All color values traceable to DS §1 primitives.
+
+Note on `shadow-[var(--shadow-sm)]` usage: several Tailwind arbitrary-value expressions reference `var(--shadow-sm)` and `var(--shadow-pop)`. These CSS custom properties are not declared in `:root`; only the Tailwind config `boxShadow` keys exist under those names. In the CDN build this resolves to an empty/invalid value, making those shadows non-functional. The design intent (shadow-sm / shadow-pop) is clear and correct; this is an implementation-wiring issue, not a token-discipline issue.
 
 ---
 
 ## Dimension Scores
 
-### 1. Visual Hierarchy — 7.5 / 10
+### 1. Visual Hierarchy — 7 / 10
 
-The assignment title (h1, 3xl/4xl semibold) dominates cleanly. The amber due chip establishes urgency at first glance. The `lg:grid-cols-12` split (student 5 cols, roster 7 cols) gives the educator surface appropriate visual weight. Within the roster, the amber "Awaiting" dot + text and the emerald check-circle + "Returned" text create legible, scannable state differences across rows. The returned state card on the student side uses an emerald left-edge accent bar and check-circle badge to distinguish it from the submitted card above it without being loud.
+The assignment H1 at 3xl/4xl semibold dominates cleanly. The amber due chip establishes priority at first glance. The `lg:grid-cols-12` split (5-col student left / 7-col roster right) gives the educator surface appropriate weight relative to the individual student action. The emerald left-edge accent bar and active node glow on the returned card create a clear visual completion signal without loudness. The amber dot + "Awaiting" / emerald check-circle + "Returned" vocabulary in the roster is immediately scannable.
 
-Deductions: Both the active submit form (Scenario A) and the submitted+returned timeline (Scenarios B/C) remain simultaneously visible in the student column. A cold reviewer cannot immediately determine which sub-state is "live." This is a known staging artifact carried from iter 0 and no longer blocking, but it does suppress the hierarchy score. The two section h2 headings in the columns ("Your Work" at `text-lg` 18px; "Submissions Roster" at `text-[15px]`) use different scale values without a hierarchy reason — a sub-panel heading reading at 15px is between DS `text-sm` and `text-base` and is off the documented type scale.
+Deductions: Both the active submit form (Scenario A) and the submitted/returned timeline (Scenarios B/C) remain simultaneously visible in the student column — a staging artifact carried across all iterations, previously downgraded to non-blocking. While a React toggle will handle mutual exclusivity in production, the staging file does not communicate this to the developer receiving it, which creates ambiguity about which visual structure is the canonical "submitted" treatment. The two column h2 headings ("Your Work" at `text-lg` 18px; "Submissions Roster" at `text-[15px]`) sit at different, off-scale values — `text-[15px]` falls between DS `text-sm` (14px) and `text-base` (16px) with no hierarchy rationale.
 
-What would make it a 10: align both column h2 headings to the same DS text scale value (14px sm or 16px base); add visible "State:" labels or a tab strip above the student column scenarios to make the mockup self-explanatory without verbal annotation.
+What would make it a 10: Unify both column h2 headings to a single DS type-scale value (`text-sm` or `text-base`). Add an inline comment or demo-switcher note in the HTML to clarify that the submit form and the timeline are mutually exclusive production states.
 
 ---
 
 ### 2. Spacing Rhythm — 7.5 / 10
 
-The 4px base grid is respected throughout. Section-level gaps (`gap-8`, `py-8 md:py-12`), card padding (`p-4`, `p-5`), and roster row density (`p-3`, `space-y-0.5`) are coherent with the design system §3 scale. The `pb-32` bottom padding on the scroll container is generous but not harmful. The HR separator between the assignment header and the split view is clean.
+The 4px base unit is respected throughout. Section-level gaps (`gap-8`, `gap-12`, `py-8 md:py-12`) and card internals (`p-3`, `p-4`, `p-5`) are coherent with DS §3. `space-y-0.5` between roster rows produces appropriate list density. The `pb-32` bottom padding on the scroll container is generous but not harmful.
 
-Deductions: The submit form footer uses `p-2 pt-0` with `mt-2` on both interior buttons, producing a compressed and asymmetric action row — bottom edge has less breathing room than the sides. The assignment H1 at 3xl/4xl is separated from the badge row above it by only `mb-4` (16px), which reads as a body-level gap for a headline of that visual weight; DS §3 calls for 24px section gaps at section entry points.
+Deductions: The timeline's second node uses a hardcoded absolute position `top-[214px]` — a magic number measured from the static mockup. If the submitted card's content varies (longer note text, wrapped attachment chip) the node will visually misalign from its associated returned card. The timeline vertical line (`before:left-[11px] before:top-4`) is also brittle in the same way. The submit-form footer uses `p-2 pt-0` with `mt-2` on interior buttons, producing slight asymmetry at the action row bottom edge.
 
-What would make it a 10: normalize the form footer to symmetric `px-2 pb-2 pt-2`; increase the spacing between the badge group and H1 to `mb-6` (24px).
-
----
-
-### 3. Brand Coherence — 8.5 / 10
-
-Dark-only is correctly enforced (`html class="antialiased dark"`; all surface tokens resolve to the near-black zinc stack). Geist is loaded and applied via Google Fonts. Emerald is correctly dominant for returned states, submit button, focus ring, and the active server indicator. Amber is correctly reserved for "Awaiting" and the due-date chip. Phosphor icons are used consistently at the correct weight (regular line, 16–20px, stroke `--text-secondary`; filled variants on active/completion states only). The glass-panel backdrop blur on the popover, the shimmer skeleton, and the `letter-spacing: -0.01em` on headings all match the shipped aesthetic.
-
-§10 grading language: PASS — assignment body copy no longer contains grade/rubric/score terms. The educator comment shown to the student ("Excellent approach with the latency filter. The log outputs verify your methodology cleanly. Keep this standard up for the final.") is plausible acknowledgement copy; "Keep this standard up" is encouraging feedback rather than a grade value. No numeric field, no grade column.
-
-Deductions: The "Mark Done" toggle in the student column header is rendered as a purely decorative div-based control (a `<div>` pair with inline visual styling) with no real `<input type="checkbox">` behind it. The label's `for` attribute does not reference an id; the `peer` class is not connected to an input. While §10 notes the done-toggle is orthogonal to this wave, its visual presence in the staging surface implies functionality that does not exist, including for AT users. The `prose prose-invert` Tailwind utility on the assignment body description requires the `@tailwindcss/typography` plugin; the CDN `<script src="https://cdn.tailwindcss.com">` does not bundle this plugin by default, meaning the `.prose` class produces no formatting effect in this staging environment.
-
-What would make it a 10: replace the decorative toggle stub with a real `<input type="checkbox" id="mark-done-toggle" class="sr-only peer">` driving the visual div via `peer-checked:` Tailwind variants; either add the typography plugin or replace `prose` with explicit DS typography token classes.
+What would make it a 10: Replace hardcoded node positions with a content-relative approach (e.g., margin offset matching the adjacent card's padding, or a JS-measured approach with a code comment). Normalize the form footer to symmetric `p-2`.
 
 ---
 
-### 4. Edge-Case Handling — 6.5 / 10
+### 3. Brand Coherence — 6.5 / 10
 
-Present and functional: upload oversize error (`#upload-error`, role=alert, inline, no layout break), submit POST failure (`#submit-error`, role=alert, inline, retry path in the JS sim), 403 forbidden roster state (`#forbidden-state`, calm "Access restricted"), empty roster (`#empty-state`, "No submissions yet"), loading skeleton shimmer (one row), attachment removal, resubmit flow (button label changes to "Resubmit" on second attempt), viewport-flip on the return popover (flip-up logic near the bottom edge).
+The dark-only zinc stack is correctly enforced. Emerald is used for returned state, submit button, active server indicator, focus ring, and timeline active node — all correct semantic mappings. Amber is correctly reserved for awaiting state and the due chip. Phosphor icons are used consistently at correct weight (regular, 16–20px, stroke `--text-secondary`; filled only on active/completion states). The glass-panel backdrop blur on the popover, the emerald server-rail active indicator bar, and the tight heading letter-spacing all match the shipped aesthetic. §10 grading language is clean across all surfaces including the educator comment.
 
-Missing:
+**Primary deduction — DS §6 motion violation (REVISE trigger):**
 
-**Return-action failure state — §3 explicit requirement.** Brief §3 states "Error (submit/return failed, or over-permission 403 → calm inline message)." The "return failed" branch is not implemented. `submitReturn()` calls `closePopover()` unconditionally on form submission with no network request or failure path. If the `POST /assignments/:id/submissions/:submissionId/return` call fails (network error, 5xx), the educator sees no feedback and the row silently stays in its prior state. This is a missing §3 required state.
+The `spring` timing function defined in the Tailwind config (`'spring': 'cubic-bezier(0.175, 0.885, 0.32, 1.275)'`) is applied to the `slideUpFade` keyframe animation used on every roster row:
 
-Additional non-blocking gaps: "Undo submission" button has no JS handler (no-op click); only one skeleton row is shown where a 48-student roster would warrant 3–4 rows for a credible loading state.
+```
+animation: slideUpFade 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards
+```
 
-What would make it a 10: add an inline danger message inside `#return-form` mirroring `#submit-error`; populate it in a failure branch of `submitReturn()`; add a stub handler for "Undo submission"; render 3–4 skeleton rows.
+DS §6 states explicitly: "No bouncy/playful easing — keep it calm and quick." The spring curve carries an intentional physical overshoot past the settled position before arriving. This is perceptible on roster load and produces a notification-app liveliness that directly contradicts the calm, academic brand. The `smooth` easing (`cubic-bezier(0.4, 0.0, 0.2, 1)`) is already defined in the Tailwind config under `transitionTimingFunction.smooth` and is the correct substitution.
 
----
+**Secondary deduction — DS §1 token discipline (REVISE trigger):**
 
-### 5. Accessibility — 5.5 / 10
+The student's submitted note body text (l.291) uses `text-[var(--text-secondary)]` (0.60 opacity):
 
-Correctly implemented: `sr-only` labels on `#submission-text` and `#return-comment`; `role="alert"` on `#upload-error` and `#submit-error`; `role="dialog" aria-modal="true" aria-label="Return submission"` on the return popover; `aria-hidden` toggled via JS on open/close; Esc key closes (`keydown` listener); outside-click closes; `currentTriggerButton.focus()` restores focus to trigger on close; `focus-visible` ring on all buttons (`button:focus-visible { outline: 2px solid emerald; }`); `aria-haspopup="dialog"` on the Return row trigger buttons; `alt` text on avatar images.
+```html
+<p class="text-sm text-[var(--text-secondary)] leading-relaxed mb-3">
+    I decided to run the latency matrix through an O(n log n) filter...
+</p>
+```
 
-Failures:
+DS §1 maps `--text-secondary` to "Metadata, channel names, timestamps" and `--text-primary` to "Headings, message body." The student's submitted note is the message body of their work — the substance of their submission — not metadata. Rendering the user's own words at 0.60 opacity creates a WCAG AA contrast concern on the `surface-900` background and misrepresents the semantic weight of the content. The educator comment in the returned card correctly uses `text-[var(--text-primary)]` (l.323); the student submission note should match.
 
-**[A11y-1 — Critical] No focus trap in `role="dialog" aria-modal="true"` (DESIGN-SYSTEM §8 Modal/Dialog; WCAG 2.1 Authoring Practices dialog pattern)**
-
-The popover correctly declares `aria-modal="true"`, which signals to screen readers that content outside the dialog is inert. However, there is no programmatic focus trap. A keyboard user who presses Tab from the Cancel button exits the dialog boundary and navigates the underlying roster rows, contradicting the `aria-modal` contract. The DS §8 Modal/Dialog spec explicitly states "focus-trap" as a required attribute of this primitive. The change from `role="menu"` (iter 0) to `role="dialog"` (iter 1) was correct but introduced this obligation that is not yet met. A minimal implementation: collect all focusable descendants of `#return-popover`; on Tab from the last element, cycle to the first; on Shift+Tab from the first, cycle to the last.
-
-**[A11y-2 — High] `aria-hidden="true"` on `#attachment-input` breaks the AT file-upload path (Brief §9 WCAG-AA; DESIGN-SYSTEM §8 Button a11y)**
-
-The file input (`id="attachment-input"`) carries both `aria-hidden="true"` and `tabindex="-1"`, removing it from the accessibility tree. The `<label for="attachment-input">` in `sr-only` points to a now-hidden control — the label is present in the AT tree but the control it references is not, so screen readers cannot activate the file picker via the label. The visual button (`triggerAttachment()`) is not semantically associated with the input. Resolution: remove `aria-hidden="true"` from the file input; retain `tabindex="-1"` (the visual button handles activation for sighted keyboard users); the input remains discoverable via its `sr-only` label for AT.
-
-**[A11y-3 — High] "Mark Done" toggle is inert to assistive technology (DESIGN-SYSTEM §8 AssignmentCard; WCAG 1.3.1 Info and Relationships)**
-
-The `<label>` wrapping the decorative toggle has no `for` attribute pointing to an actual interactive element, and there is no `<input>` child within or referenced by the label. Screen readers announce it as a static text string, not an interactive control. WCAG 1.3.1 requires that the role, state, and value of UI components be programmatically determinable. DS §8 AssignmentCard specifies "toggle is a real checkbox/switch with label."
-
-**[A11y-4 — Medium] No `aria-live` region for dynamic roster state changes (DESIGN-SYSTEM §8 Empty/Error/Loading states; Brief §6)**
-
-When `submitReturn()` mutates `.innerHTML` on a roster row (Awaiting to Returned), the DOM change is invisible to screen readers. An `aria-live="polite"` status region should announce the state change after the action completes (e.g., "Elena Rostova marked as returned").
-
-**[A11y-5 — Low] Breadcrumb lacks proper nav semantics (WCAG 2.4.8 Location)**
-
-The breadcrumb row is implemented as `<div>` + `<span>` elements with no `<nav aria-label="Breadcrumb">`, no `<ol>`, and no `aria-current="page"` on the active crumb. For a desktop app with multiple panel levels this is a low-severity gap but it is still a WCAG 2.4.8 matter.
-
-What would make it a 10: implement a Tab/Shift+Tab focus trap loop in the dialog; remove `aria-hidden` from `#attachment-input`; replace the decorative toggle with a real `<input type="checkbox">`; add `<div role="status" aria-live="polite" class="sr-only" id="roster-live"></div>` to the roster panel and populate it after state changes; convert the breadcrumb to `<nav aria-label="Breadcrumb"><ol>` with `aria-current="page"`.
+What would make it a 10: (a) Change `slideUpFade` animation timing from the `spring` curve to `cubic-bezier(0.4, 0.0, 0.2, 1)` (the defined `smooth` easing) — one-line fix. (b) Change the submitted note `<p>` at l.291 from `text-[var(--text-secondary)]` to `text-[var(--text-primary)]` — one-line fix. Both changes are surgical; no layout or structural impact.
 
 ---
 
-### 6. Responsive — 8 / 10
+### 4. Edge-Case Handling — 8 / 10
 
-The core contract is met: `grid-cols-1` default collapses to `lg:grid-cols-12` at 1024px (corrected from iter 0), with `lg:col-span-5` student and `lg:col-span-7` roster. Server rail is `hidden md:flex`, sidebar is `hidden lg:flex`, mobile hamburger is `lg:hidden`. The Sort button text (`max-sm:hidden`) and Return label text (`max-sm:hidden`) hide appropriately on narrow viewports. Popover viewport-flip logic (flip up near bottom edge) is implemented.
+All required error states from Brief §3 are now present and structurally correct. Upload oversize (`#upload-error`, role=alert, inline, no layout break), submit POST failure (`#submit-error`, role=alert, retry path), return-action failure (`#return-error` in the return popover, role=alert, failure-then-retry simulation), 403 forbidden roster (`#forbidden-state`, calm lock icon + "Access restricted"), empty roster (`#empty-state`, "No submissions yet"), loading skeleton shimmer, attachment removal, and viewport-flip on the return popover are all implemented.
 
-Deductions: The JS popover positioning (`left = rect.left - (300 - rect.width)`) has no boundary clamping. At 1024px viewport width, with a narrow right column, `rect.left` of a right-aligned Return button can yield a negative `left` value, clipping the 300px popover against the left viewport edge. No `Math.max(8, ...)` lower clamp exists. Similarly, no right-edge clamp (`Math.min(left, window.innerWidth - 308)`) guards against the popover extending past the right edge at unusual zoom levels. The `sticky top-8` on the student column at viewport heights below ~700px may cause the bottom of the sticky column to overlap the roster header when both columns are in the 1024px+ layout; this is testable only in a live browser but worth noting as a risk.
+The submit-failure simulation correctly shows error on first attempt, then allows retry on second click (using `btn.dataset.hasFailed` flag). The return-failure simulation mirrors this pattern in the popover.
 
-What would make it a 10: add `const clampedLeft = Math.max(8, Math.min(left, window.innerWidth - 308));` in `openReturnPopover()`; browser-test the sticky column behavior at 1024px × 700px.
+Minor deductions: The submit success path changes the button label to "Resubmit" (l.575) but does not clear the `#submit-error` banner — leaving the error and the new label simultaneously visible creates a brief visual contradiction. Only one skeleton row is shown; a 48-student roster would warrant 3–4 rows for a credible loading state. "Undo submission" button (l.299) has no JS handler (no-op click).
 
----
-
-## Brief Verification Checklist
-
-| Check | Result | Notes |
-|---|---|---|
-| §3 Student not-submitted (submit form) | PASS | Form present |
-| §3 Student submitting (spinner + disabled) | PASS | JS loading state |
-| §3 Student submitted-not-returned | PASS | Timeline card |
-| §3 Student returned (emerald badge + comment) | PASS | Returned card with quote |
-| §3 Educator roster loaded | PASS | 3 rows with states |
-| §3 Educator roster empty | PASS | #empty-state |
-| §3 Educator return-popover-open | PASS | #return-popover |
-| §3 Loading (skeleton) | PASS | Shimmer row |
-| §3 Error — upload oversize | PASS | #upload-error, role=alert |
-| §3 Error — submit POST failure | PASS | #submit-error, role=alert |
-| §3 Error — return action failure | **FAIL** | No failure branch in submitReturn() |
-| §3 Error — 403 forbidden roster | PASS | #forbidden-state |
-| §10 NO grading — zero grade/score/rubric affordance | PASS | No numeric field, no rubric language |
-| §10 NO grading — assignment body copy | PASS | Submission-only copy; no grade/rubric terms |
-| §10 NO grading — return popover | PASS | "Acknowledgement comment" / "Mark Returned" |
-| Returned = calm emerald, unmistakably NOT a grade | PASS | Check-circle + "Returned" text only |
-| Awaiting = calm amber, unmistakably NOT a grade | PASS | Amber dot + "Awaiting" text only |
-| Return popover: role=dialog | PASS | Present |
-| Return popover: aria-modal | PASS | Present |
-| Return popover: aria-label | PASS | "Return submission" |
-| Return popover: focus restore on close | PASS | currentTriggerButton.focus() |
-| Return popover: focus trap | **FAIL** | Not implemented; Tab exits dialog |
-| Responsive — columns inline at ≥1024 | PASS | lg:grid-cols-12 |
-| Responsive — single column below 1024 | PASS | grid-cols-1 default |
-| Token — no invented hex | PASS | All values derived from DS |
-| Token — --text-muted not on body text | PASS | Placeholders only |
-| Badge — ≥12px | PASS | text-xs = 12px |
+What would make it a 10: Add `submitErr.classList.add('hidden')` before the success path label change. Render 3 skeleton rows instead of 1. Add a stub handler or `disabled` state to "Undo submission."
 
 ---
 
-## Enumerated Concerns (blocking)
+### 5. Accessibility — 7.5 / 10
 
-**Concern 1 — Missing return-action failure error state (Brief §3)**
-Brief §3 explicitly names "return failed" as a required error state. `submitReturn()` has no failure branch; an educator whose POST fails receives no feedback.
-Resolution: add an inline danger element inside `#return-form` mirroring `#submit-error`; populate it on network/server failure in a try/catch or fetch `.catch()` branch.
+All five iter 1 blocking a11y concerns are resolved. The structural foundation is now sound: `role="dialog"` + `aria-modal="true"` + `aria-label` on the popover; Tab/Shift+Tab focus trap cycling within `focusableElements`; Esc close with focus restore; real `<input type="checkbox">` for Mark Done; global `aria-live="polite"` announcer with `announce()` called on all async state transitions; file input accessible via label wrapping without aria-hidden; `button:focus-visible` emerald ring defined globally; `aria-haspopup="dialog"` on return trigger buttons; `aria-hidden="true"` on skeleton row; role=alert on all error messages; `lang="en"` on html element; alt text on avatar images.
 
-**Concern 2 — No focus trap in `role="dialog" aria-modal="true"` (DESIGN-SYSTEM §8 Modal/Dialog; WCAG 2.1 dialog authoring practice)**
-The iter 0 → iter 1 change from `role="menu"` to `role="dialog" aria-modal="true"` was correct but created a new obligation: focus must be trapped inside the dialog while open. Tab from Cancel escapes to the roster behind the popover, contradicting the `aria-modal` declaration.
-Resolution: in `openReturnPopover()`, after showing the popover, collect `focusableEls = popover.querySelectorAll('textarea, button')`. In the `keydown` listener, when `e.key === 'Tab'` and `isPopoverOpen`, intercept and cycle within `focusableEls`.
+Remaining deductions:
 
-**Concern 3 — `aria-hidden="true"` on `#attachment-input` severs AT file-upload path (Brief §9 WCAG-AA; DESIGN-SYSTEM §8 Button a11y)**
-The `sr-only` label references the input by `for`, but the input is hidden from the AT tree via `aria-hidden`. AT users cannot activate the file picker.
-Resolution: remove `aria-hidden="true"` from `#attachment-input`; keep `tabindex="-1"`.
+The toggle thumb's `peer-checked:translate-x-4 peer-checked:bg-emerald-500` classes (l.223) are on an element that is a grandchild of the `<input class="sr-only peer">`, not a direct sibling. In standard Tailwind CSS the `peer-*` variants apply only to direct siblings of `.peer`. The outer container div (direct sibling) correctly activates `peer-checked:bg-emerald-500/20` and `peer-checked:border-emerald-500/50`, but the inner thumb div will not translate or change color on check. Sighted keyboard users and mouse users will see the container change color but the thumb remain stationary — the toggle appears broken visually while the underlying checkbox state is correctly toggled. This is an implementation-wiring issue; the design intent is clear and correct. The React build should apply the thumb transform via a state-driven class or data attribute.
 
-**Concern 4 — "Mark Done" toggle has no underlying `<input>` (DESIGN-SYSTEM §8 AssignmentCard; WCAG 1.3.1)**
-The toggle is a decorative div construct inert to keyboard and AT. WCAG 1.3.1 requires the role/state/value of interactive components to be programmatically determinable.
-Resolution: replace the div pair with `<input type="checkbox" id="mark-done-toggle" class="sr-only peer">` driving the visual track/thumb via `peer-checked:` variants.
+The `return-trigger` buttons are `opacity-0` at rest and become visible only on group-hover or `focus-visible:opacity-100`. The `focus-visible:opacity-100` qualifier correctly reveals them for keyboard users, but a keyboard user tabbing through the roster will encounter buttons that are invisible until focused — a discoverability gap for sighted keyboard users who may not expect hidden interactive controls in the roster. This is a design pattern choice; a low resting opacity (e.g., `opacity-[0.15]`) would make the affordance discoverable without visual noise.
 
-**Concern 5 — No `aria-live` region for roster state changes (DESIGN-SYSTEM §8; Brief §6)**
-`submitReturn()` mutates the DOM without any AT announcement. State changes are invisible to screen reader users.
-Resolution: add `<div role="status" aria-live="polite" aria-atomic="true" class="sr-only" id="roster-live"></div>` in the roster panel; set `textContent` to "[Name] marked as returned" after each successful state flip.
+What would make it a 10: (a) Document in an HTML comment that the toggle thumb needs state-driven styling in React, not CSS peer variants. (b) Set `return-trigger` buttons to `opacity-[0.15]` at rest rather than `opacity-0`, so keyboard users can orient before focusing.
+
+---
+
+### 6. Responsive — 7.5 / 10
+
+The Brief §5 responsive contract is met: `grid-cols-1 lg:grid-cols-12` collapses correctly at 1024px, `col-span-5`/`col-span-7` proportions are appropriate, server rail is `hidden md:flex`, sidebar is `hidden lg:flex`, and the mobile hamburger is `lg:hidden`. `sticky top-8` on the student column keeps the submit control in view while scrolling a long roster. `max-sm:hidden` on sort label and return button text hides correctly on narrow viewports. Popover viewport-flip logic (flip up near bottom edge) is implemented.
+
+Deductions: The JS popover left-position calculation (`left = rect.left - (300 - rect.width)`) has no lower boundary clamp. At exactly 1024px viewport width, the right column is narrow enough that a right-aligned Return trigger's `rect.left` can produce a negative `left` value, clipping the 300px popover against the left viewport edge. No `Math.max(8, ...)` guard exists. The hardcoded timeline node at `top-[214px]` (flagged under spacing rhythm) creates an additional responsive fragility: in the single-column layout below 1024px, the left column stacks full-width and the magic-number y-position will likely be wrong against the actual rendered card height on narrower screens.
+
+What would make it a 10: Add `const clampedLeft = Math.max(8, Math.min(left, window.innerWidth - 308))` in `openReturnPopover()`. Replace hardcoded timeline positions with fluid CSS (see Spacing Rhythm suggestion).
+
+---
+
+## REVISE items — design-direction only (must be fixed in staging HTML before adoption)
+
+Both items are single-line fixes that do not affect layout, structure, or interaction logic.
+
+---
+
+**REVISE-1 — Spring easing on roster animations violates DS §6 motion principles**
+
+File: `<style>` block — `slideUpFade` keyframe animation / Tailwind config `spring` key.
+
+Current (l.95–97, l.42–43 of config):
+```
+animation: slideUpFade 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards
+```
+
+Required:
+```
+animation: slideUpFade 0.35s cubic-bezier(0.4, 0.0, 0.2, 1) forwards
+```
+
+The `smooth` easing is already defined in the Tailwind config (`transitionTimingFunction.smooth`). Use it here.
+
+DS reference: DESIGN-SYSTEM.md §6 — "No bouncy/playful easing — keep it calm and quick."
+Brief reference: §11(a) — "submission lifecycle read as calm/academic."
+
+---
+
+**REVISE-2 — Student submitted-note body text at `--text-secondary` instead of `--text-primary`**
+
+File: l.291, the `<p>` inside the submitted state card.
+
+Current:
+```html
+<p class="text-sm text-[var(--text-secondary)] leading-relaxed mb-3">
+```
+
+Required:
+```html
+<p class="text-sm text-[var(--text-primary)] leading-relaxed mb-3">
+```
+
+The submitted note is the message body of the student's work. DS §1 maps `--text-primary` to "Headings, message body" and `--text-secondary` to "Metadata, channel names, timestamps." The educator comment in the returned card at l.323 correctly uses `--text-primary`; the submitted note must match.
+
+DS reference: DESIGN-SYSTEM.md §1 text token semantic mappings.
+Brief reference: §4.7 typography token discipline.
+
+---
+
+## Non-blocking implementation wiring notes (must NOT delay adoption once REVISE-1 and REVISE-2 are applied)
+
+These belong to the React build, not to the design adoption gate.
+
+**WIRE-1 — Toggle thumb `peer-checked:` on non-sibling element**
+The `peer-checked:translate-x-4 peer-checked:bg-emerald-500` classes on the inner thumb div (l.223) are on a grandchild of the `<input class="peer">`. Standard Tailwind peer variants apply only to direct siblings. The React implementation should use a state variable (`checked`) to apply the thumb transform class: `checked ? 'translate-x-4 bg-emerald-500' : 'translate-x-0 bg-white/40'`. Design intent is correct; this is a CSS scope limitation.
+
+**WIRE-2 — `shadow-[var(--shadow-sm)]` and `shadow-[var(--shadow-pop)]` CSS var references**
+`--shadow-sm` and `--shadow-pop` are Tailwind config keys, not CSS custom properties in `:root`. The arbitrary Tailwind syntax `shadow-[var(--shadow-sm)]` resolves to empty at runtime in the CDN build. Use the standard Tailwind classes `shadow-sm` and `shadow-pop` directly. Design intent (shadow-sm / shadow-pop per DS §5) is clear.
+
+**WIRE-3 — Hardcoded absolute timeline node positions**
+`top-[14px]` and `top-[214px]` are static measurements from this mockup's rendered card heights. The React implementation should position nodes relative to their adjacent cards using margins or a ref-based calculation. The timeline pattern (vertical line, nodes, stacked cards) is correct and must be preserved.
+
+---
+
+## Preserved elements (do not alter in refine pass if REVISE is triggered)
+
+The following are explicitly confirmed correct and should not be touched:
+
+- All §3 states present and correctly structured — form, submitting spinner, submitted card, returned card, roster loaded, roster empty, return popover, loading skeleton, all error states
+- §10 grading compliance confirmed — no grade, score, rubric, or numeric field anywhere
+- `role="dialog"` / `aria-modal="true"` / `aria-label="Return submission"` on the return popover
+- Focus trap (Tab/Shift+Tab cycle within `focusableElements`) and Escape close
+- Focus restore to `currentTriggerButton` on close
+- `#a11y-announcer` aria-live=polite with `announce()` called on all async state changes
+- Real `<input type="checkbox" class="sr-only peer">` for Mark Done
+- File input accessible via label wrapping, no aria-hidden
+- Token audit: all color values map to DS §1 tokens; no invented hex
+- All badge/status text at 12px minimum
+- Emerald returned / amber awaiting semantic treatment — calm, not grade-like
+- `lg:grid-cols-12` with col-span-5 / col-span-7 responsive inline layout
+- role=alert on all error messages with inline display, no layout break
+- `#empty-state` and `#forbidden-state` structures
+- The timeline pattern (vertical line + node dots + stacked submitted/returned cards)
+- Roster row layout, hover states, return trigger with aria-haspopup="dialog"
+- Glass panel popover, shimmer skeleton, server rail with emerald indicator bar
 
 ---
 
@@ -174,4 +260,4 @@ Resolution: add `<div role="status" aria-live="polite" aria-atomic="true" class=
 
 **REVISE**
 
-The §10 grading violation is resolved and the `role="dialog"` semantic is now correct — both are material progress from iter 0. However, switching to `role="dialog" aria-modal="true"` without implementing the required focus trap is a WCAG-level regression that creates a new blocking accessibility issue (Concern 2). Combined with the missing return-action error state (Concern 1, explicit §3 requirement), the severed file-input AT path (Concern 3), and the inert toggle (Concern 4), the design cannot be canonicalized in its current form. All five concerns are mechanically small fixes requiring no structural redesign; a focused iter 2 can resolve them.
+All five iter 1 blocking concerns are resolved. The design is structurally sound, all §3 states and error states are present, §10 grading compliance is confirmed, the dialog accessibility pattern is correctly implemented, and no invented tokens appear. Two design-direction items require correction before adoption: (1) the spring/bouncy easing on roster row animations directly violates DS §6 and must be changed to the `smooth` easing already defined in the Tailwind config; (2) the student's submitted note body text uses `--text-secondary` (metadata token) instead of `--text-primary` (message-body token) per DS §1. Both are single-line fixes with no layout impact. Three wiring notes are documented above and must not delay adoption once the two REVISE items are applied.
