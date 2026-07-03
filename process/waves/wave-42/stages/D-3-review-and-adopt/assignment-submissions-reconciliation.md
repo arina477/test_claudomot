@@ -35,3 +35,9 @@ A1. Spring easing on slideUpFade (cubic-bezier(0.175,0.885,0.32,1.275)) violates
 A2. Student submitted-note body text uses --text-secondary (l.291) — DS §1 body = --text-primary (secondary is metadata) → change to --text-primary.
 B. Resubmit-after-return path not discoverable (brief §3 "resubmit still possible") → add a visible "Edit submission" affordance/label on the returned card.
 Non-blocking React-build notes (do NOT block adoption): peer-CSS toggle thumb, shadow var, hardcoded timeline node positions.
+
+---
+# Iteration 3 review → APPROVE / APPROVE → D-3 Phase 2 (head-designer gate)
+Reviewer A (ui-designer/plan-design-review): APPROVE — 3 iter-2 items fixed (calm slideUpFade easing, submitted-note body --text-primary, visible "Edit submission" affordance), no regressions.
+Reviewer B (accessibility-tester/ui-ux-pro-max): APPROVE — WCAG-AA across all dimensions; §9 all PASS; §10 zero grading; dialog focus-trap+restore, aria-live, real checkbox, file-input reachable; tokens all traced, no invented values.
+Matrix outcome: APPROVE/APPROVE → Phase 2 head-designer spawn.

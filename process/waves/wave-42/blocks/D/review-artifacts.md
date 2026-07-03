@@ -3,7 +3,7 @@
 **Block:** D (Design)
 **Wave topic:** Assignment submission lifecycle UI — student submit (text + optional attachment), educator submissions roster (collect view), educator return-with-comment
 **Block exit gate:** D-3
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 
@@ -29,3 +29,12 @@ none
 ## Gate verdict log
 
 <appended by fresh head-designer spawn at D-3>
+
+## Block exit / handoff
+```yaml
+design_block_status:    complete
+gaps_resolved:          [assignment-submissions]
+gaps_deferred:          []
+design_system_updates:  []
+canonicalized_at:       2026-07-03
+```
