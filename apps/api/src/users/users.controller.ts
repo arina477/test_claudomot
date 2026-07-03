@@ -9,7 +9,7 @@ import {
   ServiceUnavailableException,
   forwardRef,
 } from '@nestjs/common';
-import { SkipThrottle } from '@nestjs/throttler';
+import { Throttle } from '@nestjs/throttler';
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
 import { FilesService } from '../files/files.service';
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
@@ -27,9 +27,10 @@ import { UsersService } from './users.service';
  * Why unauthenticated: avatars are public content; cross-origin <img> tags send
  * no auth cookies so the endpoint must be reachable without a session.
  * IDOR-safety: server-derived key only (no client-controlled path), 404 for
- * users with no avatar, short presign TTL (300s). Rate limiting is coarse
- * (app-wide ThrottlerGuard, 10 req/60s) — enough for MVP; fine-grained
- * per-IP throttle on this route is a T-8 follow-up.
+ * users with no avatar, short presign TTL (300s). Rate limiting: per-route
+ * @Throttle at 120 req/60s per IP — higher than the global 10/60s default
+ * because avatars load for every visible user on a page, but not unlimited
+ * since this endpoint does a DB SELECT + S3 presign per hit.
  */
 @Controller('users')
 export class UsersController {
@@ -45,21 +46,22 @@ export class UsersController {
    * PUBLIC / UNAUTHENTICATED — no SessionGuard; cross-origin <img> sends no cookies.
    *
    * Response:
-   *   302  Location: <presigned GET URL>  Cache-Control: public, max-age=300
+   *   302  Location: <presigned GET URL>  Cache-Control: public, max-age=240
    *   404  when user has no avatar (avatar_key IS NULL)
    *   503  when storage env vars are not configured
    *
-   * Cache-Control: public, max-age=300 is intentionally < presign TTL (300s) so
-   * browsers never follow a stale/expired presigned URL from their cache.
+   * Cache-Control: public, max-age=240 is strictly < presign TTL (300s),
+   * giving a 60s safety margin so browsers never follow a cached 302 that
+   * points at an already-expired presigned URL.
    *
    * NestJS @Redirect + dynamic url: returning { url, statusCode } from a
    * @Redirect()-decorated handler overrides the static decorator values, which
    * is the canonical NestJS pattern for dynamic redirects.
    */
   @Get(':userId/avatar')
-  @SkipThrottle()
+  @Throttle({ default: { limit: 120, ttl: 60_000 } })
   @Redirect('', 302)
-  @Header('Cache-Control', 'public, max-age=300')
+  @Header('Cache-Control', 'public, max-age=240')
   async redirectToAvatar(
     @Param('userId') userId: string,
   ): Promise<{ url: string; statusCode: number }> {

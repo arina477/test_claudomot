@@ -50,10 +50,10 @@ const ATTACHMENT_GET_EXPIRY_SECONDS = 3600; // 1 hour
 // Presigned-GET TTL for avatar redirect responses.
 // Shorter than attachments: avatars are served through a redirect endpoint
 // (GET /users/:userId/avatar → 302 to presigned URL) with Cache-Control:
-// public, max-age=300, so browsers cache the presigned target for ~5 min.
-// The presign TTL must exceed max-age so the target is still valid when a
-// browser re-validates.
-const AVATAR_GET_EXPIRY_SECONDS = 300; // 5 minutes
+// public, max-age=240. The presign TTL (300s) must be strictly > max-age (240s)
+// to guarantee a 60s safety margin — browsers never follow a cached 302
+// pointing at an already-expired presigned URL.
+const AVATAR_GET_EXPIRY_SECONDS = 300; // 5 minutes (must stay > max-age=240)
 
 const PRESIGN_EXPIRY_SECONDS = 300; // 5 minutes
 
