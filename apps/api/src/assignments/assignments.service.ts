@@ -14,6 +14,7 @@ import type {
   AssignmentSubmissionPresignResponse,
   AssignmentSubmissionRosterRow,
   CreateAssignmentInput,
+  ReturnSubmissionInput,
   SubmitAssignmentInput,
   UpdateAssignmentInput,
 } from '@studyhall/shared';
@@ -739,5 +740,60 @@ export class AssignmentsService {
         };
       }),
     );
+  }
+
+  // -------------------------------------------------------------------------
+  // returnSubmission — POST /assignments/:id/submissions/:submissionId/return
+  //
+  // Organizer authz derived from the assignment row's server_id (IDOR-safe).
+  // Guards that the submission.assignment_id matches the path assignmentId.
+  // Sets returned_at=now(), organizer_comment=input.comment (nullable).
+  // Idempotent: repeat calls overwrite the prior return. No grade/score.
+  // -------------------------------------------------------------------------
+
+  async returnSubmission(
+    assignmentId: string,
+    submissionId: string,
+    userId: string,
+    input: ReturnSubmissionInput,
+  ): Promise<AssignmentSubmission> {
+    const [row] = await db
+      .select()
+      .from(assignments)
+      .where(and(eq(assignments.id, assignmentId), eq(assignments.is_deleted, false)))
+      .limit(1);
+
+    if (!row) throw new NotFoundException('Assignment not found');
+
+    await this.assertOrganizer(userId, row.server_id);
+
+    // Fetch the submission, then guard it belongs to this assignment
+    const [subRow] = await db
+      .select()
+      .from(assignment_submissions)
+      .where(eq(assignment_submissions.id, submissionId))
+      .limit(1);
+
+    if (!subRow) throw new NotFoundException('Submission not found');
+
+    if (subRow.assignment_id !== assignmentId) {
+      throw new BadRequestException('Submission does not belong to this assignment');
+    }
+
+    const now = new Date();
+
+    const [updated] = await db
+      .update(assignment_submissions)
+      .set({
+        returned_at: now,
+        organizer_comment: input.comment ?? null,
+        updated_at: now,
+      })
+      .where(eq(assignment_submissions.id, submissionId))
+      .returning();
+
+    if (!updated) throw new Error('Submission return update failed unexpectedly');
+
+    return this.submissionRowToDto(updated);
   }
 }

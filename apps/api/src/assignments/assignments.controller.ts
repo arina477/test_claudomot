@@ -24,6 +24,7 @@ import type {
 import {
   AssignmentStatusSchema,
   CreateAssignmentSchema,
+  ReturnSubmissionSchema,
   SubmitAssignmentSchema,
   UpdateAssignmentSchema,
 } from '@studyhall/shared';
@@ -32,7 +33,7 @@ import { AuthGuard } from '../auth/auth.guard';
 import { AssignmentsService } from './assignments.service';
 
 // ---------------------------------------------------------------------------
-// AssignmentsController — wave-22 M5 (task 01fcefb8) + wave-42 (tasks db8e082a, 1746f72a)
+// AssignmentsController — wave-22 M5 (task 01fcefb8) + wave-42 (tasks db8e082a, 1746f72a, b859984b)
 //
 // Routes:
 //   POST   /servers/:serverId/assignments                              — organizer create
@@ -45,6 +46,7 @@ import { AssignmentsService } from './assignments.service';
 //   PUT    /assignments/:id/status                                    — member toggle state
 //   POST   /assignments/:id/submit                                    — member submit (wave-42)
 //   GET    /assignments/:id/submissions                               — educator roster (wave-42)
+//   POST   /assignments/:id/submissions/:submissionId/return         — educator return (wave-42)
 //
 // Security:
 //   - @UseGuards(AuthGuard) on every route.
@@ -262,5 +264,29 @@ export class AssignmentsController {
     const userId = req.session.getUserId();
     const submissions = await this.assignmentsService.listSubmissions(id, userId);
     return { submissions };
+  }
+
+  // -------------------------------------------------------------------------
+  // POST /assignments/:id/submissions/:submissionId/return
+  // Educator return (wave-42 task b859984b). Organizer-only.
+  // serverId derived from assignment row.
+  // -------------------------------------------------------------------------
+
+  @Post('assignments/:id/submissions/:submissionId/return')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async returnSubmission(
+    @Param('id') id: string,
+    @Param('submissionId') submissionId: string,
+    @Req() req: SessionAugmentedRequest,
+    @Body() body: unknown,
+  ): Promise<AssignmentSubmission> {
+    const parsed = ReturnSubmissionSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.flatten());
+    }
+
+    const userId = req.session.getUserId();
+    return this.assignmentsService.returnSubmission(id, submissionId, userId, parsed.data);
   }
 }
