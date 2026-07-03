@@ -16,7 +16,8 @@
  */
 
 import type { MessageResponse, ValidatedAttachment } from '@studyhall/shared';
-import { useCallback, useContext, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { api } from '../auth/api';
 import { AssignmentsPanel } from './AssignmentsPanel';
 import { type ConnectionState, ConnectionStateIndicator } from './ConnectionStateIndicator';
 import { HeaderBell } from './HeaderBell';
@@ -47,6 +48,15 @@ export function MainColumn({ connectionState = 'online', onToggleSidebar }: Prop
   } = useServers();
   const { profile } = useContext(ProfileContext);
 
+  const [canModerateMembers, setCanModerateMembers] = useState(false);
+  useEffect(() => {
+    setCanModerateMembers(false);
+    if (!selectedId) return;
+    api
+      .getMyPermissions(selectedId)
+      .then((perms) => setCanModerateMembers(perms.owner || perms.moderate_members))
+      .catch(() => {});
+  }, [selectedId]);
   // Resolve the type of the currently selected channel from the server detail.
   // This avoids adding selectedChannelType to ServerContext (minimal blast radius).
   const selectedChannelType: string | null =
@@ -295,6 +305,7 @@ export function MainColumn({ connectionState = 'online', onToggleSidebar }: Prop
             onEdit={editMessage}
             onDelete={deleteMessage}
             onReaction={toggleReaction}
+            canModerateMembers={canModerateMembers}
             currentUserId={profile?.username ?? null}
             viewerUsername={profile?.username ?? null}
             onOpenThread={handleOpenThread}

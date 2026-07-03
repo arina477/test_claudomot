@@ -134,6 +134,7 @@ type Props = {
    * Typically focuses the message composer so the user can start typing.
    */
   onFocusComposer?: () => void;
+  canModerateMembers?: boolean;
 };
 
 // ---------------------------------------------------------------------------
@@ -998,6 +999,7 @@ type SentRowProps = {
    * out when the derived status prop is identical to the previous render.
    */
   presenceTick: number;
+  canModerateMembers?: boolean;
 };
 
 function SentRow({
@@ -1010,6 +1012,7 @@ function SentRow({
   onOpenThread,
   isThreadOpen,
   presenceTick: _presenceTick, // consumed to trigger re-derive; not used directly
+  canModerateMembers = false,
 }: SentRowProps) {
   // Derive this author's presence tri-state from the store snapshot.
   // SentRow re-renders on every presenceTick change; AuthorPresenceDot
@@ -1264,7 +1267,11 @@ function SentRow({
           isOwn={isOwn}
           onReact={() => setPopoverOpen((v) => !v)}
           onEdit={isOwn && onEdit !== null ? () => setRowState('editing') : null}
-          onDelete={onDelete !== null ? () => setRowState('deleting') : null}
+          onDelete={
+            (isOwn || canModerateMembers) && onDelete !== null
+              ? () => setRowState('deleting')
+              : null
+          }
         />
       )}
 
@@ -1537,6 +1544,7 @@ export function MessageList({
   openThreadParentId,
   onRetryLoad,
   onFocusComposer,
+  canModerateMembers = false,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -1713,6 +1721,7 @@ export function MessageList({
               onOpenThread={onOpenThread ?? null}
               isThreadOpen={openThreadParentId === msg.id}
               presenceTick={presenceTick}
+              canModerateMembers={canModerateMembers}
             />
           );
         }
