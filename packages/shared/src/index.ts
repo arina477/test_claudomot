@@ -49,6 +49,7 @@ export {
   AssignRoleSchema,
   UpsertChannelOverrideSchema,
   EffectivePermissionsSchema,
+  MemberTimeoutSchema,
 } from './rbac.js';
 export type {
   RolePermissions,
@@ -59,6 +60,7 @@ export type {
   AssignRoleInput,
   UpsertChannelOverrideInput,
   EffectivePermissions,
+  MemberTimeoutInput,
 } from './rbac.js';
 
 export {
