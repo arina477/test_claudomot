@@ -1,11 +1,11 @@
 # Wave 41 — D-block review artifacts
-**Block:** D (Design) · **Wave topic:** Educator light-moderation UI (member timeout) · **Block exit gate:** D-3 · **Status:** in-progress
+**Block:** D (Design) · **Wave topic:** Educator light-moderation UI (member timeout) · **Block exit gate:** D-3 · **Status:** gate-passed
 ## Stage deliverables
 | Stage | Deliverable file(s) | Status | Notes |
 |---|---|---|---|
 | D-1 | stages/D-1-brief/member-moderation-brief.md | done | 1 gap (member-moderation UI); role-toggle+delete-any trivial pattern-extensions |
 | D-2 | stages/D-2-variants/member-moderation-{variants,iterate}.md | done | staging/member-moderation.html (iter 0); checkpoint skipped-automatic |
-| D-3 | stages/D-3-review-and-adopt/member-moderation-* | pending | dual-reviewer + head-designer gate |
+| D-3 | stages/D-3-review-and-adopt/member-moderation-{reconciliation,adopt}.md | done | APPROVE+APPROVE (iter1) → head-designer APPROVED; canonicalized |
 ## Block-specific context
 - **Wave topic:** educator light-moderation UI
 - **design_gap_flag:** true (from P-1)
@@ -17,3 +17,12 @@
 none
 ## Gate verdict log
 <appended by head-designer at D-3>
+
+## Block exit / handoff
+```yaml
+design_block_status:    complete
+gaps_resolved:          [member-moderation-timeout-UI]
+gaps_deferred:          []
+design_system_updates:  []
+canonicalized_at:       design/member-moderation.html
+```
