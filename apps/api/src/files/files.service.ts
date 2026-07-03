@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import {
   GetObjectCommand,
   HeadObjectCommand,
+  type HeadObjectCommandOutput,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -9,6 +10,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import {
   Injectable,
   Logger,
+  NotFoundException,
   PayloadTooLargeException,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -181,7 +183,19 @@ export class FilesService {
       throw new ServiceUnavailableException({ code: 'STORAGE_NOT_CONFIGURED' });
     }
 
-    const head = await client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
+    // wave-40 (task 7525b759): catch HeadObject not-found — a key that was never
+    // uploaded throws NoSuchKey / NotFound; previously uncaught → 500.
+    // Re-throw every other error unchanged (503 storage / real S3 failures stay).
+    let head: HeadObjectCommandOutput;
+    try {
+      head = await client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
+    } catch (err: unknown) {
+      const e = err as { name?: string; $metadata?: { httpStatusCode?: number } };
+      if (e.name === 'NotFound' || e.name === 'NoSuchKey' || e.$metadata?.httpStatusCode === 404) {
+        throw new NotFoundException('Avatar object not found');
+      }
+      throw err;
+    }
 
     const contentLength = head.ContentLength ?? 0;
     if (contentLength > AVATAR_MAX_SIZE_BYTES) {
