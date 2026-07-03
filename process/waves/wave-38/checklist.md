@@ -38,7 +38,7 @@ TEST:
 
 VERIFY:
 - [x] V-1 Independent reviews (Karen + jenny, parallel)
-- [ ] V-2 Triage
+- [x] V-2 Triage
 - [ ] V-3 Fast-fix loop (or close)
 
 LEARN:
