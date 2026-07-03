@@ -2,11 +2,31 @@ import { z } from 'zod';
 import { AttachmentRefSchema } from './messaging.js';
 
 // ---------------------------------------------------------------------------
+// AssignmentSubmission — student submission DTO as surfaced to clients
+// wave-42 — no grade/score field (grading excluded from milestone scope)
+//
+// Defined before AssignmentSchema so AssignmentSchema can reference it
+// directly (mySubmission field) without z.lazy().
+// ---------------------------------------------------------------------------
+
+export const AssignmentSubmissionSchema = z.object({
+  userId: z.string(),
+  assignmentId: z.string(),
+  text: z.string().nullable(),
+  attachment: AttachmentRefSchema.nullable(),
+  submittedAt: z.string(), // ISO 8601 — submitted_at timestamptz
+  returnedAt: z.string().nullable(), // ISO 8601 — null until organizer returns
+  organizerComment: z.string().nullable(), // null until organizer returns with comment
+});
+export type AssignmentSubmission = z.infer<typeof AssignmentSubmissionSchema>;
+
+// ---------------------------------------------------------------------------
 // Assignment — wave-22 M5 (task 01fcefb8)
 //
 // myStatus is per-authenticated-user state (LEFT JOIN assignment_status, default 'todo').
 // attachment is optional (0-1 per assignment this wave).
 // dueDate is an ISO 8601 string (timestamptz serialized to ISO on the wire).
+// mySubmission added wave-42 — authenticated member's own submission (null when not yet submitted).
 // ---------------------------------------------------------------------------
 
 export const AssignmentSchema = z.object({
@@ -19,6 +39,7 @@ export const AssignmentSchema = z.object({
   attachment: AttachmentRefSchema.nullable().optional(),
   myStatus: z.enum(['todo', 'done']),
   createdAt: z.string(),
+  mySubmission: AssignmentSubmissionSchema.nullable().optional(),
 });
 export type Assignment = z.infer<typeof AssignmentSchema>;
 
@@ -93,3 +114,70 @@ export const AssignmentPresignResponseSchema = z.object({
   key: z.string(),
 });
 export type AssignmentPresignResponse = z.infer<typeof AssignmentPresignResponseSchema>;
+
+// ---------------------------------------------------------------------------
+// SubmitAssignmentInput — POST /assignments/:id/submissions
+// At least one of text or attachment must be present.
+// ---------------------------------------------------------------------------
+
+export const SubmitAssignmentSchema = z
+  .object({
+    text: z.string().max(5000).nullable().optional(),
+    attachment: z
+      .object({
+        key: z.string(),
+        filename: z.string(),
+        contentType: z.string(),
+      })
+      .nullable()
+      .optional(),
+  })
+  .refine((data) => (data.text != null && data.text.length > 0) || data.attachment != null, {
+    message: 'A submission must include text or an attachment.',
+  });
+export type SubmitAssignmentInput = z.infer<typeof SubmitAssignmentSchema>;
+
+// ---------------------------------------------------------------------------
+// AssignmentSubmissionPresignResponse — POST /assignments/:id/submissions/attachments/presign
+// Mirrors AssignmentPresignResponseSchema.
+// ---------------------------------------------------------------------------
+
+export const AssignmentSubmissionPresignResponseSchema = z.object({
+  uploadUrl: z.string(),
+  key: z.string(),
+});
+export type AssignmentSubmissionPresignResponse = z.infer<
+  typeof AssignmentSubmissionPresignResponseSchema
+>;
+
+// ---------------------------------------------------------------------------
+// AssignmentSubmissionsListResponse — GET /assignments/:id/submissions (educator roster)
+// Each row extends AssignmentSubmission with the submitter's profile fields.
+// ---------------------------------------------------------------------------
+
+export const AssignmentSubmissionRosterRowSchema = AssignmentSubmissionSchema.extend({
+  submitter: z.object({
+    userId: z.string(),
+    displayName: z.string(),
+    username: z.string(),
+    avatarUrl: z.string().nullable(),
+  }),
+});
+export type AssignmentSubmissionRosterRow = z.infer<typeof AssignmentSubmissionRosterRowSchema>;
+
+export const AssignmentSubmissionsListResponseSchema = z.object({
+  submissions: z.array(AssignmentSubmissionRosterRowSchema),
+});
+export type AssignmentSubmissionsListResponse = z.infer<
+  typeof AssignmentSubmissionsListResponseSchema
+>;
+
+// ---------------------------------------------------------------------------
+// ReturnSubmissionInput — POST /assignments/:id/submissions/:userId/return
+// Organizer returns a submission with an optional comment.
+// ---------------------------------------------------------------------------
+
+export const ReturnSubmissionSchema = z.object({
+  comment: z.string().max(2000).nullable().optional(),
+});
+export type ReturnSubmissionInput = z.infer<typeof ReturnSubmissionSchema>;
