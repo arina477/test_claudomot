@@ -1,5 +1,5 @@
 # Wave 39 — T-block review artifacts
-**Block:** T (Test) · **Wave topic:** Settings-doorway user menu (F1 fix) · **Block exit gate:** T-9 · **Status:** in-progress
+**Block:** T (Test) · **Wave topic:** Settings-doorway user menu (F1 fix) · **Block exit gate:** T-9 · **Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable | Pattern | Status | Notes |
@@ -24,3 +24,14 @@ process/waves/wave-39/blocks/T/findings-aggregate.md
 
 ## Gate verdict log
 <appended by head-tester at T-9>
+
+## Block exit / handoff
+```yaml
+test_block_status:    complete
+stages_run:           [T-1, T-2, T-5, T-6, T-8, T-9]
+stages_skipped:       [T-3 (no contract), T-4 (no schema), T-7 (not heavy)]
+findings_total:       0
+findings_critical:    0
+findings_aggregate:   process/waves/wave-39/blocks/T/findings-aggregate.md
+ready_for_verify:     true
+```
