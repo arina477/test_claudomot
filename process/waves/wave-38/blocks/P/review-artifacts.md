@@ -12,7 +12,7 @@
 | P-0 | process/waves/wave-38/stages/P-0-frame.md | done | discovery + reframe |
 | P-1 | process/waves/wave-38/stages/P-1-decompose.md | done | single-spec; floor-merge override-ship (precedent-application) |
 | P-2 | process/waves/wave-38/stages/P-2-spec.md | done | spec in task 84e09891 description |
-| P-3 | process/waves/wave-38/stages/P-3-plan.md | pending | approach + plan |
+| P-3 | process/waves/wave-38/stages/P-3-plan.md | done | presigned-GET redirect approach (bucket empirically private) |
 | P-4 | process/waves/wave-38/stages/P-4-gemini-review.md | pending | Phase 2 reviewer output |
 
 ## Block-specific context
