@@ -11,7 +11,7 @@
 |---|---|---|---|
 | P-0 | stages/P-0-frame.md | done | PROCEED; 3 findings carried to P-2/P-3 (presign-gating, migration-order) |
 | P-1 | stages/P-1-decompose.md | done | multi-spec, PROCEED, floor met; design_gap_flag=true |
-| P-2 | stages/P-2-spec.md | pending | |
+| P-2 | stages/P-2-spec.md | done | multi-spec contract written to seed task description (3 blocks) |
 | P-3 | stages/P-3-plan.md | pending | approach + plan |
 | P-4 | stages/P-4-gemini-review.md | pending | Phase 2 reviewer output |
 
