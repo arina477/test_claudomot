@@ -3,7 +3,7 @@
 **Block:** T (Test)
 **Wave topic:** Avatar storage go-live — presigned-GET render + Tigris creds wiring
 **Block exit gate:** T-9
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 
@@ -33,3 +33,14 @@ none
 
 ## Gate verdict log
 <appended by fresh head-tester spawn at T-9 Action 1>
+
+## Block exit / handoff
+```yaml
+test_block_status:    complete
+stages_run:           [T-1, T-2, T-3, T-4, T-5, T-8, T-9]
+stages_skipped:       [T-6 (non-UI), T-7 (not heavy)]
+findings_total:       5
+findings_critical:    0
+findings_aggregate:   process/waves/wave-38/blocks/T/findings-aggregate.md
+ready_for_verify:     true
+```
