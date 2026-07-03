@@ -5,8 +5,8 @@
 PRODUCT:
 - [x] P-0 Frame (discover + reframe)
 - [x] P-1 Decompose
-- [ ] P-2 Spec
-- [ ] P-3 Plan
+- [x] P-2 Spec
+- [x] P-3 Plan
 - [ ] P-4 Gate
 
 DESIGN (skip block if non-UI wave):
