@@ -3,7 +3,7 @@
 **Block:** P (Product)
 **Wave topic:** M8 assignment collect/return — student submission + educator submissions roster + educator return action (NO grading)
 **Block exit gate:** P-4
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 
