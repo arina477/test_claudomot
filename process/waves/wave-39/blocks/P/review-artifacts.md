@@ -10,7 +10,7 @@
 |---|---|---|---|
 | P-0 | process/waves/wave-39/stages/P-0-frame.md | done | REFRAMED: SELECTIVE-EXPANSION to small user menu over existing routes |
 | P-1 | process/waves/wave-39/stages/P-1-decompose.md | done | single-spec ui; floor-merge override-ship (precedent); design_gap_flag=false |
-| P-2 | process/waves/wave-39/stages/P-2-spec.md | pending | |
+| P-2 | process/waves/wave-39/stages/P-2-spec.md | done | spec in task c208e91e |
 | P-3 | process/waves/wave-39/stages/P-3-plan.md | pending | |
 | P-4 | process/waves/wave-39/blocks/P/gate-verdict.md | pending | |
 
@@ -19,7 +19,7 @@
 - **Spec-contract short-circuit verdict:** no-prior-spec (P-0 Action 3)
 - **Roadmap milestone:** M7 (6e2f68d8) in_progress, class=product-polish
 - **design_gap_flag:** false (P-1) — reuses existing MessageList role=menu popover pattern + tokens; trivial extension; D skips
-- **claimed_task_ids:** pending (P-2)
+- **claimed_task_ids:** [c208e91e] (P-2)
 - **Tier-3 product decisions resolved this wave:** none
 - **Autonomous mode active during P-block:** automatic
 
