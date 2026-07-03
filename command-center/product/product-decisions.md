@@ -512,3 +512,8 @@ These are staged for the next P-0 walk (may re-home to M7 launch-polish or a suc
 [2026-07-03] M8 (Educator tools & deeper academics): bundle authored — 2 tasks (Educator/Facilitator role + educator permission in RBAC, with light moderation as the role's first power)
 - caller: N-1-next-bundle
 - decomposed by: milestone-decomposer sub-agent
+
+## [2026-07-03] Deploy model: hosting services git-connected (resolves the CLI-upload/GraphQL-only contradiction)
+- Context: the deploy-CLI is now hard-blocked by a guard hook (framework mandates GraphQL-only), but the api+web hosting services were CLI-upload-sourced (source.repo=null) → GraphQL redeploy would only rebuild the stale prior snapshot (false-green). No source-upload mutation exists. wave-41 C-2 was BLOCKED on this.
+- Resolution (founder authorized "continue" → self-serve): the project-scoped token could not use serviceConnect/githubRepoUpdate (Not Authorized), but `serviceInstanceUpdate(serviceId, environmentId, input:{source:{repo:"arina477/test_claudomot"}})` git-connected BOTH services; `serviceInstanceDeploy(latestCommit:true)` then built from main. api + web shipped SUCCESS on 5a5f79a (git build, not stale snapshot); old CLI-upload snapshots now REMOVED.
+- **Durable:** deploys are now git-connected. Future waves deploy purely via GraphQL `serviceInstanceDeploy(latestCommit:true)` — the CLI-upload contradiction won't recur. Supersedes the prior "Railway deploy = CLI-push" model. (L-2 candidate.)

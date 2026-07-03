@@ -25,7 +25,7 @@ BUILD:
 
 CI/CD:
 - [x] C-1 PR, CI & merge — PR #55 MERGED (squash), merge commit 5a5f79a; CI all green (fix-up cycle 1: test assertion 404 vs 403)
-- [ ] C-2 Deploy & verify (canary armed when real users > 1000)
+- [x] C-2 Deploy & verify (canary armed when real users > 1000)
 
 TEST:
 - [ ] T-1 Static
