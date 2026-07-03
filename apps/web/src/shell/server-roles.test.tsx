@@ -66,6 +66,7 @@ function makeRole(overrides: Partial<Role> = {}): Role {
       manage_channels: true,
       manage_members: false,
       manage_assignments: false,
+      moderate_members: false,
     },
     isDefault: false,
     createdAt: '2024-01-01T00:00:00Z',
@@ -84,6 +85,7 @@ const DEFAULT_ROLE: Role = {
     manage_channels: false,
     manage_members: false,
     manage_assignments: false,
+    moderate_members: false,
   },
   isDefault: true,
   createdAt: '2024-01-01T00:00:00Z',
@@ -195,8 +197,7 @@ describe('ServerRolesPage', () => {
     const nameInput = screen.getByTestId('role-name-input');
     fireEvent.change(nameInput, { target: { value: 'New Role Name' } });
 
-    const saveBtn = screen.getByTestId('save-role-btn');
-    expect(saveBtn).not.toBeDisabled();
+    await waitFor(() => expect(screen.getByTestId('save-role-btn')).not.toBeDisabled());
   });
 
   it('calls api.updateRole on Save and shows success toast', async () => {
@@ -271,6 +272,7 @@ describe('ServerRolesPage', () => {
         manage_channels: true,
         manage_members: false,
         manage_assignments: false,
+        moderate_members: false,
       },
     });
     mockApi.updateRole.mockResolvedValue(updated);
