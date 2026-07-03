@@ -7,7 +7,7 @@
 <!-- Upcoming juncture: after 7525b759 ships, M7's only remaining open task is a1299e88 (Verify a Resend domain — founder-blocked). Next N-1 will face a seedless/founder-blocked M7 → checkpoint/pause for the founder-credential fork. Do NOT act on it early. -->
 
 PRODUCT:
-- [ ] P-0 Frame (discover + reframe)
+- [x] P-0 Frame (discover + reframe)
 - [ ] P-1 Decompose
 - [ ] P-2 Spec
 - [ ] P-3 Plan
