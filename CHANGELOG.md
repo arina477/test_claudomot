@@ -71,6 +71,8 @@ All notable changes to StudyHall are documented here. Format follows
 - Stored files live in a private bucket and are served through expiring signed links, and the upload endpoints are rate-limited, so attachments stay private and the storage layer is protected from abuse. (#52)
 - A user menu opens from your profile button in the sidebar, giving you a single doorway to your profile and settings, avatar upload, and privacy controls — and, for the first time, a log out button right in the app. (#53)
 - Setting a profile picture is now reachable end-to-end from the app: the avatar upload that shipped on the backend last release finally has an in-app entry point through the new user menu. (#53)
+- Educator role: a server owner can grant a member a moderation permission that lets a teaching assistant or study-group lead keep a space on track — time out a disruptive member and delete any message — without handing over full ownership. (#55)
+- Moderation is rank-guarded and enforced server-side: an educator can act only on members below them and never on the owner or a fellow educator, and the timeout and delete-any controls appear only for members who actually hold the permission. (#55)
 
 ### Changed
 
