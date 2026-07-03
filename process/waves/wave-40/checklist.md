@@ -1,0 +1,57 @@
+## Wave 40 stage completion
+
+<!-- Seed: 7525b759-33e7-480f-bdf5-5aedf4594c1d (Harden avatar endpoints against malformed/edge input — two 500s → 4xx) -->
+<!-- Bundled siblings: none (single-task bundle) -->
+<!-- claimed_task_ids: [7525b759-33e7-480f-bdf5-5aedf4594c1d] -->
+<!-- Active milestone: M7 6e2f68d8-dd04-44c5-b2e1-b9c6f28e9007 (in_progress) — Privacy controls, notifications & launch polish -->
+<!-- Upcoming juncture: after 7525b759 ships, M7's only remaining open task is a1299e88 (Verify a Resend domain — founder-blocked). Next N-1 will face a seedless/founder-blocked M7 → checkpoint/pause for the founder-credential fork. Do NOT act on it early. -->
+
+PRODUCT:
+- [ ] P-0 Frame (discover + reframe)
+- [ ] P-1 Decompose
+- [ ] P-2 Spec
+- [ ] P-3 Plan
+- [ ] P-4 Gate
+
+DESIGN (skip block if non-UI wave):
+- [ ] D-1 Brief
+- [ ] D-2 Variants (with bounded iteration)
+- [ ] D-3 Review & adopt
+
+BUILD:
+- [ ] B-0 Branch & schema
+- [ ] B-1 Contracts
+- [ ] B-2 Backend
+- [ ] B-3 Frontend
+- [ ] B-4 Wiring
+- [ ] B-5 Verify
+- [ ] B-6 Review
+
+CI/CD:
+- [ ] C-1 PR, CI & merge
+- [ ] C-2 Deploy & verify (canary armed when real users > 1000)
+
+TEST:
+- [ ] T-1 Static
+- [ ] T-2 Unit
+- [ ] T-3 Contract
+- [ ] T-4 Integration
+- [ ] T-5 E2E
+- [ ] T-6 Layout
+- [ ] T-7 Perf
+- [ ] T-8 Security
+- [ ] T-9 Journey
+
+VERIFY:
+- [ ] V-1 Independent reviews (Karen + jenny, parallel)
+- [ ] V-2 Triage
+- [ ] V-3 Fast-fix loop (or close)
+
+LEARN:
+- [ ] L-1 Docs
+- [ ] L-2 Distill
+
+NEXT:
+- [ ] N-1 Survey & triggers
+- [ ] N-2 Seed
+- [ ] N-3 Handoff
