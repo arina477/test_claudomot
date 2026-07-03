@@ -69,6 +69,8 @@ All notable changes to StudyHall are documented here. Format follows
 - File storage is now live: message attachments upload, store, and render end-to-end in production, so images and files you attach in a channel are delivered reliably. (#52)
 - Avatar image storage is now wired end-to-end on the backend — a profile picture is stored and served through short-lived private links — with the in-app upload entry point tracked as a follow-up before students can set an avatar from the app. (#52)
 - Stored files live in a private bucket and are served through expiring signed links, and the upload endpoints are rate-limited, so attachments stay private and the storage layer is protected from abuse. (#52)
+- A user menu opens from your profile button in the sidebar, giving you a single doorway to your profile and settings, avatar upload, and privacy controls — and, for the first time, a log out button right in the app. (#53)
+- Setting a profile picture is now reachable end-to-end from the app: the avatar upload that shipped on the backend last release finally has an in-app entry point through the new user menu. (#53)
 
 ### Changed
 
