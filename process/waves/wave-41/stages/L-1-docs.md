@@ -55,7 +55,7 @@ verdict_evidence:
   - "CHANGELOG.md:74-75"
   - "milestones row UPDATE: none (M8 stays in_progress; open_count=2)"
   - "README.md commit: none (skipped)"
-  - "commit SHA: <FILLED_ON_COMMIT>"
+  - "commit SHA: 4b3cbf9 (pushed to main)"
 changelog_entry_added: true
 changelog_line_range: "CHANGELOG.md:74-75"
 roadmap_milestones_progressed:
