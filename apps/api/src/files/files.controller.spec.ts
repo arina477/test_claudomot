@@ -48,7 +48,7 @@ describe('FilesController', () => {
   });
 
   afterEach(() => {
-    delete process.env.PUBLIC_API_URL;
+    Reflect.deleteProperty(process.env, 'PUBLIC_API_URL');
   });
 
   // ── POST /profile/avatar/presign ─────────────────────────────────────────────
@@ -142,7 +142,7 @@ describe('FilesController', () => {
     it('throws ServiceUnavailableException (503) when PUBLIC_API_URL is not set', async () => {
       // wave-38: confirm now requires PUBLIC_API_URL to build the stable avatar URL.
       // When absent it throws 503 STORAGE_NOT_CONFIGURED (same family as missing S3 creds).
-      delete process.env.PUBLIC_API_URL;
+      Reflect.deleteProperty(process.env, 'PUBLIC_API_URL');
       await expect(
         controller.confirm(makeReq('user-abc'), { key: 'avatars/user-abc/some-uuid.png' }),
       ).rejects.toThrow(ServiceUnavailableException);

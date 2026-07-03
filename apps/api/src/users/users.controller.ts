@@ -10,7 +10,6 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-// biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
 import { FilesService } from '../files/files.service';
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
 import { UsersService } from './users.service';

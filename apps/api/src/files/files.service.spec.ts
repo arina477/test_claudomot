@@ -208,7 +208,7 @@ describe('FilesService', () => {
     });
 
     it('returns null when STORAGE_BUCKET_NAME is missing even if S3 creds are set', async () => {
-      delete process.env.STORAGE_BUCKET_NAME;
+      Reflect.deleteProperty(process.env, 'STORAGE_BUCKET_NAME');
       const service = new FilesService();
       const result = await service.resolveAvatarUrl('avatars/user-abc/file.png');
       expect(result).toBeNull();

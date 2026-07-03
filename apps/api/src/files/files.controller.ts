@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import {
   BadRequestException,
   Body,
@@ -10,10 +11,8 @@ import {
   UseGuards,
   forwardRef,
 } from '@nestjs/common';
-import { createHash } from 'node:crypto';
 import type { AvatarPresignResponse } from '@studyhall/shared';
 import { SessionNoVerifyGuard } from '../auth/session-no-verify.guard';
-// biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
 import { UsersService } from '../users/users.service';
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
 import { FilesService } from './files.service';
