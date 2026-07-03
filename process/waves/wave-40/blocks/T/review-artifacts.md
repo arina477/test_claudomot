@@ -9,7 +9,7 @@
 | T-5 | stages/T-5-e2e.md | — | SKIP | no user-visible FLOW change (malformed-input robustness; behavior proven at C-2 smoke + T-8) |
 | T-6 | stages/T-6-layout.md | — | SKIP | non-UI |
 | T-7 | stages/T-7-perf.md | — | SKIP | not heavy |
-| T-8 | stages/T-8-security.md | active | pending | re-verify 500→4xx live on both endpoints |
+| T-8 | stages/T-8-security.md | active | done | all PASS: NUL→400, non-UUID→404, confirm-NoSuchKey→404, no leak |
 | T-9 | stages/T-9-journey.md | active | pending | map: F-T8-1/2 resolved + gate |
 ## Block-specific context
 - **wave_type:** backend, security-hardening (T-8-sourced)

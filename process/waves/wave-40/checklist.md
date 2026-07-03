@@ -39,7 +39,7 @@ TEST:
 - [x] T-5 E2E
 - [x] T-6 Layout
 - [x] T-7 Perf
-- [ ] T-8 Security
+- [x] T-8 Security
 - [ ] T-9 Journey
 
 VERIFY:
