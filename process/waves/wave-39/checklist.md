@@ -6,7 +6,7 @@
 <!-- Active milestone: M7 6e2f68d8-dd04-44c5-b2e1-b9c6f28e9007 (in_progress) — Privacy controls, notifications & launch polish -->
 
 PRODUCT:
-- [ ] P-0 Frame (discover + reframe)
+- [x] P-0 Frame (discover + reframe)
 - [ ] P-1 Decompose
 - [ ] P-2 Spec
 - [ ] P-3 Plan
