@@ -179,4 +179,39 @@ describe('FilesService', () => {
       await expect(service.checkAvatarSize('avatars/user-abc/file.png')).resolves.toBeUndefined();
     });
   });
+
+  // ── resolveAvatarUrl — presigned GET for avatar (wave-38, task 84e09891) ──
+
+  describe('resolveAvatarUrl — storage env UNSET', () => {
+    it('returns null when storage env is unset', async () => {
+      const service = new FilesService();
+      const result = await service.resolveAvatarUrl('avatars/user-abc/file.png');
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('resolveAvatarUrl — storage env SET', () => {
+    beforeEach(() => {
+      setStorageEnv();
+    });
+
+    it('returns a presigned GET URL when storage is configured', async () => {
+      const { getSignedUrl } = await import('@aws-sdk/s3-request-presigner');
+      // biome-ignore lint/suspicious/noExplicitAny: mock return
+      (getSignedUrl as any).mockResolvedValue('https://signed.example.com/avatar-get-url');
+
+      const service = new FilesService();
+      const result = await service.resolveAvatarUrl('avatars/user-abc/file.png');
+
+      expect(result).toBe('https://signed.example.com/avatar-get-url');
+      expect(getSignedUrl).toHaveBeenCalledOnce();
+    });
+
+    it('returns null when STORAGE_BUCKET_NAME is missing even if S3 creds are set', async () => {
+      Reflect.deleteProperty(process.env, 'STORAGE_BUCKET_NAME');
+      const service = new FilesService();
+      const result = await service.resolveAvatarUrl('avatars/user-abc/file.png');
+      expect(result).toBeNull();
+    });
+  });
 });
