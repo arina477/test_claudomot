@@ -66,6 +66,9 @@ All notable changes to StudyHall are documented here. Format follows
 - In-app notifications: a header bell with a panel that collects your @mentions and assignment-due reminders in one place, so a ping is never lost just because you missed the moment it happened. (#51)
 - Notifications persist across devices and sessions — sign in anywhere and your unread mentions and reminders are waiting — with the bell counting only what's genuinely unread. (#51)
 - Mark a single notification read, or clear them all at once; you only ever see your own, enforced server-side so no one can read or clear anyone else's. (#51)
+- File storage is now live: message attachments upload, store, and render end-to-end in production, so images and files you attach in a channel are delivered reliably. (#52)
+- Avatar image storage is now wired end-to-end on the backend — a profile picture is stored and served through short-lived private links — with the in-app upload entry point tracked as a follow-up before students can set an avatar from the app. (#52)
+- Stored files live in a private bucket and are served through expiring signed links, and the upload endpoints are rate-limited, so attachments stay private and the storage layer is protected from abuse. (#52)
 
 ### Changed
 
