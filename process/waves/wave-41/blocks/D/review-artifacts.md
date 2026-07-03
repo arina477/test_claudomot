@@ -4,7 +4,7 @@
 | Stage | Deliverable file(s) | Status | Notes |
 |---|---|---|---|
 | D-1 | stages/D-1-brief/member-moderation-brief.md | done | 1 gap (member-moderation UI); role-toggle+delete-any trivial pattern-extensions |
-| D-2 | stages/D-2-variants/member-moderation-{variants,iterate}.md | pending | /aidesigner variants |
+| D-2 | stages/D-2-variants/member-moderation-{variants,iterate}.md | done | staging/member-moderation.html (iter 0); checkpoint skipped-automatic |
 | D-3 | stages/D-3-review-and-adopt/member-moderation-* | pending | dual-reviewer + head-designer gate |
 ## Block-specific context
 - **Wave topic:** educator light-moderation UI

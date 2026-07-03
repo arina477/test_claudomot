@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en" class="antialiased dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyHall — Educator Moderation UI</title>
+    
+    <!-- 
+    aesthetic_dna: {"palette": "zinc-emerald-amber-red", "radius": "md-lg", "vibe": "academic-calm-credible"}
+    ui_paradigm: "multi-pane-workspace (4-column spatial split with fixed utility overlays)"
+    -->
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Geist', 'system-ui', 'sans-serif'] },
+                    colors: {
+                        study: {
+                            950: '#0a0a0b',
+                            900: '#121214',
+                            800: '#1c1c1f',
+                            700: '#27272a',
+                            600: '#3f3f46',
+                            500: '#52525b',
+                        },
+                        accent: {
+                            emerald: '#10b981',
+                            amber: '#f59e0b',
+                        },
+                        danger: {
+                            DEFAULT: '#ef4444',
+                            text: '#f87171' // Enhanced contrast for tinted backgrounds
+                        }
+                    },
+                    boxShadow: {
+                        'sm-dark': '0 1px 2px rgba(0,0,0,0.4)',
+                        'pop': '0 8px 24px rgba(0,0,0,0.5)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* CSS Variables to match Design System exact specifications */
+        :root {
+            --border-hairline: rgba(255,255,255,0.06);
+            --border-hover: rgba(255,255,255,0.10);
+            --text-primary: rgba(255,255,255,0.92);
+            --text-secondary: rgba(255,255,255,0.60);
+            --text-muted: rgba(255,255,255,0.40);
+        }
+
+        body {
+            color: var(--text-primary);
+            background-color: #0a0a0b; 
+        }
+
+        /* Typography Scoping */
+        .text-secondary { color: var(--text-secondary); }
+        .text-muted { color: var(--text-muted); }
+
+        /* Minimal dark scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+
+        /* Base Component Primitives */
+        .hairline-border { border: 1px solid var(--border-hairline); }
+        .hairline-border-b { border-bottom: 1px solid var(--border-hairline); }
+        .hairline-border-r { border-right: 1px solid var(--border-hairline); }
+        
+        .glow-focus-ring:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(16,185,129,0.4);
+        }
+
+        /* Member Row Specifics */
+        .member-row {
+            transition: background-color 150ms ease;
+        }
+        .member-row .row-actions {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 150ms ease;
+        }
+        .member-row:hover .row-actions,
+        .member-row:focus-within .row-actions,
+        .member-row[data-menu-open="true"] .row-actions {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        /* Muted State Styles */
+        .member-row.is-muted .member-name {
+            color: var(--text-muted);
+        }
+        .member-row.is-muted .avatar-img {
+            opacity: 0.6;
+            filter: grayscale(40%);
+        }
+
+        /* Popover Animation Setup */
+        .popover-enter {
+            animation: popover-in 200ms cubic-bezier(0.175, 0.885, 0.32, 1.1) forwards;
+            transform-origin: top right;
+        }
+        .popover-exit {
+            animation: popover-out 150ms ease-in forwards;
+            transform-origin: top right;
+        }
+
+        @keyframes popover-in {
+            from { opacity: 0; transform: scale(0.96) translateY(-4px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes popover-out {
+            from { opacity: 1; transform: scale(1) translateY(0); }
+            to { opacity: 0; transform: scale(0.98) translateY(-2px); }
+        }
+
+        /* Spring-physics spinner for inline loading States */
+        @keyframes chill-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .animate-chill-spin {
+            animation: chill-spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+
+        /* Viewport Structural Management */
+        .layout-grid {
+            display: grid;
+            grid-template-columns: 72px 260px minmax(0, 1fr) 280px;
+            height: 100vh; /* Using absolute viewport to prevent jump */
+            height: 100dvh;
+        }
+
+        @media (max-width: 1024px) {
+            .layout-grid { 
+                grid-template-columns: 72px 260px minmax(0, 1fr); 
+            }
+            .member-panel { 
+                display: none; /* Brief constraint: no mobile moderation layout required */
+            }
+        }
+    </style>
+</head>
+<body class="overflow-hidden select-none">
+
+    <div class="layout-grid w-full">
+        
+        <!-- PANE 1: Minimal Server Rail (Context) -->
+        <nav class="bg-study-950 hairline-border-r flex flex-col items-center py-4 gap-3 z-30 relative" aria-label="Servers">
+            <button class="w-11 h-11 rounded-[12px] bg-study-800 flex items-center justify-center hover:bg-study-700 transition-colors glow-focus-ring relative group" aria-label="CS-201 Workspace">
+                <span class="absolute left-[-20px] top-1/2 -translate-y-1/2 w-1 h-5 bg-accent-emerald rounded-r-full transition-all group-hover:h-8"></span>
+                <span class="text-lg font-semibold tracking-tighter">CS</span>
+            </button>
+            <div class="w-8 h-px bg-study-800/50 my-2"></div>
+            <button class="w-11 h-11 rounded-[22px] hover:rounded-[12px] bg-study-900 border border-study-800 flex items-center justify-center text-secondary hover:text-primary transition-all glow-focus-ring duration-300">
+                <i class="ph ph-plus text-xl"></i>
+            </button>
+        </nav>
+
+        <!-- PANE 2: Channel Sidebar (Context) -->
+        <aside class="bg-study-900 hairline-border-r flex flex-col z-20">
+            <header class="h-14 hairline-border-b flex items-center px-4 shadow-sm-dark z-10 shrink-0">
+                <h1 class="font-semibold text-[15px] tracking-tight truncate">CS-201: Data Structures</h1>
+                <i class="ph ph-caret-down ml-auto text-secondary text-sm"></i>
+            </header>
+            <div class="flex-1 overflow-y-auto px-2 py-4 space-y-6">
+                <!-- Section -->
+                <div>
+                    <h2 class="px-2 text-[11px] font-semibold uppercase tracking-wider text-muted mb-1">Weekly Modules</h2>
+                    <div class="space-y-0.5">
+                        <button class="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-study-800 text-sm text-secondary hover:text-primary transition-colors glow-focus-ring group">
+                            <i class="ph ph-hash text-muted group-hover:text-secondary"></i>
+                            <span class="truncate">announcements</span>
+                        </button>
+                        <button class="w-full flex items-center gap-2 px-2 py-1.5 rounded-md bg-study-700/50 text-accent-emerald text-sm transition-colors glow-focus-ring group" aria-current="page">
+                            <i class="ph ph-hash"></i>
+                            <span class="font-medium truncate">questions</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- PANE 3: Main Canvas (Context) -->
+        <main class="bg-study-800 flex flex-col relative z-10">
+            <header class="h-14 hairline-border-b bg-study-800/90 backdrop-blur-md flex items-center px-6 shrink-0 relative z-10">
+                <div class="flex items-center gap-3">
+                    <i class="ph ph-hash text-xl text-muted"></i>
+                    <h2 class="font-semibold text-base">questions</h2>
+                </div>
+                <div class="ml-auto flex items-center gap-4">
+                    <div class="w-[200px] h-7 rounded-md bg-study-900 hairline-border flex items-center px-2.5 gap-2">
+                        <i class="ph ph-magnifying-glass text-secondary text-sm"></i>
+                        <span class="text-xs text-muted">Search channel</span>
+                    </div>
+                </div>
+            </header>
+            
+            <div class="flex-1 p-6 flex flex-col justify-end">
+                <div class="space-y-1 mb-8 opacity-40 mix-blend-screen pointer-events-none user-select-none">
+                    <!-- Faux content to create depth -->
+                    <div class="flex gap-4 p-2">
+                        <div class="w-10 h-10 rounded-full bg-study-700 shrink-0"></div>
+                        <div class="space-y-2 flex-1">
+                            <div class="flex items-baseline gap-2">
+                                <div class="w-24 h-4 bg-study-700 rounded"></div>
+                                <div class="w-12 h-3 bg-study-700/50 rounded"></div>
+                            </div>
+                            <div class="w-3/4 h-3 bg-study-700 rounded"></div>
+                            <div class="w-1/2 h-3 bg-study-700 rounded"></div>
+                        </div>
+                    </div>
+                    <div class="flex gap-4 p-2 mt-4">
+                        <div class="w-10 h-10 rounded-full bg-study-700 shrink-0"></div>
+                        <div class="space-y-2 flex-1">
+                            <div class="flex items-baseline gap-2">
+                                <div class="w-32 h-4 bg-study-700 rounded"></div>
+                                <div class="w-12 h-3 bg-study-700/50 rounded"></div>
+                            </div>
+                            <div class="w-full h-3 bg-study-700 rounded"></div>
+                            <div class="w-5/6 h-3 bg-study-700 rounded"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Composer Area -->
+                <div class="bg-study-900 rounded-lg hairline-border p-3 group focus-within:ring-1 focus-within:ring-accent-emerald focus-within:border-transparent transition-all shadow-sm-dark">
+                    <div class="flex w-full items-start gap-3">
+                        <button class="text-secondary hover:text-primary transition-colors mt-0.5"><i class="ph ph-plus-circle text-[22px]"></i></button>
+                        <textarea class="bg-transparent w-full resize-none outline-none text-sm min-h-[40px] text-primary placeholder:text-muted py-1" rows="1" placeholder="Message #questions..." readonly></textarea>
+                        <div class="flex gap-2">
+                            <button class="text-secondary hover:text-primary transition-colors p-1"><i class="ph ph-gif text-xl"></i></button>
+                            <button class="text-secondary hover:text-primary transition-colors p-1"><i class="ph ph-smiley text-xl"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- PANE 4: THE TARGET - Member Roster Panel -->
+        <aside class="member-panel bg-study-900 hairline-border-l flex flex-col z-20">
+            <header class="h-14 hairline-border-b flex items-center px-4 shrink-0 shadow-sm-dark z-10">
+                <h3 class="font-medium text-sm text-secondary">Roster <span class="text-xs text-muted ml-1">42</span></h3>
+            </header>
+            
+            <div class="flex-1 overflow-y-auto p-4 space-y-6" id="roster-container">
+                
+                <!-- Role Group: Leadership -->
+                <div>
+                    <h4 class="text-[11px] font-semibold uppercase tracking-wider text-muted mb-2 px-1">Educators — 2</h4>
+                    <div class="space-y-0.5">
+                        
+                        <!-- Member Item: Admin/Higher Rank (Cannot touch) -->
+                        <div class="member-row group flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-study-800 relative" 
+                             data-member-id="prof" 
+                             data-rank="100" 
+                             data-name="Prof. Aris" 
+                             data-is-muted="false">
+                            <div class="flex items-center gap-3 overflow-hidden cursor-pointer">
+                                <div class="relative mt-0.5 shrink-0">
+                                    <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=64&h=64&q=80" alt="Prof. Aris" class="w-8 h-8 rounded-full avatar-img object-cover ring-1 ring-white/10">
+                                    <div class="absolute -bottom-0.5 -right-0.5 w-[11px] h-[11px] bg-accent-emerald rounded-full border-[2.5px] border-study-900 group-hover:border-study-800 transition-colors"></div>
+                                </div>
+                                <div class="flex flex-col min-w-0">
+                                    <span class="text-[14px] font-medium leading-snug truncate member-name text-accent-emerald">Prof. Aris</span>
+                                    <span class="text-[11px] text-muted truncate">Course Director</span>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center gap-1.5 pl-2 shrink-0">
+                                <!-- Status slot (empty) -->
+                                <div class="status-slot flex items-center justify-center w-5"></div>
+                                <!-- Kebab Trigger -->
+                                <button class="row-actions text-secondary hover:text-primary p-1 rounded hover:bg-study-700 glow-focus-ring mod-trigger" aria-label="Moderate Prof. Aris" aria-haspopup="menu" aria-expanded="false">
+                                    <i class="ph ph-dots-three text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Role Group: Students -->
+                <div>
+                    <h4 class="text-[11px] font-semibold uppercase tracking-wider text-muted mb-2 px-1">Students — Online</h4>
+                    <div class="space-y-0.5">
+                        
+                        <!-- Member Item: Normal Student (Can be moderated) -->
+                        <div class="member-row group flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-study-800 relative" 
+                             data-member-id="stu_1" 
+                             data-rank="10" 
+                             data-name="Elena Rostova" 
+                             data-is-muted="false">
+                            <div class="flex items-center gap-3 overflow-hidden cursor-pointer">
+                                <div class="relative mt-0.5 shrink-0">
+                                    <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=facearea&facepad=2&w=64&h=64&q=80" alt="Elena Rostova" class="w-8 h-8 rounded-full avatar-img object-cover ring-1 ring-white/10">
+                                    <div class="absolute -bottom-0.5 -right-0.5 w-[11px] h-[11px] bg-accent-emerald rounded-full border-[2.5px] border-study-900 group-hover:border-study-800 transition-colors"></div>
+                                </div>
+                                <div class="flex flex-col min-w-0">
+                                    <span class="text-[14px] font-medium leading-snug truncate member-name">Elena Rostova</span>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center gap-1.5 pl-2 shrink-0">
+                                <div class="status-slot flex items-center justify-center w-5">
+                                    <!-- Indicator injects here via JS if muted -->
+                                </div>
+                                <button class="row-actions text-secondary hover:text-primary p-1 rounded hover:bg-study-700 glow-focus-ring mod-trigger" aria-label="Moderate Elena Rostova" aria-haspopup="menu" aria-expanded="false">
+                                    <i class="ph ph-dots-three text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Member Item: Already Muted Student -->
+                        <div class="member-row is-muted group flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-study-800 relative" 
+                             data-member-id="stu_2" 
+                             data-rank="10" 
+                             data-name="Jax_99" 
+                             data-is-muted="true"
+                             data-mute-expiry="1h">
+                            <div class="flex items-center gap-3 overflow-hidden cursor-pointer">
+                                <div class="relative mt-0.5 shrink-0">
+                                    <img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=facearea&facepad=2&w=64&h=64&q=80" alt="Jax_99" class="w-8 h-8 rounded-full avatar-img object-cover ring-1 ring-white/10">
+                                    <div class="absolute -bottom-0.5 -right-0.5 w-[11px] h-[11px] bg-study-500 rounded-full border-[2.5px] border-study-900 group-hover:border-study-800 transition-colors"></div>
+                                </div>
+                                <div class="flex flex-col min-w-0">
+                                    <span class="text-[14px] font-medium leading-snug truncate member-name">Jax_99</span>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center gap-1.5 pl-2 shrink-0">
+                                <div class="status-slot flex items-center justify-center w-5">
+                                    <div class="text-accent-amber" aria-label="Timed out" title="Timed out">
+                                        <i class="ph-fill ph-speaker-x text-[15px] opacity-90 drop-shadow-[0_0_8px_rgba(245,158,11,0.3)]"></i>
+                                    </div>
+                                </div>
+                                <button class="row-actions text-secondary hover:text-primary p-1 rounded hover:bg-study-700 glow-focus-ring mod-trigger" aria-label="Moderate Jax_99" aria-haspopup="menu" aria-expanded="false">
+                                    <i class="ph ph-dots-three text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                         <!-- Member Item: Normal Student -->
+                         <div class="member-row group flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-study-800 relative" 
+                         data-member-id="stu_3" 
+                         data-rank="10" 
+                         data-name="Sam Chen" 
+                         data-is-muted="false">
+                        <div class="flex items-center gap-3 overflow-hidden cursor-pointer">
+                            <div class="relative mt-0.5 shrink-0">
+                                <img src="https://images.unsplash.com/photo-1543610892-0b1f7e6d8c1c?auto=format&fit=facearea&facepad=2&w=64&h=64&q=80" alt="Sam Chen" class="w-8 h-8 rounded-full avatar-img object-cover ring-1 ring-white/10">
+                                <div class="absolute -bottom-0.5 -right-0.5 w-[11px] h-[11px] bg-accent-amber rounded-full border-[2.5px] border-study-900 group-hover:border-study-800 transition-colors"></div>
+                            </div>
+                            <div class="flex flex-col min-w-0">
+                                <span class="text-[14px] font-medium leading-snug truncate member-name">Sam Chen</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center gap-1.5 pl-2 shrink-0">
+                            <div class="status-slot flex items-center justify-center w-5"></div>
+                            <button class="row-actions text-secondary hover:text-primary p-1 rounded hover:bg-study-700 glow-focus-ring mod-trigger" aria-label="Moderate Sam Chen" aria-haspopup="menu" aria-expanded="false">
+                                <i class="ph ph-dots-three text-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    </div>
+                </div>
+
+            </div>
+            
+            <!-- Contextual Footer (Educational note for the mockup viewer) -->
+            <div class="p-4 hairline-border-t bg-study-900/50 mt-auto shrink-0">
+                <div class="rounded-md bg-study-800/80 p-3 hairline-border flex items-start gap-2">
+                    <i class="ph-fill ph-info text-accent-emerald mt-0.5"></i>
+                    <p class="text-[12px] text-secondary leading-relaxed">
+                        Viewer holds <code class="bg-study-950 px-1 py-0.5 rounded text-[10px] ml-0.5 text-primary">moderate_members</code>. Hover rows to access controls via the kebeab button.
+                    </p>
+                </div>
+            </div>
+
+        </aside>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MACRO-ARCHITECTURE: The Moderation Popover -->
+    <!-- ========================================== -->
+    <!-- Single DOM instance globally positioned via JS -->
+    <div id="unified-mod-popover" 
+         class="fixed hidden z-[100] w-[200px] bg-study-700 rounded-md shadow-pop ring-1 ring-white/10 isolate"
+         role="menu" 
+         aria-orientation="vertical"
+         tabindex="-1">
+        
+        <!-- Inner wrapper for transition handling -->
+        <div id="popover-content-wrapper" class="relative overflow-hidden flex flex-col p-1">
+            
+            <!-- VIEW: Main Moderation Menu (Context) -->
+            <div id="view-main" class="flex flex-col w-full origin-top">
+                <div class="px-2 py-1.5 mb-1 hairline-border-b text-xs font-semibold text-muted tracking-tight select-none">
+                    Moderate <span id="target-member-name" class="text-primary font-medium ml-1"></span>
+                </div>
+                
+                <!-- Action: Time Out (Destructive, Danger) -->
+                <button type="button" id="action-init-timeout" class="group flex items-center justify-between w-full px-2 py-1.5 text-[13px] rounded hover:bg-danger/10 text-danger-text text-left transition-colors glow-focus-ring" role="menuitem">
+                    <span class="flex items-center gap-2 font-medium">
+                        <i class="ph ph-speaker-x text-base opacity-80 group-hover:opacity-100"></i>
+                        Time out member
+                    </span>
+                    <i class="ph ph-caret-right text-xs opacity-50 group-hover:opacity-100 group-hover:translate-x-[2px] transition-transform"></i>
+                </button>
+
+                <!-- Action: Remove Timeout (Contextual, visible if muted) -->
+                <button type="button" id="action-remove-timeout" class="hidden group flex flex-col w-full px-2 py-1.5 text-[13px] rounded hover:bg-study-600 text-left transition-colors glow-focus-ring" role="menuitem">
+                    <span class="flex items-center gap-2 font-medium text-primary">
+                        <i class="ph ph-speaker-high text-base text-secondary group-hover:text-primary transition-colors"></i>
+                        Remove timeout
+                    </span>
+                </button>
+            </div>
+
+            <!-- VIEW: Duration Selector (Bounded strict choices) -->
+            <div id="view-duration" class="hidden flex flex-col w-full h-full absolute inset-0 bg-study-700 z-10 p-1">
+                <div class="flex items-center gap-2 px-1 py-1 mb-1 hairline-border-b">
+                    <button type="button" id="action-back-view" class="p-1 rounded hover:bg-study-600 text-secondary hover:text-primary transition-colors focus:ring-1 focus:ring-accent-emerald focus:outline-none" aria-label="Back">
+                        <i class="ph ph-arrow-left text-sm"></i>
+                    </button>
+                    <span class="text-xs font-semibold text-muted tracking-tight select-none">Duration</span>
+                </div>
+                
+                <div class="flex flex-col space-y-0.5 mt-1">
+                    <button type="button" class="duration-opt flex items-center justify-between w-full px-2 py-1.5 text-[13px] rounded hover:bg-study-600 text-primary text-left transition-colors glow-focus-ring" data-mins="5" role="menuitem">
+                        <span>5 minutes</span>
+                        <div class="status-indicator"></div>
+                    </button>
+                    <button type="button" class="duration-opt flex items-center justify-between w-full px-2 py-1.5 text-[13px] rounded hover:bg-study-600 text-primary text-left transition-colors glow-focus-ring" data-mins="60" role="menuitem">
+                        <span>1 hour</span>
+                        <div class="status-indicator"></div>
+                    </button>
+                    <button type="button" class="duration-opt flex items-center justify-between w-full px-2 py-1.5 text-[13px] rounded hover:bg-study-600 text-primary text-left transition-colors glow-focus-ring" data-mins="1440" role="menuitem">
+                        <span>1 day</span>
+                        <div class="status-indicator"></div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- VIEW: Inline Error State (Calm, non-disruptive constraint handling) -->
+            <div id="view-error" class="hidden flex flex-col w-full p-2 h-full absolute inset-0 bg-study-700 z-20 items-center justify-center text-center">
+                <div class="w-8 h-8 rounded-full bg-danger/10 flex items-center justify-center mb-2">
+                    <i class="ph-fill ph-warning-circle text-danger text-lg"></i>
+                </div>
+                <p class="text-[12px] leading-tight text-primary font-medium mb-1 drop-shadow-sm">Cannot modify member</p>
+                <p class="text-[11px] leading-tight text-danger-text px-2">Their server role ranks higher than yours.</p>
+                <button type="button" id="action-dismiss-error" class="mt-3 text-[11px] font-semibold text-muted hover:text-primary transition-colors px-3 py-1 rounded bg-study-600/50 hover:bg-study-600 glow-focus-ring">Dismiss</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- JavaScript - Micro-Interactions & Popover Architecture Engine -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // Core DOM Elements
+            const popover = document.getElementById('unified-mod-popover');
+            const viewMain = document.getElementById('view-main');
+            const viewDuration = document.getElementById('view-duration');
+            const viewError = document.getElementById('view-error');
+            
+            // Action Buttons
+            const btnInitTimeout = document.getElementById('action-init-timeout');
+            const btnRemoveTimeout = document.getElementById('action-remove-timeout');
+            const btnBack = document.getElementById('action-back-view');
+            const btnDismissError = document.getElementById('action-dismiss-error');
+            const durationButtons = document.querySelectorAll('.duration-opt');
+            
+            // Labels
+            const targetNameLabel = document.getElementById('target-member-name');
+
+            // Virtual State
+            let state = {
+                isOpen: false,
+                activeTriggerElement: null,
+                activeRowData: null,
+                viewerRank: 50 // Base hypothetical rank for the current user
+            };
+
+            // Loading SVG Template
+            const loadingHtml = `<i class="ph ph-spinner-gap text-current text-sm animate-chill-spin"></i>`;
+
+            // === CORE POPOVER LOGIC ===
+
+            const openPopover = (triggerBtn, rowElement) => {
+                if (state.isOpen) closePopover(); // close existing
+                
+                state.activeTriggerElement = triggerBtn;
+                triggerBtn.setAttribute('aria-expanded', 'true');
+                rowElement.setAttribute('data-menu-open', 'true');
+                
+                // Construct Data Context
+                state.activeRowData = {
+                    id: rowElement.getAttribute('data-member-id'),
+                    name: rowElement.getAttribute('data-name'),
+                    rank: parseInt(rowElement.getAttribute('data-rank'), 10),
+                    isMuted: rowElement.getAttribute('data-is-muted') === 'true',
+                    el: rowElement
+                };
+
+                // Hydrate UI based on context
+                targetNameLabel.textContent = state.activeRowData.name;
+                resetViews();
+
+                // Conditional UI Injection
+                if (state.activeRowData.isMuted) {
+                    btnInitTimeout.classList.add('hidden');
+                    btnRemoveTimeout.classList.remove('hidden');
+                } else {
+                    btnInitTimeout.classList.remove('hidden');
+                    btnRemoveTimeout.classList.add('hidden');
+                }
+
+                // Positioning Physics
+                const rect = triggerBtn.getBoundingClientRect();
+                const popWidth = 200; 
+                let top = rect.bottom + 4;
+                let left = rect.right - popWidth; // Right align to the kebab
+
+                // Basic bounds checking (flip up if too close to bottom)
+                if (top + 160 > window.innerHeight) {
+                    top = rect.top - 4 - 160; // 160 approximate height
+                }
+
+                popover.style.top = `${top}px`;
+                popover.style.left = `${left}px`;
+                
+                // Reveal
+                popover.classList.remove('hidden', 'popover-exit');
+                popover.classList.add('popover-enter');
+                state.isOpen = true;
+
+                // Focus management (A11y)
+                setTimeout(() => {
+                    if(!state.activeRowData.isMuted) {
+                        btnInitTimeout.focus();
+                    } else {
+                        btnRemoveTimeout.focus();
+                    }
+                }, 50);
+            };
+
+            const closePopover = () => {
+                if (!state.isOpen) return;
+                
+                popover.classList.remove('popover-enter');
+                popover.classList.add('popover-exit');
+                
+                if (state.activeTriggerElement) {
+                    state.activeTriggerElement.setAttribute('aria-expanded', 'false');
+                    state.activeRowData.el.setAttribute('data-menu-open', 'false');
+                    // Return focus on close
+                    state.activeTriggerElement.focus();
+                }
+
+                setTimeout(() => {
+                    popover.classList.add('hidden');
+                    state.isOpen = false;
+                    state.activeTriggerElement = null;
+                }, 150); // wait for animation
+            };
+
+            // === VIEW ROUTING ===
+            
+            const resetViews = () => {
+                viewMain.classList.remove('hidden');
+                viewDuration.classList.add('hidden');
+                viewError.classList.add('hidden');
+            };
+
+            const switchView = (targetViewElement) => {
+                // simple display toggle mapping
+                [viewMain, viewDuration, viewError].forEach(v => {
+                    if (v === targetViewElement) {
+                        v.classList.remove('hidden');
+                        // Micro-entry animation
+                        v.animate([
+                            { opacity: 0, transform: 'scale(0.98)' },
+                            { opacity: 1, transform: 'scale(1)' }
+                        ], { duration: 150, easing: 'ease-out' });
+                    } else {
+                        v.classList.add('hidden');
+                    }
+                });
+            };
+
+            // === ACTION HANDLERS (The "Simulation") ===
+
+            btnInitTimeout.addEventListener('click', (e) => {
+                e.preventDefault();
+                // Check permissions payload
+                if (state.activeRowData.rank >= state.viewerRank) {
+                    switchView(viewError);
+                    btnDismissError.focus();
+                } else {
+                    switchView(viewDuration);
+                    durationButtons[0].focus();
+                }
+            });
+
+            btnRemoveTimeout.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                // Loading simulation on the button itself
+                const originalHtml = btnRemoveTimeout.innerHTML;
+                btnRemoveTimeout.innerHTML = `<span class="flex items-center gap-2 font-medium text-primary"><div class="w-4 h-4 flex items-center justify-center">${loadingHtml}</div> Lifting timeout...</span>`;
+                btnRemoveTimeout.style.pointerEvents = 'none';
+
+                setTimeout(() => {
+                    // Update Row DOM
+                    const row = state.activeRowData.el;
+                    row.classList.remove('is-muted');
+                    row.setAttribute('data-is-muted', 'false');
+                    
+                    const statusSlot = row.querySelector('.status-slot');
+                    statusSlot.innerHTML = ''; // clear amber icon
+
+                    // Reset menu & close
+                    btnRemoveTimeout.innerHTML = originalHtml;
+                    btnRemoveTimeout.style.pointerEvents = 'auto';
+                    closePopover();
+                }, 750);
+            });
+
+            durationButtons.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    
+                    const mins = btn.getAttribute('data-mins');
+                    const indicator = btn.querySelector('.status-indicator');
+                    
+                    // Loading State
+                    indicator.innerHTML = loadingHtml;
+                    durationButtons.forEach(b => b.style.pointerEvents = 'none');
+
+                    setTimeout(() => {
+                        // Apply Mutation to Row
+                        const row = state.activeRowData.el;
+                        row.classList.add('is-muted');
+                        row.setAttribute('data-is-muted', 'true');
+                        
+                        const statusSlot = row.querySelector('.status-slot');
+                        // Inflate Amber Glyph
+                        statusSlot.innerHTML = `
+                            <div class="text-accent-amber" aria-label="Timed out" title="Timed out">
+                                <i class="ph-fill ph-speaker-x text-[15px] opacity-0 drop-shadow-[0_0_8px_rgba(245,158,11,0.3)] transition-opacity duration-300" id="anim-icon-${state.activeRowData.id}"></i>
+                            </div>
+                        `;
+                        
+                        // Force reflow and animate in the icon
+                        requestAnimationFrame(() => {
+                            const icon = document.getElementById(`anim-icon-${state.activeRowData.id}`);
+                            if(icon) icon.style.opacity = '0.9';
+                        });
+
+                        // Reset
+                        indicator.innerHTML = '';
+                        durationButtons.forEach(b => b.style.pointerEvents = 'auto');
+                        closePopover();
+                    }, 800);
+
+                });
+            });
+
+            // Utilities
+            btnBack.addEventListener('click', (e) => {
+                e.preventDefault();
+                switchView(viewMain);
+                btnInitTimeout.focus();
+            });
+
+            btnDismissError.addEventListener('click', (e) => {
+                e.preventDefault();
+                closePopover();
+            });
+
+            // === EVENT BINDING ===
+
+            // Delegate clicking to the container so we don't attach 100 listeners
+            document.getElementById('roster-container').addEventListener('click', (e) => {
+                const trigger = e.target.closest('.mod-trigger');
+                if (trigger) {
+                    e.stopPropagation(); // prevent window click from firing immediately
+                    const row = trigger.closest('.member-row');
+                    
+                    if (state.isOpen && state.activeTriggerElement === trigger) {
+                        closePopover();
+                    } else {
+                        openPopover(trigger, row);
+                    }
+                }
+            });
+
+            // Global Dismissals
+            window.addEventListener('click', (e) => {
+                if (state.isOpen && !popover.contains(e.target)) {
+                    closePopover();
+                }
+            });
+
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && state.isOpen) {
+                    closePopover();
+                }
+            });
+            
+            // Prevent scrolling on the document when over popover (native software feel)
+            popover.addEventListener('wheel', (e) => e.stopPropagation(), {passive: true});
+        });
+    </script>
+</body>
+</html>
