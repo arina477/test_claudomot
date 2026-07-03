@@ -37,6 +37,7 @@ export const roles = pgTable('roles', {
   manage_channels: boolean('manage_channels').default(false).notNull(),
   manage_members: boolean('manage_members').default(false).notNull(),
   manage_assignments: boolean('manage_assignments').default(false).notNull(),
+  moderate_members: boolean('moderate_members').default(false).notNull(),
   is_default: boolean('is_default').default(false).notNull(),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
@@ -53,6 +54,8 @@ export const server_members = pgTable(
       .references(() => users.id),
     role_id: uuid('role_id').references(() => roles.id, { onDelete: 'set null' }),
     joined_at: timestamp('joined_at', { withTimezone: true }).defaultNow().notNull(),
+    // wave-41: member timeout — NULL = not muted; future timestamp = muted until that time (time-based expiry at send-gate)
+    muted_until: timestamp('muted_until', { withTimezone: true }),
   },
   (table) => [
     unique().on(table.server_id, table.user_id),
