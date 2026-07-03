@@ -243,13 +243,15 @@ describe('MessagesService.createMessage — mentions', () => {
     mockSelect.mockImplementation(() => {
       selectCallCount++;
       // 1: channel exists (with server_id)
-      if (selectCallCount === 1) return makeSelectChain([mockChannel]);
-      // 2: fetch inserted message
-      if (selectCallCount === 2) return makeSelectChain([mockMessage]);
-      // 3: resolveMentions → server_members JOIN users → alice is a member
-      if (selectCallCount === 3) return makeSelectChain([{ user_id: ALICE_ID }]);
-      // 4: fetchMentionRows → message_mentions JOIN users
-      if (selectCallCount === 4) return makeSelectChain([mockMentionRowAlice]);
+      if (selectCallCount === 1) return makeSelectChain([{ ...mockChannel, name: 'general' }]);
+      // 2: muted_until check (wave-41 send-gate) — [] = not muted, proceed
+      if (selectCallCount === 2) return makeSelectChain([]);
+      // 3: fetch inserted message
+      if (selectCallCount === 3) return makeSelectChain([mockMessage]);
+      // 4: resolveMentions → server_members JOIN users → alice is a member
+      if (selectCallCount === 4) return makeSelectChain([{ user_id: ALICE_ID }]);
+      // 5: fetchMentionRows → message_mentions JOIN users
+      if (selectCallCount === 5) return makeSelectChain([mockMentionRowAlice]);
       return makeSelectChain([]);
     });
     mockInsert.mockReturnValue(makeInsertChain());
@@ -268,13 +270,15 @@ describe('MessagesService.createMessage — mentions', () => {
     let selectCallCount = 0;
     mockSelect.mockImplementation(() => {
       selectCallCount++;
-      if (selectCallCount === 1) return makeSelectChain([mockChannel]);
-      if (selectCallCount === 2)
+      if (selectCallCount === 1) return makeSelectChain([{ ...mockChannel, name: 'general' }]);
+      // 2: muted_until check
+      if (selectCallCount === 2) return makeSelectChain([]);
+      if (selectCallCount === 3)
         return makeSelectChain([{ ...mockMessage, content: 'Hello @nonmember' }]);
       // resolveMentions → empty (no server member with that username)
-      if (selectCallCount === 3) return makeSelectChain([]);
-      // fetchMentionRows → empty (no rows persisted)
       if (selectCallCount === 4) return makeSelectChain([]);
+      // fetchMentionRows → empty (no rows persisted)
+      if (selectCallCount === 5) return makeSelectChain([]);
       return makeSelectChain([]);
     });
     mockInsert.mockReturnValue(makeInsertChain());
@@ -300,15 +304,17 @@ describe('MessagesService.createMessage — mentions', () => {
     let selectCallCount = 0;
     mockSelect.mockImplementation(() => {
       selectCallCount++;
-      if (selectCallCount === 1) return makeSelectChain([mockChannel]);
-      if (selectCallCount === 2)
+      if (selectCallCount === 1) return makeSelectChain([{ ...mockChannel, name: 'general' }]);
+      // 2: muted_until check
+      if (selectCallCount === 2) return makeSelectChain([]);
+      if (selectCallCount === 3)
         return makeSelectChain([
           { ...mockMessage, author_id: AUTHOR_ID, content: `Hey @${AUTHOR_USERNAME}` },
         ]);
       // resolveMentions → author is a server member
-      if (selectCallCount === 3) return makeSelectChain([{ user_id: AUTHOR_ID }]);
+      if (selectCallCount === 4) return makeSelectChain([{ user_id: AUTHOR_ID }]);
       // fetchMentionRows
-      if (selectCallCount === 4) return makeSelectChain([mockMentionRowSelf]);
+      if (selectCallCount === 5) return makeSelectChain([mockMentionRowSelf]);
       return makeSelectChain([]);
     });
     mockInsert.mockReturnValue(makeInsertChain());
@@ -326,12 +332,14 @@ describe('MessagesService.createMessage — mentions', () => {
     let selectCallCount = 0;
     mockSelect.mockImplementation(() => {
       selectCallCount++;
-      if (selectCallCount === 1) return makeSelectChain([mockChannel]);
-      if (selectCallCount === 2)
+      if (selectCallCount === 1) return makeSelectChain([{ ...mockChannel, name: 'general' }]);
+      // 2: muted_until check
+      if (selectCallCount === 2) return makeSelectChain([]);
+      if (selectCallCount === 3)
         return makeSelectChain([{ ...mockMessage, content: '@alice @alice' }]);
       // parseMentions deduplicates → only alice resolved once
-      if (selectCallCount === 3) return makeSelectChain([{ user_id: ALICE_ID }]);
-      if (selectCallCount === 4) return makeSelectChain([mockMentionRowAlice]);
+      if (selectCallCount === 4) return makeSelectChain([{ user_id: ALICE_ID }]);
+      if (selectCallCount === 5) return makeSelectChain([mockMentionRowAlice]);
       return makeSelectChain([]);
     });
     mockInsert.mockReturnValue(makeInsertChain());

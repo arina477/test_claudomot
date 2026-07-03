@@ -233,10 +233,12 @@ describe('MessagesService.createMessage', () => {
     let callCount = 0;
     mockSelect.mockImplementation(() => {
       callCount++;
-      // 1: channel exists (with server_id); 2: fetch inserted message;
-      // 3: fetchMentionRows (no mentions in "Hello wave 12"); further: reactions etc.
-      if (callCount === 1) return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID }]);
-      if (callCount === 2) return makeSelectChain([mockMessage]);
+      // 1: channel exists (with server_id); 2: muted_until check (wave-41 send-gate);
+      // 3: fetch inserted message; further: fetchMentionRows, reactions etc.
+      if (callCount === 1)
+        return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID, name: 'general' }]);
+      if (callCount === 2) return makeSelectChain([]); // muted_until: not a member → no mute
+      if (callCount === 3) return makeSelectChain([mockMessage]);
       return makeSelectChain([]);
     });
     mockInsert.mockReturnValue(makeInsertChain());
@@ -261,8 +263,11 @@ describe('MessagesService.createMessage', () => {
     let callCount = 0;
     mockSelect.mockImplementation(() => {
       callCount++;
-      if (callCount === 1) return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID }]);
-      if (callCount === 2) return makeSelectChain([mockMessage]);
+      // 1: channel; 2: muted_until check; 3: fetch inserted message; further: mentions/reactions
+      if (callCount === 1)
+        return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID, name: 'general' }]);
+      if (callCount === 2) return makeSelectChain([]); // muted_until: not muted
+      if (callCount === 3) return makeSelectChain([mockMessage]);
       return makeSelectChain([]); // resolveMentions (early exit for no tokens) / fetchMentionRows
     });
     mockInsert.mockReturnValue(makeInsertChain());
@@ -275,8 +280,10 @@ describe('MessagesService.createMessage', () => {
     callCount = 0;
     mockSelect.mockImplementation(() => {
       callCount++;
-      if (callCount === 1) return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID }]);
-      if (callCount === 2) return makeSelectChain([mockMessage]); // same row
+      if (callCount === 1)
+        return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID, name: 'general' }]);
+      if (callCount === 2) return makeSelectChain([]); // muted_until: not muted
+      if (callCount === 3) return makeSelectChain([mockMessage]); // same row
       return makeSelectChain([]);
     });
 
@@ -295,8 +302,11 @@ describe('MessagesService.createMessage', () => {
     const capturedMessages: { author_id: string }[] = [];
     mockSelect.mockImplementation(() => {
       callCount++;
-      if (callCount === 1) return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID }]);
-      if (callCount === 2) return makeSelectChain([{ ...mockMessage, author_id: AUTHOR_ID }]);
+      // 1: channel; 2: muted_until check; 3: fetch inserted message; further: mentions/reactions
+      if (callCount === 1)
+        return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID, name: 'general' }]);
+      if (callCount === 2) return makeSelectChain([]); // muted_until: not muted
+      if (callCount === 3) return makeSelectChain([{ ...mockMessage, author_id: AUTHOR_ID }]);
       return makeSelectChain([]); // fetchMentionRows
     });
     const insertChain = makeInsertChain();
@@ -322,8 +332,11 @@ describe('MessagesService.createMessage', () => {
     let callCount = 0;
     mockSelect.mockImplementation(() => {
       callCount++;
-      if (callCount === 1) return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID }]);
-      if (callCount === 2) return makeSelectChain([mockMessage]);
+      // 1: channel; 2: muted_until check; 3: fetch inserted message; further: mentions/reactions
+      if (callCount === 1)
+        return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID, name: 'general' }]);
+      if (callCount === 2) return makeSelectChain([]); // muted_until: not muted
+      if (callCount === 3) return makeSelectChain([mockMessage]);
       return makeSelectChain([]); // fetchMentionRows
     });
     mockInsert.mockReturnValue(makeInsertChain());
@@ -495,7 +508,8 @@ describe('MessagesService.deleteMessage', () => {
     await service.deleteMessage(CHANNEL_ID, MESSAGE_ID, MODERATOR_ID);
 
     // rbacService.can must be called with resolved serverId (from channel row)
-    expect(rbacService.can).toHaveBeenCalledWith(MODERATOR_ID, SERVER_ID, 'manage_channels');
+    // wave-41: widened from manage_channels → moderate_members
+    expect(rbacService.can).toHaveBeenCalledWith(MODERATOR_ID, SERVER_ID, 'moderate_members');
     expect(mockUpdate).toHaveBeenCalledOnce();
     expect(eventEmitter.emit).toHaveBeenCalledWith(
       'message.deleted',
@@ -799,17 +813,19 @@ const mockChannelWithName = { id: CHANNEL_ID, server_id: SERVER_ID, name: CHANNE
 function setupCreateWithMentions(mentionedUserIds: string[]) {
   let callCount = 0;
 
-  // The service calls:
+  // The service calls (wave-41: muted_until check added at position 2):
   //   1. SELECT channel (with server_id + name)
-  //   2. SELECT message after insert
-  //   3. SELECT in resolveMentions (for @username → user_id lookup)
-  //   4. SELECT fetchMentionRows (username join)
+  //   2. SELECT server_members for muted_until (wave-41 send-gate) → [] = not muted
+  //   3. SELECT message after insert (inside transaction)
+  //   4. SELECT in resolveMentions (for @username → user_id lookup)
+  //   5. SELECT fetchMentionRows (username join)
   mockSelect.mockImplementation(() => {
     callCount++;
     if (callCount === 1) return makeSelectChain([mockChannelWithName]);
-    if (callCount === 2) return makeSelectChain([mockMessage]);
+    if (callCount === 2) return makeSelectChain([]); // muted_until: not muted → proceed
+    if (callCount === 3) return makeSelectChain([mockMessage]);
     // resolveMentions result — return one row per mentioned user
-    if (callCount === 3) return makeSelectChain(mentionedUserIds.map((id) => ({ user_id: id })));
+    if (callCount === 4) return makeSelectChain(mentionedUserIds.map((id) => ({ user_id: id })));
     // fetchMentionRows — return mention rows with usernames
     return makeSelectChain(
       mentionedUserIds.map((id) => ({
@@ -919,7 +935,8 @@ describe('MessagesService.createMessage — wave-15 mention.created events', () 
     mockSelect.mockImplementation(() => {
       callCount++;
       if (callCount === 1) return makeSelectChain([mockChannelWithName]);
-      if (callCount === 2) return makeSelectChain([mockMessage]);
+      if (callCount === 2) return makeSelectChain([]); // muted_until: not muted
+      if (callCount === 3) return makeSelectChain([mockMessage]);
       return makeSelectChain([]); // no mentions
     });
     mockInsert.mockReturnValue(makeInsertChain());
@@ -2026,10 +2043,12 @@ describe('MessagesService.createMessage — wave-19 M3 attachment row-at-send', 
       // 1: channel check (outside txn, before db.transaction() call)
       if (selectCallCount === 1)
         return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID, name: 'general' }]);
-      // 2: fetchMentionRows (resolveMentions returns early — no @tokens in content)
+      // 2: muted_until check (wave-41 send-gate) — [] = not muted, proceed
       if (selectCallCount === 2) return makeSelectChain([]);
-      // 3: fetchAttachmentRows — returns the persisted attachment row
-      if (selectCallCount === 3) return makeSelectChain([mockAttachmentRow]);
+      // 3: fetchMentionRows (resolveMentions returns early — no @tokens in content)
+      if (selectCallCount === 3) return makeSelectChain([]);
+      // 4: fetchAttachmentRows — returns the persisted attachment row
+      if (selectCallCount === 4) return makeSelectChain([mockAttachmentRow]);
       return makeSelectChain([]);
     });
 
@@ -2090,9 +2109,11 @@ describe('MessagesService.createMessage — wave-19 M3 attachment row-at-send', 
       // 1: channel check
       if (selectCallCount === 1)
         return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID, name: 'general' }]);
-      // 2: replay fetch by idempotency key
-      if (selectCallCount === 2) return makeSelectChain([mockMessage]);
-      // 3+: resolveMentions / fetchMentionRows / fetchAttachmentRows → empty
+      // 2: muted_until check (wave-41 send-gate) — [] = not muted
+      if (selectCallCount === 2) return makeSelectChain([]);
+      // 3: replay fetch by idempotency key (inside tx — ON CONFLICT DO NOTHING returned [])
+      if (selectCallCount === 3) return makeSelectChain([mockMessage]);
+      // 4+: resolveMentions / fetchMentionRows / fetchAttachmentRows → empty
       return makeSelectChain([]);
     });
 
