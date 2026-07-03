@@ -1,4 +1,8 @@
-import { PayloadTooLargeException, ServiceUnavailableException } from '@nestjs/common';
+import {
+  NotFoundException,
+  PayloadTooLargeException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // vi.mock is hoisted to the top of the file by vitest — the factory must not
@@ -177,6 +181,70 @@ describe('FilesService', () => {
 
       const service = new FilesService();
       await expect(service.checkAvatarSize('avatars/user-abc/file.png')).resolves.toBeUndefined();
+    });
+
+    // ── wave-40 (task 7525b759): HeadObject NoSuchKey/NotFound → 404 ─────────
+
+    it('throws NotFoundException (404) when HeadObject rejects with name=NoSuchKey', async () => {
+      const { S3Client } = await import('@aws-sdk/client-s3');
+      const noSuchKeyError = Object.assign(new Error('NoSuchKey'), { name: 'NoSuchKey' });
+      const mockSend = vi.fn().mockRejectedValue(noSuchKeyError);
+      // biome-ignore lint/suspicious/noExplicitAny: mock constructor
+      (S3Client as any).mockImplementation(() => ({ send: mockSend }));
+
+      const service = new FilesService();
+      await expect(service.checkAvatarSize('avatars/user-abc/never-uploaded.png')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('throws NotFoundException (404) when HeadObject rejects with name=NotFound', async () => {
+      const { S3Client } = await import('@aws-sdk/client-s3');
+      const notFoundError = Object.assign(new Error('NotFound'), { name: 'NotFound' });
+      const mockSend = vi.fn().mockRejectedValue(notFoundError);
+      // biome-ignore lint/suspicious/noExplicitAny: mock constructor
+      (S3Client as any).mockImplementation(() => ({ send: mockSend }));
+
+      const service = new FilesService();
+      await expect(service.checkAvatarSize('avatars/user-abc/never-uploaded.png')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('throws NotFoundException (404) when HeadObject rejects with $metadata.httpStatusCode=404', async () => {
+      const { S3Client } = await import('@aws-sdk/client-s3');
+      const metaError = Object.assign(new Error('HeadObject failed'), {
+        name: 'UnknownError',
+        $metadata: { httpStatusCode: 404 },
+      });
+      const mockSend = vi.fn().mockRejectedValue(metaError);
+      // biome-ignore lint/suspicious/noExplicitAny: mock constructor
+      (S3Client as any).mockImplementation(() => ({ send: mockSend }));
+
+      const service = new FilesService();
+      await expect(service.checkAvatarSize('avatars/user-abc/never-uploaded.png')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('re-throws non-404 S3 errors unchanged (does not swallow real failures)', async () => {
+      const { S3Client } = await import('@aws-sdk/client-s3');
+      const s3Error = Object.assign(new Error('InternalServerError'), {
+        name: 'InternalServerError',
+        $metadata: { httpStatusCode: 500 },
+      });
+      const mockSend = vi.fn().mockRejectedValue(s3Error);
+      // biome-ignore lint/suspicious/noExplicitAny: mock constructor
+      (S3Client as any).mockImplementation(() => ({ send: mockSend }));
+
+      const service = new FilesService();
+      await expect(service.checkAvatarSize('avatars/user-abc/file.png')).rejects.toThrow(
+        'InternalServerError',
+      );
+      // Must NOT be wrapped as NotFoundException — the raw error propagates.
+      await expect(service.checkAvatarSize('avatars/user-abc/file.png')).rejects.not.toThrow(
+        NotFoundException,
+      );
     });
   });
 

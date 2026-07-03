@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  NotFoundException,
   PayloadTooLargeException,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -181,6 +182,34 @@ describe('FilesController', () => {
       await expect(
         controller.confirm(makeReq('user-abc'), { key: 'avatars/user-abc/some-uuid.png' }),
       ).rejects.toThrow(ServiceUnavailableException);
+    });
+
+    // ── wave-40 (task 7525b759): never-uploaded key → 404 ────────────────────
+
+    it('propagates NotFoundException (404) from checkAvatarSize when key was never uploaded (NoSuchKey)', async () => {
+      // Simulates HeadObject NoSuchKey → checkAvatarSize → NotFoundException.
+      // The controller must not suppress it — 404 surfaces to the client.
+      filesService.checkAvatarSize.mockRejectedValue(
+        new NotFoundException('Avatar object not found'),
+      );
+      await expect(
+        controller.confirm(makeReq('user-abc'), { key: 'avatars/user-abc/never-uploaded.png' }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('does NOT persist avatar when checkAvatarSize throws NotFoundException (never-uploaded key)', async () => {
+      // Guard: no DB write must occur when the key is not found in storage.
+      filesService.checkAvatarSize.mockRejectedValue(
+        new NotFoundException('Avatar object not found'),
+      );
+      try {
+        await controller.confirm(makeReq('user-abc'), {
+          key: 'avatars/user-abc/never-uploaded.png',
+        });
+      } catch {
+        // expected NotFoundException
+      }
+      expect(usersService.setAvatar).not.toHaveBeenCalled();
     });
   });
 });

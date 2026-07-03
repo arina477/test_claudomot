@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Get,
   Header,
@@ -64,6 +65,20 @@ export class UsersController {
   async redirectToAvatar(
     @Param('userId') userId: string,
   ): Promise<{ url: string; statusCode: number }> {
+    // Boundary guard (wave-40, task 7525b759): reject NUL bytes and ASCII control
+    // characters (U+0000–U+001F and U+007F) before the id reaches the DB query.
+    // The pg driver rejects a NUL byte in a query parameter with an untranslatable
+    // error that is NOT a 22P02 (users.id is text, no uuid cast), so the existing
+    // SupertokensExceptionFilter 22P02→400 branch does not catch it → 500 was fired.
+    //
+    // CRITICAL: this guard imposes NO uuid shape. SuperTokens user ids are opaque
+    // text strings (not canonical UUIDs) — rejecting by format would 400 legitimate
+    // avatar fetches. We reject ONLY on NUL / control bytes.
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional control-char guard
+    if (/[\x00-\x1f\x7f]/.test(userId)) {
+      throw new BadRequestException('Bad Request');
+    }
+
     const avatarKey = await this.usersService.findAvatarKey(userId);
     if (!avatarKey) {
       throw new NotFoundException('User has no avatar');
