@@ -1,0 +1,78 @@
+===== LOGIN =====
+  [shot] login-filled.png
+  [login] url after submit: https://web-production-bce1a8.up.railway.app/app
+  [login] auth network: ["200 https://web-production-bce1a8.up.railway.app/login","401 https://api-production-b93e.up.railway.app/auth/session/refresh","200 https://api-production-b93e.up.railway.app/auth/signin"]
+  [app] url: https://web-production-bce1a8.up.railway.app/app
+  [shot] app-shell.png
+  [app] logged in (not on /login): true
+===== SCENARIO 1 (T-5) open menu — pass 1 =====
+  trigger count: 1
+  aria-expanded before/after: false / true
+  menu visible: true items: ["Profile","Privacy","Log out"]
+  [shot] menu-open.png
+  menu DOM saved (len): 2874
+===== SCENARIO 1 (T-5) open menu — pass 2 =====
+  trigger count: 1
+  aria-expanded before/after: false / true
+  menu visible: true items: ["Profile","Privacy","Log out"]
+===== SCENARIO 2 (T-5 CRUX) Profile+avatar — pass 1 =====
+  profile menu item count: 1
+  url after Profile click: https://web-production-bce1a8.up.railway.app/settings/profile
+  [shot] profile-page.png
+  file input count: 1
+  clicking save/upload button
+  upload-related network: [{"status":200,"url":"https://api-production-b93e.up.railway.app/profile","method":"GET"},{"status":302,"url":"https://api-production-b93e.up.railway.app/users/21984eb2-8029-4c1b-9e73-bc586a0be4d2/avatar?v=93183dec","method":"GET"},{"status":200,"url":"https://t3.storageapi.dev/studyhall-avatars-ngavql0/avatars/21984eb2-8029-4c1b-9e73-bc586a0be4d2/de05e872-4bbc-4bbd-b574-7b66e021fe90.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=tid_yDFgkMtyyIzdmxjDZvqCiILLtBEbrIcJGPFItjcmbXuihrztYF%2F20260703%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20260703T112744Z&X-Amz-Expires=300&X-Amz-Signature=364db2b72647d75d6f541f92d4263e1fe13a2fb3ed083c4d075df40bc20cb11d&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject","method":"GET"},{"status":200,"url":"https://api-production-b93e.up.railway.app/profile","method":"GET"},{"status":200,"url":"https://api-production-b93e.up.railway.app/users/21984eb2-8029-4c1b-9e73-bc586a0be4d2/avatar?v=93183dec","method":"GET"},{"status":200,"url":"https://api-production-b93e.up.railway.app/profile","method":"GET"},{"status":200,"url":"https://api-production-b93e.up.railway.app/users/21984eb2-8029-4c1b-9e73-bc586a0be4d2/avatar?v=93183dec","method":"GET"},{"status":200,"url":"https://api-production-b93e.up.railway.app/profile","method":"GET"},{"status":200,"url":"https://api-production-b93e.up.railway.app/users/21984eb2-8029-4c1b-9e73-bc586a0be4d2/avatar?v=93183dec","method":"GET"},{"status":200,"url":"https://api-production-b93e.up.railway.app/profile","method":"GET"},{"status":200,"url":"https://api-production-b93e.up.railway.app/profile/avatar/presign","method":"POST"},{"status":200,"url":"https://t3.storageapi.dev/studyhall-avatars-ngavql0/avatars/21984eb2-8029-4c1b-9e73-bc586a0be4d2/4f090be5-b95e-43ce-82a7-6787fd260c9c.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=tid_yDFgkMtyyIzdmxjDZvqCiILLtBEbrIcJGPFItjcmbXuihrztYF%2F20260703%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20260703T112801Z&X-Amz-Expires=300&X-Amz-Signature=46c16650c15d3fbf8aa0acf9097ebcc43462b7c8fc082e346ee68ac3babf9056&X-Amz-SignedHeaders=host&x-amz-checksum-crc32=AAAAAA%3D%3D&x-amz-sdk-checksum-algorithm=CRC32&x-id=PutObject","method":"PUT"},{"status":200,"url":"https://api-production-b93e.up.railway.app/profile/avatar/confirm","method":"POST"},{"status":302,"url":"https://api-production-b93e.up.railway.app/users/21984eb2-8029-4c1b-9e73-bc586a0be4d2/avatar?v=309451ad","method":"GET"},{"status":200,"url":"https://t3.storageapi.dev/studyhall-avatars-ngavql0/avatars/21984eb2-8029-4c1b-9e73-bc586a0be4d2/4f090be5-b95e-43ce-82a7-6787fd260c9c.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=tid_yDFgkMtyyIzdmxjDZvqCiILLtBEbrIcJGPFItjcmbXuihrztYF%2F20260703%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20260703T112802Z&X-Amz-Expires=300&X-Amz-Signature=bdbd08f6b78b20abbd43de83b5ac287cc87b24116736abbf241e0a97db859bf1&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject","method":"GET"}]
+  imgs after (with natural dims): [{"src":"https://api-production-b93e.up.railway.app/users/21984eb2-8029-4c1b-9e73-bc586a0be4d2/avatar?v=309451ad","w":64,"h":64}]
+  [shot] profile-after-upload.png
+===== SCENARIO 2 (T-5 CRUX) Profile+avatar — pass 2 =====
+  profile menu item count: 1
+  url after Profile click: https://web-production-bce1a8.up.railway.app/settings/profile
+  file input count: 1
+===== SCENARIO 3 (T-5) Privacy — pass 1 =====
+  url after Privacy click: https://web-production-bce1a8.up.railway.app/settings/privacy
+  [shot] privacy-page.png
+===== SCENARIO 3 (T-5) Privacy — pass 2 =====
+  url after Privacy click: https://web-production-bce1a8.up.railway.app/settings/privacy
+===== SCENARIO 4 (T-5) Escape + outside-click — pass 1 =====
+  after open menuVis: true | after Esc menuVis: false | focus back on trigger: true
+  after open menuVis2: true | after outside-click menuVis: false
+===== SCENARIO 4 (T-5) Escape + outside-click — pass 2 =====
+  after open menuVis: true | after Esc menuVis: false | focus back on trigger: true
+  after open menuVis2: true | after outside-click menuVis: false
+===== SCENARIO 6 (T-6) layout =====
+  menu box: {"x":80,"y":615.5,"width":180,"height":116.5}
+  trigger box: {"x":80,"y":746.5,"width":243,"height":48}
+  menu computed styles: {"bg":"rgb(39, 39, 42)","color":"rgba(255, 255, 255, 0.92)"}
+  opensUpward: true | inViewport: true | page horizontal overflow: false
+  [shot] layout-menu-1280.png
+===== SCENARIO 5 (T-8) logout/session =====
+  url after logout: https://web-production-bce1a8.up.railway.app/login
+  logout network: ["200 POST https://api-production-b93e.up.railway.app/auth/signout"]
+  [shot] after-logout.png
+  url after visiting /app post-logout: https://web-production-bce1a8.up.railway.app/
+  [shot] protected-bounce.png
+  post-logout authed API status: 404
+===== CONSOLE ERRORS =====
+[
+ "Failed to load resource: the server responded with a status of 401 ()",
+ "Failed to load resource: the server responded with a status of 429 ()",
+ "Failed to load resource: the server responded with a status of 404 ()"
+]
+===== RESULTS =====
+{
+  "S1_p1": "PASS",
+  "S1_p2": "PASS",
+  "S2_nav_p1": "PASS",
+  "S2_upload": "PASS (rendered=true upload2xx=true changed=true)",
+  "S2_nav_p2": "PASS",
+  "S3_p1": "PASS",
+  "S3_p2": "PASS",
+  "S4esc_p1": "PASS",
+  "S4out_p1": "PASS",
+  "S4esc_p2": "PASS",
+  "S4out_p2": "PASS",
+  "S6_layout": "bg=rgb(39, 39, 42) color=rgba(255, 255, 255, 0.92) opensUpward=true inViewport=true hOverflow=false",
+  "S5_logout": "PASS",
+  "S5_bounce": "FAIL: stayed at https://web-production-bce1a8.up.railway.app/",
+  "S5_api": "INFO status=404"
+}

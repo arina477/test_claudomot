@@ -35,10 +35,10 @@ TEST:
 - [x] T-2 Unit
 - [x] T-3 Contract
 - [x] T-4 Integration
-- [ ] T-5 E2E
-- [ ] T-6 Layout
+- [x] T-5 E2E
+- [x] T-6 Layout
 - [x] T-7 Perf
-- [ ] T-8 Security
+- [x] T-8 Security
 - [ ] T-9 Journey
 
 VERIFY:

@@ -8,10 +8,10 @@
 | T-2 | stages/T-2-unit.md | ci-verified | done | 341 web tests pass in CI |
 | T-3 | stages/T-3-contract.md | — | SKIP | no API/SDK contract change |
 | T-4 | stages/T-4-integration.md | — | SKIP | no schema/service change |
-| T-5 | stages/T-5-e2e.md | active | pending | crux: UI-only reachability |
-| T-6 | stages/T-6-layout.md | active | pending | menu popover visual |
+| T-5 | stages/T-5-e2e.md | active | done | CRUX PASS — F1 closed; avatar reachable via UI |
+| T-6 | stages/T-6-layout.md | active | done | PASS 0 regressions |
 | T-7 | stages/T-7-perf.md | — | SKIP | not heavy |
-| T-8 | stages/T-8-security.md | active | pending | logout/session |
+| T-8 | stages/T-8-security.md | active | done | logout revokes session (401 after); PASS |
 | T-9 | stages/T-9-journey.md | active | pending | map flip + gate |
 
 ## Block-specific context

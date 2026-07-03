@@ -1,0 +1,17 @@
+{
+  "S1_p1": "PASS",
+  "S1_p2": "PASS",
+  "S2_nav_p1": "PASS",
+  "S2_upload": "PASS (rendered=true upload2xx=true changed=true)",
+  "S2_nav_p2": "PASS",
+  "S3_p1": "PASS",
+  "S3_p2": "PASS",
+  "S4esc_p1": "PASS",
+  "S4out_p1": "PASS",
+  "S4esc_p2": "PASS",
+  "S4out_p2": "PASS",
+  "S6_layout": "bg=rgb(39, 39, 42) color=rgba(255, 255, 255, 0.92) opensUpward=true inViewport=true hOverflow=false",
+  "S5_logout": "PASS",
+  "S5_bounce": "FAIL: stayed at https://web-production-bce1a8.up.railway.app/",
+  "S5_api": "INFO status=404"
+}
