@@ -11,7 +11,7 @@
 | P-0 | process/waves/wave-39/stages/P-0-frame.md | done | REFRAMED: SELECTIVE-EXPANSION to small user menu over existing routes |
 | P-1 | process/waves/wave-39/stages/P-1-decompose.md | done | single-spec ui; floor-merge override-ship (precedent); design_gap_flag=false |
 | P-2 | process/waves/wave-39/stages/P-2-spec.md | done | spec in task c208e91e |
-| P-3 | process/waves/wave-39/stages/P-3-plan.md | pending | |
+| P-3 | process/waves/wave-39/stages/P-3-plan.md | done | frontend-only; react-specialist; UserMenu popover over existing routes |
 | P-4 | process/waves/wave-39/blocks/P/gate-verdict.md | pending | |
 
 ## Block-specific context
