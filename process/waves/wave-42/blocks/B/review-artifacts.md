@@ -10,7 +10,7 @@
 | Stage | Deliverable file | Status | Notes |
 |---|---|---|---|
 | B-0 | stages/B-0-branch-and-schema.md | done | branch+migration 0019 (assignment_submissions); typecheck clean |
-| B-1 | stages/B-1-contracts.md | pending | shared Zod for submission/roster/return |
+| B-1 | stages/B-1-contracts.md | done | 6 schemas + mySubmission; shared typecheck clean |
 | B-2 | stages/B-2-backend.md | pending | service + controller (4 endpoints) |
 | B-3 | stages/B-3-frontend.md | pending | submit control + roster + return UI |
 | B-4 | stages/B-4-wiring.md | pending | |
