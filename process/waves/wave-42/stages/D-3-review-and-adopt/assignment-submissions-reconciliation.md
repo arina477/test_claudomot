@@ -18,3 +18,12 @@
 - Fix broken Phosphor icon classes (`ph ph- graduation-cap`, any `ph-` with a space).
 - Off-scale `gap-10` (40px) → nearest scale token.
 - Add explicit form label on the submit textarea + attachment input.
+
+---
+# Iteration 1 review → REVISE / REVISE → D-2 refine (iteration 2; cap 3)
+Both reviewers: iter-1 resolved 7/10 (grade copy, dialog role, glow-focus var, 1024 breakpoint). Remaining blocking a11y:
+1. Return-action FAILURE error state missing (brief §3 "return failed") — submitReturn() has no failure branch.
+2. Focus trap: role="dialog" aria-modal="true" must trap Tab/Shift+Tab within the popover while open.
+3. File input has aria-hidden="true" — removes it from a11y tree; drop it so the labelled input is reachable.
+4. "Mark Done" toggle is a decorative div — needs a real <input>/button with programmatic role+state (WCAG 1.3.1).
+5. No aria-live region — async submit/return DOM changes must announce (aria-live="polite" on the roster/status region).

@@ -128,6 +128,9 @@
 </head>
 <body class="h-screen w-full flex overflow-hidden selection:bg-emerald-500/30">
 
+    <!-- Screen Reader Announcer Region (Aria-live) -->
+    <div id="a11y-announcer" aria-live="polite" aria-atomic="true" class="sr-only"></div>
+
     <!-- Mock Shell: Server Rail (Pane 1) -->
     <nav class="w-[72px] h-full bg-surface-900 border-r border-[var(--border-hairline)] flex flex-col items-center py-4 gap-3 z-10 shrink-0 hidden md:flex">
         <!-- Server Icon Active -->
@@ -167,10 +170,10 @@
         <!-- Top Nav / Breadcrumb Shell -->
         <header class="h-[60px] px-6 border-b border-[var(--border-hairline)] flex items-center justify-between shrink-0 bg-surface-800/80 backdrop-blur-md z-20 sticky top-0">
             <div class="flex items-center gap-3">
-                <button class="w-7 h-7 rounded-md hover:bg-surface-700 flex items-center justify-center text-white/60 hover:text-white transition-colors lg:hidden">
+                <button class="w-7 h-7 rounded-md hover:bg-surface-700 flex items-center justify-center text-white/60 hover:text-white transition-colors lg:hidden" aria-label="Toggle Navigation">
                     <i class="ph ph-list text-lg"></i>
                 </button>
-                <div class="flex items-center gap-2 text-sm text-[var(--text-secondary)]"> <!-- Breadcrumbs -->
+                <div class="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
                     <i class="ph ph-clipboard-text"></i>
                     <span>Assignments</span>
                     <i class="ph ph-caret-right text-[10px]"></i>
@@ -212,11 +215,12 @@
                     <div class="lg:col-span-5 flex flex-col gap-6 sticky top-8">
                         <header class="flex items-center justify-between">
                             <h2 class="text-lg font-semibold text-[var(--text-primary)]">Your Work</h2>
-                            <!-- Private Todo Toggle (Shipped feature context) -->
-                            <label class="flex items-center gap-2 cursor-pointer group">
+                            <!-- Private Todo Toggle (Fully accessible Checkbox implementation) -->
+                            <label class="flex items-center gap-2 cursor-pointer group relative">
                                 <span class="text-xs font-medium text-[var(--text-secondary)] transition-colors">Mark Done</span>
-                                <div class="w-9 h-5 rounded-full bg-surface-700 relative border border-[var(--border-hairline)] transition-colors peer-checked:bg-emerald-500/20 peer-checked:border-emerald-500/50">
-                                    <div class="absolute left-1 top-1 w-3 h-3 rounded-full bg-white/40 transition-all peer-checked:bg-emerald-500"></div>
+                                <input type="checkbox" class="sr-only peer" aria-label="Mark assignment done" />
+                                <div class="w-9 h-5 rounded-full bg-surface-700 relative border border-[var(--border-hairline)] transition-colors peer-checked:bg-emerald-500/20 peer-checked:border-emerald-500/50 peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-500/50 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-surface-800">
+                                    <div class="absolute left-1 top-1 w-3 h-3 rounded-full bg-white/40 transition-transform duration-200 peer-checked:translate-x-4 peer-checked:bg-emerald-500"></div>
                                 </div>
                             </label>
                         </header>
@@ -237,7 +241,7 @@
                                         <span class="text-xs text-[var(--text-secondary)]">2.4 MB</span>
                                     </div>
                                 </div>
-                                <button type="button" onclick="removeAttachment()" class="w-6 h-6 rounded flex items-center justify-center text-[var(--text-secondary)] hover:text-danger hover:bg-danger/10 transition-colors btn-press">
+                                <button type="button" onclick="removeAttachment()" aria-label="Remove attachment" class="w-6 h-6 rounded flex items-center justify-center text-[var(--text-secondary)] hover:text-danger hover:bg-danger/10 transition-colors btn-press">
                                     <i class="ph ph-x"></i>
                                 </button>
                             </div>
@@ -254,13 +258,12 @@
 
                             <div class="p-2 pt-0 flex justify-between items-center border-t border-[var(--border-hairline)] mt-1">
                                 <div class="flex items-center gap-1 mt-2 relative">
-                                    <!-- Semantic accessible file input wrapped via button styling proxy -->
-                                    <label for="attachment-input" class="sr-only">Attach file</label>
-                                    <input type="file" id="attachment-input" class="absolute w-[1px] h-[1px] opacity-0 -z-10 focus-visible:z-10" aria-hidden="true" tabindex="-1">
-                                    <button type="button" onclick="triggerAttachment()" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-surface-700 text-sm font-medium px-2.5 py-1.5 rounded-md flex items-center gap-2 transition-colors btn-press active:bg-surface-600">
+                                    <!-- Accessible file input (sr-only, visible outline via focus-within on label) -->
+                                    <label for="attachment-input" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-surface-700 text-sm font-medium px-2.5 py-1.5 rounded-md flex items-center gap-2 transition-colors cursor-pointer focus-within:ring-2 focus-within:ring-emerald-500 focus-within:ring-offset-2 focus-within:ring-offset-surface-900 active:bg-surface-600 btn-press">
                                         <i class="ph ph-paperclip text-lg"></i>
                                         <span>Attach file</span>
-                                    </button>
+                                        <input type="file" id="attachment-input" class="sr-only" onchange="triggerAttachment()">
+                                    </label>
                                 </div>
                                 <button type="button" id="submit-btn" onclick="submitAssignment()" class="mt-2 text-surface-950 bg-emerald hover:bg-emerald-500/90 font-semibold text-sm px-4 py-1.5 rounded-md shadow-[var(--shadow-sm)] transition-all btn-press relative h-[34px] min-w-[80px] flex justify-center items-center">
                                     <span class="transition-opacity duration-200" id="submit-text">Submit</span>
@@ -336,7 +339,7 @@
                                 <span class="bg-surface-700 text-xs font-medium px-2 py-0.5 rounded-full text-[var(--text-secondary)]">24/48</span>
                             </div>
                             <div class="flex gap-2">
-                                <button class="w-8 h-8 rounded-md bg-surface-800 hover:bg-surface-700 border border-[var(--border-hairline)] flex items-center justify-center text-[var(--text-secondary)] hover:text-white transition-colors btn-press">
+                                <button class="w-8 h-8 rounded-md bg-surface-800 hover:bg-surface-700 border border-[var(--border-hairline)] flex items-center justify-center text-[var(--text-secondary)] hover:text-white transition-colors btn-press" aria-label="Filter submissions">
                                     <i class="ph ph-funnel"></i>
                                 </button>
                                 <button class="h-8 px-3 rounded-md bg-surface-800 hover:bg-surface-700 border border-[var(--border-hairline)] flex items-center gap-2 text-xs font-medium text-[var(--text-secondary)] hover:text-white transition-colors btn-press max-sm:hidden">
@@ -430,7 +433,7 @@
                             </div>
 
                             <!-- Skeleton Row (Loading Context) -->
-                            <div class="roster-row flex items-center p-3 rounded-lg opacity-50" style="animation-delay: 0.3s; pointer-events: none;">
+                            <div class="roster-row flex items-center p-3 rounded-lg opacity-50" style="animation-delay: 0.3s; pointer-events: none;" aria-hidden="true">
                                 <div class="w-8 h-8 rounded-full roster-loader shrink-0"></div>
                                 <div class="ml-3 flex-1 space-y-2">
                                     <div class="h-3.5 w-32 rounded bg-surface-700 roster-loader"></div>
@@ -463,8 +466,7 @@
         </div>
     </main>
 
-    <!-- EDUCATOR TOOL: Return Content Popover (role="dialog" per review) -->
-    <!-- Fixed strategy allows escape from parent overflow constraints, absolute positioning handled by JS -->
+    <!-- EDUCATOR TOOL: Return Content Popover (role="dialog") -->
     <div id="return-popover" role="dialog" aria-modal="true" aria-label="Return submission" aria-hidden="true" class="fixed z-50 w-[300px] glass-panel border border-surface-600 rounded-lg p-3 hidden opacity-0 scale-[0.97] transition-all duration-200 pointer-events-none transform origin-top shadow-[var(--shadow-pop)] shadow-black/80">
         
         <header class="flex items-center justify-between mb-3 px-1">
@@ -472,7 +474,7 @@
                 <i class="ph ph-arrow-u-turn-left text-[var(--text-secondary)] font-bold"></i> 
                 Return to <span id="popover-student-name" class="text-emerald">Student</span>
             </span>
-            <button onclick="closePopover()" class="w-6 h-6 rounded flex items-center justify-center text-[var(--text-secondary)] hover:text-white hover:bg-surface-700 transition-colors btn-press">
+            <button onclick="closePopover()" aria-label="Close dialog" class="w-6 h-6 rounded flex items-center justify-center text-[var(--text-secondary)] hover:text-white hover:bg-surface-700 transition-colors btn-press">
                 <i class="ph ph-x"></i>
             </button>
         </header>
@@ -483,18 +485,23 @@
                 <textarea id="return-comment" placeholder="Add an acknowledgement note (optional)..." class="w-full bg-transparent resize-none h-[72px] outline-none p-2.5 text-[13px] text-[var(--text-primary)] placeholder-[var(--text-muted)]"></textarea>
             </div>
             
+            <!-- Return Validaiton Error Message (Hidden) -->
+            <div id="return-error" class="hidden mb-3 text-xs text-danger-text px-3 py-2 rounded bg-danger/10 border border-danger/20 flex items-center gap-2" role="alert">
+                <i class="ph ph-warning-circle text-[16px]"></i> <span>Couldn't return submission &mdash; try again</span>
+            </div>
+
             <div class="flex justify-end gap-2">
                 <button type="button" onclick="closePopover()" class="px-3 py-1.5 rounded-md text-xs font-medium text-[var(--text-secondary)] hover:text-white hover:bg-surface-600 border border-transparent transition-colors btn-press">
                     Cancel
                 </button>
-                <button type="submit" class="px-3 py-1.5 rounded-md text-xs font-medium bg-emerald hover:bg-emerald-500/90 text-surface-950 shadow-[0_0_10px_rgba(16,185,129,0.15)] transition-all btn-press">
+                <button type="submit" id="return-submit-btn" class="px-3 py-1.5 rounded-md text-xs font-medium bg-emerald hover:bg-emerald-500/90 text-surface-950 shadow-[0_0_10px_rgba(16,185,129,0.15)] transition-all btn-press">
                     Mark Returned
                 </button>
             </div>
         </form>
     </div>
 
-    <!-- Scripting for Micro-Interactions & Popover Logic -->
+    <!-- Scripting for Micro-Interactions & Accessibility Logic -->
     <script>
         // --- 1. Top Level UI Variables & State ---
         let currentTargetRowId = null;
@@ -502,29 +509,42 @@
         const popover = document.getElementById('return-popover');
         const popoverName = document.getElementById('popover-student-name');
         const returnTextarea = document.getElementById('return-comment');
+        const announcer = document.getElementById('a11y-announcer');
         let isPopoverOpen = false;
 
-        // --- 2. Student Form Interactions ---
+        // --- 2. Screen Reader Announce Pattern ---
+        function announce(message) {
+            announcer.textContent = message;
+            // Clear slightly after so it functions repeatedly
+            setTimeout(() => { if (announcer.textContent === message) announcer.textContent = ''; }, 3000);
+        }
+
+        // --- 3. Student Form Interactions ---
         function triggerAttachment() {
-            // Simulate selecting a wrong file type first to show error handling calmly inline
+            // Simulate selecting an invalid file type first to show proper inline error, followed by correct file
             const err = document.getElementById('upload-error');
             const prev = document.getElementById('attachment-preview');
             
             if (err.classList.contains('hidden')) {
                 err.classList.remove('hidden');
                 err.classList.add('animate-[slideUpFade_0.2s_ease-out]');
+                announce("File exceeds 10MB limit.");
+                
                 setTimeout(() => {
                     err.classList.add('hidden');
-                    prev.classList.remove('hidden'); // Show actual attachment on visual 'retry'
+                    prev.classList.remove('hidden'); 
                     prev.classList.add('animate-[slideUpFade_0.3s_ease-out]');
+                    announce("pathway-analysis-log.pdf attached successfully.");
                 }, 2500);
             } else {
                 prev.classList.remove('hidden');
+                announce("File attached.");
             }
         }
 
         function removeAttachment() {
             document.getElementById('attachment-preview').classList.add('hidden');
+            announce("Attachment removed.");
         }
 
         function submitAssignment() {
@@ -533,81 +553,84 @@
             const spinner = document.getElementById('submit-spinner');
             const submitErr = document.getElementById('submit-error');
 
-            // Button Loading State
+            announce("Submitting assignment...");
             btn.classList.add('pointer-events-none', '!bg-emerald/50');
             text.classList.add('opacity-0');
             spinner.classList.remove('opacity-0');
             spinner.style.animation = 'spinner-draw 1.5s infinite ease-in-out';
-            submitErr.classList.add('hidden'); // Hide exact error on retry
+            submitErr.classList.add('hidden'); 
 
-            // Simulate Network Request - For demo, show failure first if not shown
+            // Simulate Network Request - Shows failure on first attempt to fulfill requirements
             setTimeout(() => {
                 const hasShownError = btn.dataset.hasFailed;
                 if(!hasShownError) {
-                    // Show missing state: POST failure inline error
                     btn.classList.remove('pointer-events-none', '!bg-emerald/50');
                     text.classList.remove('opacity-0');
                     spinner.classList.add('opacity-0');
                     submitErr.classList.remove('hidden');
                     submitErr.classList.add('animate-[slideUpFade_0.2s_ease-out]');
                     btn.dataset.hasFailed = 'true';
+                    announce("Submission failed. Please try again.");
                 } else {
-                    // Success State Reset
                     text.innerText = "Resubmit";
                     btn.classList.remove('pointer-events-none', '!bg-emerald/50');
                     btn.classList.add('bg-surface-700', 'text-white', 'border', 'border-surface-600');
                     btn.style.boxShadow = 'none';
                     text.classList.remove('opacity-0');
                     spinner.classList.add('opacity-0');
+                    announce("Assignment submitted successfully.");
                 }
             }, 1200);
         }
 
-        // --- 3. Educator Popover Interoperability (Advanced Anchoring & A11y Focus management) ---
+        // --- 4. Educator Popover Interoperability (Advanced Anchoring & Return POST logic) ---
         function openReturnPopover(event, rowId, studentName) {
             event.stopPropagation();
             currentTriggerButton = event.currentTarget;
             let rect = currentTriggerButton.getBoundingClientRect();
 
             currentTargetRowId = rowId;
-            popoverName.textContent = studentName.split(' ')[0]; // First name
+            let firstName = studentName.split(' ')[0];
+            popoverName.textContent = firstName;
             returnTextarea.value = '';
+            
+            // Clean up old error states
+            document.getElementById('return-error').classList.add('hidden');
+            const btn = document.getElementById('return-submit-btn');
+            btn.dataset.hasFailed = ''; 
+            btn.classList.remove('opacity-50', 'pointer-events-none');
 
-            // Calculate Position (Desktop context anchoring)
+            // Position specific logic
             let top = rect.bottom + 8;
-            let left = rect.left - (300 - rect.width); // Right align by default (width=300px)
+            let left = rect.left - (300 - rect.width); 
 
-            // Smart flipping if too close to bottom of screen
             if (top + 160 > window.innerHeight) { 
-                top = rect.top - 160 - 8; // Flip up
+                top = rect.top - 160 - 8;
                 popover.style.transformOrigin = 'bottom';
             } else {
                 popover.style.transformOrigin = 'top';
             }
 
-            // Apply specific positioning bounds
             popover.style.top = `${top}px`;
             popover.style.left = `${left}px`;
             
-            // Activate overlay with A11y
+            // A11y & Display
             popover.classList.remove('hidden');
             popover.setAttribute('aria-hidden', 'false');
             
-            // Force reflow for transition
-            void popover.offsetWidth; 
+            void popover.offsetWidth; // Reflow
             
             popover.classList.remove('opacity-0', 'scale-[0.97]', 'pointer-events-none');
             isPopoverOpen = true;
             
-            // Set focus for a11y dialog management
             setTimeout(() => returnTextarea.focus(), 100);
+            announce(`Return dialog opened for ${firstName}. Press Escape to cancel.`);
         }
 
         function closePopover() {
             popover.setAttribute('aria-hidden', 'true');
             popover.classList.add('opacity-0', 'scale-[0.97]', 'pointer-events-none');
             
-            // Re-focus the trigger element for accessibility
             if(currentTriggerButton) {
                 currentTriggerButton.focus();
                 currentTriggerButton = null;
@@ -625,9 +648,27 @@
             e.preventDefault();
             if(!currentTargetRowId) return;
 
+            const btn = document.getElementById('return-submit-btn');
+            
+            // Failure State Simulation per checklist req
+            if(!btn.dataset.hasFailed) {
+                announce("Processing return...");
+                btn.classList.add('opacity-50', 'pointer-events-none');
+                
+                setTimeout(() => {
+                    const retErr = document.getElementById('return-error');
+                    retErr.classList.remove('hidden');
+                    retErr.classList.add('animate-[slideUpFade_0.2s_ease-out]');
+                    btn.dataset.hasFailed = 'true';
+                    btn.classList.remove('opacity-50', 'pointer-events-none');
+                    announce("Couldn't return submission. Try again.");
+                }, 600);
+                return;
+            }
+
+            // Success application state
             const row = document.getElementById(currentTargetRowId);
             if(row) {
-                // Find and execute the DOM mutation to transform state cleanly (Amber -> Emerald)
                 const rightSide = row.querySelector('.ml-auto');
                 rightSide.innerHTML = `
                     <div class="flex items-center gap-1.5 animate-[slideUpFade_0.3s_ease-out]">
@@ -635,30 +676,50 @@
                         <span class="text-xs font-medium text-emerald uppercase tracking-wide">Returned</span>
                     </div>
                 `;
-                // Dim row slightly to push visual focus down the list
                 const mainInfo = row.querySelector('.flex-1');
-                if(mainInfo) mainInfo.classList.add('opacity-75');
+                if(mainInfo) mainInfo.classList.add('opacity-75'); // calm dimming of returned rows
+                announce(`Submission marked as returned for ${popoverName.textContent}`);
             }
             
             closePopover();
         }
 
-        // --- 4. Global A11y & Listener logic ---
-        // Outside click to close
+        // --- 5. Global A11y & Focus Traps ---
+        
+        // Trap focus inside modal while open
+        popover.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') {
+                const focusableElements = popover.querySelectorAll('button, [href], input, select, textarea');
+                const first = focusableElements[0];
+                const last = focusableElements[focusableElements.length - 1];
+                
+                if (e.shiftKey && document.activeElement === first) {
+                    e.preventDefault();
+                    last.focus();
+                } else if (!e.shiftKey && document.activeElement === last) {
+                    e.preventDefault();
+                    first.focus();
+                }
+            } else if (e.key === 'Escape' && isPopoverOpen) {
+                closePopover();
+                announce("Return dialog closed.");
+            }
+        });
+
+        // Outside click logic
         document.addEventListener('mousedown', (e) => {
             if (isPopoverOpen && !popover.contains(e.target)) {
                 closePopover();
             }
         });
 
-        // Esc key to close
+        // Handle Escape correctly globally if focus slips
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && isPopoverOpen) {
+            if (e.key === 'Escape' && isPopoverOpen && !popover.contains(document.activeElement)) {
                 closePopover();
             }
         });
 
-        // Prevent popover clicks from bubbling to the outside click listener
         popover.addEventListener('mousedown', (e) => e.stopPropagation());
 
     </script>
