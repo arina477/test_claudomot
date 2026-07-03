@@ -1,0 +1,161 @@
+===== SESSION A LOGIN =====
+  [login studyhall-e2e-fixture@example.com] url: https://web-production-bce1a8.up.railway.app/app
+  [server] rail button count: 1
+  [server] selected Fixture Proof Server
+  [shot] A-01-app-shell.png
+  [state pre] {"membersStatus":200,"members":[{"id":"da74148e-132e-4faf-a526-a34c28e7481b","name":"studyhall-e2e-fixture-b","mutedUntil":null},{"id":"21984eb2-8029-4c1b-9e73-bc586a0be4d2","name":"studyhall-e2e-fixture","mutedUntil":null}],"permStatus":404,"perms":{"message":"Cannot GET /servers/ad62cd12-b78e-4a85-a214-042cf176b16c/permissions","error":"Not Found","statusCode":404}}
+===== SCENARIO 1 (T-5) roles: Moderate Members toggle =====
+  [shot] A-02-roles-page.png
+  role items: 0
+===== SCENARIO 2 (T-5) moderator timeout flow (run x2) =====
+  [shot] A-04-roster.png
+  kebabs present: ["mod-kebab-21984eb2-8029-4c1b-9e73-bc586a0be4d2","mod-kebab-da74148e-132e-4faf-a526-a34c28e7481b"]
+----- timeout pass 1 -----
+  popover visible: true
+  [shot] A-05-mod-menu.png
+  duration popover (5m) visible: true
+  [shot] A-06-duration-popover.png
+  timeout network: ["200 POST /servers/ad62cd12-b78e-4a85-a214-042cf176b16c/members/da74148e-132e-4faf-a526-a34c28e7481b/timeout"]
+  muted indicator visible after timeout: true
+  [shot] A-07-muted-indicator.png
+  [shot] A-08-remove-menu.png
+  remove network: ["204 DELETE /servers/ad62cd12-b78e-4a85-a214-042cf176b16c/members/da74148e-132e-4faf-a526-a34c28e7481b/timeout"]
+  [shot] A-09-after-remove.png
+----- timeout pass 2 -----
+  popover visible: true
+  duration popover (5m) visible: true
+  timeout network: ["200 POST /servers/ad62cd12-b78e-4a85-a214-042cf176b16c/members/da74148e-132e-4faf-a526-a34c28e7481b/timeout"]
+  muted indicator visible after timeout: true
+  remove network: ["204 DELETE /servers/ad62cd12-b78e-4a85-a214-042cf176b16c/members/da74148e-132e-4faf-a526-a34c28e7481b/timeout"]
+===== SCENARIO 3 (T-5) keyboard nav =====
+  menu open via Enter: true
+  activeElement after ArrowDown/ArrowUp: mod-kebab-da74148e-132e-4faf-a526-a34c28e7481b / mod-kebab-da74148e-132e-4faf-a526-a34c28e7481b
+  menu visible after Esc: false | focused testid: mod-kebab-da74148e-132e-4faf-a526-a34c28e7481b
+  reopened: true | closed by outside-click: true
+===== T-6 LAYOUT @1280 =====
+  menu box: {"x":1078,"y":219.5,"width":180,"height":41.5} styles: {"bg":"rgb(39, 39, 42)","color":"rgba(255, 255, 255, 0.92)","z":"100","w":"180px"} inViewport: true hOverflow: false
+  [shot] A-10-layout-menu-1280.png
+  [shot] A-11-layout-duration-1280.png
+===== prep for S4: time out B (5m) so non-moderator can observe indicator =====
+  B timed out for S4 window
+===== A console errors =====
+["Failed to load resource: the server responded with a status of 401 ()","Failed to load resource: the server responded with a status of 404 ()"]
+===== A moderation network =====
+["200 GET /servers/ad62cd12-b78e-4a85-a214-042cf176b16c/me/permissions","200 GET /servers/ad62cd12-b78e-4a85-a214-042cf176b16c/members","200 GET /servers/ad62cd12-b78e-4a85-a214-042cf176b16c/members","404 GET /servers/ad62cd12-b78e-4a85-a214-042cf176b16c/permissions","200 GET /servers/ad62cd12-b78e-4a85-a214-042cf176b16c/roles","200 POST /servers/ad62cd12-b78e-4a85-a214-042cf176b16c/members/da74148e-132e-4faf-a526-a34c28e7481b/timeout","204 DELETE /servers/ad62cd12-b78e-4a85-a214-042cf176b16c/members/da74148e-132e-4faf-a526-a34c28e7481b/timeout","200 POST /servers/ad62cd12-b78e-4a85-a214-042cf176b16c/members/da74148e-132e-4faf-a526-a34c28e7481b/timeout","204 DELETE /servers/ad62cd12-b78e-4a85-a214-042cf176b16c/members/da74148e-132e-4faf-a526-a34c28e7481b/timeout","200 POST /servers/ad62cd12-b78e-4a85-a214-042cf176b16c/members/da74148e-132e-4faf-a526-a34c28e7481b/timeout"]
+===== SCENARIO 4 (T-5) non-moderator view (session B) =====
+  [login studyhall-e2e-fixture-b@example.com] url: https://web-production-bce1a8.up.railway.app/app
+  [server] rail button count: 1
+  [server] selected Fixture Proof Server
+  [shot] B-01-roster.png
+  [B] kebab count (expect 0): 0
+  [B] muted indicator visible (public state): true
+  [shot] B-02-muted-indicator.png
+===== CLEANUP: clear any B timeout =====
+  cleanup DELETE status: 204
+  [state final] {"membersStatus":200,"members":[{"id":"da74148e-132e-4faf-a526-a34c28e7481b","name":"studyhall-e2e-fixture-b","mutedUntil":null},{"id":"21984eb2-8029-4c1b-9e73-bc586a0be4d2","name":"studyhall-e2e-fixture","mutedUntil":null}],"permStatus":404,"perms":{"message":"Cannot GET /servers/ad62cd12-b78e-4a85-a214-042cf176b16c/permissions","error":"Not Found","statusCode":404}}
+===== RESULTS =====
+{
+  "A_login": "PASS",
+  "A_serverSelect": "PASS",
+  "A_perms": "{\"message\":\"Cannot GET /servers/ad62cd12-b78e-4a85-a214-042cf176b16c/permissions\",\"error\":\"Not Found\",\"statusCode\":404}",
+  "S1_toggle_present": "FAIL: toggle input not found on any role",
+  "S1_toggle_enableable": "INFO: only default role(s) present (toggle read-only)",
+  "S2_kebab_present": "PASS",
+  "S2_kebab_on_B": "PASS",
+  "S2_menu": "PASS",
+  "S2_duration": "PASS",
+  "S2_p1_net": "200 POST /servers/ad62cd12-b78e-4a85-a214-042cf176b16c/members/da74148e-132e-4faf-a526-a34c28e7481b/timeout",
+  "S2_p1": "PASS",
+  "S2_p1_remove_net": "204 DELETE /servers/ad62cd12-b78e-4a85-a214-042cf176b16c/members/da74148e-132e-4faf-a526-a34c28e7481b/timeout",
+  "S2_p1_remove": "PASS",
+  "S2_p2_net": "200 POST /servers/ad62cd12-b78e-4a85-a214-042cf176b16c/members/da74148e-132e-4faf-a526-a34c28e7481b/timeout",
+  "S2_p2": "PASS",
+  "S2_p2_remove_net": "204 DELETE /servers/ad62cd12-b78e-4a85-a214-042cf176b16c/members/da74148e-132e-4faf-a526-a34c28e7481b/timeout",
+  "S2_p2_remove": "PASS",
+  "S3_keyboard": "PASS",
+  "S_layout": "bg=rgb(39, 39, 42) inViewport=true hOverflow=false z=100 w=180px",
+  "B_login": "PASS",
+  "S4_no_kebab": "PASS",
+  "S4_sees_indicator": "PASS",
+  "cleanup": "OK (204)",
+  "final_state": "[{\"name\":\"studyhall-e2e-fixture-b\",\"mutedUntil\":null},{\"name\":\"studyhall-e2e-fixture\",\"mutedUntil\":null}]"
+}
+
+=== S1 ROLES RUN ===
+  create btn count: 1
+  [shot] S1-01-create-modal.png
+  post-create /roles net: ["200 GET /servers/ad62cd12-b78e-4a85-a214-042cf176b16c/roles","201 POST /servers/ad62cd12-b78e-4a85-a214-042cf176b16c/roles"]
+  [shot] S1-02-role-editor.png
+  role items after create: 1
+  Moderate Members toggle present: true
+  toggle disabled: false | checked before: false
+  checked after toggle: true
+  [shot] S1-03-moderate-enabled.png
+  save btn disabled: false
+  post-save /roles net: ["200 GET /servers/ad62cd12-b78e-4a85-a214-042cf176b16c/roles","201 POST /servers/ad62cd12-b78e-4a85-a214-042cf176b16c/roles","200 PATCH /servers/ad62cd12-b78e-4a85-a214-042cf176b16c/roles/db3e05d0-ec4e-455d-8446-d2dbf861b79b"]
+  persisted checked: true
+  [shot] S1-04-saved.png
+  ===== cleanup: delete role =====
+FATAL locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator('button:has-text("Delete")').last()
+    - locator resolved to <button type="button" data-testid="delete-role-btn" class="flex h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-4 text-[13px] font-medium transition-colors hover:bg-red-500/20 disabled:opacity-50">…</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class="fixed inset-0"></div> from <div role="dialog" aria-modal="true" aria-labelledby="modal-delete-title" class="fixed inset-0 z-50 flex items-center justify-center p-4">…</div> subtree intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class="fixed inset-0"></div> from <div role="dialog" aria-modal="true" aria-labelledby="modal-delete-title" class="fixed inset-0 z-50 flex items-center justify-center p-4">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    58 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <div class="fixed inset-0"></div> from <div role="dialog" aria-modal="true" aria-labelledby="modal-delete-title" class="fixed inset-0 z-50 flex items-center justify-center p-4">…</div> subtree intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+ locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator('button:has-text("Delete")').last()
+    - locator resolved to <button type="button" data-testid="delete-role-btn" class="flex h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-4 text-[13px] font-medium transition-colors hover:bg-red-500/20 disabled:opacity-50">…</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class="fixed inset-0"></div> from <div role="dialog" aria-modal="true" aria-labelledby="modal-delete-title" class="fixed inset-0 z-50 flex items-center justify-center p-4">…</div> subtree intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class="fixed inset-0"></div> from <div role="dialog" aria-modal="true" aria-labelledby="modal-delete-title" class="fixed inset-0 z-50 flex items-center justify-center p-4">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    58 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <div class="fixed inset-0"></div> from <div role="dialog" aria-modal="true" aria-labelledby="modal-delete-title" class="fixed inset-0 z-50 flex items-center justify-center p-4">…</div> subtree intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+
+    at /home/claudomat/project/process/waves/wave-41/stages/evidence/s1-roles-driver.mjs:98:24
+===== RESULTS =====
+{
+  "S1_toggle_present": "PASS",
+  "S1_toggle_enableable": "PASS",
+  "S1_toggle_state_change": "PASS",
+  "S1_save": "PASS",
+  "S1_persist": "PASS",
+  "FATAL": "locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator('button:has-text(\"Delete\")').last()\n    - locator resolved to <button type=\"button\" data-testid=\"delete-role-btn\" class=\"flex h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-4 text-[13px] font-medium transition-colors hover:bg-red-500/20 disabled:opacity-50\">…</button>\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div class=\"fixed inset-0\"></div> from <div role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"modal-delete-title\" class=\"fixed inset-0 z-50 flex items-center justify-center p-4\">…</div> subtree intercepts pointer events\n    - retrying click action\n    - waiting 20ms\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div class=\"fixed inset-0\"></div> from <div role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"modal-delete-title\" class=\"fixed inset-0 z-50 flex items-center justify-center p-4\">…</div> subtree intercepts pointer events\n    - retrying click action\n      - waiting 100ms\n    58 × waiting for element to be visible, enabled and stable\n       - element is visible, enabled and stable\n       - scrolling into view if needed\n       - done scrolling\n       - <div class=\"fixed inset-0\"></div> from <div role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"modal-delete-title\" class=\"fixed inset-0 z-50 flex items-center justify-center p-4\">…</div> subtree intercepts pointer events\n     - retrying click action\n       - waiting 500ms\n"
+}

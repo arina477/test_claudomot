@@ -6,10 +6,10 @@
 | T-2 | stages/T-2-unit.md | ci-verified | done | 551 api + 354 web tests pass in CI |
 | T-3 | stages/T-3-contract.md | ci-verified | done | moderation endpoints + rbac contract (controller specs) |
 | T-4 | stages/T-4-integration.md | ci-verified | done | moderation.integration real-PG (rank guard, timeout, can()) |
-| T-5 | stages/T-5-e2e.md | active | pending | live moderation UI flow |
-| T-6 | stages/T-6-layout.md | active | pending | moderation UI layout |
+| T-5 | stages/T-5-e2e.md | active | done | PASS (delete-any UI deferred) |
+| T-6 | stages/T-6-layout.md | active | done | PASS (1 LOW cosmetic) |
 | T-7 | stages/T-7-perf.md | — | SKIP | not heavy |
-| T-8 | stages/T-8-security.md | active | pending | CRITICAL: moderation authz live (rank guard, mute-gate, delete-any, non-mod 403) |
+| T-8 | stages/T-8-security.md | active | done | ALL 7 PASS, 0 findings — authz airtight |
 | T-9 | stages/T-9-journey.md | active | pending | map moderation surfaces + gate |
 ## Block-specific context
 - **wave_type:** ui, auth (moderation authz)
