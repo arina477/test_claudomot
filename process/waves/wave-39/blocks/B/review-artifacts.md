@@ -1,0 +1,39 @@
+# Wave 39 — B-block review artifacts
+**Block:** B (Build) · **Wave topic:** Settings-doorway user menu (F1 fix) · **Block exit gate:** B-6 · **Status:** gate-passed
+
+## Stage deliverables
+| Stage | Deliverable file | Status | Notes |
+|---|---|---|---|
+| B-0 | stages/B-0-branch-and-schema.md | in-progress | frontend-only; no schema/deps |
+| B-1 | stages/B-1-contracts.md | done | SKIP — no contract surface |
+| B-2 | stages/B-2-backend.md | done | SKIP — no backend |
+| B-3 | stages/B-3-frontend.md | done | done — UserMenu + ChannelSidebar wired (b374023) |
+| B-4 | stages/B-4-wiring.md | done | done — typecheck clean |
+| B-5 | stages/B-5-verify.md | done | done — tc0/biome0/340 tests |
+| B-6 | stages/B-6-review.md | done | head-builder APPROVED; code-reviewer 1 CRIT+1 HIGH fixed (91bcb5a) |
+
+## Block-specific context
+- **Spec contract:** tasks row c208e91e (DB)
+- **Branch name:** wave-39-settings-menu
+- **claimed_task_ids:** [c208e91e]
+- **New deps added this wave:** none
+- **New env vars added this wave:** none
+- **Schema changes this wave:** none (frontend-only)
+- **Deviations from plan logged this block:** none
+
+## Open escalations carried into gate
+none
+## Gate verdict log
+<appended by fresh head-builder spawn at B-6 Action 1>
+
+## Block exit / handoff
+```yaml
+build_block_status:    complete
+branch:                wave-39-settings-menu
+stages_run:            [B-0, B-3, B-4, B-5, B-6]
+stages_skipped:        [B-1 (no contract surface), B-2 (no backend)]
+review_verdict:        APPROVE
+deviations_logged:     []
+last_commit_sha:       91bcb5a
+ready_for_ci:          true
+```

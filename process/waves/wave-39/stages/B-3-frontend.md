@@ -1,0 +1,5 @@
+# Wave 39 — B-3 Frontend (react-specialist)
+- NEW `apps/web/src/shell/UserMenu.tsx` — role=menu popover reusing MessageList AddReactionPopover pattern (popoverRef+anchorRef mousedown outside-click close; Escape closes + refocuses trigger). 3 role=menuitem: Profile→navigate('/settings/profile'), Privacy→navigate('/settings/privacy'), Log out→Session.signOut() then navigate('/login'). Dark tokens (#27272a surface). Opens upward from sidebar footer.
+- MOD `apps/web/src/shell/ChannelSidebar.tsx` — menuOpen state + settingsBtnRef; settings button onClick toggles, aria-haspopup="menu" + aria-expanded; renders <UserMenu> when open; hover styling preserved.
+- NEW `apps/web/src/shell/UserMenu.test.tsx` — 7 unit tests (3 items; Profile/Privacy nav+onClose; Logout signOut+navigate('/login')+onClose; Escape close+refocus; outside-mousedown close; inside-mousedown no-close).
+- signOut import: `import Session from 'supertokens-auth-react/recipe/session'` → `await Session.signOut()` (matches supertokens.ts). Commit b374023. No deviations.
