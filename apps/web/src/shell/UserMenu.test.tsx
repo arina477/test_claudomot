@@ -6,6 +6,7 @@
  *   - Clicking Profile calls navigate('/settings/profile') and closes menu
  *   - Clicking Privacy calls navigate('/settings/privacy') and closes menu
  *   - Clicking Log out calls Session.signOut() + navigate('/login') and closes menu
+ *   - [C1 regression guard] Log out navigates to /login even when signOut() rejects
  *   - Escape key closes the menu and returns focus to the trigger button
  *   - Mousedown outside the popover closes the menu
  *   - Selecting any item closes (covered per-item above)
@@ -119,9 +120,28 @@ describe('UserMenu', () => {
     await user.click(screen.getByRole('menuitem', { name: /log out/i }));
 
     await waitFor(() => {
-      expect(onClose).toHaveBeenCalledOnce();
       expect(mockSignOut).toHaveBeenCalledOnce();
       expect(mockNavigate).toHaveBeenCalledWith('/login');
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+  });
+
+  it('[C1] navigates to /login even when Session.signOut() rejects', async () => {
+    // Arrange: make signOut reject this one time
+    mockSignOut.mockRejectedValueOnce(new Error('network error'));
+
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderMenu(onClose);
+
+    await user.click(screen.getByRole('menuitem', { name: /log out/i }));
+
+    await waitFor(() => {
+      expect(mockSignOut).toHaveBeenCalledOnce();
+      // navigate('/login') MUST still be called despite the rejection
+      expect(mockNavigate).toHaveBeenCalledWith('/login');
+      // menu should still close
+      expect(onClose).toHaveBeenCalledOnce();
     });
   });
 

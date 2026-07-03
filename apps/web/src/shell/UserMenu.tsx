@@ -31,6 +31,12 @@ type MenuItem = {
 export function UserMenu({ anchorRef, onClose }: UserMenuProps) {
   const navigate = useNavigate();
   const popoverRef = useRef<HTMLDivElement>(null);
+  const firstItemRef = useRef<HTMLButtonElement>(null);
+
+  // Move focus to the first menuitem on open (a11y: opening-focus)
+  useEffect(() => {
+    firstItemRef.current?.focus();
+  }, []);
 
   // Close on outside mousedown or Escape; Escape also returns focus to trigger
   useEffect(() => {
@@ -60,10 +66,12 @@ export function UserMenu({ anchorRef, onClose }: UserMenuProps) {
     };
   }, [onClose, anchorRef]);
 
+  // H1 fix: perform the action to a safe point BEFORE closing, so the async
+  // work is not orphaned by the component unmounting mid-flight.
   function handleSelect(action: () => void | Promise<void>) {
     return async () => {
-      onClose();
       await action();
+      onClose();
     };
   }
 
@@ -85,9 +93,17 @@ export function UserMenu({ anchorRef, onClose }: UserMenuProps) {
     {
       label: 'Log out',
       icon: <SignOutIcon size={14} />,
+      // C1 fix: always navigate to /login regardless of whether signOut
+      // succeeds — user intent is to leave; a failed server-side revoke
+      // must not strand them in a half-authed state.
       action: async () => {
-        await Session.signOut();
-        navigate('/login');
+        try {
+          await Session.signOut();
+        } catch {
+          // signOut failure is non-fatal: swallow and proceed to /login
+        } finally {
+          navigate('/login');
+        }
       },
     },
   ];
@@ -110,9 +126,10 @@ export function UserMenu({ anchorRef, onClose }: UserMenuProps) {
         padding: '4px',
       }}
     >
-      {items.map(({ label, icon, action }) => (
+      {items.map(({ label, icon, action }, index) => (
         <button
           key={label}
+          ref={index === 0 ? firstItemRef : undefined}
           type="button"
           role="menuitem"
           onClick={handleSelect(action)}
