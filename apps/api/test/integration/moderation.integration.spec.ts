@@ -27,7 +27,7 @@ import {
   truncateTables,
 } from './pg-harness';
 
-import { ForbiddenException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ModerationService } from '../../src/rbac/moderation.service';
 import { RbacService } from '../../src/rbac/rbac.service';
@@ -299,9 +299,13 @@ describe.skipIf(SKIP)(
     // -----------------------------------------------------------------------
 
     it('setMemberTimeout: target not a member → NotFoundException', async () => {
+      // Non-member target: caller has moderate_members (can() passes), the rank
+      // guard passes-through an unknown member (no role_id → returns), so the
+      // membership-existence check is what rejects — with 404, not 403. A user
+      // who isn't in the server isn't "forbidden", they don't exist here.
       await expect(
         moderationService.setMemberTimeout(SERVER_ID, MODERATOR_ID, 'nonexistent-user', 30),
-      ).rejects.toBeInstanceOf(ForbiddenException); // rank guard fires first (owner check) or NotFoundException
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
   },
 );
