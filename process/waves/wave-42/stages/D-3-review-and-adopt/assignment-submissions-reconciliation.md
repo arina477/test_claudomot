@@ -1,0 +1,20 @@
+# D-3 Reconciliation — assignment-submissions (iteration 0 review)
+
+| Reviewer A (plan-design-review / ui-designer) | Reviewer B (ui-ux-pro-max / accessibility-tester) | Matrix outcome |
+|---|---|---|
+| REVISE | REVISE | Aggregate both → D-2 refine (iteration 1; cap 3) |
+
+## Aggregated blocking concerns → refine prompt
+1. **§10 grading copy** (line 201 assignment body): remove "Grade will be mapped to the central rubric automatically upon return" and any grade/rubric/score wording — replace with plain submission instructions. (Both reviewers.)
+2. **Return popover role**: it contains a form (comment textarea + Return button), NOT menu items → change `role="menu"` to `role="dialog" aria-modal="true"` with an accessible name (brief §4/§6; WCAG 4.1.2). (Reviewer A + B.)
+3. **Focus restore on close**: on Esc / outside-click / confirm, return focus to the Return trigger button (brief §6 "Esc close+refocus"); toggle `aria-hidden` dynamically. (Both.)
+4. **Responsive breakpoint**: the roster/student dual-column must be inline at **≥1024 (lg)** per brief §5, not 1280 (xl) — use `lg:col-span-*` so columns don't stack in 1024–1279.
+5. **Missing error states** (brief §3): add student POST-failure inline error + educator 403 over-permission calm inline message.
+
+## Aggregated non-blocking (fold into same refine)
+- Fix broken `var(--glow-focus)` reference in `.input-ring`.
+- `--text-muted` ~3.87:1 fails AA for normal text — use `--text-secondary` for body/empty-state text, reserve muted for large/decorative only.
+- Badge text 11px is below DESIGN-SYSTEM §2 minimum — bump to ≥12px.
+- Fix broken Phosphor icon classes (`ph ph- graduation-cap`, any `ph-` with a space).
+- Off-scale `gap-10` (40px) → nearest scale token.
+- Add explicit form label on the submit textarea + attachment input.
