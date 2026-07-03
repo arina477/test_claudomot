@@ -17,10 +17,13 @@ import type {
   Assignment,
   AssignmentListResponse,
   AssignmentPresignResponse,
+  AssignmentSubmission,
+  AssignmentSubmissionPresignResponse,
 } from '@studyhall/shared';
 import {
   AssignmentStatusSchema,
   CreateAssignmentSchema,
+  SubmitAssignmentSchema,
   UpdateAssignmentSchema,
 } from '@studyhall/shared';
 import { AuthGuard } from '../auth/auth.guard';
@@ -28,16 +31,18 @@ import { AuthGuard } from '../auth/auth.guard';
 import { AssignmentsService } from './assignments.service';
 
 // ---------------------------------------------------------------------------
-// AssignmentsController — wave-22 M5 (task 01fcefb8)
+// AssignmentsController — wave-22 M5 (task 01fcefb8) + wave-42 (task db8e082a)
 //
 // Routes:
-//   POST   /servers/:serverId/assignments                         — organizer create
-//   GET    /servers/:serverId/assignments                         — member list (due ASC + myStatus)
-//   GET    /assignments/:id                                       — member get (serverId derived from row)
-//   PATCH  /assignments/:id                                       — organizer update (serverId derived from row)
-//   DELETE /assignments/:id                                       — organizer soft-delete (serverId derived from row)
-//   PUT    /assignments/:id/status                                — member toggle state
-//   POST   /servers/:serverId/assignments/attachments/presign     — organizer attachment presign
+//   POST   /servers/:serverId/assignments                              — organizer create
+//   GET    /servers/:serverId/assignments                              — member list (due ASC + myStatus)
+//   POST   /servers/:serverId/assignments/attachments/presign         — organizer attachment presign
+//   POST   /servers/:serverId/assignments/submissions/presign         — member submission presign (wave-42)
+//   GET    /assignments/:id                                           — member get (serverId derived from row)
+//   PATCH  /assignments/:id                                           — organizer update (serverId derived from row)
+//   DELETE /assignments/:id                                           — organizer soft-delete (serverId derived from row)
+//   PUT    /assignments/:id/status                                    — member toggle state
+//   POST   /assignments/:id/submit                                    — member submit (wave-42)
 //
 // Security:
 //   - @UseGuards(AuthGuard) on every route.
@@ -120,6 +125,29 @@ export class AssignmentsController {
   }
 
   // -------------------------------------------------------------------------
+  // POST /servers/:serverId/assignments/submissions/presign
+  // Member-only submission attachment presign (wave-42 task db8e082a).
+  // Declared BEFORE /assignments/:id to prevent 'submissions' shadowing ':id'.
+  // -------------------------------------------------------------------------
+
+  @Post('servers/:serverId/assignments/submissions/presign')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async presignSubmissionAttachment(
+    @Param('serverId') serverId: string,
+    @Req() req: SessionAugmentedRequest,
+    @Body() body: unknown,
+  ): Promise<AssignmentSubmissionPresignResponse> {
+    const contentType = (body as { contentType?: unknown }).contentType;
+    if (typeof contentType !== 'string' || !contentType) {
+      throw new BadRequestException('contentType (string) is required');
+    }
+
+    const userId = req.session.getUserId();
+    return this.assignmentsService.presignSubmissionAttachment(serverId, userId, contentType);
+  }
+
+  // -------------------------------------------------------------------------
   // GET /assignments/:id
   // Member get. serverId derived from assignment row in service (IDOR-safe).
   // -------------------------------------------------------------------------
@@ -192,5 +220,28 @@ export class AssignmentsController {
 
     const userId = req.session.getUserId();
     return this.assignmentsService.toggleStatus(id, userId, parsed.data.state);
+  }
+
+  // -------------------------------------------------------------------------
+  // POST /assignments/:id/submit
+  // Member submit (wave-42 task db8e082a). serverId derived from assignment row.
+  // Returns 200 with the submitted AssignmentSubmission DTO.
+  // -------------------------------------------------------------------------
+
+  @Post('assignments/:id/submit')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async submitAssignment(
+    @Param('id') id: string,
+    @Req() req: SessionAugmentedRequest,
+    @Body() body: unknown,
+  ): Promise<AssignmentSubmission> {
+    const parsed = SubmitAssignmentSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.flatten());
+    }
+
+    const userId = req.session.getUserId();
+    return this.assignmentsService.submitAssignment(id, userId, parsed.data);
   }
 }

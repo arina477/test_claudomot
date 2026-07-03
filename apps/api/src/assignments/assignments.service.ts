@@ -10,7 +10,10 @@ import {
 import type {
   Assignment,
   AssignmentPresignResponse,
+  AssignmentSubmission,
+  AssignmentSubmissionPresignResponse,
   CreateAssignmentInput,
+  SubmitAssignmentInput,
   UpdateAssignmentInput,
 } from '@studyhall/shared';
 import { and, asc, eq } from 'drizzle-orm';
@@ -18,6 +21,7 @@ import { db } from '../db/index';
 import {
   assignment_attachments,
   assignment_status,
+  assignment_submissions,
   assignments,
   server_members,
 } from '../db/schema/index';
@@ -156,6 +160,7 @@ export class AssignmentsService {
 
   // -------------------------------------------------------------------------
   // rowToDto — map DB rows to Assignment DTO
+  // Optionally embeds mySubmission when includeSubmission=true (wave-42).
   // -------------------------------------------------------------------------
 
   private async rowToDto(
@@ -171,6 +176,7 @@ export class AssignmentsService {
       updated_at: Date;
     },
     userId: string,
+    includeSubmission = false,
   ): Promise<Assignment> {
     // Fetch per-user status (LEFT JOIN semantics — default 'todo' if no row)
     const [statusRow] = await db
@@ -202,6 +208,25 @@ export class AssignmentsService {
       };
     }
 
+    // wave-42: include the authenticated member's own submission when requested
+    let mySubmission: AssignmentSubmission | null = null;
+    if (includeSubmission) {
+      const [subRow] = await db
+        .select()
+        .from(assignment_submissions)
+        .where(
+          and(
+            eq(assignment_submissions.assignment_id, row.id),
+            eq(assignment_submissions.user_id, userId),
+          ),
+        )
+        .limit(1);
+
+      if (subRow) {
+        mySubmission = await this.submissionRowToDto(subRow);
+      }
+    }
+
     return {
       id: row.id,
       serverId: row.server_id,
@@ -211,7 +236,49 @@ export class AssignmentsService {
       dueDate: row.due_date.toISOString(),
       attachment,
       myStatus,
+      mySubmission,
       createdAt: row.created_at.toISOString(),
+    };
+  }
+
+  // -------------------------------------------------------------------------
+  // submissionRowToDto — map a DB submission row to AssignmentSubmission DTO
+  // Resolves attachment URL when an attachment is present.
+  // -------------------------------------------------------------------------
+
+  private async submissionRowToDto(row: {
+    user_id: string;
+    assignment_id: string;
+    text: string | null;
+    object_key: string | null;
+    filename: string | null;
+    content_type: string | null;
+    size_bytes: number | null;
+    submitted_at: Date;
+    returned_at: Date | null;
+    organizer_comment: string | null;
+  }): Promise<AssignmentSubmission> {
+    let attachment: AssignmentSubmission['attachment'] = null;
+    if (row.object_key && row.filename && row.content_type && row.size_bytes != null) {
+      const url = await this.filesService.resolveAttachmentUrl(row.object_key);
+      attachment = {
+        // submission attachments have no separate id row — use the object key as a stable id
+        id: row.object_key,
+        filename: row.filename,
+        contentType: row.content_type,
+        sizeBytes: row.size_bytes,
+        url: url ?? '',
+      };
+    }
+
+    return {
+      userId: row.user_id,
+      assignmentId: row.assignment_id,
+      text: row.text ?? null,
+      attachment,
+      submittedAt: row.submitted_at.toISOString(),
+      returnedAt: row.returned_at?.toISOString() ?? null,
+      organizerComment: row.organizer_comment ?? null,
     };
   }
 
@@ -315,7 +382,8 @@ export class AssignmentsService {
     // Derive serverId from row (IDOR-safe — never trust client param)
     await this.assertMember(userId, row.server_id);
 
-    return this.rowToDto(row, userId);
+    // wave-42: include the authenticated member's own submission
+    return this.rowToDto(row, userId, true);
   }
 
   // -------------------------------------------------------------------------
@@ -490,5 +558,129 @@ export class AssignmentsService {
     );
 
     return { uploadUrl, key };
+  }
+
+  // -------------------------------------------------------------------------
+  // presignSubmissionAttachment — POST /servers/:serverId/assignments/submissions/presign
+  //
+  // Member-only (NOT organizer). Reuses FilesService.presignAttachmentUpload
+  // with serverId as the scope key — same key pattern as organizer presign
+  // (attachments/<serverId>/<uuid>.<ext>), so validateAndHeadAttachment's
+  // server-scope regex accepts the resulting key at submit time.
+  // -------------------------------------------------------------------------
+
+  async presignSubmissionAttachment(
+    serverId: string,
+    userId: string,
+    contentType: string,
+  ): Promise<AssignmentSubmissionPresignResponse> {
+    await this.assertMember(userId, serverId);
+
+    if (!ATTACHMENT_ALLOWED_MIME[contentType]) {
+      throw new BadRequestException(
+        `Unsupported content-type: ${contentType}. Allowed: ${Object.keys(ATTACHMENT_ALLOWED_MIME).join(', ')}`,
+      );
+    }
+
+    const { uploadUrl, key } = await this.filesService.presignAttachmentUpload(
+      serverId,
+      userId,
+      contentType,
+    );
+
+    return { uploadUrl, key };
+  }
+
+  // -------------------------------------------------------------------------
+  // submitAssignment — POST /assignments/:id/submit
+  //
+  // Member authz derived from the assignment row's server_id (IDOR-safe).
+  // Idempotent UPSERT on (assignment_id, user_id): on resubmit the text +
+  // attachment columns are overwritten AND returned_at + organizer_comment
+  // are cleared (new submission supersedes a prior return).
+  // 400 if neither text nor attachment (mirrors Zod refine).
+  // -------------------------------------------------------------------------
+
+  async submitAssignment(
+    assignmentId: string,
+    userId: string,
+    input: SubmitAssignmentInput,
+  ): Promise<AssignmentSubmission> {
+    // Fetch the assignment row to derive server_id (IDOR-safe)
+    const [row] = await db
+      .select()
+      .from(assignments)
+      .where(and(eq(assignments.id, assignmentId), eq(assignments.is_deleted, false)))
+      .limit(1);
+
+    if (!row) throw new NotFoundException('Assignment not found');
+
+    // Derive serverId from row — never trust a client param
+    await this.assertMember(userId, row.server_id);
+
+    // Mirror the Zod refine: at least one of text or attachment must be present
+    if ((!input.text || input.text.length === 0) && !input.attachment) {
+      throw new BadRequestException('A submission must include text or an attachment.');
+    }
+
+    // If an attachment key is supplied, server-validate it (anti-spoof HeadObject)
+    let attachmentMeta: {
+      key: string;
+      filename: string;
+      sizeBytes: number;
+      contentType: string;
+    } | null = null;
+
+    if (input.attachment) {
+      const { sizeBytes, contentType } = await this.validateAndHeadAttachment(
+        input.attachment.key,
+        row.server_id,
+      );
+      attachmentMeta = {
+        key: input.attachment.key,
+        filename: input.attachment.filename,
+        sizeBytes,
+        contentType,
+      };
+    }
+
+    const now = new Date();
+
+    // Idempotent UPSERT: insert or update text + attachment; on resubmit clear
+    // returned_at + organizer_comment (new submission supersedes a prior return).
+    const [upserted] = await db
+      .insert(assignment_submissions)
+      .values({
+        assignment_id: assignmentId,
+        user_id: userId,
+        text: input.text ?? null,
+        object_key: attachmentMeta?.key ?? null,
+        filename: attachmentMeta?.filename ?? null,
+        content_type: attachmentMeta?.contentType ?? null,
+        size_bytes: attachmentMeta?.sizeBytes ?? null,
+        submitted_at: now,
+        returned_at: null,
+        organizer_comment: null,
+      })
+      .onConflictDoUpdate({
+        target: [assignment_submissions.assignment_id, assignment_submissions.user_id],
+        set: {
+          text: input.text ?? null,
+          object_key: attachmentMeta?.key ?? null,
+          filename: attachmentMeta?.filename ?? null,
+          content_type: attachmentMeta?.contentType ?? null,
+          size_bytes: attachmentMeta?.sizeBytes ?? null,
+          submitted_at: now,
+          // Clear return state on resubmit — new submission supersedes prior return
+          returned_at: null,
+          organizer_comment: null,
+          updated_at: now,
+        },
+      })
+      .returning();
+
+    if (!upserted) throw new Error('Submission upsert failed unexpectedly');
+
+    return this.submissionRowToDto(upserted);
   }
 }
