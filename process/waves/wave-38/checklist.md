@@ -37,7 +37,7 @@ TEST:
 - [x] T-9 Journey
 
 VERIFY:
-- [ ] V-1 Independent reviews (Karen + jenny, parallel)
+- [x] V-1 Independent reviews (Karen + jenny, parallel)
 - [ ] V-2 Triage
 - [ ] V-3 Fast-fix loop (or close)
 
