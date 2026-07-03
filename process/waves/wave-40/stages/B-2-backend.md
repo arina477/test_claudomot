@@ -1,0 +1,4 @@
+# Wave 40 — B-2 Backend (node-specialist)
+- `users.controller.ts` redirectToAvatar: boundary guard `/[\x00-\x1f\x7f]/` (NUL + ASCII control + DEL) on :userId → BadRequestException (400) before the service call. NO UUID shape imposed (users.id is opaque text) — valid non-UUID ids pass through (302/404). biome-ignore for noControlCharactersInRegex.
+- `files.service.ts` checkAvatarSize: try/catch the HeadObject send; `e.name==='NotFound' || 'NoSuchKey' || e.$metadata?.httpStatusCode===404` → NotFoundException (404); re-throw others (503/real failures unaffected).
+- Tests: files.service.spec (+4 NoSuchKey/re-throw), files.controller.spec (+2 NotFound propagation), NEW users.controller.spec (13: NUL/control→400, regression non-UUID→404, happy path). 543 total pass. Commit cbd88ba. No deviations; scope held to 2 endpoints.

@@ -3,11 +3,11 @@
 | Stage | Deliverable | Status | Notes |
 |---|---|---|---|
 | B-0 | stages/B-0-branch-and-schema.md | in-progress | backend-only, no schema |
-| B-1 | stages/B-1-contracts.md | pending | SKIP |
-| B-2 | stages/B-2-backend.md | pending | NUL-byte guard + catch NoSuchKey |
-| B-3 | stages/B-3-frontend.md | pending | SKIP |
-| B-4 | stages/B-4-wiring.md | pending | typecheck |
-| B-5 | stages/B-5-verify.md | pending | typecheck/biome/tests |
+| B-1 | stages/B-1-contracts.md | done | SKIP — no contract |
+| B-2 | stages/B-2-backend.md | done | done — guard+catch (cbd88ba) |
+| B-3 | stages/B-3-frontend.md | done | SKIP — no frontend |
+| B-4 | stages/B-4-wiring.md | done | done — typecheck clean |
+| B-5 | stages/B-5-verify.md | done | done — tc0/biome0/543 tests |
 | B-6 | stages/B-6-review.md | pending | head-builder gate |
 ## Block-specific context
 - **Spec contract:** tasks row 7525b759
