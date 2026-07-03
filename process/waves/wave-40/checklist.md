@@ -40,7 +40,7 @@ TEST:
 - [x] T-6 Layout
 - [x] T-7 Perf
 - [x] T-8 Security
-- [ ] T-9 Journey
+- [x] T-9 Journey
 
 VERIFY:
 - [ ] V-1 Independent reviews (Karen + jenny, parallel)

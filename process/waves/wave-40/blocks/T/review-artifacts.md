@@ -1,5 +1,5 @@
 # Wave 40 — T-block review artifacts
-**Block:** T (Test) · **Wave topic:** Harden avatar endpoints (500→4xx) · **Block exit gate:** T-9 · **Status:** in-progress
+**Block:** T (Test) · **Wave topic:** Harden avatar endpoints (500→4xx) · **Block exit gate:** T-9 · **Status:** gate-passed
 | Stage | Deliverable | Pattern | Status | Notes |
 |---|---|---|---|---|
 | T-1 | stages/T-1-static.md | ci-verified | done | biome+tsc green (run 28660221936) |
@@ -19,3 +19,14 @@
 process/waves/wave-40/blocks/T/findings-aggregate.md
 ## Gate verdict log
 <appended by head-tester at T-9>
+
+## Block exit / handoff
+```yaml
+test_block_status:    complete
+stages_run:           [T-1, T-2, T-4, T-8, T-9]
+stages_skipped:       [T-3 (no contract), T-5 (no user flow), T-6 (non-UI), T-7 (not heavy)]
+findings_total:       1
+findings_critical:    0
+findings_aggregate:   process/waves/wave-40/blocks/T/findings-aggregate.md
+ready_for_verify:     true
+```
