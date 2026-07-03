@@ -5,11 +5,11 @@
 | Stage | Deliverable file | Status | Notes |
 |---|---|---|---|
 | B-0 | stages/B-0-branch-and-schema.md | in-progress | frontend-only; no schema/deps |
-| B-1 | stages/B-1-contracts.md | pending | SKIP (no contract surface) |
-| B-2 | stages/B-2-backend.md | pending | SKIP (no backend) |
-| B-3 | stages/B-3-frontend.md | pending | UserMenu popover + wire ChannelSidebar |
-| B-4 | stages/B-4-wiring.md | pending | typecheck + nav/route wiring |
-| B-5 | stages/B-5-verify.md | pending | typecheck/lint/unit |
+| B-1 | stages/B-1-contracts.md | done | SKIP — no contract surface |
+| B-2 | stages/B-2-backend.md | done | SKIP — no backend |
+| B-3 | stages/B-3-frontend.md | done | done — UserMenu + ChannelSidebar wired (b374023) |
+| B-4 | stages/B-4-wiring.md | done | done — typecheck clean |
+| B-5 | stages/B-5-verify.md | done | done — tc0/biome0/340 tests |
 | B-6 | stages/B-6-review.md | pending | head-builder gate |
 
 ## Block-specific context
