@@ -3,7 +3,7 @@
 **Block:** P (Product)
 **Wave topic:** Wire the profile-settings entry button so the avatar upload UI (and settings) is reachable — fixes wave-38 F1
 **Block exit gate:** P-4
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
@@ -12,7 +12,7 @@
 | P-1 | process/waves/wave-39/stages/P-1-decompose.md | done | single-spec ui; floor-merge override-ship (precedent); design_gap_flag=false |
 | P-2 | process/waves/wave-39/stages/P-2-spec.md | done | spec in task c208e91e |
 | P-3 | process/waves/wave-39/stages/P-3-plan.md | done | frontend-only; react-specialist; UserMenu popover over existing routes |
-| P-4 | process/waves/wave-39/blocks/P/gate-verdict.md | pending | |
+| P-4 | process/waves/wave-39/blocks/P/gate-verdict.md | done | Phase1 head-product APPROVED; Phase2 Karen+jenny APPROVE, Gemini UNAVAILABLE |
 
 ## Block-specific context
 - **Wave topic:** wire dead settings button → reachable settings/avatar UI (F1 fix)
