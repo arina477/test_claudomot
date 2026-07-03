@@ -98,4 +98,34 @@ export class UsersService {
       .set({ avatar_url: avatarUrl, updated_at: new Date() })
       .where(eq(users.id, id));
   }
+
+  /**
+   * Persist avatar_key (S3 object key) and avatar_url (stable app redirect URL)
+   * together in a single UPDATE (wave-38, task 84e09891).
+   *
+   * avatar_url is now a stable app URL (`<PUBLIC_API_URL>/users/:id/avatar?v=<hash>`)
+   * rather than a raw static S3 URL — it never expires and consumers need not
+   * change; the redirect endpoint handles per-request presigning.
+   */
+  async setAvatar(id: string, avatarKey: string, avatarUrl: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ avatar_key: avatarKey, avatar_url: avatarUrl, updated_at: new Date() })
+      .where(eq(users.id, id));
+  }
+
+  /**
+   * Look up avatar_key for the given userId — used by GET /users/:userId/avatar
+   * to resolve a fresh presigned URL per redirect hit.
+   *
+   * Returns null when the user has no avatar (avatar_key IS NULL).
+   */
+  async findAvatarKey(id: string): Promise<string | null> {
+    const result = await db
+      .select({ avatar_key: users.avatar_key })
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1);
+    return result[0]?.avatar_key ?? null;
+  }
 }

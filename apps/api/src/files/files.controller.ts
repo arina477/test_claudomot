@@ -3,10 +3,14 @@ import {
   Body,
   Controller,
   HttpCode,
+  Inject,
   Post,
   Req,
+  ServiceUnavailableException,
   UseGuards,
+  forwardRef,
 } from '@nestjs/common';
+import { createHash } from 'node:crypto';
 import type { AvatarPresignResponse } from '@studyhall/shared';
 import { SessionNoVerifyGuard } from '../auth/session-no-verify.guard';
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
@@ -35,6 +39,7 @@ interface ConfirmAvatarBody {
 export class FilesController {
   constructor(
     private readonly filesService: FilesService,
+    @Inject(forwardRef(() => UsersService))
     private readonly usersService: UsersService,
   ) {}
 
@@ -100,12 +105,29 @@ export class FilesController {
     // Throws 413 PayloadTooLargeException if object > 2MB, 503 if storage is unconfigured.
     await this.filesService.checkAvatarSize(key);
 
-    const publicUrl = this.filesService.resolvePublicUrl(key);
-    if (!publicUrl) {
-      throw new BadRequestException('Storage not configured — cannot resolve avatar URL');
+    // Build a stable app redirect URL for avatar rendering (wave-38, task 84e09891).
+    //
+    // The Tigris bucket is PRIVATE — static public URLs return 403 anonymously.
+    // Instead of persisting a raw S3 URL (which 403s), we persist:
+    //   avatar_key  — the S3 object key, used by GET /users/:id/avatar to re-sign per hit.
+    //   avatar_url  — a stable app URL that never expires; the ?v= cache-buster changes
+    //                 only when the avatar changes (8 chars of SHA-256(key)), so consumers
+    //                 refetch on update but cache aggressively otherwise.
+    //
+    // All DTO consumers (profile, servers roster, account-data export, etc.) keep reading
+    // avatar_url as before — zero consumer change; the redirect is transparent to <img>.
+    const publicApiUrl = process.env.PUBLIC_API_URL;
+    if (!publicApiUrl) {
+      throw new ServiceUnavailableException({
+        code: 'STORAGE_NOT_CONFIGURED',
+        message: 'PUBLIC_API_URL is not set — cannot build stable avatar URL',
+      });
     }
-    await this.usersService.setAvatarUrl(userId, publicUrl);
+    const vHash = createHash('sha256').update(key).digest('hex').slice(0, 8);
+    const stableAvatarUrl = `${publicApiUrl}/users/${userId}/avatar?v=${vHash}`;
 
-    return { avatarUrl: publicUrl };
+    await this.usersService.setAvatar(userId, key, stableAvatarUrl);
+
+    return { avatarUrl: stableAvatarUrl };
   }
 }

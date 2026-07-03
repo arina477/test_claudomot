@@ -47,6 +47,14 @@ const ATTACHMENT_MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 // per-request re-signing.
 const ATTACHMENT_GET_EXPIRY_SECONDS = 3600; // 1 hour
 
+// Presigned-GET TTL for avatar redirect responses.
+// Shorter than attachments: avatars are served through a redirect endpoint
+// (GET /users/:userId/avatar → 302 to presigned URL) with Cache-Control:
+// public, max-age=300, so browsers cache the presigned target for ~5 min.
+// The presign TTL must exceed max-age so the target is still valid when a
+// browser re-validates.
+const AVATAR_GET_EXPIRY_SECONDS = 300; // 5 minutes
+
 const PRESIGN_EXPIRY_SECONDS = 300; // 5 minutes
 
 // Server-side size cap enforced at confirm time via HeadObject.
@@ -198,6 +206,32 @@ export class FilesService {
       return null;
     }
     return buildPublicUrl(endpoint, bucket, key);
+  }
+
+  /**
+   * Resolve a presigned-GET URL for an avatar key (wave-38, task 84e09891).
+   *
+   * Tigris bucket is PRIVATE — static public URLs return 403 anonymously.
+   * Avatars are served via GET /users/:userId/avatar → 302 redirect to this
+   * presigned URL, mirroring the proven resolveAttachmentUrl pattern.
+   *
+   * Returns null when storage is not configured (graceful — caller emits 503).
+   *
+   * @param key - S3 object key (avatars/<userId>/<uuid>.<ext>)
+   */
+  async resolveAvatarUrl(key: string): Promise<string | null> {
+    const client = this.getS3Client();
+    if (!client) {
+      return null;
+    }
+
+    const bucket = process.env.STORAGE_BUCKET_NAME;
+    if (!bucket) {
+      return null;
+    }
+
+    const command = new GetObjectCommand({ Bucket: bucket, Key: key });
+    return getSignedUrl(client, command, { expiresIn: AVATAR_GET_EXPIRY_SECONDS });
   }
 
   // ---------------------------------------------------------------------------
