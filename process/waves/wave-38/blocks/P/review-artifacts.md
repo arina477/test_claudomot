@@ -3,7 +3,7 @@
 **Block:** P (Product)
 **Wave topic:** Avatar storage go-live — wire founder-provided Tigris S3 creds, verify server-side 2MB cap, ship avatar upload end-to-end (closes task 84e09891)
 **Block exit gate:** P-4
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 
