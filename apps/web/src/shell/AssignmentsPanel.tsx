@@ -1,19 +1,22 @@
 /**
- * AssignmentsPanel — the server assignments page (wave-22 M5).
+ * AssignmentsPanel — the server assignments page (wave-22 M5 + wave-42 M9).
  *
  * Layout follows design/assignments-panel.html:
  *   - Channel-like header ("Assignments", clipboard icon) with organizer-only "New Assignment" CTA.
  *   - Section header "Upcoming & Recent" + "Sorted by Due Date" caption.
  *   - Assignment list (due-sorted ASC, from GET /servers/:serverId/assignments).
+ *   - Each AssignmentCard includes the student submit/return UI (wave-42).
  *   - Empty state when list is empty: clipboard icon + "No assignments yet." + organizer CTA.
  *   - AssignmentForm modal (create/edit) — organizer-only.
  *
- * ORGANIZER check (wave-23 B-3): gated on effective permissions from
- * GET /servers/:serverId/me/permissions. CTA is shown when perms.owner OR
- * perms.manage_assignments is true. While loading or on fetch error the CTA is hidden.
- * The server always enforces; client gate is convenience-only.
- * On 403 from POST/PATCH (permission revoked between load and submit), AssignmentForm
- * surfaces the thrown error as an inline red alert — no new toast system needed.
+ * ORGANIZER check (wave-23 B-3 + wave-42 M9): gated on effective permissions from
+ * GET /servers/:serverId/me/permissions. CTA shown when perms.owner OR
+ * perms.manage_assignments is true. Server always enforces; client gate is convenience-only.
+ *
+ * wave-42 additions:
+ *   - AssignmentCard receives serverId + onAnnounce for submission flow.
+ *   - SubmissionsRoster rendered below each card when isOrganizer and card expanded.
+ *   - aria-live announcer region for a11y state announcements.
  */
 
 import type { Assignment } from '@studyhall/shared';
@@ -23,6 +26,7 @@ import { ErrorState } from '../components/states/ErrorState';
 import { AssignmentCard } from './AssignmentCard';
 import { AssignmentForm } from './AssignmentForm';
 import { useServers } from './ServerContext';
+import { SubmissionsRoster } from './SubmissionsRoster';
 import { ClipboardTextIcon, PlusIcon } from './icons';
 
 // ---------------------------------------------------------------------------
@@ -52,8 +56,17 @@ export function AssignmentsPanel({ onClose }: Props) {
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Assignment | null>(null);
 
-  // Detail modal state (future extension — for now clicking a card is a no-op or opens edit for organizer)
-  // We keep this minimal: card click opens edit for organizer; non-organizer gets a read-only detail modal (future wave).
+  // A11y live-region announcer
+  const announceRef = useRef<HTMLDivElement>(null);
+  function announce(msg: string) {
+    if (!announceRef.current) return;
+    announceRef.current.textContent = msg;
+    setTimeout(() => {
+      if (announceRef.current?.textContent === msg) {
+        announceRef.current.textContent = '';
+      }
+    }, 3000);
+  }
 
   const mounted = useRef(true);
   useEffect(() => {
@@ -67,9 +80,6 @@ export function AssignmentsPanel({ onClose }: Props) {
   // Effective permissions (wave-23 B-3)
   // ---------------------------------------------------------------------------
 
-  // Fetch session-scoped effective permissions for this server.
-  // CTA is hidden while loading or if the fetch fails (e.g. 403 non-member).
-  // Gate: perms.owner || perms.manage_assignments (server always enforces).
   type PermsState = 'loading' | 'ready' | 'error';
   const [perms, setPerms] = useState<import('@studyhall/shared').EffectivePermissions | null>(null);
   const [permsStatus, setPermsStatus] = useState<PermsState>('loading');
@@ -105,7 +115,6 @@ export function AssignmentsPanel({ onClose }: Props) {
       .listAssignments(serverId)
       .then(({ assignments: list }) => {
         if (!mounted.current) return;
-        // Already due-sorted by backend (due_date ASC), but sort client-side too for safety
         const sorted = [...list].sort(
           (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
         );
@@ -131,7 +140,7 @@ export function AssignmentsPanel({ onClose }: Props) {
   }, []);
 
   // ---------------------------------------------------------------------------
-  // Card click handler — for now: organizer opens edit; member noop (future: detail view)
+  // Card click handler
   // ---------------------------------------------------------------------------
 
   const handleCardClick = useCallback(
@@ -140,7 +149,6 @@ export function AssignmentsPanel({ onClose }: Props) {
         setEditTarget(assignment);
         setFormOpen(true);
       }
-      // Non-organizers: detail view is a future wave feature
     },
     [isOrganizer],
   );
@@ -153,13 +161,11 @@ export function AssignmentsPanel({ onClose }: Props) {
     setAssignments((prev) => {
       const exists = prev.find((a) => a.id === saved.id);
       if (exists) {
-        // Update in place
         const updated = prev.map((a) => (a.id === saved.id ? saved : a));
         return [...updated].sort(
           (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
         );
       }
-      // Insert new
       const next = [...prev, saved].sort(
         (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
       );
@@ -193,6 +199,15 @@ export function AssignmentsPanel({ onClose }: Props) {
       className="flex flex-col flex-1 min-w-0 min-h-0"
       style={{ backgroundColor: '#1c1c1f' }}
     >
+      {/* A11y live-region announcer — screen reader only */}
+      <div
+        ref={announceRef}
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+        data-testid="a11y-announcer"
+      />
+
       {/* Panel header */}
       <header
         className="flex h-14 shrink-0 items-center justify-between px-6"
@@ -212,7 +227,6 @@ export function AssignmentsPanel({ onClose }: Props) {
               className="mr-1 flex h-8 w-8 items-center justify-center rounded-md transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 lg:hidden"
               style={{ color: 'rgba(255,255,255,0.60)' }}
             >
-              {/* left arrow */}
               <svg
                 width={18}
                 height={18}
@@ -279,7 +293,7 @@ export function AssignmentsPanel({ onClose }: Props) {
       {/* Scrolling content */}
       <div className="flex-1 overflow-y-auto px-4 py-8">
         <div className="max-w-4xl mx-auto flex flex-col gap-8">
-          {/* Loading — §113 skeleton rows (surface-700 shimmer) */}
+          {/* Loading */}
           {loadStatus === 'loading' && (
             <div
               className="flex flex-col gap-3 animate-pulse"
@@ -316,7 +330,7 @@ export function AssignmentsPanel({ onClose }: Props) {
             </div>
           )}
 
-          {/* Error — §113: danger icon + cause + retry */}
+          {/* Error */}
           {loadStatus === 'error' && (
             <ErrorState
               data-testid="assignments-error"
@@ -391,15 +405,26 @@ export function AssignmentsPanel({ onClose }: Props) {
                 </span>
               </div>
 
-              {/* Cards */}
-              <div className="flex flex-col gap-3">
+              {/* Cards + roster */}
+              <div className="flex flex-col gap-8">
                 {assignments.map((a) => (
-                  <AssignmentCard
-                    key={a.id}
-                    assignment={a}
-                    onStatusChange={handleStatusChange}
-                    onClick={handleCardClick}
-                  />
+                  <div key={a.id} className="flex flex-col gap-4">
+                    <AssignmentCard
+                      assignment={a}
+                      serverId={serverId ?? ''}
+                      onStatusChange={handleStatusChange}
+                      onClick={handleCardClick}
+                      onAnnounce={announce}
+                    />
+                    {/* Educator submissions roster — manage_assignments gated */}
+                    {isOrganizer && (
+                      <SubmissionsRoster
+                        assignmentId={a.id}
+                        isOrganizer={isOrganizer}
+                        onAnnounce={announce}
+                      />
+                    )}
+                  </div>
                 ))}
               </div>
 
