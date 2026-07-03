@@ -1,5 +1,5 @@
 # Wave 39 — B-block review artifacts
-**Block:** B (Build) · **Wave topic:** Settings-doorway user menu (F1 fix) · **Block exit gate:** B-6 · **Status:** in-progress
+**Block:** B (Build) · **Wave topic:** Settings-doorway user menu (F1 fix) · **Block exit gate:** B-6 · **Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
@@ -10,7 +10,7 @@
 | B-3 | stages/B-3-frontend.md | done | done — UserMenu + ChannelSidebar wired (b374023) |
 | B-4 | stages/B-4-wiring.md | done | done — typecheck clean |
 | B-5 | stages/B-5-verify.md | done | done — tc0/biome0/340 tests |
-| B-6 | stages/B-6-review.md | pending | head-builder gate |
+| B-6 | stages/B-6-review.md | done | head-builder APPROVED; code-reviewer 1 CRIT+1 HIGH fixed (91bcb5a) |
 
 ## Block-specific context
 - **Spec contract:** tasks row c208e91e (DB)
@@ -25,3 +25,15 @@
 none
 ## Gate verdict log
 <appended by fresh head-builder spawn at B-6 Action 1>
+
+## Block exit / handoff
+```yaml
+build_block_status:    complete
+branch:                wave-39-settings-menu
+stages_run:            [B-0, B-3, B-4, B-5, B-6]
+stages_skipped:        [B-1 (no contract surface), B-2 (no backend)]
+review_verdict:        APPROVE
+deviations_logged:     []
+last_commit_sha:       91bcb5a
+ready_for_ci:          true
+```
