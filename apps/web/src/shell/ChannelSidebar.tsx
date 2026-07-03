@@ -17,6 +17,7 @@ import { InviteShareModal } from './InviteShareModal';
 import { useProfile } from './ProfileContext';
 import { useServers } from './ServerContext';
 import { ServerRolesPage } from './ServerRolesPage';
+import { UserMenu } from './UserMenu';
 import {
   CaretDownIcon,
   ClipboardTextIcon,
@@ -167,7 +168,9 @@ export function ChannelSidebar() {
   } = useServers();
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [rolesPageOpen, setRolesPageOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const inviteBtnRef = useRef<HTMLButtonElement>(null);
+  const settingsBtnRef = useRef<HTMLButtonElement>(null);
 
   // Unread mention badge counts — driven by realtime socket + bootstrap fetch
   const { getCount, markChannelRead } = useMentionBadge(
@@ -394,16 +397,23 @@ export function ChannelSidebar() {
 
       {/* Current user panel (bottom) */}
       <div
-        className="flex h-[60px] shrink-0 items-center px-2"
+        className="relative flex h-[60px] shrink-0 items-center px-2"
         style={{
           borderTop: '1px solid rgba(255,255,255,0.06)',
           backgroundColor: 'rgba(10,10,11,0.80)',
         }}
       >
+        {/* User menu popover — renders above the footer when open */}
+        {menuOpen && <UserMenu anchorRef={settingsBtnRef} onClose={() => setMenuOpen(false)} />}
+
         <button
+          ref={settingsBtnRef}
           type="button"
           aria-label="Your profile and settings"
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
           className="flex w-full items-center gap-2 rounded-md p-1.5 cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 group"
+          onClick={() => setMenuOpen((prev) => !prev)}
           onMouseEnter={(e) => {
             (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#1c1c1f';
           }}
