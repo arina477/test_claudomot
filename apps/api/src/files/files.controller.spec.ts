@@ -3,7 +3,7 @@ import {
   PayloadTooLargeException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FilesController } from './files.controller';
 
 // Minimal mock session request — mirrors the SessionAugmentedRequest interface.
@@ -27,6 +27,8 @@ function makeController() {
       .mockReturnValue('https://cdn.example.com/avatars/user-abc/some-uuid.png'),
   };
   const usersService = {
+    // wave-38: confirm now calls setAvatar (key + url) instead of setAvatarUrl (url only)
+    setAvatar: vi.fn().mockResolvedValue(undefined),
     setAvatarUrl: vi.fn().mockResolvedValue(undefined),
   };
   // biome-ignore lint/suspicious/noExplicitAny: test mock — full service types not needed
@@ -40,7 +42,13 @@ describe('FilesController', () => {
   let usersService: ReturnType<typeof makeController>['usersService'];
 
   beforeEach(() => {
+    // wave-38: confirm handler requires PUBLIC_API_URL to build the stable avatar URL.
+    process.env.PUBLIC_API_URL = 'https://api.studyhall.test';
     ({ controller, filesService, usersService } = makeController());
+  });
+
+  afterEach(() => {
+    delete process.env.PUBLIC_API_URL;
   });
 
   // ── POST /profile/avatar/presign ─────────────────────────────────────────────
@@ -74,16 +82,21 @@ describe('FilesController', () => {
   // ── POST /profile/avatar/confirm ─────────────────────────────────────────────
 
   describe('confirm — key ownership enforcement (B-6 defense-in-depth)', () => {
-    it('accepts a key scoped to the calling user and returns avatarUrl', async () => {
+    it('accepts a key scoped to the calling user and returns a stable avatarUrl', async () => {
+      // wave-38: confirm now returns a stable app URL (<PUBLIC_API_URL>/users/:id/avatar?v=<hash>)
+      // instead of a raw S3 URL. The ?v= hash is SHA-256(key).slice(0,8) — deterministic.
       const result = await controller.confirm(makeReq('user-abc'), {
         key: 'avatars/user-abc/some-uuid.png',
       });
-      expect(result).toEqual({
-        avatarUrl: 'https://cdn.example.com/avatars/user-abc/some-uuid.png',
-      });
-      expect(usersService.setAvatarUrl).toHaveBeenCalledWith(
+      // Stable app URL — must route through the redirect endpoint, not raw S3.
+      expect(result.avatarUrl).toMatch(
+        /^https:\/\/api\.studyhall\.test\/users\/user-abc\/avatar\?v=[0-9a-f]{8}$/,
+      );
+      // setAvatar(userId, key, url) is called — both key and url persisted together.
+      expect(usersService.setAvatar).toHaveBeenCalledWith(
         'user-abc',
-        'https://cdn.example.com/avatars/user-abc/some-uuid.png',
+        'avatars/user-abc/some-uuid.png',
+        result.avatarUrl,
       );
     });
 
@@ -126,11 +139,13 @@ describe('FilesController', () => {
       );
     });
 
-    it('throws BadRequestException (400) when storage is not configured', async () => {
-      filesService.resolvePublicUrl.mockReturnValue(null);
+    it('throws ServiceUnavailableException (503) when PUBLIC_API_URL is not set', async () => {
+      // wave-38: confirm now requires PUBLIC_API_URL to build the stable avatar URL.
+      // When absent it throws 503 STORAGE_NOT_CONFIGURED (same family as missing S3 creds).
+      delete process.env.PUBLIC_API_URL;
       await expect(
         controller.confirm(makeReq('user-abc'), { key: 'avatars/user-abc/some-uuid.png' }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(ServiceUnavailableException);
     });
 
     it('propagates PayloadTooLargeException (413) when checkAvatarSize rejects oversized upload', async () => {
@@ -143,19 +158,20 @@ describe('FilesController', () => {
       ).rejects.toThrow(PayloadTooLargeException);
     });
 
-    it('calls checkAvatarSize before setAvatarUrl (size check runs before DB write)', async () => {
+    it('calls checkAvatarSize before setAvatar (size check runs before DB write)', async () => {
       // Ensures size enforcement is not bypassed even when storage is configured.
+      // wave-38: the DB write is now usersService.setAvatar (key+url), not setAvatarUrl.
       const callOrder: string[] = [];
       filesService.checkAvatarSize.mockImplementation(async () => {
         callOrder.push('checkAvatarSize');
       });
-      usersService.setAvatarUrl.mockImplementation(async () => {
-        callOrder.push('setAvatarUrl');
+      usersService.setAvatar.mockImplementation(async () => {
+        callOrder.push('setAvatar');
       });
 
       await controller.confirm(makeReq('user-abc'), { key: 'avatars/user-abc/some-uuid.png' });
 
-      expect(callOrder).toEqual(['checkAvatarSize', 'setAvatarUrl']);
+      expect(callOrder).toEqual(['checkAvatarSize', 'setAvatar']);
     });
 
     it('propagates ServiceUnavailableException (503) from checkAvatarSize when storage unconfigured', async () => {
