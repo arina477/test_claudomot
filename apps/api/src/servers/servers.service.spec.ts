@@ -1211,6 +1211,7 @@ describe('ServersService.listServerMembers', () => {
           email: 'mia@example.com',
           avatarUrl: null,
           username: 'miaw',
+          mutedUntil: null,
         },
         {
           userId: 'user-2',
@@ -1218,6 +1219,7 @@ describe('ServersService.listServerMembers', () => {
           email: 'jane@example.com',
           avatarUrl: 'https://example.com/avatar.png',
           username: 'jane99',
+          mutedUntil: null,
         },
       ]);
     });
@@ -1230,12 +1232,14 @@ describe('ServersService.listServerMembers', () => {
       displayName: 'Mia Wong',
       avatarUrl: null,
       username: 'miaw',
+      mutedUntil: null,
     });
     expect(result[1]).toEqual({
       userId: 'user-2',
       displayName: 'jane', // falls back to email prefix when display_name is null
       avatarUrl: 'https://example.com/avatar.png',
       username: 'jane99',
+      mutedUntil: null,
     });
   });
 
