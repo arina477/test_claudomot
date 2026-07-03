@@ -11,7 +11,7 @@ PRODUCT:
 
 DESIGN (skip block if non-UI wave):
 - [x] D-1 Brief
-- [ ] D-2 Variants (with bounded iteration)
+- [x] D-2 Variants (with bounded iteration)
 - [ ] D-3 Review & adopt
 
 BUILD:

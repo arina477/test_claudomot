@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en" class="antialiased dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assignment Lifecycle - StudyHall</title>
+    
+    <!-- Fonts: Geist Family -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Icons: Phosphor -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Geist', '-apple-system', 'sans-serif'],
+                        mono: ['Geist Mono', 'monospace'],
+                    },
+                    colors: {
+                        surface: {
+                            950: '#0a0a0b',
+                            900: '#121214',
+                            800: '#1c1c1f',
+                            700: '#27272a',
+                            600: '#3f3f46',
+                            500: '#52525b',
+                        },
+                        emerald: { DEFAULT: '#10b981', 500: '#10b981' },
+                        amber: { DEFAULT: '#f59e0b', 500: '#f59e0b' },
+                        danger: { DEFAULT: '#ef4444', 500: '#ef4444', text: '#f87171' },
+                    },
+                    boxShadow: {
+                        'sm': '0 1px 2px rgba(0,0,0,0.4)',
+                        'pop': '0 8px 24px rgba(0,0,0,0.5)',
+                        'glow-focus': '0 0 0 2px rgba(16,185,129,0.4)',
+                        'glow-subtle': '0 0 15px rgba(255,255,255,0.05)',
+                    },
+                    transitionTimingFunction: {
+                        'spring': 'cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                        'smooth': 'cubic-bezier(0.4, 0.0, 0.2, 1)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Macro & Meso CSS Definitions */
+        :root {
+            --border-hairline: rgba(255,255,255,0.06);
+            --border-hover: rgba(255,255,255,0.10);
+            --text-primary: rgba(255,255,255,0.92);
+            --text-secondary: rgba(255,255,255,0.60);
+            --text-muted: rgba(255,255,255,0.40);
+        }
+
+        body {
+            background-color: theme('colors.surface.950');
+            color: var(--text-primary);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: theme('colors.surface.600'); border-radius: 999px; }
+        ::-webkit-scrollbar-thumb:hover { background: theme('colors.surface.500'); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+
+        /* Liquid Glass / Refraction Elements */
+        .glass-panel {
+            background: rgba(39, 39, 42, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 8px 24px rgba(0,0,0,0.5);
+        }
+
+        .input-ring:focus-within {
+            box-shadow: var(--glow-focus);
+            border-color: theme('colors.emerald.DEFAULT');
+        }
+
+        /* Staggered Roster Animation */
+        .roster-row {
+            opacity: 0;
+            transform: translateY(10px);
+            animation: slideUpFade 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        
+        .roster-loader {
+            background: linear-gradient(90deg, #27272a 0%, #3f3f46 50%, #27272a 100%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite linear;
+        }
+
+        /* Keyframes */
+        @keyframes slideUpFade {
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        @keyframes spinner-draw {
+            0% { stroke-dasharray: 1, 150; stroke-dashoffset: 0; }
+            50% { stroke-dasharray: 90, 150; stroke-dashoffset: -35; }
+            100% { stroke-dasharray: 90, 150; stroke-dashoffset: -124; }
+        }
+
+        /* Interactive Micro-states */
+        .btn-press:active { transform: scale(0.98); }
+        .btn-press { transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.15s ease, border-color 0.15s ease; }
+        
+        /* Focus Outline Reset via Tailwind config, explicitly disabling browser default on generic buttons to rely on custom rings */
+        button:focus-visible { outline: 2px solid theme('colors.emerald.DEFAULT'); outline-offset: 2px; }
+
+        /* Typography fixes */
+        h1, h2, h3, h4 { letter-spacing: -0.01em; }
+    </style>
+</head>
+<body class="h-screen w-full flex overflow-hidden selection:bg-emerald-500/30">
+
+    <!-- Mock Shell: Server Rail (Pane 1) -->
+    <nav class="w-[72px] h-full bg-surface-900 border-r border-[var(--border-hairline)] flex flex-col items-center py-4 gap-3 z-10 shrink-0 hidden md:flex">
+        <!-- Server Icon Active -->
+        <button class="relative w-11 h-11 rounded-xl bg-surface-800 flex items-center justify-center group btn-press transition-all duration-300 !rounded-[12px] bg-surface-700">
+            <div class="absolute -left-[18px] top-1/2 -translate-y-1/2 w-[4px] h-[32px] bg-emerald-500 rounded-r-full"></div>
+            <i class="ph ph- graduation-cap text-xl text-white"></i>
+        </button>
+        <div class="w-8 h-[2px] bg-surface-700/50 rounded-full my-1"></div>
+        <!-- Inactive Servers -->
+        <button class="w-11 h-11 rounded-[22px] hover:rounded-[12px] bg-surface-800 flex items-center justify-center text-white/50 hover:text-white hover:bg-surface-700 group btn-press transition-all duration-300">
+            <span class="font-medium text-xs">CS</span>
+        </button>
+        <button class="w-11 h-11 rounded-[22px] hover:rounded-[12px] bg-surface-800 flex items-center justify-center text-white/50 hover:text-white hover:bg-surface-700 group btn-press transition-all duration-300">
+            <span class="font-medium text-xs">HI</span>
+        </button>
+    </nav>
+
+    <!-- Mock Shell: Sidebar (Pane 2) -->
+    <aside class="w-[260px] h-full bg-surface-900 border-r border-[var(--border-hairline)] flex flex-col z-10 shrink-0 hidden lg:flex">
+        <header class="h-[60px] px-4 flex items-center shadow-sm border-b border-[var(--border-hairline)] relative z-10">
+            <h2 class="font-semibold text-[15px] truncate text-primary">Advanced Cybernetics</h2>
+        </header>
+        <div class="flex-1 overflow-y-auto py-3 px-3 space-y-[2px]">
+            <div class="text-[11px] font-semibold text-white/40 uppercase tracking-wider mb-2 px-2 pt-2">Tasks & Tracking</div>
+            <button class="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-white/60 hover:text-white hover:bg-surface-700 mb-1 btn-press">
+                <i class="ph ph-kanban"></i> <span class="text-sm font-medium">Project Board</span>
+            </button>
+            <button class="w-full flex items-center gap-2 px-2 py-1.5 rounded-md bg-surface-700 text-emerald-400 btn-press">
+                <i class="ph ph-clipboard-text"></i> <span class="text-sm font-medium">Assignments</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Canvas (Assignment Detail) -->
+    <main class="flex-1 h-full bg-surface-800 flex flex-col relative overflow-hidden">
+        
+        <!-- Top Nav / Breadcrumb Shell -->
+        <header class="h-[60px] px-6 border-b border-[var(--border-hairline)] flex items-center justify-between shrink-0 bg-surface-800/80 backdrop-blur-md z-20 sticky top-0">
+            <div class="flex items-center gap-3">
+                <button class="w-7 h-7 rounded-md hover:bg-surface-700 flex items-center justify-center text-white/60 hover:text-white transition-colors lg:hidden">
+                    <i class="ph ph-list text-lg"></i>
+                </button>
+                <div class="flex items-center gap-2 text-sm text-[var(--text-secondary)]"> <!-- Breadcrumbs -->
+                    <i class="ph ph-clipboard-text"></i>
+                    <span>Assignments</span>
+                    <i class="ph ph-caret-right text-[10px]"></i>
+                    <span class="text-[var(--text-primary)] font-medium">Midterm Architectures</span>
+                </div>
+            </div>
+            <!-- Educator perspective toggle (For demo purposes only, mapping to functional realities) -->
+            <div class="hidden md:flex items-center gap-2 bg-surface-900 border border-[var(--border-hairline)] p-1 rounded-md text-xs font-mono">
+                <span class="px-2 py-1 rounded bg-surface-700 text-[var(--text-primary)]">Scope: Detail Ext.</span>
+            </div>
+        </header>
+
+        <!-- Canvas Body (Scrollable Scroll Container) -->
+        <div class="flex-1 overflow-y-auto no-scrollbar relative w-full pb-32">
+            <div class="max-w-6xl mx-auto w-full px-4 lg:px-8 py-8 md:py-12 flex flex-col gap-10">
+                
+                <!-- Assignment Header (Context) -->
+                <section class="max-w-3xl">
+                    <div class="flex flex-wrap items-center gap-3 mb-4">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-medium tracking-wide">
+                            <i class="ph-fill ph-clock"></i> Due tonight, 11:59p
+                        </span>
+                        <span class="text-xs text-[var(--text-muted)] font-mono">ID: CS492-AX8</span>
+                    </div>
+                    <h1 class="text-3xl md:text-4xl font-semibold tracking-tight text-[var(--text-primary)] mb-4 leading-tight">
+                        Midterm: Neural Pathway Analysis Model
+                    </h1>
+                    <div class="prose prose-invert prose-p:text-[15px] prose-p:leading-relaxed text-[var(--text-secondary)]">
+                        <p>Evaluate the dataset provided in module 4. Construct a predictive model noting the latency between simulated synapses. Submit your core logic rationale and attach an executed log (PDF or TXT only, max 10MB). Grade will be mapped to the central rubric automatically upon return.</p>
+                    </div>
+                </section>
+
+                <hr class="border-[var(--border-hairline)]">
+
+                <!-- Split View: Differentiating the unified spec for prototyping. -->
+                <div class="grid grid-cols-1 xl:grid-cols-12 gap-8 xl:gap-12 items-start relative">
+                    
+                    <!-- LEFT COLUMN: STUDENT SPHERE (The submit control) -->
+                    <div class="xl:col-span-5 flex flex-col gap-6 sticky top-8">
+                        <header class="flex items-center justify-between">
+                            <h2 class="text-lg font-semibold text-[var(--text-primary)]">Your Work</h2>
+                            <!-- Private Todo Toggle (Shipped feature context) -->
+                            <label class="flex items-center gap-2 cursor-pointer group">
+                                <span class="text-xs font-medium text-[var(--text-muted)] group-hover:text-[var(--text-secondary)] transition-colors">Mark Done</span>
+                                <div class="w-9 h-5 rounded-full bg-surface-700 relative border border-[var(--border-hairline)] transition-colors peer-checked:bg-emerald-500/20 peer-checked:border-emerald-500/50">
+                                    <div class="absolute left-1 top-1 w-3 h-3 rounded-full bg-white/40 transition-all peer-checked:bg-emerald-500"></div>
+                                </div>
+                            </label>
+                        </header>
+
+                        <!-- Scenario A: ACTIVE SUBMIT FORM -->
+                        <div id="student-form-state" class="bg-surface-900 border border-[var(--border-hairline)] rounded-lg p-1 transition-all duration-300 focus-within:border-emerald-500/40 focus-within:shadow-[0_0_0_1px_rgba(16,185,129,0.2)]">
+                            <textarea id="submission-text" placeholder="Add a note for your educator (optional)..." class="w-full bg-transparent min-h-[100px] resize-none outline-none p-3 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)]"></textarea>
+                            
+                            <!-- Attachment Preview (Hidden initially) -->
+                            <div id="attachment-preview" class="hidden mx-3 mb-3 px-3 py-2 rounded-md bg-surface-800 border border-[var(--border-hairline)] flex items-center justify-between group">
+                                <div class="flex items-center gap-2.5 overflow-hidden">
+                                    <div class="w-7 h-7 rounded bg-surface-700 flex items-center justify-center shrink-0">
+                                        <i class="ph ph-file-pdf text-[var(--text-secondary)] text-sm group-hover:text-amber-400 transition-colors"></i>
+                                    </div>
+                                    <div class="flex flex-col truncate">
+                                        <span class="text-sm font-medium text-[var(--text-primary)] truncate">pathway-analysis-log.pdf</span>
+                                        <span class="text-[11px] text-[var(--text-muted)]">2.4 MB</span>
+                                    </div>
+                                </div>
+                                <button type="button" onclick="removeAttachment()" class="w-6 h-6 rounded flex items-center justify-center text-[var(--text-muted)] hover:text-danger hover:bg-danger/10 transition-colors btn-press">
+                                    <i class="ph ph-x"></i>
+                                </button>
+                            </div>
+
+                            <!-- Error Message (Hidden) -->
+                            <div id="upload-error" class="hidden mx-3 mb-3 text-xs text-danger-text px-3 py-2 rounded bg-danger/10 border border-danger/20 flex items-center gap-2">
+                                <i class="ph ph-warning-circle"></i> <span>File exceeds 10MB limit.</span>
+                            </div>
+
+                            <div class="p-2 pt-0 flex justify-between items-center border-t border-[var(--border-hairline)] mt-1">
+                                <div class="flex items-center gap-1 mt-2">
+                                    <button type="button" onclick="triggerAttachment()" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-surface-700 text-sm font-medium px-2.5 py-1.5 rounded-md flex items-center gap-2 transition-colors btn-press active:bg-surface-600">
+                                        <i class="ph ph-paperclip text-lg"></i>
+                                        <span>Attach file</span>
+                                    </button>
+                                </div>
+                                <button type="button" id="submit-btn" onclick="submitAssignment()" class="mt-2 text-surface-950 bg-emerald hover:bg-emerald-500/90 font-semibold text-sm px-4 py-1.5 rounded-md shadow-[var(--shadow-sm)] transition-all btn-press relative h-[34px] min-w-[80px] flex justify-center items-center">
+                                    <span class="transition-opacity duration-200" id="submit-text">Submit</span>
+                                    <!-- Spinner overlay -->
+                                    <svg class="w-4 h-4 absolute text-surface-950 opacity-0 transition-opacity duration-200" id="submit-spinner" viewBox="0 0 24 24" fill="none">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Scenario B/C: SUBMITTED & RETURNED STATES (Simulated timeline stack for demo context) -->
+                        <div class="mt-8 flex flex-col gap-4 relative pl-6 before:absolute before:left-[11px] before:top-4 before:bottom-0 before:w-px before:bg-[var(--border-hairline)]">
+                            
+                            <!-- Timeline node -->
+                            <div class="absolute left-[7px] top-[14px] w-2 h-2 rounded-full bg-[var(--text-muted)] ring-4 ring-surface-800"></div>
+                            
+                            <!-- Submitted State Card -->
+                            <div class="bg-surface-900 border border-[var(--border-hairline)] rounded-lg p-4 pb-3 shadow-[var(--shadow-sm)]">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h3 class="text-sm font-medium text-[var(--text-primary)]">Your submission</h3>
+                                    <span class="text-xs text-[var(--text-muted)] flex items-center gap-1"><i class="ph ph-clock"></i> Yesterday, 8:42p</span>
+                                </div>
+                                <p class="text-sm text-[var(--text-secondary)] leading-relaxed mb-3">
+                                    I decided to run the latency matrix through an O(n log n) filter, hope the log outputs make sense.
+                                </p>
+                                <div class="bg-surface-800 border border-[var(--border-hairline)] rounded-md px-3 py-2 flex items-center gap-3 w-fit mb-3">
+                                    <i class="ph ph-file text-[var(--text-secondary)] text-lg"></i>
+                                    <span class="text-sm text-[var(--text-primary)] font-medium">analysis-log-final.txt</span>
+                                </div>
+                                <div class="flex justify-end border-t border-[var(--border-hairline)] pt-2 gap-2 mt-4">
+                                    <button class="text-xs font-medium text-[var(--text-secondary)] hover:text-white hover:bg-surface-700 px-3 py-1.5 rounded transition-colors btn-press">Undo submission</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Timeline node - Active -->
+                            <div class="absolute left-[7.5px] top-[214px] w-1.5 h-1.5 rounded-full bg-emerald-500 ring-4 ring-surface-800 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
+
+                            <!-- Returned State Display (What student sees after educator acts) -->
+                            <div class="bg-surface-900 border border-[var(--border-hairline)] rounded-lg p-5 shadow-[var(--shadow-sm)] relative overflow-hidden">
+                                <!-- Edge highlight -->
+                                <div class="absolute left-0 top-0 bottom-0 w-[3px] bg-emerald-500"></div>
+                                
+                                <div class="flex items-start justify-between">
+                                    <div class="flex flex-col gap-1">
+                                        <!-- The Calm 'Returned' Badge -->
+                                        <span class="text-[11px] font-semibold text-emerald inline-flex items-center gap-1.5 tracking-wide uppercase">
+                                            <i class="ph-fill ph-check-circle text-[13px]"></i> Returned
+                                        </span>
+                                        <span class="text-xs text-[var(--text-muted)] mt-1">Returned by Prof. Vance • Today, 9:15a</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-4 bg-surface-800/50 rounded-md p-3.5 border border-[var(--border-hairline)] flex gap-3 text-sm text-[var(--text-secondary)] italic relative">
+                                    <i class="ph-fill ph-quotes text-emerald-500/30 text-2xl absolute -top-2 -left-1"></i>
+                                    <div class="relative z-10 text-[13px] leading-relaxed">
+                                        "Excellent approach with the latency filter. The log outputs verify your methodology cleanly. Keep this standard up for the final."
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- RIGHT COLUMN: EDUCATOR ROSTER (manage_assignments gated) -->
+                    <div class="xl:col-span-7 flex flex-col h-full bg-surface-950 rounded-xl border border-[var(--border-hairline)] shadow-lg overflow-hidden relative">
+                        
+                        <!-- Header -->
+                        <div class="p-4 border-b border-[var(--border-hairline)] flex items-center justify-between bg-surface-900/50">
+                            <div class="flex items-center gap-3">
+                                <h2 class="text-[15px] font-semibold text-[var(--text-primary)]">Submissions Roster</h2>
+                                <span class="bg-surface-700 text-[11px] font-medium px-2 py-0.5 rounded-full text-[var(--text-secondary)]">24/48</span>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="w-8 h-8 rounded-md bg-surface-800 hover:bg-surface-700 border border-[var(--border-hairline)] flex items-center justify-center text-[var(--text-secondary)] hover:text-white transition-colors btn-press">
+                                    <i class="ph ph-funnel"></i>
+                                </button>
+                                <button class="h-8 px-3 rounded-md bg-surface-800 hover:bg-surface-700 border border-[var(--border-hairline)] flex items-center gap-2 text-xs font-medium text-[var(--text-secondary)] hover:text-white transition-colors btn-press max-sm:hidden">
+                                    <i class="ph ph-sort-descending"></i> Sort: Time
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Roster List -->
+                        <div class="flex-1 overflow-y-auto w-full p-2 space-y-0.5 relative" id="roster-list">
+                            
+                            <!-- Row 1: Awaiting (requires action) -->
+                            <div class="roster-row flex items-center p-3 rounded-lg hover:bg-surface-800 group transition-colors duration-200 border border-transparent hover:border-[var(--border-hover)]" style="animation-delay: 0.1s;" id="row-student-1">
+                                <div class="w-8 h-8 rounded-full bg-surface-700 overflow-hidden shrink-0">
+                                    <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=64&q=80" alt="Elena Rostova" class="w-full h-full object-cover">
+                                </div>
+                                <div class="ml-3 flex-1 min-w-0 pr-4">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-sm font-medium text-[var(--text-primary)] truncate">Elena Rostova</span>
+                                        <span class="text-[11px] text-[var(--text-secondary)] whitespace-nowrap">42m ago</span>
+                                    </div>
+                                    <div class="text-xs text-[var(--text-muted)] truncate flex items-center gap-2 mt-0.5">
+                                        <i class="ph ph-paperclip"></i> <span>model-logic.pdf</span>
+                                        <span class="w-1 h-1 bg-[var(--text-muted)] rounded-full hidden sm:block"></span>
+                                        <span class="truncate hidden sm:block">"Hey Professor, I attached the..."</span>
+                                    </div>
+                                </div>
+                                <!-- States area -->
+                                <div class="flex items-center justify-end gap-4 ml-auto shrink-0 min-w-[120px]">
+                                    <div class="status-badge flex items-center gap-1.5 px-2 py-1 rounded bg-surface-800 group-hover:bg-surface-900 border border-[var(--border-hairline)] transition-colors">
+                                        <!-- Awaiting State (Amber) -->
+                                        <span class="w-1.5 h-1.5 rounded-full bg-amber shadow-[0_0_8px_rgba(245,158,11,0.5)]"></span>
+                                        <span class="text-[11px] font-medium text-[var(--text-secondary)]">Awaiting</span>
+                                    </div>
+                                    <!-- Action Trigger -->
+                                    <button class="return-trigger opacity-0 focus-visible:opacity-100 group-hover:opacity-100 transition-opacity btn-press bg-surface-700 hover:bg-emerald/10 hover:text-emerald text-sm font-medium px-3 py-1.5 rounded-md flex items-center gap-1.5 border border-transparent hover:border-emerald/30 shadow-sm" onclick="openReturnPopover(event, 'row-student-1', 'Elena Rostova')">
+                                        <i class="ph ph-arrow-u-turn-left"></i> <span class="max-sm:hidden">Return</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Row 2: Returned (Completed state) -->
+                            <div class="roster-row flex items-center p-3 rounded-lg hover:bg-surface-800 group transition-colors duration-200 border border-transparent hover:border-[var(--border-hover)]" style="animation-delay: 0.15s;">
+                                <div class="w-8 h-8 rounded-full bg-surface-700 overflow-hidden shrink-0">
+                                    <img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=64&q=80" alt="Marcus Chen" class="w-full h-full object-cover grayscale brightness-75">
+                                </div>
+                                <div class="ml-3 flex-1 min-w-0 pr-4 opacity-75">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-sm font-medium text-[var(--text-primary)] truncate">Marcus Chen</span>
+                                        <span class="text-[11px] text-[var(--text-secondary)] whitespace-nowrap">2h ago</span>
+                                    </div>
+                                    <div class="text-xs text-[var(--text-muted)] truncate flex items-center gap-2 mt-0.5">
+                                        <i class="ph ph-text-align-left"></i> <span class="truncate">Text submission only</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-end gap-3 ml-auto shrink-0 min-w-[120px]">
+                                    <div class="flex items-center gap-1.5">
+                                        <!-- Returned acknowledge badge -->
+                                        <i class="ph-fill ph-check-circle text-emerald"></i>
+                                        <span class="text-[11px] font-medium text-emerald">Returned</span>
+                                    </div>
+                                    <button class="w-7 h-7 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-white hover:bg-surface-700 opacity-0 group-hover:opacity-100 transition-all btn-press" aria-label="Edit Return">
+                                        <i class="ph ph-dots-three"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Row 3: Awaiting (Text + no attachment) -->
+                            <div class="roster-row flex items-center p-3 rounded-lg hover:bg-surface-800 group transition-colors duration-200 border border-transparent hover:border-[var(--border-hover)]" style="animation-delay: 0.2s;" id="row-student-3">
+                                <div class="w-8 h-8 rounded-full bg-surface-700 flex items-center justify-center shrink-0 border border-[var(--border-hairline)] text-xs font-semibold">
+                                    JS
+                                </div>
+                                <div class="ml-3 flex-1 min-w-0 pr-4 border-l-2 border-transparent pl-0 group-hover:pl-1 transition-all">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-sm font-medium text-[var(--text-primary)]">Jada Smith</span>
+                                        <span class="text-[11px] text-[var(--text-secondary)]">Yesterday</span>
+                                    </div>
+                                    <div class="text-xs text-[var(--text-muted)] truncate flex items-center gap-2 mt-0.5">
+                                        <span class="truncate">"Uploaded via the portal directly since..."</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-end gap-4 ml-auto shrink-0 min-w-[120px]">
+                                    <div class="status-badge flex items-center gap-1.5 px-2 py-1 rounded bg-surface-800 group-hover:bg-surface-900 border border-[var(--border-hairline)] transition-colors">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-amber shadow-[0_0_8px_rgba(245,158,11,0.5)]"></span>
+                                        <span class="text-[11px] font-medium text-[var(--text-secondary)]">Awaiting</span>
+                                    </div>
+                                    <button class="return-trigger opacity-0 focus-visible:opacity-100 group-hover:opacity-100 transition-opacity btn-press bg-surface-700 hover:bg-emerald/10 hover:text-emerald text-sm font-medium px-3 py-1.5 rounded-md flex items-center gap-1.5 border border-transparent hover:border-emerald/30 shadow-sm" onclick="openReturnPopover(event, 'row-student-3', 'Jada Smith')">
+                                        <i class="ph ph-arrow-u-turn-left"></i> <span class="max-sm:hidden">Return</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Skeleton Row (Loading Context) -->
+                            <div class="roster-row flex items-center p-3 rounded-lg opacity-50" style="animation-delay: 0.3s; pointer-events: none;">
+                                <div class="w-8 h-8 rounded-full roster-loader shrink-0"></div>
+                                <div class="ml-3 flex-1 space-y-2">
+                                    <div class="h-3.5 w-32 rounded bg-surface-700 roster-loader"></div>
+                                    <div class="h-2.5 w-48 rounded bg-surface-700/50 roster-loader"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Empty State (Hidden logically, structurally present) -->
+                        <div class="hidden flex-col items-center justify-center p-12 text-center h-full absolute inset-0 bg-surface-950 z-10" id="empty-state">
+                            <div class="w-16 h-16 rounded-full bg-surface-900 flex items-center justify-center mb-4 border border-[var(--border-hairline)] shadow-[var(--shadow-sm)]">
+                                <i class="ph ph-tray-light text-3xl text-[var(--text-muted)]"></i>
+                            </div>
+                            <h3 class="text-sm font-medium text-[var(--text-primary)]">No submissions yet</h3>
+                            <p class="text-xs text-[var(--text-secondary)] mt-1 max-w-[200px]">Students haven't submitted against this assignment.</p>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- EDUCATOR TOOL: Return Content Popover (role="menu" implementation) -->
+    <!-- Fixed strategy allows escape from parent overflow constraints, absolute positioning handled by JS -->
+    <div id="return-popover" role="menu" aria-label="Return Assignment" aria-hidden="true" class="fixed z-50 w-[300px] glass-panel border border-surface-600 rounded-lg p-3 hidden opacity-0 scale-[0.97] transition-all duration-200 pointer-events-none transform origin-top shadow-[var(--shadow-pop)] shadow-black/80">
+        
+        <header class="flex items-center justify-between mb-3 px-1">
+            <span class="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2">
+                <i class="ph ph-arrow-u-turn-left text-[var(--text-secondary)] font-bold"></i> 
+                Return to <span id="popover-student-name" class="text-emerald">Student</span>
+            </span>
+            <button onclick="closePopover()" class="w-6 h-6 rounded flex items-center justify-center text-[var(--text-muted)] hover:text-white hover:bg-surface-700 transition-colors btn-press">
+                <i class="ph ph-x"></i>
+            </button>
+        </header>
+
+        <form id="return-form" onsubmit="submitReturn(event)">
+            <label class="sr-only" for="return-comment">Acknowledgement comment (optional)</label>
+            <div class="relative rounded-md input-ring transition-shadow mb-3 bg-surface-800 border border-[var(--border-hairline)]">
+                <textarea id="return-comment" placeholder="Add an acknowledgement note (optional)..." class="w-full bg-transparent resize-none h-[72px] outline-none p-2.5 text-[13px] text-[var(--text-primary)] placeholder-[var(--text-muted)]" autofocus></textarea>
+            </div>
+            
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="closePopover()" class="px-3 py-1.5 rounded-md text-xs font-medium text-[var(--text-secondary)] hover:text-white hover:bg-surface-600 border border-transparent transition-colors btn-press">
+                    Cancel
+                </button>
+                <button type="submit" class="px-3 py-1.5 rounded-md text-xs font-medium bg-emerald hover:bg-emerald-500/90 text-surface-950 shadow-[0_0_10px_rgba(16,185,129,0.15)] transition-all btn-press">
+                    Mark Returned
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Scripting for Micro-Interactions & Popover Logic -->
+    <script>
+        // --- 1. Top Level UI Variables & State ---
+        let currentTargetRowId = null;
+        const popover = document.getElementById('return-popover');
+        const popoverName = document.getElementById('popover-student-name');
+        const returnTextarea = document.getElementById('return-comment');
+        let isPopoverOpen = false;
+
+        // --- 2. Student Form Interactions ---
+        function triggerAttachment() {
+            // Simulate selecting a wrong file type first to show error handling calmly inline
+            const err = document.getElementById('upload-error');
+            const prev = document.getElementById('attachment-preview');
+            
+            if (err.classList.contains('hidden')) {
+                err.classList.remove('hidden');
+                err.classList.add('animate-[slideUpFade_0.2s_ease-out]');
+                setTimeout(() => {
+                    err.classList.add('hidden');
+                    prev.classList.remove('hidden'); // Show actual attachment on visual 'retry'
+                    prev.classList.add('animate-[slideUpFade_0.3s_ease-out]');
+                }, 2500);
+            } else {
+                prev.classList.remove('hidden');
+            }
+        }
+
+        function removeAttachment() {
+            document.getElementById('attachment-preview').classList.add('hidden');
+        }
+
+        function submitAssignment() {
+            const btn = document.getElementById('submit-btn');
+            const text = document.getElementById('submit-text');
+            const spinner = document.getElementById('submit-spinner');
+
+            // Button Loading State
+            btn.classList.add('pointer-events-none', '!bg-emerald/50');
+            text.classList.add('opacity-0');
+            spinner.classList.remove('opacity-0');
+            spinner.style.animation = 'spinner-draw 1.5s infinite ease-in-out';
+
+            // Simulate Network Request
+            setTimeout(() => {
+                // Success State Reset (In a real app, this would shift the view to 'Scenario B')
+                text.innerText = "Resubmit";
+                btn.classList.remove('pointer-events-none', '!bg-emerald/50');
+                btn.classList.add('bg-surface-700', 'text-white', 'border', 'border-surface-600');
+                btn.style.boxShadow = 'none';
+                text.classList.remove('opacity-0');
+                spinner.classList.add('opacity-0');
+            }, 1200);
+        }
+
+        // --- 3. Educator Popover Interoperability (Advanced Anchoring) ---
+        function openReturnPopover(event, rowId, studentName) {
+            event.stopPropagation();
+            const btn = event.currentTarget;
+            let rect = btn.getBoundingClientRect();
+
+            currentTargetRowId = rowId;
+            popoverName.textContent = studentName.split(' ')[0]; // First name
+            returnTextarea.value = '';
+
+            // Calculate Position (Desktop context anchoring)
+            let top = rect.bottom + 8;
+            let left = rect.left - (300 - rect.width); // Right align by default (width=300px)
+
+            // Smart flipping if too close to bottom of screen
+            if (top + 160 > window.innerHeight) { 
+                top = rect.top - 160 - 8; // Flip up
+                popover.style.transformOrigin = 'bottom';
+            } else {
+                popover.style.transformOrigin = 'top';
+            }
+
+            // Apply specific positioning bounds
+            popover.style.top = `${top}px`;
+            popover.style.left = `${left}px`;
+            
+            // Activate overlay
+            popover.classList.remove('hidden');
+            
+            // Force reflow for transition
+            void popover.offsetWidth; 
+            
+            popover.classList.remove('opacity-0', 'scale-[0.97]', 'pointer-events-none');
+            isPopoverOpen = true;
+            
+            // Set focus for a11y
+            setTimeout(() => returnTextarea.focus(), 100);
+        }
+
+        function closePopover() {
+            popover.classList.add('opacity-0', 'scale-[0.97]', 'pointer-events-none');
+            setTimeout(() => {
+                popover.classList.add('hidden');
+            }, 200);
+            isPopoverOpen = false;
+            currentTargetRowId = null;
+        }
+
+        function submitReturn(e) {
+            e.preventDefault();
+            if(!currentTargetRowId) return;
+
+            const row = document.getElementById(currentTargetRowId);
+            if(row) {
+                // Find and execute the DOM mutation to transform state cleanly (Amber -> Emerald)
+                const rightSide = row.querySelector('.ml-auto');
+                rightSide.innerHTML = `
+                    <div class="flex items-center gap-1.5 animate-[slideUpFade_0.3s_ease-out]">
+                        <i class="ph-fill ph-check-circle text-emerald"></i>
+                        <span class="text-[11px] font-medium text-emerald uppercase tracking-wide">Returned</span>
+                    </div>
+                `;
+                // Dim row slightly to push visual focus down the list
+                const mainInfo = row.querySelector('.flex-1');
+                if(mainInfo) mainInfo.classList.add('opacity-75');
+            }
+            
+            closePopover();
+        }
+
+        // --- 4. Global A11y & Listener logic ---
+        // Outside click to close
+        document.addEventListener('click', (e) => {
+            if (isPopoverOpen && !popover.contains(e.target)) {
+                closePopover();
+            }
+        });
+
+        // Esc key to close
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && isPopoverOpen) {
+                closePopover();
+            }
+        });
+
+        // Prevent popover clicks from bubbling to the outside click listener
+        popover.addEventListener('click', (e) => e.stopPropagation());
+
+    </script>
+</body>
+</html>
