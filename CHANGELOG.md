@@ -97,3 +97,5 @@ All notable changes to StudyHall are documented here. Format follows
 - This applies everywhere ids appear in a link across the app, and the friendlier response is now consistent instead of surfacing an internal error. (#46)
 - The "Last updated" date on the /privacy and /terms pages now reads 2026, correcting a stale year on the published policy pages. (#50)
 - Avatar image requests now return a clean error instead of a server error on odd input: an unusual control character in a user id returns a "bad request" and asking for a picture that was never uploaded returns a "not found". A hardening fix — nothing changes for normal use. (#54)
+- On a narrower window the class-schedule session details now open as a proper full-screen overlay instead of getting squeezed, so the schedule is usable on smaller screens and tablets. (#58)
+- Opening and closing a session's details is now smoother for keyboard and screen-reader users: focus returns to where you were when you close it, and the details always reflect the latest schedule. (#58)
