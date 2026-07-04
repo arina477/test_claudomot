@@ -3,7 +3,7 @@
 **Block:** D (Design)
 **Wave topic:** Class scheduling UI — educator session authoring modal + member class calendar/agenda view + session detail (CRUD only, no reminders/RSVP/ICS)
 **Block exit gate:** D-3
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 
@@ -11,7 +11,7 @@
 |---|---|---|---|
 | D-1 | stages/D-1-brief/class-scheduling-brief.md | done | 1 coherent gap; mask_mode PASS |
 | D-2 | stages/D-2-variants/... (+ design/staging/class-scheduling.html) | done | iter 0; checkpoint skipped (automatic) |
-| D-3 | stages/D-3-review-and-adopt/class-scheduling-{reconciliation,adopt}.md | pending | dual-reviewer gate + head-designer + canonicalize |
+| D-3 | stages/D-3-review-and-adopt/class-scheduling-{...,adopt}.md | done | APPROVE/APPROVE (iter1) → head-designer APPROVED → canonicalized |
 
 ## Block-specific context
 
@@ -29,3 +29,12 @@ none
 ## Gate verdict log
 
 <appended by fresh head-designer spawn at D-3>
+
+## Block exit / handoff
+```yaml
+design_block_status:    complete
+gaps_resolved:          [class-scheduling]
+gaps_deferred:          []
+design_system_updates:  []
+canonicalized_at:       2026-07-04
+```

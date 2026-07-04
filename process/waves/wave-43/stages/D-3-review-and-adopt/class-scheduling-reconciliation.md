@@ -17,3 +17,9 @@
 - "Close dialogue" → "Close dialog" (US English).
 - add explicit heading structure to the detail panel.
 - support prefers-reduced-motion.
+
+---
+# Iteration 1 review → APPROVE / APPROVE → D-3 Phase 2 (head-designer gate)
+Reviewer A (ui-designer): APPROVE — all 5 iter-0 blockers fixed (not-found state, save-failed error, focus trap, delete-confirm role=dialog, --danger-text). No regressions (agenda not month-grid, organizer-gating, §10 non-goals). 1 non-blocking residual (vestigial #until-container CSS selector — React-build wiring).
+Reviewer B (accessibility-tester): APPROVE — WCAG-AA confirmed (contrast/keyboard/SR/motion); §9 all PASS; §10 non-goals all respected; tokens DS-only; --danger-text used not #ef4444; focus trap + aria-live + reduced-motion present.
+Matrix outcome: APPROVE/APPROVE → Phase 2 head-designer spawn.

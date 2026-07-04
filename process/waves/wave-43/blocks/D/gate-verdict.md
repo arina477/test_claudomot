@@ -1,0 +1,28 @@
+# Wave 43 — D-3 Verdict
+
+**Reviewer:** head-designer (fresh spawn, agentId head-designer-wave43-D3-phase2)
+**Reviewed against:** process/waves/wave-43/blocks/D/review-artifacts.md
+**Attempt:** 1  (1 = first gate, 2+ = post-rework)
+
+## Verdict
+APPROVED
+
+## Rationale
+
+The single coherent gap — the class-scheduling UI (date-grouped agenda + educator authoring modal + session detail) — clears every head-designer heuristic on independent inspection of `design/staging/class-scheduling.html`, not merely on the strength of the dual-reviewer APPROVE/APPROVE.
+
+**Brief fidelity (PASS).** Every §9 success criterion and every §3 state is present and independently verified in the staging file: the calendar renders loaded (`.data-view`, date-grouped `<h3>` headers "Today — Oct 12" / "Tomorrow — Oct 13" over a vertical card list), empty (`.empty-view`, "No sessions scheduled" + organizer-gated CTA), and loading (`.skeleton-view` shimmer rows); the authoring modal covers create/edit (title swap in `openModal`), submitting (button spinner, `aria-busy` behavior, live "Saving session…"), and error (invalid-range inline error at line 784-790 and API save-failed banner at 809-813, `role="alert"`, modal stays open, values preserved); the session detail covers organizer (footer `#detail-footer` with Edit + Delete, `organizer-only`), member (removed via `.member-view .organizer-only { display:none !important }`), and not-found (`#detail-empty`, calm "Session not found", reachable via `openDetail('not-found')`). Recurrence renders as a "Weekly" chip on the card and a detail badge, with a one-off showing a single date — no RRULE implication. §10 non-goals are honored: the recurrence control is hard-capped to None/Weekly, and there is no month-grid, RSVP/attendance, reminder, timezone picker, ICS export, or drag-to-reschedule anywhere in the file. The agenda-list-not-month-grid milestone fence holds.
+
+**Token discipline (PASS).** No invented color, spacing, radius, or shadow *token* fragments the system. Every color primitive at lines 24-51 maps to DESIGN-SYSTEM.md exactly (`--surface-950/900/800/700/600/500`, `--accent-emerald #10b981`, `--accent-amber #f59e0b`, `--danger #ef4444`, `--danger-text #f87171`, `--glow-focus` = `0 0 0 2px rgba(16,185,129,0.4)`), radius follows the md/lg/xl scale, and the emerald/amber chips + surface-800/900 usage match §4 of the brief. I explicitly re-audited the two items the Phase-1 reviewers waved through as "acceptable polish": (a) the `--shadow-liquid: inset 0 1px 0 rgba(255,255,255,0.06)` value inside `.glass-panel`, and (b) the inline `shadow-[inset_0_1px_0_rgba(255,255,255,0.3)]` button shine. Both are **already-shipped precedent** across the canonical `design/` corpus — `.glass-panel` (same inset-hairline value) ships in app-home, login, assignments-panel, assignment-submissions, direction, settings-profile, and signup; the inset button-shine ships in assignments-panel (line 338, `0.2`), email-verify, and server-settings. They are per-file decorative box-shadow utilities composed from system values, not a color/spacing/radius fork, so they do not trip the token-fragmentation heuristic. The prior AA blocker (delete text `#ef4444` → `--danger-text #f87171`, 6.30:1 on danger/10 tint) was correctly resolved in iteration 1 and re-confirmed here.
+
+**Brand + prior-art coherence (PASS).** The surface reads as a calm, academic, date-grouped agenda in dark-only (`<html class="dark">`), not a heavy month-grid calendar app. It faithfully extends the shipped assignments-panel row layout and the shipped `role="dialog" aria-modal` modal pattern (focus trap wrapping Tab/Shift-Tab on visible focusables, Esc priority delete→authoring→detail, `activeTriggerElement` focus restore on close, `aria-live` announcer). The delete confirmation was upgraded from `window.confirm()` to a proper `role=dialog` destructive modal (Cancel-focused-first) — no new modal or popover system was introduced. The Schedule sidebar item sits cleanly beside Assignments in the shipped `/servers/:id` chrome (server rail + channel sidebar + user area all consistent with adjacent screens).
+
+**Accessibility (PASS).** The mandatory pre-adoption a11y concerns are all resolved and re-verified: WCAG-AA contrast on all text/interactive combinations (including the previously-failing delete text), designed emerald focus rings (`.glow-focus:focus-visible`, not browser default), keyboard-operable cards (Enter/Space) and native form controls, focus trap + focus restore, `aria-live` save/error announcements, `aria-hidden` toggling on the conditional "until" field, and a `prefers-reduced-motion` suppression block.
+
+One non-blocking residual is noted (not a rework item): the vestigial CSS attribute selector `#recurrence-select[value="weekly"] ~ #until-container` at line 178 never fires (attribute vs. live-property), but the correct show/hide path runs entirely through `toggleUntilDate()` in JS. This is a React-build wiring cleanup for the B-block, not a design-direction defect.
+
+**DESIGN-SYSTEM.md token addition: NONE blessed.** No new reusable design token is warranted by this gap. The `--shadow-liquid` alias and the inset button-shine are per-file utilities built from existing primitives with established shipped precedent, not system-level tokens; promoting a `--shine` token is a legitimate but separate future-wave design-system-hygiene task, and per D-3 Action 8 a token not explicitly blessed here must NOT be added. Canonicalize `design/staging/class-scheduling.html` → `design/class-scheduling.html` with `design_system_tokens_added: []`.
+
+## Footer
+- verdict_complete: true
+- rework_attempt_cap_remaining: 3
