@@ -2,8 +2,12 @@ import { defineConfig, devices } from '@playwright/test';
 
 /**
  * Playwright config — E2E against the live web deployment.
- * Runs chromium; no local dev server required (tests run against E2E_BASE_URL
- * which defaults to the Railway production URL).
+ * Runs on the BUNDLED Playwright chromium (not the Google Chrome channel).
+ * `channel` is explicitly set to `undefined` on every project so Playwright
+ * resolves its own managed chromium build (~/.cache/ms-playwright/chromium-*)
+ * rather than looking for system Chrome at /opt/google/chrome/chrome (absent in CI).
+ * No local dev server required; tests run against E2E_BASE_URL which defaults
+ * to the Railway production URL.
  *
  * Three projects:
  *   - setup           : signs in as the verified fixture, saves storageState.
@@ -26,13 +30,13 @@ export default defineConfig({
     {
       name: 'setup',
       testMatch: /.*\.setup\.ts/,
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], channel: undefined },
     },
     {
       // Unauthenticated smoke — no storageState, no dependency on the authed session.
       name: 'chromium-smoke',
       testMatch: /smoke\.spec\.ts/,
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], channel: undefined },
     },
     {
       // Authenticated flows — reuse the fixture session; sign-in happens once in `setup`.
@@ -42,6 +46,7 @@ export default defineConfig({
       dependencies: ['setup'],
       use: {
         ...devices['Desktop Chrome'],
+        channel: undefined,
         storageState: 'e2e/.auth/fixture.json',
       },
     },
