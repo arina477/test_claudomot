@@ -41,7 +41,7 @@ import type {
   DmMessageListResponse,
   SendDmMessageInput,
 } from '@studyhall/shared';
-import { and, desc, eq, inArray, or, sql } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, or, sql } from 'drizzle-orm';
 import { db } from '../db/index';
 import {
   dm_conversations,
@@ -230,6 +230,83 @@ export class DmService {
     // ANY rejection → whole-create fails 403 (no partial conversation).
     for (const targetId of participantIds) {
       await this.enforceWhoCanDm(callerId, targetId);
+    }
+
+    // -----------------------------------------------------------------------
+    // Find-or-create for 1:1 conversations (M3 fix — wave-46 B-6 review).
+    //
+    // For non-group (exactly 2 participants) conversations, check whether the
+    // caller and target already share a 1:1 conversation before inserting.
+    //
+    // Strategy: find conversation_ids where BOTH users are participants
+    // (COUNT = 2 in dm_participants for those two user_ids) and the
+    // conversation is_group = false.
+    //
+    // who_can_dm was already enforced above — we keep that check before
+    // the find-or-create so a policy change after the first DM is still
+    // caught on subsequent attempts.
+    // -----------------------------------------------------------------------
+    if (!resolvedIsGroup) {
+      // Safe: resolvedIsGroup=false guarantees participantIds.length === 1 (checked above).
+      const targetId = participantIds[0] as string;
+
+      // Find conversation_ids that contain BOTH the caller and the target
+      // as participants, restricted to is_group=false conversations.
+      const existingRows = await db
+        .select({
+          conversation_id: dm_participants.conversation_id,
+          participant_count: count(dm_participants.user_id),
+        })
+        .from(dm_participants)
+        .innerJoin(
+          dm_conversations,
+          and(
+            eq(dm_participants.conversation_id, dm_conversations.id),
+            eq(dm_conversations.is_group, false),
+          ),
+        )
+        .where(inArray(dm_participants.user_id, [callerId, targetId]))
+        .groupBy(dm_participants.conversation_id)
+        .having(sql`COUNT(${dm_participants.user_id}) = 2`);
+
+      if (existingRows.length > 0) {
+        // Return the first match (there should be at most one for a 1:1 pair)
+        // Safe: guarded by existingRows.length > 0 immediately above.
+        const existingConvId = (existingRows[0] as (typeof existingRows)[0]).conversation_id;
+
+        const participantRows = await db
+          .select({
+            user_id: dm_participants.user_id,
+            display_name: users.display_name,
+            avatar_url: users.avatar_url,
+          })
+          .from(dm_participants)
+          .innerJoin(users, eq(dm_participants.user_id, users.id))
+          .where(eq(dm_participants.conversation_id, existingConvId));
+
+        const [existingConv] = await db
+          .select()
+          .from(dm_conversations)
+          .where(eq(dm_conversations.id, existingConvId))
+          .limit(1);
+
+        if (existingConv) {
+          this.logger.debug(
+            `find-or-create: returning existing 1:1 conversation ${existingConvId} for (${callerId}, ${targetId})`,
+          );
+          return {
+            id: existingConv.id,
+            isGroup: existingConv.is_group,
+            participants: participantRows.map((p) => ({
+              userId: p.user_id,
+              displayName: p.display_name ?? p.user_id,
+              avatar: p.avatar_url,
+            })),
+            lastMessage: null,
+            createdAt: existingConv.created_at.toISOString(),
+          };
+        }
+      }
     }
 
     // INSERT dm_conversations + dm_participants in a single transaction

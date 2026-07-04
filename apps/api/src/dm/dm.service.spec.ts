@@ -66,7 +66,18 @@ function makeSelectChain(resolveWith: unknown[]) {
     then: (res: (v: unknown) => unknown, rej?: (e: unknown) => unknown) =>
       Promise.resolve(resolveWith).then(res, rej),
   };
-  for (const m of ['from', 'where', 'limit', 'orderBy', 'select', 'innerJoin', 'leftJoin', 'as']) {
+  for (const m of [
+    'from',
+    'where',
+    'limit',
+    'orderBy',
+    'select',
+    'innerJoin',
+    'leftJoin',
+    'as',
+    'groupBy',
+    'having',
+  ]) {
     chain[m] = vi.fn().mockReturnValue(chain);
   }
   return chain;
@@ -143,6 +154,10 @@ describe('DmService — who_can_dm enforcement', () => {
         // enforceWhoCanDm: fetch target user
         return makeSelectChain([{ who_can_dm: 'everyone' }]);
       }
+      if (selectCallCount === 2) {
+        // find-or-create lookup: no existing 1:1 → fall through to insert
+        return makeSelectChain([]);
+      }
       // fetchParticipantDetails after insert
       return makeSelectChain([
         { user_id: CREATOR_ID, display_name: 'Alice', avatar_url: null },
@@ -187,6 +202,10 @@ describe('DmService — who_can_dm enforcement', () => {
       if (selectCallCount === 2) {
         // shared server query → returns a row (they share a server)
         return makeSelectChain([{ server_id: 'server-shared-001' }]);
+      }
+      if (selectCallCount === 3) {
+        // find-or-create lookup: no existing 1:1 → fall through to insert
+        return makeSelectChain([]);
       }
       // participant detail fetch after transaction
       return makeSelectChain([
@@ -316,6 +335,10 @@ describe('DmService — participant cap', () => {
       if (selectCallCount === 1) {
         // enforceWhoCanDm: fetch target user's who_can_dm
         return makeSelectChain([{ who_can_dm: 'everyone' }]);
+      }
+      if (selectCallCount === 2) {
+        // find-or-create lookup: no existing 1:1 → fall through to insert
+        return makeSelectChain([]);
       }
       // fetchParticipantDetails after transaction
       return makeSelectChain([
@@ -549,5 +572,168 @@ describe('DmService — listConversations', () => {
     const lastMsg = conv0.lastMessage as NonNullable<typeof conv0.lastMessage>;
     expect(lastMsg.content).toBe('Hello!');
     expect(conv0.participants).toHaveLength(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: find-or-create for 1:1 conversations (M3 fix — wave-46 B-6 review)
+// ---------------------------------------------------------------------------
+
+describe('DmService — createConversation find-or-create (1:1)', () => {
+  let service: DmService;
+  let emitter: ReturnType<typeof makeEventEmitter>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    emitter = makeEventEmitter();
+    // biome-ignore lint/suspicious/noExplicitAny: test mock
+    service = new DmService(emitter as any);
+  });
+
+  it('returns the SAME conversation id on a repeat 1:1 (find-or-create)', async () => {
+    // Scenario: caller + TARGET_A already have a 1:1 conv (CONV_ID).
+    // The second createConversation call should return the existing conv,
+    // NOT insert a new one.
+    let selectCallCount = 0;
+    mockSelect.mockImplementation(() => {
+      selectCallCount++;
+      if (selectCallCount === 1) {
+        // enforceWhoCanDm: target's who_can_dm
+        return makeSelectChain([{ who_can_dm: 'everyone' }]);
+      }
+      if (selectCallCount === 2) {
+        // find-or-create lookup: existingRows — returns a row (existing 1:1 found)
+        return makeSelectChain([{ conversation_id: CONV_ID, participant_count: 2 }]);
+      }
+      if (selectCallCount === 3) {
+        // participantRows for the existing conversation
+        return makeSelectChain([
+          { user_id: CREATOR_ID, display_name: 'Alice', avatar_url: null },
+          { user_id: TARGET_A_ID, display_name: 'Bob', avatar_url: null },
+        ]);
+      }
+      // existingConv row fetch
+      return makeSelectChain([mockConvRow]);
+    });
+
+    const result = await service.createConversation(CREATOR_ID, {
+      participantIds: [TARGET_A_ID],
+    });
+
+    // Must return the existing conversation id — no new transaction/insert
+    expect(result.id).toBe(CONV_ID);
+    expect(result.isGroup).toBe(false);
+    expect(mockTransaction).not.toHaveBeenCalled();
+  });
+
+  it('creates a NEW conversation when no prior 1:1 exists', async () => {
+    // find-or-create lookup returns empty → falls through to insert
+    let selectCallCount = 0;
+    mockSelect.mockImplementation(() => {
+      selectCallCount++;
+      if (selectCallCount === 1) {
+        // enforceWhoCanDm
+        return makeSelectChain([{ who_can_dm: 'everyone' }]);
+      }
+      if (selectCallCount === 2) {
+        // find-or-create lookup: no existing 1:1
+        return makeSelectChain([]);
+      }
+      // participant details after insert
+      return makeSelectChain([
+        { user_id: CREATOR_ID, display_name: 'Alice', avatar_url: null },
+        { user_id: TARGET_A_ID, display_name: 'Bob', avatar_url: null },
+      ]);
+    });
+
+    mockTransaction.mockImplementation(async (fn: (tx: unknown) => unknown) => {
+      const txInsert = vi.fn().mockReturnValue(makeInsertChain([mockConvRow]));
+      const tx = { insert: txInsert };
+      return fn(tx);
+    });
+
+    const result = await service.createConversation(CREATOR_ID, {
+      participantIds: [TARGET_A_ID],
+    });
+
+    expect(result.id).toBe(CONV_ID);
+    // Transaction MUST be called for a new conversation
+    expect(mockTransaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT apply find-or-create for group DMs (is_group=true) — always inserts new', async () => {
+    // Group DM with 2 non-caller participants → is_group=true, find-or-create skipped.
+    let selectCallCount = 0;
+    const TARGET_C = 'user-target-c';
+    mockSelect.mockImplementation(() => {
+      selectCallCount++;
+      // enforceWhoCanDm for 2 targets (2 calls)
+      if (selectCallCount <= 2) {
+        return makeSelectChain([{ who_can_dm: 'everyone' }]);
+      }
+      // participant details after insert
+      return makeSelectChain([
+        { user_id: CREATOR_ID, display_name: 'Alice', avatar_url: null },
+        { user_id: TARGET_A_ID, display_name: 'Bob', avatar_url: null },
+        { user_id: TARGET_C, display_name: 'Carol', avatar_url: null },
+      ]);
+    });
+
+    const groupConvRow = { ...mockConvRow, id: 'conv-group-001', is_group: true };
+    mockTransaction.mockImplementation(async (fn: (tx: unknown) => unknown) => {
+      const txInsert = vi.fn().mockReturnValue(makeInsertChain([groupConvRow]));
+      const tx = { insert: txInsert };
+      return fn(tx);
+    });
+
+    const result = await service.createConversation(CREATOR_ID, {
+      participantIds: [TARGET_A_ID, TARGET_C],
+      isGroup: true,
+    });
+
+    expect(result.isGroup).toBe(true);
+    // Transaction must be called — find-or-create does NOT run for groups
+    expect(mockTransaction).toHaveBeenCalledTimes(1);
+    // find-or-create select never fired: only 2 who_can_dm checks + 1 detail fetch = 3 selects
+    expect(selectCallCount).toBe(3);
+  });
+
+  it('creates distinct conversations for different targets (no cross-pair dedup)', async () => {
+    // First 1:1: CREATOR + TARGET_A → no existing
+    // Second 1:1: CREATOR + TARGET_B → also no existing
+    // Both should result in separate transactions (not deduplicated together)
+    let selectCallCount = 0;
+    mockSelect.mockImplementation(() => {
+      selectCallCount++;
+      // Alternating: who_can_dm → find-or-create lookup → participant details
+      // For simplicity: all find-or-create lookups return empty (fresh convs)
+      if (selectCallCount % 3 === 1) {
+        return makeSelectChain([{ who_can_dm: 'everyone' }]);
+      }
+      if (selectCallCount % 3 === 2) {
+        return makeSelectChain([]); // no existing 1:1
+      }
+      return makeSelectChain([
+        { user_id: CREATOR_ID, display_name: 'Alice', avatar_url: null },
+        { user_id: TARGET_A_ID, display_name: 'Bob', avatar_url: null },
+      ]);
+    });
+
+    let txCallCount = 0;
+    mockTransaction.mockImplementation(async (fn: (tx: unknown) => unknown) => {
+      txCallCount++;
+      const convRow = { ...mockConvRow, id: `conv-new-00${txCallCount}` };
+      const txInsert = vi.fn().mockReturnValue(makeInsertChain([convRow]));
+      const tx = { insert: txInsert };
+      return fn(tx);
+    });
+
+    const r1 = await service.createConversation(CREATOR_ID, { participantIds: [TARGET_A_ID] });
+    const r2 = await service.createConversation(CREATOR_ID, { participantIds: [TARGET_B_ID] });
+
+    expect(r1.id).toBe('conv-new-001');
+    expect(r2.id).toBe('conv-new-002');
+    expect(r1.id).not.toBe(r2.id);
+    expect(mockTransaction).toHaveBeenCalledTimes(2);
   });
 });
