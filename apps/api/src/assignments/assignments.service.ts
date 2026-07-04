@@ -365,7 +365,7 @@ export class AssignmentsService {
       .where(and(eq(assignments.server_id, serverId), eq(assignments.is_deleted, false)))
       .orderBy(asc(assignments.due_date));
 
-    return Promise.all(rows.map((row) => this.rowToDto(row, userId)));
+    return Promise.all(rows.map((row) => this.rowToDto(row, userId, true)));
   }
 
   // -------------------------------------------------------------------------
