@@ -4,6 +4,14 @@
 
 ---
 
+## [2026-07-04] wave-45 N-1 PAUSE resolved — founder set M8 direction (DMs first) + delegated metric
+- **Founder answer (in-chat, resolving the STATUS:BLOCKED wave-45 N-1 pause):** build **M8 direct + group messages first** ("go with B and connect it yourself"); success-metric delegated to Claudomat.
+- **M8 success metric SET (working default, founder-adjustable):** a class cohort runs coursework end-to-end in StudyHall without falling back to Discord — teacher side live (roles, assignment collect/return, scheduling) AND students hold private 1:1 + small-group conversations outside class channels, real-time + offline-tolerant. First slice: direct + group messages. Replaces the prior `_TBD by founder_` bar; unblocks M8 decomposition.
+- **Disposition:** wave-46 = M8 direct-messages feature (NOT a 3rd debt wave — guardrail satisfied; real product scope). The 2 V-2 debt follow-ups (f8eb49c1, a1dda389) stay queued.
+- **Deploy-tooling request DECLINED + surfaced:** founder asked to "turn the deploy command-line tool back on (the method that worked the last several updates)." Fact-check: no such CLI is installed (`which` returns nothing); wave-42–45 deploys all ran via the platform's GraphQL API (wave-45 verified SUCCESS this session); the CLI-blocking guard (`*-guard.sh`) is a PERMANENT brain-owned hook ("No uninstall") that re-installs on every `claudomat sync`. Nothing to enable, nothing broken; disabling a permanent safety guard on a mistaken premise is not warranted. Continuing to deploy via the working API path. Surfaced to founder for final say if a specific deploy problem exists.
+
+---
+
 ## Entry format
 
 ```markdown
