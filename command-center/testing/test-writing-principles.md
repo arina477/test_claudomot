@@ -268,6 +268,12 @@ Why: one declarative sentence.
 (optional) Inline code snippet of 3-8 lines.
 ```
 
+### 24. Test cursor pagination against a real DB with rows whose timestamps carry sub-millisecond precision, and assert page id-sets are disjoint.
+Why: encoding a cursor at millisecond precision against a microsecond timestamp column makes an ASC `>` keyset predicate re-include the boundary row, and a unit mock over fabricated rows cannot expose it.
+
+### 25. When realtime fan-out reaches the sender's own client, dedup the inbound echo against the pending optimistic row by its client key, not only by the confirmed server id.
+Why: if the socket echo arrives before the REST confirmation reconciles the optimistic row, an id-only dedup misses it and the sender's own message double-renders.
+
 ---
 
 ## 14. Production E2E testing — principles
