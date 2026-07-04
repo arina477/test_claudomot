@@ -11,7 +11,7 @@
 | P-0 | stages/P-0-frame.md | done | PROCEED; blocked-dep flags (fixture-B for ca43eb12; S3 for 8d971bc2) → B; c50f3040 un-stranded |
 | P-1 | stages/P-1-decompose.md | done | multi-spec PROCEED, floor met (len 6), design_gap_flag=FALSE → skip D |
 | P-2 | stages/P-2-spec.md | done | 6-block multi-spec contract on seed task |
-| P-3 | stages/P-3-plan.md | pending | |
+| P-3 | stages/P-3-plan.md | done | per-task plan; no migration; specialists validated |
 | P-4 | blocks/P/gate-verdict.md | pending | |
 
 ## Block-specific context
