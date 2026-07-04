@@ -46,7 +46,7 @@ VERIFY:
 - [x] V-3 Fast-fix loop (or close) — Phase-1 head-verifier APPROVED; Phase-2 skipped (empty queue)
 
 LEARN:
-- [ ] L-1 Docs
+- [x] L-1 Docs
 - [ ] L-2 Distill
 
 NEXT:
