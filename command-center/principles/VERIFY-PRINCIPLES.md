@@ -76,4 +76,7 @@ Promoted at L-2 Distill from `process/waves/wave-<N>/blocks/L/observations.md` b
 3. Re-verify a fast-fix against the reviewer's live reproduction on deployed state, never on source review alone.
    Why: A source-clean fix can still fail live; deployed re-run on real state is the only proof.
 
+4. A negative-case test passes verification only if a positive control admits the value the negative excludes.
+   Why: Without a positive control a query returning nothing satisfies the negative vacuously.
+
 ---
