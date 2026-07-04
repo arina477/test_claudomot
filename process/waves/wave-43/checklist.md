@@ -24,14 +24,14 @@ BUILD:
 - [x] B-6 Review
 
 CI/CD:
-- [ ] C-1 PR, CI & merge
-- [ ] C-2 Deploy & verify
+- [x] C-1 PR, CI & merge
+- [x] C-2 Deploy & verify
 
 TEST:
-- [ ] T-1 Static
-- [ ] T-2 Unit
-- [ ] T-3 Contract
-- [ ] T-4 Integration
+- [x] T-1 Static
+- [x] T-2 Unit
+- [x] T-3 Contract
+- [x] T-4 Integration
 - [ ] T-5 E2E
 - [ ] T-6 Layout
 - [ ] T-7 (skipped — not heavy) Perf
