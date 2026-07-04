@@ -1,5 +1,5 @@
 # Wave 48 — P-block review artifacts
-**Block:** P · **Wave topic:** DM candidate privacy-fence negative-case test hardening (who_can_dm='nobody' exclusion + non-co-member isolation on GET /dm/candidates) · **Block exit gate:** P-4 · **Status:** in-progress · **wave_db_id:** 25c46eee-306a-4b10-b0b9-d842542dcd9c (wave 48)
+**Block:** P · **Wave topic:** DM candidate privacy-fence negative-case test hardening (who_can_dm='nobody' exclusion + non-co-member isolation on GET /dm/candidates) · **Block exit gate:** P-4 · **Status:** gate-passed · **wave_db_id:** 25c46eee-306a-4b10-b0b9-d842542dcd9c (wave 48)
 
 ## Stage deliverables
 | Stage | Deliverable | Status | Notes |

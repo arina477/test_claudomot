@@ -10,7 +10,7 @@ PRODUCT:
 - [x] P-1 Decompose
 - [x] P-2 Spec
 - [x] P-3 Plan
-- [ ] P-4 Gate
+- [x] P-4 Gate
 
 DESIGN (skip block if non-UI wave):
 - [ ] D-1 Brief
@@ -18,10 +18,10 @@ DESIGN (skip block if non-UI wave):
 - [ ] D-3 Review & adopt
 
 BUILD:
-- [ ] B-0 Branch & schema
-- [ ] B-1 Contracts
+- [x] B-0 Branch & schema
+- [x] B-1 (SKIP — no contracts/frontend) Contracts
 - [ ] B-2 Backend
-- [ ] B-3 Frontend
+- [x] B-3 (SKIP — no contracts/frontend) Frontend
 - [ ] B-4 Wiring
 - [ ] B-5 Verify
 - [ ] B-6 Review
