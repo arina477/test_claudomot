@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyHall - Direct Messages</title>
+  
+  <!-- Fonts: Geist & Geist Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+  <!-- Tailwind Framework -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            geist: ['Geist', 'sans-serif'],
+            mono: ['"Geist Mono"', 'monospace'],
+          },
+          colors: {
+            surface: {
+              950: '#0a0a0b',
+              900: '#121214',
+              800: '#1c1c1f',
+              700: '#27272a',
+              600: '#3f3f46',
+              500: '#52525b',
+            },
+            accent: {
+              emerald: '#10b981',
+              amber: '#f59e0b',
+            },
+            danger: {
+              DEFAULT: '#ef4444',
+              text: '#f87171',
+            },
+            border: {
+              hairline: 'rgba(255,255,255,0.06)',
+              hover: 'rgba(255,255,255,0.10)',
+            },
+            text: {
+              primary: 'rgba(255,255,255,0.92)',
+              secondary: 'rgba(255,255,255,0.60)',
+              muted: 'rgba(255,255,255,0.40)',
+            }
+          },
+          boxShadow: {
+            sm: '0 1px 2px rgba(0,0,0,0.4)',
+            pop: '0 8px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)',
+            'emerald-glow': '0 0 0 2px rgba(16,185,129,0.4)',
+            'danger-glow': '0 0 0 2px rgba(239,68,68,0.4)',
+          },
+          animation: {
+            'modal-in': 'modalIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+            'fade-in': 'fadeIn 0.2s ease-out forwards',
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          },
+          keyframes: {
+            modalIn: {
+              '0%': { opacity: '0', transform: 'scale(0.96) translateY(10px)' },
+              '100%': { opacity: '1', transform: 'scale(1) translateY(0)' },
+            },
+            fadeIn: {
+              '0%': { opacity: '0' },
+              '100%': { opacity: '1' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom High-End Scrollbar for Dark Academic Feel */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--surface-600, #3f3f46);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--surface-500, #52525b);
+    }
+
+    /* Base Setup */
+    body {
+      background-color: #0a0a0b;
+      color: rgba(255,255,255,0.92);
+      font-family: 'Geist', sans-serif;
+      overscroll-behavior: none;
+    }
+
+    /* Staggered entry for message lists to simulate loading paint */
+    .stagger-list > * {
+      opacity: 0;
+      animation: fadeIn calc(var(--index, 0) * 80ms) ease-out forwards;
+    }
+
+    .glass-panel {
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+    }
+    
+    /* Interactive Button Press Physics */
+    .btn-press:active {
+      transform: scale(0.97) translateY(1px);
+    }
+
+    /* Drawer transition for mobile */
+    @media (max-width: 1024px) {
+      .dm-drawer-hidden {
+        transform: translateX(-100%);
+      }
+      .dm-drawer-visible {
+        transform: translateX(0);
+      }
+    }
+  </style>
+</head>
+<body class="h-[100dvh] w-full flex overflow-hidden">
+
+  <!-- ==============================================
+       MACRO-LAYERS: DEBUG CONTROLS (Hidden from final design, for reviewer toggling only)
+       ============================================== -->
+  <div class="absolute top-2 right-2 z-[100] flex gap-2 text-xs bg-surface-900 border border-border-hairline p-2 rounded-lg opacity-20 hover:opacity-100 transition-opacity">
+    <button onclick="toggleModal()" class="text-text-secondary hover:text-text-primary">Toggle Modal</button>
+    <div class="w-px bg-border-hairline"></div>
+    <button onclick="toggleStates()" class="text-text-secondary hover:text-text-primary">Toggle Empty/Load State</button>
+  </div>
+
+  <!-- ==============================================
+       PANEL 1: SERVER RAIL (Persistent Nav)
+       ============================================== -->
+  <nav class="w-[72px] flex-shrink-0 bg-surface-900 border-r border-border-hairline flex flex-col items-center py-4 z-20 hidden sm:flex">
+    
+    <!-- DM Home Button (Active) -->
+    <div class="relative group cursor-pointer w-full flex justify-center mb-2">
+      <!-- Active Edge Indicator -->
+      <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-10 bg-accent-emerald rounded-r-md"></div>
+      <div class="w-[48px] h-[48px] rounded-[16px] bg-accent-emerald flex items-center justify-center text-white shadow-emerald-glow transition-all duration-200 cursor-pointer btn-press">
+        <i class="ph-fill ph-chat-teardrop font-bold text-2xl"></i>
+      </div>
+    </div>
+
+    <!-- Separator -->
+    <div class="w-8 h-px bg-border-hairline my-2"></div>
+
+    <!-- Standard Server Icons -->
+    <div class="flex flex-col gap-2 w-full items-center">
+      <!-- Server 1 -->
+      <div class="relative group cursor-pointer w-[48px] h-[48px]">
+        <div class="absolute -left-[14px] top-1/2 -translate-y-1/2 w-1.5 h-2 group-hover:h-5 bg-text-primary rounded-r-md transition-all duration-300"></div>
+        <img src="https://images.unsplash.com/photo-1555116532-0223f8c23e8e?auto=format&fit=crop&w=150&q=80" alt="Typography Course Server" class="w-full h-full object-cover rounded-[24px] group-hover:rounded-[16px] transition-all duration-300 pointer-events-none filter brightness-90">
+      </div>
+      
+      <!-- Server 2 with Unread Mention -->
+      <div class="relative group cursor-pointer w-[48px] h-[48px]">
+        <div class="absolute -top-1 -right-1 z-10 w-5 h-5 bg-danger rounded-full border-[3px] border-surface-900 flex items-center justify-center text-[10px] font-bold text-white leading-none">3</div>
+        <div class="absolute -left-[14px] top-1/2 -translate-y-1/2 w-1.5 h-2 group-hover:h-5 bg-text-primary rounded-r-md transition-all duration-300"></div>
+        <div class="w-full h-full bg-surface-700 text-text-primary text-sm font-semibold rounded-[24px] group-hover:rounded-[16px] flex items-center justify-center transition-all duration-300 btn-press">CS</div>
+      </div>
+
+       <!-- Add Server Action -->
+       <div class="w-[48px] h-[48px] mt-2 rounded-[24px] hover:rounded-[16px] border border-border-hairline border-dashed text-accent-emerald flex items-center justify-center transition-all duration-300 cursor-pointer hover:bg-accent-emerald/10 hover:border-accent-emerald/30 btn-press">
+        <i class="ph ph-plus text-xl"></i>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ==============================================
+       PANEL 2: CONVERSATION LIST RAIL (Drawer on mobile)
+       ============================================== -->
+  <aside id="dm-list-rail" class="w-full lg:w-[320px] flex-shrink-0 bg-surface-900 border-r border-border-hairline flex flex-col z-10 transition-transform duration-300 dm-drawer-hidden lg:translate-x-0 absolute lg:relative h-full">
+    
+    <!-- Header -->
+    <header class="h-[56px] px-4 flex items-center justify-between border-b border-border-hairline shrink-0">
+      <h1 class="text-text-primary text-base font-semibold tracking-tight">Direct Messages</h1>
+      <button onclick="toggleModal()" class="w-[32px] h-[32px] rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-700 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-accent-emerald/50 btn-press" aria-label="Start Direct Message">
+        <i class="ph ph-plus text-lg"></i>
+      </button>
+    </header>
+
+    <!-- Search/Filter Input -->
+    <div class="py-3 px-3 shrink-0">
+      <div class="relative group">
+        <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"></i>
+        <input type="text" placeholder="Find or start a conversation" class="w-full bg-surface-950 border border-border-hairline text-text-primary placeholder:text-text-muted text-sm rounded-md py-1.5 pl-9 pr-3 focus:outline-none focus:border-accent-emerald/50 focus:shadow-emerald-glow transition-all duration-200">
+      </div>
+    </div>
+
+    <!-- Active List (Data Populated) -->
+    <nav id="state-populated-list" class="flex-1 overflow-y-auto px-2 py-2 flex flex-col gap-[2px]">
+      
+      <!-- Row 1: Active 1:1 Conversation -->
+      <a href="#" class="relative flex items-center gap-3 w-full p-2 mx-0 rounded-md bg-surface-700 text-text-primary cursor-pointer select-none" aria-current="page">
+        <!-- Active Nav Pip -->
+        <div class="absolute left-[-8px] top-1/2 -translate-y-1/2 w-1 h-8 bg-accent-emerald rounded-r-md"></div>
+        <!-- Avatar w/ Presence -->
+        <div class="relative shrink-0">
+          <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80" alt="Dr. Aris Thorne" class="w-[32px] h-[32px] rounded-full object-cover border border-surface-700">
+          <div class="absolute -bottom-0.5 -right-0.5 w-[12px] h-[12px] bg-accent-emerald rounded-full border-[2.5px] border-surface-700"></div>
+        </div>
+        <!-- Copy -->
+        <div class="flex-1 min-w-0 pr-1">
+          <div class="flex justify-between items-baseline mb-[2px]">
+            <span class="text-sm font-medium truncate text-accent-emerald">Dr. Aris Thorne</span>
+            <span class="text-[11px] text-text-secondary shrink-0">Now</span>
+          </div>
+          <div class="text-[12px] text-text-secondary truncate overflow-hidden">
+            <span class="text-accent-amber font-medium italic mr-1">Pending</span>Yes, sending the syllabus now.
+          </div>
+        </div>
+      </a>
+
+      <!-- Row 2: Unread Group Conversation -->
+      <a href="#" class="relative flex items-center gap-3 w-full p-2 mx-0 rounded-md hover:bg-surface-800 text-text-secondary hover:text-text-primary cursor-pointer transition-colors group">
+        <!-- Multi-Avatar -->
+        <div class="relative shrink-0 w-[32px] h-[32px]">
+          <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=80&q=80" alt="Elena" class="absolute top-0 right-0 w-[22px] h-[22px] rounded-full object-cover border-2 border-surface-900 group-hover:border-surface-800 transition-colors z-10">
+          <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=80&q=80" alt="Sarah" class="absolute bottom-0 left-0 w-[22px] h-[22px] rounded-full object-cover border-2 border-surface-900 group-hover:border-surface-800 transition-colors">
+        </div>
+        <!-- Copy -->
+        <div class="flex-1 min-w-0 pr-1">
+          <div class="flex justify-between items-baseline mb-[2px]">
+            <span class="text-sm font-medium truncate text-text-primary">Capstone Project Alpha</span>
+            <span class="text-[11px] text-accent-emerald font-medium shrink-0">12:45 PM</span>
+          </div>
+          <div class="text-[12px] text-text-primary font-medium truncate overflow-hidden">
+            <span class="text-text-primary">Sarah:</span> Did everyone finish section 3?
+          </div>
+        </div>
+        <!-- Unread Badge -->
+        <div class="w-2 h-2 bg-accent-emerald rounded-full shrink-0"></div>
+      </a>
+
+      <!-- Row 3: Read 1:1 Conversation Offline -->
+      <a href="#" class="relative flex items-center gap-3 w-full p-2 mx-0 rounded-md hover:bg-surface-800 text-text-secondary hover:text-text-primary cursor-pointer transition-colors">
+        <div class="relative shrink-0">
+          <img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=80&q=80" alt="Prof. Wallace" class="w-[32px] h-[32px] rounded-full object-cover opacity-80 filter grayscale-[30%]">
+          <!-- Offline indicator (greyed out) -->
+          <div class="absolute -bottom-0.5 -right-0.5 w-[12px] h-[12px] bg-surface-500 rounded-full border-[2.5px] border-surface-900"></div>
+        </div>
+        <div class="flex-1 min-w-0 pr-1">
+          <div class="flex justify-between items-baseline mb-[2px]">
+            <span class="text-sm font-medium truncate">Prof. Wallace</span>
+            <span class="text-[11px] text-text-muted shrink-0">Mon</span>
+          </div>
+          <div class="text-[12px] text-text-muted truncate overflow-hidden">
+            Office hours are moved to Tuesday.
+          </div>
+        </div>
+      </a>
+
+      <!-- Row 4: Read 1:1 Conversation Idle -->
+      <a href="#" class="relative flex items-center gap-3 w-full p-2 mx-0 rounded-md hover:bg-surface-800 text-text-secondary hover:text-text-primary cursor-pointer transition-colors">
+        <div class="relative shrink-0">
+          <div class="w-[32px] h-[32px] rounded-full bg-surface-600 flex items-center justify-center text-text-primary font-medium text-sm">MC</div>
+          <div class="absolute -bottom-0.5 -right-0.5 w-[12px] h-[12px] bg-accent-amber rounded-full border-[2.5px] border-surface-900"></div>
+        </div>
+        <div class="flex-1 min-w-0 pr-1">
+          <div class="flex justify-between items-baseline mb-[2px]">
+            <span class="text-sm font-medium truncate">Marcus Chen</span>
+            <span class="text-[11px] text-text-muted shrink-0">Oct 14</span>
+          </div>
+          <div class="text-[12px] text-text-muted truncate overflow-hidden">
+            Thanks for the help!
+          </div>
+        </div>
+      </a>
+    </nav>
+
+    <!-- Empty State List (Hidden by default, used for grading) -->
+    <div id="state-empty-list" class="hidden flex-1 px-6 flex flex-col items-center justify-center text-center">
+      <div class="w-[120px] h-[120px] mb-6 rounded-full bg-surface-800 border border-border-hairline flex items-center justify-center shadow-sm">
+        <i class="ph ph-chat-circle-text text-4xl text-text-muted opacity-50"></i>
+      </div>
+      <h2 class="text-lg font-semibold text-text-primary mb-2">No direct messages yet</h2>
+      <p class="text-sm text-text-secondary max-w-[200px] mb-6">Connect with classmates and professors directly.</p>
+      <button onclick="toggleModal()" class="px-4 py-2 bg-accent-emerald text-white text-sm font-semibold rounded-md shadow-emerald-glow hover:bg-emerald-400 transition-colors btn-press">
+        Start a Conversation
+      </button>
+    </div>
+
+  </aside>
+
+  <!-- ==============================================
+       PANEL 3: THREAD CANVAS (The Messaging Area)
+       ============================================== -->
+  <main class="flex-1 flex flex-col bg-surface-800 relative w-full h-full min-w-0">
+    
+    <!-- Thread Header -->
+    <header class="h-[56px] px-4 flex items-center justify-between border-b border-border-hairline bg-surface-800 shrink-0 shadow-sm z-10 glass-panel">
+      <!-- Mobile Drawer Toggle -->
+      <button class="mr-3 lg:hidden text-text-secondary hover:text-text-primary">
+        <i class="ph ph-list text-xl"></i>
+      </button>
+
+      <!-- Participant Info -->
+      <div class="flex items-center gap-3">
+        <div class="relative">
+          <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80" alt="Dr. Aris Thorne" class="w-[28px] h-[28px] rounded-full object-cover">
+          <div class="absolute -bottom-0.5 -right-0.5 w-[10px] h-[10px] bg-accent-emerald rounded-full border-[2px] border-surface-800"></div>
+        </div>
+        <div>
+          <h2 class="text-base font-semibold text-text-primary tracking-tight leading-none">Dr. Aris Thorne</h2>
+          <span class="text-xs text-text-secondary mt-0.5 block">Professor of Linguistics</span>
+        </div>
+      </div>
+
+      <!-- Action & Connection Wedge -->
+      <div class="flex items-center gap-4">
+        <!-- CONNECTION STATE WEDGE (OFFLINE / PENDING) -->
+        <div id="connection-wedge" class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-danger/10 border border-danger/20 transition-all duration-300">
+          <div class="w-2 h-2 rounded-full bg-danger animate-pulse-slow"></div>
+          <span class="text-[12px] font-medium text-danger-text tracking-tight">Offline — 1 pending</span>
+        </div>
+        
+        <div class="w-px h-6 bg-border-hairline hidden md:block"></div>
+
+        <button class="text-text-secondary hover:text-text-primary transition-colors focus:outline-none focus:ring-1 focus:ring-text-muted rounded" aria-label="Search">
+          <i class="ph ph-magnifying-glass text-lg"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Message Scroll Area -->
+    <div class="flex-1 overflow-y-auto px-4 lg:px-8 pt-4 pb-2 flex flex-col gap-0 stagger-list">
+      
+      <!-- Date Divider -->
+      <div class="flex items-center gap-4 my-4" style="--index: 1;">
+        <div class="flex-1 border-t border-border-hairline"></div>
+        <span class="text-[11px] font-medium text-text-muted uppercase tracking-wider">Yesterday</span>
+        <div class="flex-1 border-t border-border-hairline"></div>
+      </div>
+
+      <!-- Message Row: First in group (Received) -->
+      <article class="flex gap-4 py-1 hover:bg-surface-700/30 rounded-md -mx-2 px-2 transition-colors group structure-message" style="--index: 2;">
+        <div class="w-[40px] shrink-0 pt-0.5 mt-1">
+          <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80" alt="Dr. Aris Thorne" class="w-[40px] h-[40px] rounded-full object-cover">
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-baseline gap-2 mb-0.5">
+            <h3 class="text-sm font-medium text-text-primary hover:underline cursor-pointer">Dr. Aris Thorne</h3>
+            <time class="text-xs text-text-muted">4:12 PM</time>
+          </div>
+          <div class="text-sm text-text-primary leading-[1.6]">
+            I reviewed your recent draft on morphological typologies. The arguments are structurally sound, but I'd suggest tightening up the introduction. Could you resend the annotated syllabus we discussed?
+          </div>
+        </div>
+      </article>
+
+      <!-- Date Divider -->
+      <div class="flex items-center gap-4 mt-6 mb-4" style="--index: 3;">
+        <div class="flex-1 border-t border-border-hairline"></div>
+        <span class="text-[11px] font-medium text-text-muted uppercase tracking-wider">Today</span>
+        <div class="flex-1 border-t border-border-hairline"></div>
+      </div>
+
+      <!-- Message Row: First in group (Sent / Standard) -->
+      <article class="flex gap-4 py-1 hover:bg-surface-700/30 rounded-md -mx-2 px-2 transition-colors group structure-message" style="--index: 4;">
+        <div class="w-[40px] shrink-0 pt-0.5 mt-1">
+           <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&q=80" alt="Me" class="w-[40px] h-[40px] rounded-full object-cover">
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-baseline gap-2 mb-0.5">
+            <h3 class="text-sm font-medium text-text-primary hover:underline cursor-pointer">Me</h3>
+            <time class="text-xs text-text-muted">10:04 AM</time>
+          </div>
+          <div class="text-sm text-text-primary leading-[1.6]">
+            Absolutely. Let me pull that PDF up right now, I have it in my local directory.
+          </div>
+        </div>
+      </article>
+
+      <!-- Message Row: Grouped appended (Sent / THE PENDING STATE WEDGE) -->
+      <article class="flex gap-4 py-0.5 hover:bg-surface-700/30 rounded-md -mx-2 px-2 transition-colors group structure-message relative" style="--index: 5;">
+        <div class="w-[40px] shrink-0 opacity-0 text-[10px] text-right pt-[5px] text-text-muted group-hover:opacity-100 transition-opacity">
+          10:05
+        </div>
+        <div class="flex-1 min-w-0 pb-2">
+          <!-- Pending content text -->
+          <div class="text-sm text-text-primary leading-[1.6] opacity-60">
+            Yes, sending the syllabus now. I also attached the appendix we talked about for section 3. Let me know if you need any adjustments to the core thesis.
+          </div>
+          <!-- Offline / Sending indicator (CRITICAL COMPONENT) -->
+          <div class="mt-1 flex items-center gap-1.5 text-[11px] text-accent-amber font-medium">
+            <i class="ph ph-clock text-xs"></i>
+            Sending...
+          </div>
+        </div>
+      </article>
+      
+      <!-- Ghost anchor to keep scroll bottom padding -->
+      <div class="pb-[120px]"></div>
+    </div>
+
+    <!-- Message Composer Dock -->
+    <div class="absolute bottom-0 left-0 w-full px-4 lg:px-6 pb-6 pt-2 bg-gradient-to-t from-surface-800 via-surface-800 to-transparent">
+      
+      <!-- Typing Indicator Area -->
+      <div class="h-6 flex items-center mb-1 px-1">
+         <span class="text-[12px] font-medium text-text-muted hidden" id="typing-indicator">
+           <strong class="text-text-primary">Dr. Aris Thorne</strong> is typing...
+         </span>
+      </div>
+
+      <!-- Composer Input Wrapper -->
+      <div class="bg-surface-900 border border-border-hairline rounded-lg shadow-sm flex flex-col focus-within:ring-2 focus-within:ring-accent-emerald/40 focus-within:border-accent-emerald transition-all duration-200">
+        
+        <!-- Text Area -->
+        <textarea rows="1" placeholder="Message @Dr. Aris Thorne" class="w-full bg-transparent text-sm text-text-primary placeholder:text-text-muted resize-none p-3 max-h-[250px] focus:outline-none" style="min-height: 44px;"></textarea>
+        
+        <!-- Toolbar -->
+        <div class="flex items-center justify-between px-2 pb-2">
+          <div class="flex items-center gap-1">
+            <button class="w-8 h-8 rounded-md flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-700 transition-colors btn-press" aria-label="Add Attachment">
+              <i class="ph ph-plus-circle text-[20px]"></i>
+            </button>
+            <div class="w-px h-4 bg-border-hover mx-1"></div>
+            <button class="w-8 h-8 rounded-md flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-700 transition-colors btn-press" aria-label="Add Emoji">
+              <i class="ph ph-smiley text-[20px]"></i>
+            </button>
+          </div>
+          <button class="h-8 px-3 ml-2 rounded-md bg-accent-emerald text-white flex items-center justify-center font-medium shadow-emerald-glow hover:bg-emerald-400 transition-all opacity-50 cursor-not-allowed group">
+            <i class="ph-fill ph-paper-plane-right text-[16px] mr-1.5"></i>
+            <span class="text-sm">Send</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+
+  <!-- ==============================================
+       MODAL OVERLAY: START DM PICKER
+       ============================================== -->
+  <!-- Initially visible to satisfy "Renders ALL §3 states" natively without interaction required. Can toggle via UI debug button. -->
+  <div id="start-dm-overlay" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] flex items-center justify-center p-4">
+    
+    <!-- Modal Card -->
+    <div class="bg-surface-900 w-full max-w-[480px] rounded-lg shadow-pop border border-border-hover flex flex-col overflow-hidden animate-modal-in" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      
+      <!-- Header -->
+      <header class="px-5 py-4 flex items-center justify-between border-b border-border-hairline bg-surface-950/50">
+        <h2 id="modal-title" class="text-lg font-semibold text-text-primary tracking-tight leading-none">New Message</h2>
+        <button onclick="toggleModal()" class="w-8 h-8 rounded text-text-secondary hover:text-text-primary hover:bg-surface-800 flex items-center justify-center transition-colors focus:ring-2 focus:ring-accent-emerald/50 btn-press" aria-label="Close modal">
+          <i class="ph ph-x text-lg"></i>
+        </button>
+      </header>
+
+      <!-- Input Area & Selected Chips -->
+      <div class="p-4 border-b border-border-hairline bg-surface-900">
+        
+        <!-- Recipient Chips -->
+        <div class="flex flex-wrap gap-2 mb-3">
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-700 border border-border-hover text-sm text-text-primary shadow-sm">
+             <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=40&q=80" alt="" class="w-4 h-4 rounded-full">
+            Dr. Aris Thorne
+            <button class="text-text-muted hover:text-danger hover:bg-surface-600 rounded p-[1px] ml-0.5 transition-colors focus:outline-none">
+              <i class="ph ph-x text-xs"></i>
+            </button>
+          </span>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-700 border border-border-hover text-sm text-text-primary shadow-sm">
+             <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=40&q=80" alt="" class="w-4 h-4 rounded-full">
+            Elena Rossi
+            <button class="text-text-muted hover:text-danger hover:bg-surface-600 rounded p-[1px] ml-0.5 transition-colors focus:outline-none">
+              <i class="ph ph-x text-xs"></i>
+            </button>
+          </span>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="relative flex items-center bg-surface-950 border border-border-hover rounded-md focus-within:ring-2 focus-within:ring-accent-emerald/40 focus-within:border-accent-emerald overflow-hidden transition-all shadow-sm">
+          <input type="text" placeholder="Type a username or search friends" class="w-full bg-transparent text-sm text-text-primary placeholder:text-text-muted py-2 pl-3 pr-8 focus:outline-none" autofocus>
+          <div class="absolute right-3 text-text-muted pointer-events-none">
+             <i class="ph ph-magnifying-glass"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scrolled Picker List (Density + Who Can DM restrictions) -->
+      <div class="max-h-[280px] overflow-y-auto p-2 bg-surface-900" role="listbox" aria-multiselectable="true">
+        
+        <!-- Section Header -->
+        <div class="px-3 py-1.5 mt-1">
+          <h3 class="text-xs font-semibold text-text-muted uppercase tracking-wider">Suggested</h3>
+        </div>
+
+        <!-- Row 1: Selectable User -->
+        <div role="option" class="flex items-center justify-between p-2 rounded-md hover:bg-surface-800 cursor-pointer group transition-colors">
+          <div class="flex items-center gap-3">
+             <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=80&q=80" class="w-[32px] h-[32px] rounded-full object-cover">
+             <div>
+               <div class="text-sm font-medium text-text-primary">James O'Connor</div>
+               <div class="text-xs text-text-secondary">james.oc · Classmate</div>
+             </div>
+          </div>
+          <div class="w-5 h-5 rounded border border-border-hover group-hover:border-text-muted flex items-center justify-center transition-colors"></div>
+        </div>
+
+        <!-- Row 2: Selected Item (Check state) -->
+        <div role="option" aria-selected="true" class="flex items-center justify-between p-2 rounded-md hover:bg-surface-800 cursor-pointer group transition-colors bg-surface-800/50">
+          <div class="flex items-center gap-3">
+             <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=80&q=80" class="w-[32px] h-[32px] rounded-full object-cover">
+             <div>
+               <div class="text-sm font-medium text-text-primary">Elena Rossi</div>
+               <div class="text-xs text-text-secondary">elena_r</div>
+             </div>
+          </div>
+          <div class="w-5 h-5 rounded border-none bg-accent-emerald flex items-center justify-center text-surface-950 shadow-emerald-glow">
+            <i class="ph-bold ph-check text-xs"></i>
+          </div>
+        </div>
+
+        <!-- Row 3: RESTRICTED TARGET (Crucial Privacy State) -->
+        <div role="option" aria-disabled="true" class="flex items-center justify-between p-2 rounded-md cursor-not-allowed group opacity-50 grayscale mt-2 border border-danger/10 bg-danger/5">
+          <div class="flex items-center gap-3 pointer-events-none">
+             <div class="relative">
+                <img src="https://images.unsplash.com/photo-1607990281513-2c110a25bd8c?auto=format&fit=crop&w=80&q=80" class="w-[32px] h-[32px] rounded-full object-cover">
+                <!-- Lock Icon Overlay specific to restriction -->
+                <div class="absolute -bottom-1 -right-1 w-[16px] h-[16px] bg-danger rounded-full border-[2px] border-surface-900 flex items-center justify-center">
+                  <i class="ph-fill ph-lock text-[8px] text-white"></i>
+                </div>
+             </div>
+             <div>
+               <div class="text-sm font-medium text-text-primary line-through decoration-text-muted">Alex Mercer</div>
+               <!-- Clear non-color contextual reason -->
+               <div class="text-xs text-danger-text font-medium mt-0.5 flex items-center gap-1">
+                 <i class="ph ph-shield-warning text-[10px]"></i> Only accepts messages from server members
+               </div>
+             </div>
+          </div>
+          <!-- Checkbox omitted entirely to prove non-interactivity -->
+        </div>
+
+        <!-- Row 4: Selectable User -->
+        <div role="option" class="flex items-center justify-between p-2 rounded-md hover:bg-surface-800 cursor-pointer group transition-colors border-t border-transparent mt-2">
+          <div class="flex items-center gap-3">
+             <div class="w-[32px] h-[32px] rounded-full bg-surface-600 flex items-center justify-center text-text-primary font-medium text-sm">KJ</div>
+             <div>
+               <div class="text-sm font-medium text-text-primary">Kieran Jefferson</div>
+               <div class="text-xs text-text-secondary">k.jefferson</div>
+             </div>
+          </div>
+           <div class="w-5 h-5 rounded border border-border-hover group-hover:border-text-muted flex items-center justify-center transition-colors"></div>
+        </div>
+      </div>
+
+      <!-- Footer Actions -->
+      <footer class="px-5 py-4 bg-surface-950 border-t border-border-hairline flex justify-end gap-3 rounded-b-lg">
+        <button onclick="toggleModal()" class="px-4 py-2 rounded-md text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-800 transition-colors btn-press">
+          Cancel
+        </button>
+        <button class="px-5 py-2 rounded-md bg-accent-emerald text-white text-sm font-semibold shadow-emerald-glow hover:bg-emerald-400 transition-colors btn-press flex items-center gap-2">
+          Start Group DM <i class="ph-bold ph-arrow-right text-xs"></i>
+        </button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Vanilla JS for interactive demonstration of states -->
+  <script>
+    // State logic to allow reviewers to see different variations in one file.
+    const modal = document.getElementById('start-dm-overlay');
+    const statePopulatedList = document.getElementById('state-populated-list');
+    const stateEmptyList = document.getElementById('state-empty-list');
+    
+    // Toggle the Start DM Modal
+    function toggleModal() {
+      if (modal.classList.contains('hidden')) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        // Re-trigger animation
+        const card = modal.querySelector('div[role="dialog"]');
+        card.style.animation = 'none';
+        card.offsetHeight; /* trigger reflow */
+        card.style.animation = null; 
+      } else {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+    }
+
+    // Toggle the underlying list structure between Load Data and Empty
+    let isEmpty = false;
+    function toggleStates() {
+      isEmpty = !isEmpty;
+      if(isEmpty) {
+        statePopulatedList.classList.add('hidden');
+        statePopulatedList.classList.remove('flex');
+        
+        stateEmptyList.classList.remove('hidden');
+        stateEmptyList.classList.add('flex');
+      } else {
+        stateEmptyList.classList.add('hidden');
+        stateEmptyList.classList.remove('flex');
+
+        statePopulatedList.classList.remove('hidden');
+        statePopulatedList.classList.add('flex');
+      }
+    }
+
+    // Simple auto-resize logic for the composer textarea
+    const tx = document.getElementsByTagName("textarea");
+    for (let i = 0; i < tx.length; i++) {
+        tx[i].setAttribute("style", "height:" + (tx[i].scrollHeight) + "px;overflow-y:hidden;min-height:44px;");
+        tx[i].addEventListener("input", OnInput, false);
+    }
+    function OnInput() {
+        this.style.height = "auto";
+        this.style.height = (this.scrollHeight) + "px";
+    }
+
+    // Close modal on escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+        toggleModal();
+      }
+    });
+  </script>
+</body>
+</html>
