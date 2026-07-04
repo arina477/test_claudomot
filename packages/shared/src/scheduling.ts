@@ -38,10 +38,10 @@ export const CreateScheduledSessionSchema = z
   .object({
     title: z.string().min(1).max(200),
     description: z.string().nullable().optional(),
-    startsAt: z.string(),
-    endsAt: z.string(),
+    startsAt: z.string().datetime(),
+    endsAt: z.string().datetime(),
     recurrence: z.enum(['none', 'weekly']).default('none'),
-    recurrenceUntil: z.string().nullable().optional(),
+    recurrenceUntil: z.string().datetime().nullable().optional(),
   })
   .refine((data) => new Date(data.endsAt) > new Date(data.startsAt), {
     message: 'endsAt must be after startsAt',
@@ -71,10 +71,10 @@ export const UpdateScheduledSessionSchema = z
   .object({
     title: z.string().min(1).max(200).optional(),
     description: z.string().nullable().optional(),
-    startsAt: z.string().optional(),
-    endsAt: z.string().optional(),
+    startsAt: z.string().datetime().optional(),
+    endsAt: z.string().datetime().optional(),
     recurrence: z.enum(['none', 'weekly']).optional(),
-    recurrenceUntil: z.string().nullable().optional(),
+    recurrenceUntil: z.string().datetime().nullable().optional(),
   })
   .refine(
     (data) => {

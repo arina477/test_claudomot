@@ -234,6 +234,21 @@ export class SchedulingService {
         input.recurrenceUntil != null ? new Date(input.recurrenceUntil) : null;
     }
 
+    // Effective-values cross-field re-check (belt-and-suspenders for partial patches)
+    // UpdateScheduledSessionSchema refine only fires when BOTH startsAt+endsAt are
+    // present in the patch; a one-sided update can produce ends<=starts in DB.
+    const effStarts = patch.starts_at ?? existing.starts_at;
+    const effEnds = patch.ends_at ?? existing.ends_at;
+    if (effEnds <= effStarts) {
+      throw new BadRequestException('endsAt must be after startsAt');
+    }
+    const effRecurrence = patch.recurrence ?? existing.recurrence;
+    const effUntil =
+      input.recurrenceUntil !== undefined ? patch.recurrence_until : existing.recurrence_until;
+    if (effRecurrence === 'weekly' && effUntil != null && effUntil < effStarts) {
+      throw new BadRequestException('recurrenceUntil must be on or after startsAt');
+    }
+
     const [updated] = await db
       .update(scheduled_sessions)
       .set(patch)
