@@ -165,6 +165,28 @@ export type {
   UpdatePrivacyInput,
 } from './privacy.js';
 
+export {
+  DmParticipantSchema,
+  DmConversationSchema,
+  DmMessageSchema,
+  CreateConversationSchema,
+  SendDmMessageSchema,
+  DmConversationListResponseSchema,
+  DmMessageListResponseSchema,
+  DmMessageEventSchema,
+  DM_MESSAGE_EVENT,
+} from './dm.js';
+export type {
+  DmParticipant,
+  DmConversation,
+  DmMessage,
+  CreateConversationInput,
+  SendDmMessageInput,
+  DmConversationListResponse,
+  DmMessageListResponse,
+  DmMessageEvent,
+} from './dm.js';
+
 export { AccountDataResponseSchema } from './account-data.js';
 export type { AccountDataResponse } from './account-data.js';
 
