@@ -341,7 +341,10 @@ export function useDm(currentUserId: string | null, currentUserDisplay: string):
                   [key: string]: unknown;
                 }>;
               }
-              return Promise.reject(new Error('Channel drain not handled by DM hook'));
+              return api.sendMessage(drainTarget.channelId, body) as Promise<{
+                id: string;
+                [key: string]: unknown;
+              }>;
             },
             // onDelivered: reconcile optimistic → real
             (deliveredKey, confirmedId) => {

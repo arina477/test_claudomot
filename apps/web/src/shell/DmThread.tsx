@@ -43,8 +43,16 @@ function initials(name: string): string {
 // Message row variants
 // ---------------------------------------------------------------------------
 
-function RealRow({ msg }: { msg: { kind: 'real' } & import('@studyhall/shared').DmMessage }) {
-  const abbr = initials(msg.authorId);
+function RealRow({
+  msg,
+  participantMap,
+}: {
+  msg: { kind: 'real' } & import('@studyhall/shared').DmMessage;
+  /** Map from userId → displayName, built from conversation.participants. */
+  participantMap: Map<string, string>;
+}) {
+  const displayName = participantMap.get(msg.authorId) ?? 'Unknown user';
+  const abbr = initials(displayName);
 
   return (
     <article
@@ -67,7 +75,7 @@ function RealRow({ msg }: { msg: { kind: 'real' } & import('@studyhall/shared').
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-2 mb-0.5">
           <span className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.92)' }}>
-            {msg.authorId}
+            {displayName}
           </span>
           <time className="text-xs" style={{ color: 'rgba(255,255,255,0.40)' }}>
             {formatTime(msg.createdAt)}
@@ -340,6 +348,12 @@ export function DmThread({
     (m) => m.kind === 'optimistic' && m.state === 'pending',
   ).length;
 
+  // Build a stable authorId → displayName lookup from conversation participants.
+  // Used by RealRow to show human-readable names instead of opaque userId strings.
+  const participantMap = new Map<string, string>(
+    conversation ? conversation.participants.map((p) => [p.userId, p.displayName]) : [],
+  );
+
   // Scroll to bottom on new messages
   useEffect(() => {
     const prev = prevLengthRef.current;
@@ -538,7 +552,7 @@ export function DmThread({
 
           {messages.map((msg) => {
             if (msg.kind === 'real') {
-              return <RealRow key={msg.id} msg={msg} />;
+              return <RealRow key={msg.id} msg={msg} participantMap={participantMap} />;
             }
             if (msg.state === 'pending') {
               return <PendingRow key={msg.idempotencyKey} msg={msg} />;
