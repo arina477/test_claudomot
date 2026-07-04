@@ -293,17 +293,24 @@ export class MessagingGateway implements OnGatewayInit, OnGatewayConnection {
   }
 
   // -------------------------------------------------------------------------
-  // dm.message → fan-out to OTHER participants' per-user rooms (wave-46 M8)
+  // dm.message → fan-out to ALL participants' per-user rooms (wave-46 M8)
   //
   // Emitted by DmService.sendMessage() after a new DM message is inserted.
   //
-  // Fan-out is participant-scoped: only sockets whose userId is in the
-  // conversation's participant list receive the event. The SENDER is excluded
-  // (spec: sender uses optimistic local render, not the fan-out echo).
+  // Fan-out is participant-scoped: all sockets whose userId is in the
+  // conversation's participant list receive the event, INCLUDING the sender.
+  //
+  // Why include the sender (M1 fix — wave-46 B-6 review):
+  //   The sender's ORIGINATING tab uses optimistic render and dedups incoming
+  //   real rows by message id (useDm hook). The sender's OTHER open tabs and
+  //   devices have no optimistic copy, so they need the fan-out to display the
+  //   new message without a full refetch. Emitting to the sender's 'user:<id>'
+  //   room reaches ALL the sender's sockets (originating + others). The
+  //   originating tab's dedup-by-id is echo-safe — duplicate id is ignored.
   //
   // Room strategy: each authenticated socket is already in 'user:<userId>'
   // (joined at handleConnection). The DM fan-out emits to those per-user rooms
-  // for each OTHER participant — no new join/room needed for clients.
+  // for every participant — no new join/room needed for clients.
   //
   // participantIds is resolved by DmService and passed with the event payload
   // so the gateway stays decoupled from DB queries.
@@ -322,9 +329,10 @@ export class MessagingGateway implements OnGatewayInit, OnGatewayConnection {
     };
 
     for (const participantId of payload.participantIds) {
-      // Exclude the sender — they use optimistic render
-      if (participantId === payload.senderId) continue;
-
+      // Emit to ALL participants including the sender.
+      // The sender's originating tab dedups by message id (useDm hook) —
+      // echo-safe. The sender's other tabs need this event to render the
+      // new message.
       this.server.to(`user:${participantId}`).emit(DM_MESSAGE_EVENT, dmEvent);
       this.logger.debug(
         `DM fan-out: dm:message conv=${payload.conversationId} msg=${payload.message.id} → user:${participantId}`,

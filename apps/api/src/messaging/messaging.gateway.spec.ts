@@ -566,3 +566,80 @@ describe('MessagingGateway — mention.created fan-out (wave-15)', () => {
     expect(mockTo).not.toHaveBeenCalledWith(AUTHOR_ROOM);
   });
 });
+
+// ---------------------------------------------------------------------------
+// wave-46 M8 — dm.message fan-out (M1 fix — B-6 review)
+// ---------------------------------------------------------------------------
+
+describe('MessagingGateway — dm.message fan-out (wave-46 M8)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const dmPayload = {
+    conversationId: 'conv-001',
+    message: {
+      id: 'dm-msg-001',
+      conversationId: 'conv-001',
+      authorId: 'sender-user',
+      content: 'Hello from DM',
+      createdAt: '2026-07-04T10:00:00.000Z',
+    } as import('@studyhall/shared').DmMessage,
+    senderId: 'sender-user',
+    participantIds: ['sender-user', 'recipient-user'],
+  };
+
+  it('emits dm:message to ALL participant rooms including the sender (M1 fix)', () => {
+    const gateway = new MessagingGateway(makeRbacService());
+    const mockEmit = vi.fn();
+    const mockTo = vi.fn().mockReturnValue({ emit: mockEmit });
+    // biome-ignore lint/suspicious/noExplicitAny: test server mock
+    (gateway as any).server = { to: mockTo, emit: vi.fn() };
+
+    gateway.handleDmMessage(dmPayload);
+
+    // Sender's room MUST receive the event (other tabs need it)
+    expect(mockTo).toHaveBeenCalledWith('user:sender-user');
+    // Recipient's room MUST also receive it
+    expect(mockTo).toHaveBeenCalledWith('user:recipient-user');
+    // Both calls should emit the dm:message event
+    expect(mockEmit).toHaveBeenCalledTimes(2);
+    expect(mockEmit).toHaveBeenCalledWith(
+      'dm:message',
+      expect.objectContaining({ conversationId: 'conv-001' }),
+    );
+  });
+
+  it('emits to sender room — not excluded even when senderId matches participantId', () => {
+    const gateway = new MessagingGateway(makeRbacService());
+    const mockEmit = vi.fn();
+    const mockTo = vi.fn().mockReturnValue({ emit: mockEmit });
+    // biome-ignore lint/suspicious/noExplicitAny: test server mock
+    (gateway as any).server = { to: mockTo, emit: vi.fn() };
+
+    // Single-participant edge: only the sender in the list
+    gateway.handleDmMessage({ ...dmPayload, participantIds: ['sender-user'] });
+
+    expect(mockTo).toHaveBeenCalledWith('user:sender-user');
+    expect(mockEmit).toHaveBeenCalledTimes(1);
+  });
+
+  it('emits the correct event payload shape to each participant room', () => {
+    const gateway = new MessagingGateway(makeRbacService());
+    const mockEmit = vi.fn();
+    const mockTo = vi.fn().mockReturnValue({ emit: mockEmit });
+    // biome-ignore lint/suspicious/noExplicitAny: test server mock
+    (gateway as any).server = { to: mockTo, emit: vi.fn() };
+
+    gateway.handleDmMessage(dmPayload);
+
+    const expectedEvent = {
+      conversationId: 'conv-001',
+      message: dmPayload.message,
+    };
+    for (const call of mockEmit.mock.calls) {
+      expect(call[0]).toBe('dm:message');
+      expect(call[1]).toEqual(expectedEvent);
+    }
+  });
+});
