@@ -143,16 +143,14 @@ export class DmService {
 
     if (!target) {
       // Target user not found — treat as nobody (refuse)
-      throw new ForbiddenException(
-        `User ${targetId} not found or cannot receive direct messages`,
-      );
+      throw new ForbiddenException(`User ${targetId} not found or cannot receive direct messages`);
     }
 
     const policy = target.who_can_dm;
 
     if (policy === 'nobody') {
       throw new ForbiddenException(
-        `Cannot start a direct message: user has restricted direct messages (policy: nobody)`,
+        'Cannot start a direct message: user has restricted direct messages (policy: nobody)',
       );
     }
 
@@ -175,7 +173,7 @@ export class DmService {
 
       if (sharedResult.length === 0) {
         throw new ForbiddenException(
-          `Cannot start a direct message: user requires a shared server membership (policy: server-members)`,
+          'Cannot start a direct message: user requires a shared server membership (policy: server-members)',
         );
       }
     }

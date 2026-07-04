@@ -1,13 +1,5 @@
 import type { InferInsertModel, InferSelectModel } from 'drizzle-orm';
-import {
-  boolean,
-  index,
-  pgTable,
-  text,
-  timestamp,
-  unique,
-  uuid,
-} from 'drizzle-orm/pg-core';
+import { boolean, index, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
 import { users } from './users';
 
 // ---------------------------------------------------------------------------
@@ -92,10 +84,7 @@ export const dm_messages = pgTable(
       table.idempotency_key,
     ),
     // INDEX(conversation_id, created_at) — efficient cursor pagination
-    index('dm_messages_conversation_created_at_idx').on(
-      table.conversation_id,
-      table.created_at,
-    ),
+    index('dm_messages_conversation_created_at_idx').on(table.conversation_id, table.created_at),
   ],
 );
 

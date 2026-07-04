@@ -29,11 +29,7 @@
  *     - caller with conversations → returns list with participant details
  */
 
-import {
-  BadRequestException,
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ---------------------------------------------------------------------------
@@ -70,16 +66,7 @@ function makeSelectChain(resolveWith: unknown[]) {
     then: (res: (v: unknown) => unknown, rej?: (e: unknown) => unknown) =>
       Promise.resolve(resolveWith).then(res, rej),
   };
-  for (const m of [
-    'from',
-    'where',
-    'limit',
-    'orderBy',
-    'select',
-    'innerJoin',
-    'leftJoin',
-    'as',
-  ]) {
+  for (const m of ['from', 'where', 'limit', 'orderBy', 'select', 'innerJoin', 'leftJoin', 'as']) {
     chain[m] = vi.fn().mockReturnValue(chain);
   }
   return chain;
@@ -308,7 +295,9 @@ describe('DmService — participant cap', () => {
     });
 
     mockTransaction.mockImplementation(async (fn: (tx: unknown) => unknown) => {
-      const txInsert = vi.fn().mockReturnValue(makeInsertChain([{ ...mockConvRow, is_group: true }]));
+      const txInsert = vi
+        .fn()
+        .mockReturnValue(makeInsertChain([{ ...mockConvRow, is_group: true }]));
       const tx = { insert: txInsert };
       return fn(tx);
     });
@@ -421,10 +410,13 @@ describe('DmService — IDOR-safe participant gate', () => {
     expect(result.id).toBe(MSG_ID);
     expect(result.conversationId).toBe(CONV_ID);
     expect(result.authorId).toBe(CREATOR_ID);
-    expect(emitter.emit).toHaveBeenCalledWith('dm.message', expect.objectContaining({
-      conversationId: CONV_ID,
-      senderId: CREATOR_ID,
-    }));
+    expect(emitter.emit).toHaveBeenCalledWith(
+      'dm.message',
+      expect.objectContaining({
+        conversationId: CONV_ID,
+        senderId: CREATOR_ID,
+      }),
+    );
   });
 
   it('listMessages: participant gets messages list', async () => {
@@ -441,7 +433,8 @@ describe('DmService — IDOR-safe participant gate', () => {
 
     const result = await service.listMessages(CONV_ID, CREATOR_ID);
     expect(result.messages).toHaveLength(1);
-    expect(result.messages[0]!.id).toBe(MSG_ID);
+    const firstMessage = result.messages[0] as (typeof result.messages)[number];
+    expect(firstMessage.id).toBe(MSG_ID);
     expect(result.nextCursor).toBeNull();
   });
 });
@@ -522,7 +515,12 @@ describe('DmService — listConversations', () => {
       if (selectCallCount === 2) {
         // participantRows
         return makeSelectChain([
-          { conversation_id: CONV_ID, user_id: CREATOR_ID, display_name: 'Alice', avatar_url: null },
+          {
+            conversation_id: CONV_ID,
+            user_id: CREATOR_ID,
+            display_name: 'Alice',
+            avatar_url: null,
+          },
           { conversation_id: CONV_ID, user_id: TARGET_A_ID, display_name: 'Bob', avatar_url: null },
         ]);
       }
@@ -545,9 +543,11 @@ describe('DmService — listConversations', () => {
 
     const result = await service.listConversations(CREATOR_ID);
     expect(result.conversations).toHaveLength(1);
-    expect(result.conversations[0]!.id).toBe(CONV_ID);
-    expect(result.conversations[0]!.lastMessage).not.toBeNull();
-    expect(result.conversations[0]!.lastMessage!.content).toBe('Hello!');
-    expect(result.conversations[0]!.participants).toHaveLength(2);
+    const conv0 = result.conversations[0] as (typeof result.conversations)[number];
+    expect(conv0.id).toBe(CONV_ID);
+    expect(conv0.lastMessage).not.toBeNull();
+    const lastMsg = conv0.lastMessage as NonNullable<typeof conv0.lastMessage>;
+    expect(lastMsg.content).toBe('Hello!');
+    expect(conv0.participants).toHaveLength(2);
   });
 });
