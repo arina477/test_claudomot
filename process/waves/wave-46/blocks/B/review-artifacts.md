@@ -3,7 +3,7 @@
 **Block:** B (Build)
 **Wave topic:** M8 direct messages slice 1 — DM schema + participant-gated backend (who_can_dm-enforced) + Socket.IO fan-out + DM UI + offline outbox
 **Block exit gate:** B-6
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
@@ -14,7 +14,7 @@
 | B-3 | process/waves/wave-46/stages/B-3-frontend.md | pending | DM UI (design/direct-messages.html) + outbox generalization |
 | B-4 | process/waves/wave-46/stages/B-4-wiring.md | pending | |
 | B-5 | process/waves/wave-46/stages/B-5-verify.md | pending | |
-| B-6 | process/waves/wave-46/stages/B-6-review.md | pending | |
+| B-6 | process/waves/wave-46/stages/B-6-review.md | done | APPROVED (3 attempts + /review: C1 critical + 3 med fixed) |
 
 ## Block-specific context
 - **Spec contract:** tasks row a48f1910 (DB); spec at process/waves/wave-46/stages/P-2-spec.md
