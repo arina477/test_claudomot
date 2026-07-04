@@ -624,12 +624,10 @@ export function SessionForm({ serverId, session, onSuccess, onClose }: SessionFo
             {submitting ? (
               <span className="flex items-center gap-2">
                 <SpinnerIcon size={14} className="sh-animate-spin" />
-                {isEdit ? 'Saving…' : 'Creating…'}
+                Saving…
               </span>
-            ) : isEdit ? (
-              'Save Changes'
             ) : (
-              'Create Session'
+              'Save'
             )}
           </button>
         </footer>

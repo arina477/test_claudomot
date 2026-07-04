@@ -26,7 +26,7 @@
  */
 
 import type { ScheduledSession } from '@studyhall/shared';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { api } from '../auth/api';
 import { ErrorState } from '../components/states/ErrorState';
 import { useServers } from './ServerContext';
@@ -40,6 +40,28 @@ import {
   PlusIcon,
   TrashIcon,
 } from './icons';
+
+// ---------------------------------------------------------------------------
+// Responsive breakpoint hook
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns true when the viewport is ≤1024px (the DS §9 "lg" breakpoint where
+ * the member panel collapses).  Uses useSyncExternalStore for tear-free reads.
+ */
+function useIsNarrow(): boolean {
+  return useSyncExternalStore(
+    (cb) => {
+      if (typeof window === 'undefined') return () => {};
+      const mql = window.matchMedia('(max-width: 1024px)');
+      mql.addEventListener('change', cb);
+      return () => mql.removeEventListener('change', cb);
+    },
+    () =>
+      typeof window !== 'undefined' ? window.matchMedia('(max-width: 1024px)').matches : false,
+    () => false,
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Date window helpers
@@ -116,7 +138,7 @@ type SessionRowProps = {
   isSelected: boolean;
   isOrganizer: boolean;
   onClick: () => void;
-  onEdit: (e: React.MouseEvent) => void;
+  onEdit: (e: React.MouseEvent, triggerEl: HTMLButtonElement) => void;
   onDeleteClick: (e: React.MouseEvent) => void;
 };
 
@@ -238,7 +260,7 @@ function SessionRow({
           <button
             type="button"
             aria-label={`Edit session: ${session.title}`}
-            onClick={onEdit}
+            onClick={(e) => onEdit(e, e.currentTarget)}
             className="flex h-8 w-8 items-center justify-center rounded transition-colors duration-150 focus-visible:outline-none focus-visible:ring-1"
             style={{ color: 'rgba(255,255,255,0.60)' }}
             onMouseEnter={(e) => {
@@ -300,6 +322,10 @@ type Props = {
 export function ClassCalendar({ onClose }: Props) {
   const { selectedId: serverId } = useServers();
 
+  // Responsive: at ≤1024px the detail panel overlays rather than sitting inline
+  // (DS §9 — mirrors how member/assignment panels collapse at the 1024 breakpoint)
+  const isNarrow = useIsNarrow();
+
   const [sessions, setSessions] = useState<ScheduledSession[]>([]);
   const [loadStatus, setLoadStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
 
@@ -312,6 +338,12 @@ export function ClassCalendar({ onClose }: Props) {
   // Form modal
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<ScheduledSession | null>(null);
+
+  // Ref to "New session" trigger for focus-restore on form close (WCAG 2.4.3)
+  const newSessionBtnRef = useRef<HTMLButtonElement>(null);
+  const emptyStateNewBtnRef = useRef<HTMLButtonElement>(null);
+  // Tracks which trigger opened the form so we can restore focus on close
+  const formTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   // aria-live announcer
   const announceRef = useRef<HTMLDivElement>(null);
@@ -399,7 +431,22 @@ export function ClassCalendar({ onClose }: Props) {
       loadSessions();
       setFormOpen(false);
       setEditTarget(null);
+      // Detail-panel refresh: if the detail panel is open and showing the edited
+      // session, force SessionDetail to re-fetch by briefly resetting the id.
+      // We use a functional update so we read the current value without a dep.
+      setSelectedSessionId((prev) => {
+        if (prev === saved.id) {
+          // Toggle off then back on in the next microtask so SessionDetail's
+          // useEffect [sessionId] fires a fresh GET.
+          setTimeout(() => setSelectedSessionId(saved.id), 0);
+          return null;
+        }
+        return prev;
+      });
       announce(saved.title ? `Session "${saved.title}" saved.` : 'Session saved.');
+      // Restore focus to form trigger (WCAG 2.4.3) — closeForm path also does
+      // this but handleFormSuccess bypasses closeForm.
+      requestAnimationFrame(() => formTriggerRef.current?.focus());
     },
     [announce, loadSessions],
   );
@@ -416,19 +463,23 @@ export function ClassCalendar({ onClose }: Props) {
     [loadSessions],
   );
 
-  function openCreate() {
+  function openCreate(triggerEl?: HTMLButtonElement | null) {
     setEditTarget(null);
+    formTriggerRef.current = triggerEl ?? null;
     setFormOpen(true);
   }
 
-  function openEdit(session: ScheduledSession) {
+  function openEdit(session: ScheduledSession, triggerEl?: HTMLButtonElement | null) {
     setEditTarget(session);
+    formTriggerRef.current = triggerEl ?? null;
     setFormOpen(true);
   }
 
   function closeForm() {
     setFormOpen(false);
     setEditTarget(null);
+    // WCAG 2.4.3: restore focus to the element that invoked the modal
+    requestAnimationFrame(() => formTriggerRef.current?.focus());
   }
 
   // ---------------------------------------------------------------------------
@@ -508,9 +559,10 @@ export function ClassCalendar({ onClose }: Props) {
 
         {isOrganizer && (
           <button
+            ref={newSessionBtnRef}
             type="button"
             data-testid="new-session-btn"
-            onClick={openCreate}
+            onClick={() => openCreate(newSessionBtnRef.current)}
             className="flex h-8 items-center gap-1.5 rounded-md px-3 text-sm font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2"
             style={{
               backgroundColor: '#10b981',
@@ -613,9 +665,10 @@ export function ClassCalendar({ onClose }: Props) {
                 </div>
                 {isOrganizer && (
                   <button
+                    ref={emptyStateNewBtnRef}
                     type="button"
                     data-testid="empty-state-new-btn"
-                    onClick={openCreate}
+                    onClick={() => openCreate(emptyStateNewBtnRef.current)}
                     className="flex h-10 items-center gap-2 rounded-md px-4 text-sm font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2"
                     style={{ backgroundColor: '#10b981', color: '#0a0a0b' }}
                     onMouseEnter={(e) => {
@@ -669,9 +722,9 @@ export function ClassCalendar({ onClose }: Props) {
                                 prev === session.id ? null : session.id,
                               );
                             }}
-                            onEdit={(e) => {
+                            onEdit={(e, triggerEl) => {
                               e.stopPropagation();
-                              openEdit(session);
+                              openEdit(session, triggerEl);
                             }}
                             onDeleteClick={(e) => handleRowDeleteClick(e, session)}
                           />
@@ -695,10 +748,11 @@ export function ClassCalendar({ onClose }: Props) {
           </div>
         </div>
 
-        {/* SECONDARY: Session detail panel (inline, bento paradigm) */}
-        {selectedSessionId && (
+        {/* SECONDARY: Session detail panel */}
+        {selectedSessionId && !isNarrow && (
+          /* ≥1025px: inline bento side-panel (standard desktop layout) */
           <div
-            className="hidden sm:flex relative"
+            className="flex relative"
             style={{
               transition: 'all 0.35s cubic-bezier(0.16,1,0.3,1)',
             }}
@@ -709,7 +763,32 @@ export function ClassCalendar({ onClose }: Props) {
               onClose={() => {
                 setSelectedSessionId(null);
               }}
-              onEdit={(session) => openEdit(session)}
+              onEdit={(session, triggerEl) => openEdit(session, triggerEl)}
+              onDeleted={handleDeleted}
+              onAnnounce={announce}
+            />
+          </div>
+        )}
+        {selectedSessionId && isNarrow && (
+          /* ≤1024px: overlay modal — preserves agenda card readability (DS §9).
+             SessionDetail renders with fixed positioning via its own panel styles;
+             we wrap in a scrim so it behaves like a standard overlay drawer. */
+          // biome-ignore lint/a11y/useKeyWithClickEvents: Esc handled inside SessionDetail; backdrop click is supplementary
+          <div
+            role="presentation"
+            className="fixed inset-0 z-40 flex items-stretch justify-end"
+            style={{ backgroundColor: 'rgba(0,0,0,0.50)', backdropFilter: 'blur(2px)' }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setSelectedSessionId(null);
+            }}
+          >
+            <SessionDetail
+              sessionId={selectedSessionId}
+              isOrganizer={isOrganizer}
+              onClose={() => {
+                setSelectedSessionId(null);
+              }}
+              onEdit={(session, triggerEl) => openEdit(session, triggerEl)}
               onDeleted={handleDeleted}
               onAnnounce={announce}
             />
