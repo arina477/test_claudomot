@@ -10,6 +10,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:ci": "vitest run --reporter=verbose",
+    "e2e": "PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright npx playwright test",
+    "test:e2e": "PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright npx playwright test",
     "clean": "rimraf dist *.tsbuildinfo"
   },
   "dependencies": {
