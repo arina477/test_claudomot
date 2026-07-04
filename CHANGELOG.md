@@ -73,6 +73,8 @@ All notable changes to StudyHall are documented here. Format follows
 - Setting a profile picture is now reachable end-to-end from the app: the avatar upload that shipped on the backend last release finally has an in-app entry point through the new user menu. (#53)
 - Educator role: a server owner can grant a member a moderation permission that lets a teaching assistant or study-group lead keep a space on track — time out a disruptive member and delete any message — without handing over full ownership. (#55)
 - Moderation is rank-guarded and enforced server-side: an educator can act only on members below them and never on the owner or a fellow educator, and the timeout and delete-any controls appear only for members who actually hold the permission. (#55)
+- Turn in assignment work: a member can submit text and an optional single attachment on any assignment, edit their own submission in place, and see the organizer's returned status and comment once it comes back — there is no grade or score anywhere. (#56)
+- Collect and return submissions: an organizer with the manage-assignments permission sees a roster of everyone's submissions (newest first) and can mark one returned with an optional comment, while a member only ever sees their own — enforced server-side, so no student can read another's work. (#56)
 
 ### Changed
 
