@@ -63,12 +63,23 @@ export type UseTypingResult = {
 };
 
 function buildTypingLabel(typers: TypingActive['typers']): string {
+  type Typer = (typeof typers)[number];
   if (typers.length === 0) return '';
-  if (typers.length === 1) return `${typers[0]!.displayName} is typing`;
-  if (typers.length === 2)
-    return `${typers[0]!.displayName} and ${typers[1]!.displayName} are typing`;
-  if (typers.length === 3)
-    return `${typers[0]!.displayName}, ${typers[1]!.displayName} and ${typers[2]!.displayName} are typing`;
+  if (typers.length === 1) {
+    const a = typers[0] as Typer;
+    return `${a.displayName} is typing`;
+  }
+  if (typers.length === 2) {
+    const a = typers[0] as Typer;
+    const b = typers[1] as Typer;
+    return `${a.displayName} and ${b.displayName} are typing`;
+  }
+  if (typers.length === 3) {
+    const a = typers[0] as Typer;
+    const b = typers[1] as Typer;
+    const c = typers[2] as Typer;
+    return `${a.displayName}, ${b.displayName} and ${c.displayName} are typing`;
+  }
   return 'Several people are typing';
 }
 
