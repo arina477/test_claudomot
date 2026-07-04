@@ -10,7 +10,7 @@
 | Stage | Deliverable file(s) | Status | Notes |
 |---|---|---|---|
 | D-1 | stages/D-1-brief/class-scheduling-brief.md | done | 1 coherent gap; mask_mode PASS |
-| D-2 | stages/D-2-variants/class-scheduling-variants.md (+ design/staging/class-scheduling.html) | pending | aidesigner generate + iteration |
+| D-2 | stages/D-2-variants/... (+ design/staging/class-scheduling.html) | done | iter 0; checkpoint skipped (automatic) |
 | D-3 | stages/D-3-review-and-adopt/class-scheduling-{reconciliation,adopt}.md | pending | dual-reviewer gate + head-designer + canonicalize |
 
 ## Block-specific context
