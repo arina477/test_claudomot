@@ -25,8 +25,9 @@
 import { IDBFactory, IDBKeyRange } from 'fake-indexeddb';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { StudyHallDB } from './db';
-import { drain, loadPending, retryOutboxItem } from './outbox';
+import { drain, enqueue, loadPending, retryOutboxItem } from './outbox';
 import type { SendFn } from './outbox';
+import type { OutboxTarget } from './types';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -38,11 +39,14 @@ function makeSendFn(
     /** Keys that should fail (reject) */
     failKeys?: Set<string>;
   } = {},
-): { sendFn: SendFn; calls: Array<{ channelId: string; idempotencyKey: string }> } {
-  const calls: Array<{ channelId: string; idempotencyKey: string }> = [];
+): {
+  sendFn: SendFn;
+  calls: Array<{ target: OutboxTarget; idempotencyKey: string }>;
+} {
+  const calls: Array<{ target: OutboxTarget; idempotencyKey: string }> = [];
 
-  const sendFn: SendFn = (channelId, body) => {
-    calls.push({ channelId, idempotencyKey: body.idempotencyKey });
+  const sendFn: SendFn = (target, body) => {
+    calls.push({ target, idempotencyKey: body.idempotencyKey });
 
     if (opts.failKeys?.has(body.idempotencyKey)) {
       return Promise.reject(new Error('network error'));
@@ -401,7 +405,7 @@ describe('outbox drain — exactly-once + in-order (gating proof)', () => {
 
     // sendFn logs "start:<key>" before resolving and "end:<key>" after resolution
     // to prove sequential execution.
-    const sequentialSendFn: SendFn = (_channelId, body) => {
+    const sequentialSendFn: SendFn = (_target, body) => {
       orderLog.push(`start:${body.idempotencyKey}`);
       return new Promise<{ id: string }>((resolve) => {
         Promise.resolve().then(() => {
@@ -592,5 +596,227 @@ describe('outbox drain — exactly-once + in-order (gating proof)', () => {
     expect(calls[0]?.idempotencyKey).toBe('tiebreak-key-0');
     expect(calls[1]?.idempotencyKey).toBe('tiebreak-key-1');
     expect(calls[2]?.idempotencyKey).toBe('tiebreak-key-2');
+  });
+
+  // ── Test 11: Channel send NOT regressed after wave-46 outbox generalisation ──
+  //
+  // Regression proof: enqueue() with kind='channel' target must route the drain
+  // call to sendFn with target.kind === 'channel' and the correct channelId.
+  // Channel send behaviour must be identical to pre-wave-46.
+
+  it('channel send NOT regressed — enqueue({kind:channel}) drains with channel target', async () => {
+    const channelId = 'regression-channel-42';
+    const target: OutboxTarget = { kind: 'channel', channelId };
+
+    const { idempotencyKey } = await enqueue(db, target, 'channel regression message');
+
+    const idMap = new Map<string, string>();
+    const delivered: string[] = [];
+    const failed: string[] = [];
+    const { sendFn, calls } = makeSendFn({ idMap });
+
+    await drain(
+      db,
+      sendFn,
+      (k) => delivered.push(k),
+      (k) => failed.push(k),
+    );
+
+    // Exactly one POST fired.
+    expect(calls).toHaveLength(1);
+
+    // The sendFn received a channel target (not a DM target).
+    const call = calls[0];
+    expect(call?.target.kind).toBe('channel');
+    if (call?.target.kind === 'channel') {
+      expect(call.target.channelId).toBe(channelId);
+    }
+
+    // The idempotency key was routed correctly.
+    expect(call?.idempotencyKey).toBe(idempotencyKey);
+
+    // Delivered successfully, no failures.
+    expect(delivered).toContain(idempotencyKey);
+    expect(failed).toHaveLength(0);
+
+    // Outbox empty after drain.
+    expect(await db.outbox.toArray()).toHaveLength(0);
+  });
+
+  // ── Test 12: DM enqueue + drain ──────────────────────────────────────────────
+  //
+  // wave-46 M8: enqueue() with kind='dm' target stores the row and drain()
+  // routes the sendFn call with kind='dm' + conversationId.
+
+  it('DM enqueue({kind:dm}) drains with dm target and correct conversationId', async () => {
+    const conversationId = 'conv-abc-123';
+    const target: OutboxTarget = { kind: 'dm', conversationId };
+
+    const { idempotencyKey } = await enqueue(db, target, 'hello via dm outbox');
+
+    // Verify the persisted row has target and legacy channelId=''.
+    const stored = await db.outbox.where('idempotencyKey').equals(idempotencyKey).first();
+    expect(stored).toBeDefined();
+    expect(stored?.target).toEqual({ kind: 'dm', conversationId });
+    expect(stored?.channelId).toBe(''); // legacy field empty for DM items
+
+    const idMap = new Map<string, string>();
+    const delivered: string[] = [];
+    const failed: string[] = [];
+    const { sendFn, calls } = makeSendFn({ idMap });
+
+    await drain(
+      db,
+      sendFn,
+      (k) => delivered.push(k),
+      (k) => failed.push(k),
+    );
+
+    // Exactly one POST fired.
+    expect(calls).toHaveLength(1);
+
+    // The sendFn received a dm target with the correct conversationId.
+    const call = calls[0];
+    expect(call?.target.kind).toBe('dm');
+    if (call?.target.kind === 'dm') {
+      expect(call.target.conversationId).toBe(conversationId);
+    }
+
+    // Delivered successfully.
+    expect(delivered).toContain(idempotencyKey);
+    expect(failed).toHaveLength(0);
+
+    // Outbox empty.
+    expect(await db.outbox.toArray()).toHaveLength(0);
+  });
+
+  // ── Test 14: Mixed-queue drain (C1 fix) ──────────────────────────────────────
+  //
+  // CRITICAL fix proof: a pending channel item followed by a pending DM item
+  // (or vice-versa) must BOTH flush when the SendFn is a bidirectional router.
+  // Neither kind must reject or halt the drain for the other kind.
+  // This test proves the C1 fix: the off-kind item no longer rejects + stops the drain.
+
+  it('mixed channel+DM queue: both items flush; neither kind rejects the other', async () => {
+    // Channel item queued first (older createdAt).
+    await enqueue(db, { kind: 'channel', channelId: 'mixed-channel-1' }, 'channel message first');
+
+    // DM item queued second (newer createdAt).
+    await enqueue(db, { kind: 'dm', conversationId: 'mixed-conv-1' }, 'dm message second');
+
+    // Verify both rows are pending.
+    const pending = await loadPending(db);
+    expect(pending).toHaveLength(2);
+
+    // Build a bidirectional router send fn (matches the fix applied to all 3 call-sites).
+    const calls: Array<{ target: OutboxTarget; idempotencyKey: string }> = [];
+    const bidrectionalRouter: SendFn = (target, body) => {
+      calls.push({ target, idempotencyKey: body.idempotencyKey });
+      // Both kinds succeed — no rejection.
+      return Promise.resolve({ id: crypto.randomUUID() });
+    };
+
+    const delivered: string[] = [];
+    const failed: string[] = [];
+
+    await drain(
+      db,
+      bidrectionalRouter,
+      (k) => delivered.push(k),
+      (k) => failed.push(k),
+    );
+
+    // BOTH items sent — neither kind rejected or halted the drain.
+    expect(calls).toHaveLength(2);
+
+    // The first call is the channel item (older createdAt); second is DM.
+    expect(calls[0]?.target.kind).toBe('channel');
+    if (calls[0]?.target.kind === 'channel') {
+      expect(calls[0].target.channelId).toBe('mixed-channel-1');
+    }
+    expect(calls[1]?.target.kind).toBe('dm');
+    if (calls[1]?.target.kind === 'dm') {
+      expect(calls[1].target.conversationId).toBe('mixed-conv-1');
+    }
+
+    // Both delivered, none failed.
+    expect(delivered).toHaveLength(2);
+    expect(failed).toHaveLength(0);
+
+    // Outbox empty — no items stranded.
+    expect(await db.outbox.toArray()).toHaveLength(0);
+  });
+
+  it('mixed DM+channel queue (DM first): both items flush regardless of ordering', async () => {
+    // DM item queued first this time.
+    await enqueue(db, { kind: 'dm', conversationId: 'mixed-conv-reverse' }, 'dm message first');
+
+    // Channel item queued second.
+    await enqueue(
+      db,
+      { kind: 'channel', channelId: 'mixed-channel-reverse' },
+      'channel message second',
+    );
+
+    const calls: Array<{ target: OutboxTarget; idempotencyKey: string }> = [];
+    const bidirectionalRouter: SendFn = (target, body) => {
+      calls.push({ target, idempotencyKey: body.idempotencyKey });
+      return Promise.resolve({ id: crypto.randomUUID() });
+    };
+
+    const delivered: string[] = [];
+    const failed: string[] = [];
+
+    await drain(
+      db,
+      bidirectionalRouter,
+      (k) => delivered.push(k),
+      (k) => failed.push(k),
+    );
+
+    // Both items sent in enqueue order (DM first, then channel).
+    expect(calls).toHaveLength(2);
+    expect(calls[0]?.target.kind).toBe('dm');
+    expect(calls[1]?.target.kind).toBe('channel');
+
+    // Both delivered, none failed, outbox empty.
+    expect(delivered).toHaveLength(2);
+    expect(failed).toHaveLength(0);
+    expect(await db.outbox.toArray()).toHaveLength(0);
+  });
+
+  // ── Test 13: Legacy IDB row (no target field) falls back to channel routing ──
+  //
+  // Pre-wave-46 rows in IDB have no `target` field. The drain must fall back to
+  // {kind:'channel', channelId} so existing offline rows are not stranded.
+
+  it('legacy IDB row without target field falls back to channel routing', async () => {
+    // Add a legacy-style row directly (no target field — pre-wave-46 format).
+    await db.outbox.add({
+      channelId: 'legacy-channel-7',
+      idempotencyKey: 'legacy-row-key',
+      content: 'legacy message',
+      state: 'pending',
+      createdAt: '2026-06-30T10:00:00.000Z',
+      attempts: 0,
+      // No target field — simulates a row written before wave-46.
+    });
+
+    const idMap = new Map<string, string>();
+    const { sendFn, calls } = makeSendFn({ idMap });
+
+    await drain(
+      db,
+      sendFn,
+      () => {},
+      () => {},
+    );
+
+    expect(calls).toHaveLength(1);
+    // Drain fell back to channel routing from channelId field.
+    expect(calls[0]?.target.kind).toBe('channel');
+    if (calls[0]?.target.kind === 'channel') {
+      expect(calls[0].target.channelId).toBe('legacy-channel-7');
+    }
   });
 });

@@ -14,7 +14,7 @@
 
 import { useRef } from 'react';
 import { useServers } from './ServerContext';
-import { BooksIcon, PlusIcon, SpinnerIcon } from './icons';
+import { BooksIcon, ChatTeardropIcon, PlusIcon, SpinnerIcon } from './icons';
 
 /** Derive 2-character initials from a server name. */
 function serverInitials(name: string): string {
@@ -89,9 +89,13 @@ function ServerIconButton({ label, active = false, initials, onClick }: ServerIc
 type Props = {
   /** Optional ref forwarded to the "Add a server" button for focus restore after modal close. */
   addServerBtnRef?: React.RefObject<HTMLButtonElement | null>;
+  /** Whether the DM home surface is the active view. */
+  dmActive?: boolean;
+  /** Called when the DM home icon is clicked. */
+  onDmHome?: () => void;
 };
 
-export function ServerRail({ addServerBtnRef }: Props) {
+export function ServerRail({ addServerBtnRef, dmActive = false, onDmHome }: Props) {
   const { servers, status, selectedId, selectServer, openCreateModal } = useServers();
   const internalRef = useRef<HTMLButtonElement>(null);
   const btnRef = addServerBtnRef ?? internalRef;
@@ -135,6 +139,55 @@ export function ServerRail({ addServerBtnRef }: Props) {
           }}
         >
           Home
+        </div>
+      </div>
+
+      {/* DM Home button — wave-46 M8 */}
+      <div className="relative flex w-full justify-center group">
+        {dmActive && (
+          <span
+            aria-hidden="true"
+            className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-full"
+            style={{ backgroundColor: '#10b981' }}
+          />
+        )}
+        <button
+          type="button"
+          aria-label="Direct Messages"
+          aria-current={dmActive ? 'page' : undefined}
+          onClick={onDmHome}
+          data-testid="dm-home-rail-button"
+          className="w-11 h-11 flex items-center justify-center rounded-xl cursor-pointer focus-visible:outline-none focus-visible:ring-2 transition-colors"
+          style={{
+            backgroundColor: dmActive ? '#10b981' : '#1c1c1f',
+            color: dmActive ? '#0a0a0b' : 'rgba(255,255,255,0.60)',
+            boxShadow: dmActive ? '0 0 0 2px rgba(16,185,129,0.4)' : '0 1px 2px rgba(0,0,0,0.4)',
+          }}
+          onMouseEnter={(e) => {
+            if (!dmActive) {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#27272a';
+              (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.92)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!dmActive) {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#1c1c1f';
+              (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.60)';
+            }
+          }}
+        >
+          <ChatTeardropIcon size={20} />
+        </button>
+        <div
+          role="tooltip"
+          className="pointer-events-none absolute left-16 top-1/2 -translate-y-1/2 z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium shadow-pop"
+          style={{
+            backgroundColor: '#0a0a0b',
+            border: '1px solid #27272a',
+            color: 'rgba(255,255,255,0.92)',
+          }}
+        >
+          Direct Messages
         </div>
       </div>
 

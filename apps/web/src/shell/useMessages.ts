@@ -112,7 +112,10 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
     if (db) {
       await drain(
         db,
-        (chId, body) => api.sendMessage(chId, body),
+        (target, body) =>
+          target.kind === 'channel'
+            ? api.sendMessage(target.channelId, body)
+            : api.sendDmMessage(target.conversationId, body),
         (idempotencyKey, confirmedId) => {
           if (!mountedRef.current) return;
           // Reconcile: add confirmed message to real list, remove optimistic.
@@ -514,7 +517,7 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
         // Enqueue to durable store first (outbox is the SINGLE source of truth for send),
         // then reflect optimistic state, then trigger drain() — no separate direct POST.
         // This prevents the double-send race (direct POST + drain re-POSTing same item).
-        enqueue(store, channelId, content, outboxAttachments)
+        enqueue(store, { kind: 'channel', channelId }, content, outboxAttachments)
           .then(({ idempotencyKey }) => {
             if (!mountedRef.current) return;
 
@@ -536,7 +539,10 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
             // de-duped. If offline, the row stays pending until next reconnect.
             void drain(
               store,
-              (chId, body) => api.sendMessage(chId, body),
+              (target, body) =>
+                target.kind === 'channel'
+                  ? api.sendMessage(target.channelId, body)
+                  : api.sendDmMessage(target.conversationId, body),
               (deliveredKey, confirmedId) => {
                 if (!mountedRef.current) return;
                 setRealMessages((prev) => {

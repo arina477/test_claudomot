@@ -40,6 +40,7 @@
  */
 
 import type {
+  DmMessageEvent,
   MentionEvent,
   MessageResponse,
   ReactionSummary,
@@ -221,6 +222,26 @@ export function onThreadReplyDeleted(
   socket.on('thread:reply:deleted', handler);
   return () => {
     socket.off('thread:reply:deleted', handler);
+  };
+}
+
+/**
+ * Subscribe to dm:message events.
+ * Emitted to participant sockets when a new DM message is created.
+ * The handler receives { conversationId, message } so callers can:
+ *   - Append the message to the open DM thread if conversationId matches.
+ *   - Reorder the conversation list (move conversation to top).
+ * Returns unsubscribe fn.
+ *
+ * NOTE: event name is the local literal 'dm:message' — matches
+ * DM_MESSAGE_EVENT in @studyhall/shared (type-only import to avoid
+ * CJS runtime-import of shared dist).
+ */
+export function onDmMessage(handler: (event: DmMessageEvent) => void): () => void {
+  const socket = getMessagingSocket();
+  socket.on('dm:message', handler);
+  return () => {
+    socket.off('dm:message', handler);
   };
 }
 

@@ -23,11 +23,13 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import type {
+  DmMessage,
   MentionEvent,
   MessageResponse,
   ThreadReplyDeletedEvent,
   ThreadReplyEvent,
 } from '@studyhall/shared';
+import { DM_MESSAGE_EVENT } from '@studyhall/shared';
 import type { Server, Socket } from 'socket.io';
 import { installWsAuthMiddleware } from '../common/ws-auth';
 // biome-ignore lint/style/useImportType: value import required — emitDecoratorMetadata needs the runtime symbol for NestJS DI
@@ -288,5 +290,53 @@ export class MessagingGateway implements OnGatewayInit, OnGatewayConnection {
     this.logger.debug(
       `Pushed mention event to user:${payload.mentionedUserId} for msg=${payload.messageId} channel=${payload.channelId}`,
     );
+  }
+
+  // -------------------------------------------------------------------------
+  // dm.message → fan-out to ALL participants' per-user rooms (wave-46 M8)
+  //
+  // Emitted by DmService.sendMessage() after a new DM message is inserted.
+  //
+  // Fan-out is participant-scoped: all sockets whose userId is in the
+  // conversation's participant list receive the event, INCLUDING the sender.
+  //
+  // Why include the sender (M1 fix — wave-46 B-6 review):
+  //   The sender's ORIGINATING tab uses optimistic render and dedups incoming
+  //   real rows by message id (useDm hook). The sender's OTHER open tabs and
+  //   devices have no optimistic copy, so they need the fan-out to display the
+  //   new message without a full refetch. Emitting to the sender's 'user:<id>'
+  //   room reaches ALL the sender's sockets (originating + others). The
+  //   originating tab's dedup-by-id is echo-safe — duplicate id is ignored.
+  //
+  // Room strategy: each authenticated socket is already in 'user:<userId>'
+  // (joined at handleConnection). The DM fan-out emits to those per-user rooms
+  // for every participant — no new join/room needed for clients.
+  //
+  // participantIds is resolved by DmService and passed with the event payload
+  // so the gateway stays decoupled from DB queries.
+  // -------------------------------------------------------------------------
+
+  @OnEvent('dm.message')
+  handleDmMessage(payload: {
+    conversationId: string;
+    message: DmMessage;
+    senderId: string;
+    participantIds: string[];
+  }): void {
+    const dmEvent = {
+      conversationId: payload.conversationId,
+      message: payload.message,
+    };
+
+    for (const participantId of payload.participantIds) {
+      // Emit to ALL participants including the sender.
+      // The sender's originating tab dedups by message id (useDm hook) —
+      // echo-safe. The sender's other tabs need this event to render the
+      // new message.
+      this.server.to(`user:${participantId}`).emit(DM_MESSAGE_EVENT, dmEvent);
+      this.logger.debug(
+        `DM fan-out: dm:message conv=${payload.conversationId} msg=${payload.message.id} → user:${participantId}`,
+      );
+    }
   }
 }

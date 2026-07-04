@@ -1297,6 +1297,28 @@ export function SpeakerHighIcon2({ size = 16, className, style }: IconProps) {
   );
 }
 
+/** Chat teardrop — DM home icon on the server rail (wave-46 M8). */
+export function ChatTeardropIcon({ size = 20, className, style }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      style={style}
+      aria-hidden="true"
+    >
+      {/* Teardrop chat bubble */}
+      <path d="M12 3C7.03 3 3 6.58 3 11c0 2.5 1.2 4.74 3.1 6.28L5 21l4.5-1.5C10.6 19.83 11.29 20 12 20c4.97 0 9-3.58 9-9S16.97 3 12 3z" />
+    </svg>
+  );
+}
+
 /** Arrow left — back navigation in popovers (wave-41). */
 export function ArrowLeftIcon({ size = 14, className, style }: IconProps) {
   return (
