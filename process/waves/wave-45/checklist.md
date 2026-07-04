@@ -45,7 +45,7 @@ VERIFY:
 - [x] V-3 Fast-fix loop (or close) — Phase 1 gate APPROVED (fresh head-verifier); Phase 2 skipped (empty fast-fix queue); block exits clean to L
 
 LEARN:
-- [ ] L-1 Docs
+- [x] L-1 Docs — CHANGELOG +1 Changed bullet (#59, no-visible-change); M8 held in_progress (open=2, metric _TBD_); README skip; N-flags: M8 seedable + wave-46 debt-guardrail
 - [ ] L-2 Distill
 
 NEXT:
