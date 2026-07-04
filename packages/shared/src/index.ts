@@ -134,6 +134,19 @@ export type {
 } from './assignments.js';
 
 export {
+  ScheduledSessionSchema,
+  CreateScheduledSessionSchema,
+  UpdateScheduledSessionSchema,
+  ScheduledSessionListResponseSchema,
+} from './scheduling.js';
+export type {
+  ScheduledSession,
+  CreateScheduledSessionInput,
+  UpdateScheduledSessionInput,
+  ScheduledSessionListResponse,
+} from './scheduling.js';
+
+export {
   MENTION_TOKEN_SLUG_SRC,
   MENTION_TOKEN_SLUG_RE,
   extractMentionSlug,
