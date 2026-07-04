@@ -4,9 +4,9 @@
 | Stage | Deliverable file | Status | Notes |
 |---|---|---|---|
 | B-0 | stages/B-0-branch-and-schema.md | done | branch; schema SKIPPED (columns exist) |
-| B-1 | stages/B-1-contracts.md | pending | ScheduledSessionSchema += createdAt/updatedAt |
-| B-2 | stages/B-2-backend.md | pending | DTO emit + stale comment + fixture-B reprovision |
-| B-3 | stages/B-3-frontend.md | pending | responsive/a11y/padding/focus-ring/username polish |
+| B-1 | stages/B-1-contracts.md | done | DTO timestamps added |
+| B-2 | stages/B-2-backend.md | done | DTO emit + comment fixed; fixture-B WORKING (c50f3040 done) |
+| B-3 | stages/B-3-frontend.md | done | 1024 overlay + Esc-restore + refresh + focus-ring + username + padding |
 | B-4 | stages/B-4-wiring.md | pending | |
 | B-5 | stages/B-5-verify.md | pending | unit tests + conditional E2E |
 | B-6 | stages/B-6-review.md | pending | |
