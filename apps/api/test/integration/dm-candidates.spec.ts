@@ -1,0 +1,160 @@
+/**
+ * Integration test: DmService.getDmCandidates — real-Postgres privacy-fence
+ * negative-case controls (wave-48, task 03ccf636).
+ *
+ * Closes the two never-live-proven counter-example controls that wave-46/47
+ * unit tests left as mock no-ops:
+ *
+ *   (a) who_can_dm='nobody' exclusion — caller shares a server with user X,
+ *       but X.who_can_dm='nobody'. getDmCandidates(caller) MUST NOT include X.
+ *       Also asserts a control user Y (who_can_dm='everyone') IS returned,
+ *       proving the query returns co-members in general but filters the
+ *       nobody-user specifically (exercises the real ne(who_can_dm,'nobody')
+ *       WHERE predicate against real rows).
+ *
+ *   (b) Disjoint non-co-member isolation — user Z is a member of server T
+ *       which the caller is NOT in (no shared server). getDmCandidates(caller)
+ *       MUST NOT include Z (exercises the inArray(caller's servers) scope).
+ *
+ * CF-2 (LOAD-BEARING): pg-harness MUST be the first import. It sets
+ * process.env.DATABASE_URL = process.env.DATABASE_URL_TEST at module-eval
+ * time, before any SUT module is imported.
+ */
+// CF-2 side-effect import: sets process.env.DATABASE_URL = DATABASE_URL_TEST
+// at module-eval time so the lazy db singleton resolves to the test DB.
+import './pg-harness';
+import {
+  insertFixtureMembership,
+  insertFixtureServer,
+  insertFixtureUser,
+  setupHarness,
+  teardownHarness,
+  truncateTables,
+} from './pg-harness';
+
+// SUT import AFTER harness so the lazy db proxy resolves to the test DB.
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { DmService } from '../../src/dm/dm.service';
+
+// Skip-with-reason when DATABASE_URL_TEST is absent (local dev without PG).
+// Runs in CI where the Postgres 16 service + DATABASE_URL_TEST are provided
+// (see .github/workflows/ci.yml — test job sets DATABASE_URL_TEST).
+const SKIP = !process.env.DATABASE_URL_TEST;
+
+// ---------------------------------------------------------------------------
+// Fixture constants — UUIDs for servers, text IDs for users (mirrors schema)
+// ---------------------------------------------------------------------------
+
+// Shared server (caller + nobody-user X + everyone-user Y are all members)
+const SERVER_S = '00000000-0000-0000-0002-000000000001';
+// Disjoint server (only user Z is a member; caller is NOT in this server)
+const SERVER_T = '00000000-0000-0000-0002-000000000002';
+
+const CALLER = 'dm-cand-caller';
+// Co-member with who_can_dm='nobody' — must be excluded
+const USER_X_NOBODY = 'dm-cand-x-nobody';
+// Co-member with who_can_dm='everyone' — control user, must be included
+const USER_Y_EVERYONE = 'dm-cand-y-everyone';
+// Non-co-member (disjoint server) — must be excluded
+const USER_Z_DISJOINT = 'dm-cand-z-disjoint';
+
+describe.skipIf(SKIP)(
+  'DmService.getDmCandidates — real-Postgres privacy-fence negative controls',
+  () => {
+    let sut!: DmService;
+
+    beforeAll(async () => {
+      await setupHarness();
+      // DmService constructor requires EventEmitter2. getDmCandidates does not
+      // use the emitter, so a minimal stub is sufficient here.
+      const emitter = new EventEmitter2();
+      sut = new DmService(emitter);
+    });
+
+    afterAll(async () => {
+      await teardownHarness();
+    });
+
+    beforeEach(async () => {
+      await truncateTables();
+    });
+
+    // -----------------------------------------------------------------------
+    // (a) who_can_dm='nobody' exclusion
+    //
+    // Topology:
+    //   SERVER_S: CALLER + USER_X_NOBODY (nobody) + USER_Y_EVERYONE (everyone)
+    //
+    // getDmCandidates(CALLER) should return [USER_Y_EVERYONE] and NOT include
+    // USER_X_NOBODY. This exercises the real ne(users.who_can_dm,'nobody')
+    // predicate against actual Postgres rows — not a pre-filtering mock.
+    // -----------------------------------------------------------------------
+    it('(a) excludes a co-member whose who_can_dm is "nobody"; includes the control everyone-user', async () => {
+      // Insert users — CALLER owns SERVER_S (FK: servers.owner_id)
+      await insertFixtureUser(CALLER, 'dm-cand-caller@test.local');
+      await insertFixtureUser(USER_X_NOBODY, 'dm-cand-x@test.local', undefined, 'nobody');
+      await insertFixtureUser(USER_Y_EVERYONE, 'dm-cand-y@test.local', undefined, 'everyone');
+
+      await insertFixtureServer(SERVER_S, CALLER, 'Server Shared');
+
+      await insertFixtureMembership(SERVER_S, CALLER);
+      await insertFixtureMembership(SERVER_S, USER_X_NOBODY);
+      await insertFixtureMembership(SERVER_S, USER_Y_EVERYONE);
+
+      const candidates = await sut.getDmCandidates(CALLER);
+
+      const ids = candidates.map((c) => c.userId);
+
+      // Control: the everyone-user in the shared server IS returned
+      expect(ids).toContain(USER_Y_EVERYONE);
+
+      // Privacy fence: the nobody-user in the same shared server is NOT returned
+      expect(ids).not.toContain(USER_X_NOBODY);
+
+      // Self-exclusion remains intact
+      expect(ids).not.toContain(CALLER);
+    });
+
+    // -----------------------------------------------------------------------
+    // (b) Disjoint non-co-member isolation
+    //
+    // Topology:
+    //   SERVER_S: CALLER only
+    //   SERVER_T: USER_Z_DISJOINT only (no shared server with CALLER)
+    //
+    // getDmCandidates(CALLER) should NOT include USER_Z_DISJOINT because the
+    // caller shares no server with Z. This exercises the inArray(callerServerIds)
+    // scope in the WHERE clause against real Postgres rows.
+    // -----------------------------------------------------------------------
+    it('(b) does not expose a user who shares no server with the caller', async () => {
+      // CALLER owns SERVER_S; USER_Z_DISJOINT owns SERVER_T
+      await insertFixtureUser(CALLER, 'dm-cand-caller@test.local');
+      await insertFixtureUser(USER_Z_DISJOINT, 'dm-cand-z@test.local');
+
+      await insertFixtureServer(SERVER_S, CALLER, 'Server Caller');
+      await insertFixtureServer(SERVER_T, USER_Z_DISJOINT, 'Server Disjoint');
+
+      // CALLER is only in SERVER_S; USER_Z_DISJOINT is only in SERVER_T
+      await insertFixtureMembership(SERVER_S, CALLER);
+      await insertFixtureMembership(SERVER_T, USER_Z_DISJOINT);
+
+      const candidates = await sut.getDmCandidates(CALLER);
+
+      const ids = candidates.map((c) => c.userId);
+
+      // Disjoint user must not appear (inArray scope enforcement)
+      expect(ids).not.toContain(USER_Z_DISJOINT);
+
+      // Caller has no co-members in any shared server → empty list
+      expect(candidates).toHaveLength(0);
+    });
+  },
+);
+
+// When DATABASE_URL_TEST is not set, emit a clear skip message (not a silent pass).
+if (SKIP) {
+  describe('DmService.getDmCandidates — real-Postgres privacy-fence negative controls', () => {
+    it.skip('SKIPPED: DATABASE_URL_TEST is not set — set it to a real Postgres URL to run integration tests locally', () => {});
+  });
+}

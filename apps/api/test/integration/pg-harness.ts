@@ -92,17 +92,22 @@ export async function truncateTables(): Promise<void> {
  *
  * Pass `username` to set the users.username column so resolveMentions can
  * match @token slugs (e.g. wave-25 editMessage rollback spec).
+ *
+ * Pass `whoCanDm` to override the users.who_can_dm column (defaults to
+ * 'everyone' matching the DB column default — existing 3-arg callers unaffected).
+ * Valid values: 'everyone' | 'server-members' | 'nobody'.
  */
 export async function insertFixtureUser(
   id: string,
   email: string,
   username?: string,
+  whoCanDm: 'everyone' | 'server-members' | 'nobody' = 'everyone',
 ): Promise<void> {
   if (!harnessPool) throw new Error('pg-harness: call setupHarness() first');
   await harnessPool.query(
-    `INSERT INTO users (id, email, username) VALUES ($1, $2, $3)
+    `INSERT INTO users (id, email, username, who_can_dm) VALUES ($1, $2, $3, $4)
      ON CONFLICT (id) DO NOTHING`,
-    [id, email, username ?? null],
+    [id, email, username ?? null, whoCanDm],
   );
 }
 
