@@ -26,7 +26,7 @@
  */
 
 import type { ScheduledSession } from '@studyhall/shared';
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
 import { api } from '../auth/api';
 import { ErrorState } from '../components/states/ErrorState';
 import { useServers } from './ServerContext';
@@ -137,7 +137,7 @@ type SessionRowProps = {
   isToday: boolean;
   isSelected: boolean;
   isOrganizer: boolean;
-  onClick: () => void;
+  onClick: (cardEl: HTMLElement) => void;
   onEdit: (e: React.MouseEvent, triggerEl: HTMLButtonElement) => void;
   onDeleteClick: (e: React.MouseEvent) => void;
 };
@@ -158,11 +158,11 @@ function SessionRow({
       role="button"
       tabIndex={0}
       data-testid="session-card"
-      onClick={onClick}
+      onClick={(e) => onClick(e.currentTarget)}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          onClick();
+          onClick(e.currentTarget);
         }
       }}
       className="group relative flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors duration-200 outline-none focus-visible:ring-2"
@@ -345,6 +345,11 @@ export function ClassCalendar({ onClose }: Props) {
   // Tracks which trigger opened the form so we can restore focus on close
   const formTriggerRef = useRef<HTMLButtonElement | null>(null);
 
+  // Narrow overlay a11y: container ref for focus-trap, trigger ref for focus-restore on close
+  const narrowOverlayRef = useRef<HTMLDivElement>(null);
+  const narrowOverlayTriggerRef = useRef<HTMLElement | null>(null);
+  const narrowOverlayLabelId = useId();
+
   // aria-live announcer
   const announceRef = useRef<HTMLDivElement>(null);
   const announce = useCallback((msg: string) => {
@@ -364,6 +369,81 @@ export function ClassCalendar({ onClose }: Props) {
       mounted.current = false;
     };
   }, []);
+
+  // ---------------------------------------------------------------------------
+  // Narrow overlay dialog a11y — Esc dismiss + focus trap
+  // Only active when selectedSessionId is set AND isNarrow is true.
+  // ---------------------------------------------------------------------------
+
+  // Close narrow overlay and restore focus to the row that opened it
+  const closeNarrowOverlay = useCallback(() => {
+    setSelectedSessionId(null);
+    requestAnimationFrame(() => {
+      if (narrowOverlayTriggerRef.current) {
+        narrowOverlayTriggerRef.current.focus();
+      }
+      narrowOverlayTriggerRef.current = null;
+    });
+  }, []);
+
+  // Esc dismisses the narrow overlay
+  useEffect(() => {
+    if (!selectedSessionId || !isNarrow) return;
+    function handleEsc(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        closeNarrowOverlay();
+      }
+    }
+    document.addEventListener('keydown', handleEsc, true);
+    return () => document.removeEventListener('keydown', handleEsc, true);
+  }, [selectedSessionId, isNarrow, closeNarrowOverlay]);
+
+  // Focus trap: keep Tab inside the narrow overlay while it is open
+  useEffect(() => {
+    if (!selectedSessionId || !isNarrow) return;
+    const overlay = narrowOverlayRef.current;
+    if (!overlay) return;
+    function handleTab(e: KeyboardEvent) {
+      if (e.key !== 'Tab' || !overlay) return;
+      const focusable = Array.from(
+        overlay.querySelectorAll<HTMLElement>(
+          'button, input, textarea, select, [href], [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((el) => !el.hasAttribute('disabled') && !el.closest('[aria-hidden="true"]'));
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!first || !last) return;
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+    overlay.addEventListener('keydown', handleTab);
+    return () => overlay.removeEventListener('keydown', handleTab);
+  }, [selectedSessionId, isNarrow]);
+
+  // Move initial focus into the narrow overlay when it opens
+  useEffect(() => {
+    if (!selectedSessionId || !isNarrow) return;
+    const overlay = narrowOverlayRef.current;
+    if (!overlay) return;
+    const t = setTimeout(() => {
+      const first = overlay.querySelector<HTMLElement>(
+        'button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      first?.focus();
+    }, 50);
+    return () => clearTimeout(t);
+  }, [selectedSessionId, isNarrow]);
 
   // ---------------------------------------------------------------------------
   // Permissions
@@ -446,7 +526,15 @@ export function ClassCalendar({ onClose }: Props) {
       announce(saved.title ? `Session "${saved.title}" saved.` : 'Session saved.');
       // Restore focus to form trigger (WCAG 2.4.3) — closeForm path also does
       // this but handleFormSuccess bypasses closeForm.
-      requestAnimationFrame(() => formTriggerRef.current?.focus());
+      // Fallback: if the trigger was inside the detail panel that just remounted
+      // (edit-from-detail path), .focus() lands on a detached node and focus
+      // drops to body. In that case fall back to the stable newSessionBtnRef.
+      requestAnimationFrame(() => {
+        formTriggerRef.current?.focus();
+        if (document.activeElement === document.body) {
+          newSessionBtnRef.current?.focus();
+        }
+      });
     },
     [announce, loadSessions],
   );
@@ -478,8 +566,15 @@ export function ClassCalendar({ onClose }: Props) {
   function closeForm() {
     setFormOpen(false);
     setEditTarget(null);
-    // WCAG 2.4.3: restore focus to the element that invoked the modal
-    requestAnimationFrame(() => formTriggerRef.current?.focus());
+    // WCAG 2.4.3: restore focus to the element that invoked the modal.
+    // Fallback to newSessionBtnRef if the trigger was inside a remounted
+    // detail panel and the .focus() lands on a detached node (focus → body).
+    requestAnimationFrame(() => {
+      formTriggerRef.current?.focus();
+      if (document.activeElement === document.body) {
+        newSessionBtnRef.current?.focus();
+      }
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -584,8 +679,11 @@ export function ClassCalendar({ onClose }: Props) {
 
       {/* Scrollable content area + optional detail panel */}
       <div className="flex flex-1 overflow-hidden relative">
-        {/* PRIMARY: Agenda list */}
-        <div className="flex-1 overflow-y-auto">
+        {/* PRIMARY: Agenda list — hidden from AT while narrow overlay is open */}
+        <div
+          className="flex-1 overflow-y-auto"
+          aria-hidden={selectedSessionId !== null && isNarrow ? 'true' : undefined}
+        >
           <div className="max-w-4xl mx-auto p-4 md:p-6 lg:p-8 pb-32 flex flex-col gap-8 min-h-full">
             {/* Loading skeleton */}
             {loadStatus === 'loading' && (
@@ -717,10 +815,16 @@ export function ClassCalendar({ onClose }: Props) {
                             isToday={isGroupToday}
                             isSelected={selectedSessionId === session.id}
                             isOrganizer={isOrganizer}
-                            onClick={() => {
-                              setSelectedSessionId((prev) =>
-                                prev === session.id ? null : session.id,
-                              );
+                            onClick={(cardEl) => {
+                              setSelectedSessionId((prev) => {
+                                const next = prev === session.id ? null : session.id;
+                                // Track the card as the restore target for the
+                                // narrow overlay's focus-restore on close (H1 fix)
+                                if (next !== null && isNarrow) {
+                                  narrowOverlayTriggerRef.current = cardEl;
+                                }
+                                return next;
+                              });
                             }}
                             onEdit={(e, triggerEl) => {
                               e.stopPropagation();
@@ -770,24 +874,31 @@ export function ClassCalendar({ onClose }: Props) {
           </div>
         )}
         {selectedSessionId && isNarrow && (
-          /* ≤1024px: overlay modal — preserves agenda card readability (DS §9).
-             SessionDetail renders with fixed positioning via its own panel styles;
-             we wrap in a scrim so it behaves like a standard overlay drawer. */
-          // biome-ignore lint/a11y/useKeyWithClickEvents: Esc handled inside SessionDetail; backdrop click is supplementary
+          /* ≤1024px: overlay modal — proper WCAG dialog (DS §9).
+             role=dialog aria-modal; Esc dismiss + focus-trap wired via useEffect above;
+             backdrop click-outside closes as supplementary affordance.
+             The agenda list carries aria-hidden="true" while this is open (see above). */
+          // biome-ignore lint/a11y/useKeyWithClickEvents: Esc handled by the useEffect keydown listener above; backdrop click is supplementary
           <div
-            role="presentation"
+            ref={narrowOverlayRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={narrowOverlayLabelId}
+            data-testid="narrow-session-overlay"
             className="fixed inset-0 z-40 flex items-stretch justify-end"
             style={{ backgroundColor: 'rgba(0,0,0,0.50)', backdropFilter: 'blur(2px)' }}
             onClick={(e) => {
-              if (e.target === e.currentTarget) setSelectedSessionId(null);
+              if (e.target === e.currentTarget) closeNarrowOverlay();
             }}
           >
+            {/* Visually hidden label for the dialog */}
+            <span id={narrowOverlayLabelId} className="sr-only">
+              Session Details
+            </span>
             <SessionDetail
               sessionId={selectedSessionId}
               isOrganizer={isOrganizer}
-              onClose={() => {
-                setSelectedSessionId(null);
-              }}
+              onClose={closeNarrowOverlay}
               onEdit={(session, triggerEl) => openEdit(session, triggerEl)}
               onDeleted={handleDeleted}
               onAnnounce={announce}
