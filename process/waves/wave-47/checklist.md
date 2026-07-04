@@ -41,9 +41,9 @@ TEST:
 - [x] T-9 Journey
 
 VERIFY:
-- [ ] V-1 Independent reviews (Karen + jenny, parallel)
-- [ ] V-2 Triage
-- [ ] V-3 Fast-fix loop (or close)
+- [x] V-1 Independent reviews (Karen + jenny, parallel) — both APPROVE; jenny headline DMs-startable-via-UI CONFIRMED
+- [x] V-2 Triage — 0 blocking; 3 non-blocking (wave_id=NULL, M8); 2 noise
+- [x] V-3 Fast-fix loop (or close) — Phase-1 head-verifier APPROVED; Phase-2 skipped (empty queue)
 
 LEARN:
 - [ ] L-1 Docs
