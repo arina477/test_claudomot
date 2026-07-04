@@ -36,8 +36,8 @@ roadmap_milestones_progressed: none (M8 held).
 ## Action 4 — Commit
 
 FS-side touchup only (CHANGELOG). One batched commit → `main` (project convention: process/doc artifacts commit directly to main).
-- Commit: `docs: L-1 wave-45 closeout`
-- SHA: `<filled at commit>`
+- Commit: `docs: L-1 wave-45 closeout (changelog)`
+- SHA: `90f42c583a64134bc81628a6208fc62a73b6339e` (pushed to main)
 
 ---
 

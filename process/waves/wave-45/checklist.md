@@ -46,7 +46,7 @@ VERIFY:
 
 LEARN:
 - [x] L-1 Docs — CHANGELOG +1 Changed bullet (#59, no-visible-change); M8 held in_progress (open=2, metric _TBD_); README skip; N-flags: M8 seedable + wave-46 debt-guardrail
-- [ ] L-2 Distill
+- [x] L-2 Distill
 
 NEXT:
 - [ ] N-1 Survey & triggers
