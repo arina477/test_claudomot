@@ -30,3 +30,6 @@ deviations:
   - {specialist: devops-engineer, change: "channel:undefined override", plan_said: "drop channel / Desktop Chromium", why: "Desktop Chromium absent in v1.61.1", adjudication: accepted}
 simplify_applied: true
 ```
+
+## B-3 REWORK (post B-5 smoke defect)
+B-5 smoke caught that `channel: undefined` alone was insufficient: launch failed with `Executable doesn't exist at /opt/ms-playwright/chromium_headless_shell-1228/...`. Root cause (Iron Law: classified → routed to devops-engineer, not fixed by orchestrator): ambient `PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright` points at root-owned 0700 browsers (unreadable); the user-owned browsers are in `~/.cache/ms-playwright`. Fix (devops-engineer): added `PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright` (base dir, AC4-safe) to apps/web/package.json `e2e`/`test:e2e` scripts. **Canonical E2E entry is now `pnpm --filter @studyhall/web e2e`** — T-block testers must use it (not bare `npx playwright test`, which won't pick up the env). Smoke re-run: 2/2 chromium-smoke specs launched + passed on bundled chromium. tsc clean. files_implemented += apps/web/package.json.
