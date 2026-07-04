@@ -12,7 +12,7 @@
 | B-0 | stages/B-0-branch-and-schema.md | done | branch+migration 0020 (scheduled_sessions); typecheck clean |
 | B-1 | stages/B-1-contracts.md | done | 4 schemas + refines; shared typecheck clean |
 | B-2 | stages/B-2-backend.md | done | 5 endpoints, IDOR-safe, recurrence compute-on-read; api typecheck clean |
-| B-3 | stages/B-3-frontend.md | pending | SessionForm + ClassCalendar + SessionDetail |
+| B-3 | stages/B-3-frontend.md | done | SessionForm+ClassCalendar+SessionDetail+wiring; typecheck+biome clean |
 | B-4 | stages/B-4-wiring.md | pending | |
 | B-5 | stages/B-5-verify.md | pending | |
 | B-6 | stages/B-6-review.md | pending | |
