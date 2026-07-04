@@ -1,5 +1,5 @@
 # Wave 47 — B-block review artifacts
-**Block:** B (Build) · **Wave topic:** M8 DM entry-point completion — GET /dm/candidates + StartDmPicker rewire + id-space fix (make DMs startable) · **Block exit gate:** B-6 · **Status:** in-progress
+**Block:** B (Build) · **Wave topic:** M8 DM entry-point completion — GET /dm/candidates + StartDmPicker rewire + id-space fix (make DMs startable) · **Block exit gate:** B-6 · **Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable | Status | Notes |
