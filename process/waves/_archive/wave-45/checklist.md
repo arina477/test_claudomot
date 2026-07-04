@@ -49,6 +49,6 @@ LEARN:
 - [x] L-2 Distill
 
 NEXT:
-- [x] N-1 Survey & triggers — BOARD 7/7 PAUSE (N-1-wave-46-disposition); founder-reserved M8 metric re-escalated; loop paused (no wave-46 opened)
-- [ ] N-2 Seed — NOT RUN (paused at N-1; no wave-46)
-- [ ] N-3 Handoff — NOT RUN (paused at N-1; wave-45 waves row stays 'running' until resume)
+- [x] N-1 Survey & triggers — BOARD 7/7 PAUSE (N-1-wave-46-disposition); founder-reserved M8 metric re-escalated; loop paused → RESOLVED by founder (2026-07-04): build M8 DMs first, metric set
+- [x] N-2 Seed — DMs bundle a48f1910 + 3 siblings (32f5d29e, 1ceffdc9, d8264800) under M8; validated (todo / wave_id NULL / milestone_id M8 / siblings parent=seed); debt stragglers f8eb49c1+a1dda389 stay queued
+- [x] N-3 Handoff — wave-46 opened; wave-45 archived; waves row 45 closed status='ok'; .last-wave-completed + status-check written
