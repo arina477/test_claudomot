@@ -2,8 +2,8 @@
  * StartDmPicker — modal for starting a new 1:1 or group DM.
  *
  * Design: design/direct-messages.html modal section.
- * - Search input to find users (uses GET /servers/:id/members for members known
- *   to the caller; falls back to empty if no server selected).
+ * - Search input to find users (uses GET /dm/candidates — server co-members
+ *   of the caller, who_can_dm-filtered, self-excluded, deduped).
  * - Recipient chips: selected users shown as dismissible chips.
  * - who_can_dm restriction: targets that cannot be DMed are not selectable and
  *   show a clear NON-colour-only reason. When create returns 403 the error is
@@ -16,10 +16,10 @@
  *
  * D-3 notes: React focus-trap (Esc/restore focus).
  *
- * wave-46 M8 task 1ceffdc9.
+ * wave-47 M8 task 10967558 — rewired to GET /dm/candidates (no serverId gate).
  */
 
-import type { DmConversation, ServerMember } from '@studyhall/shared';
+import type { DmCandidate, DmConversation } from '@studyhall/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../auth/api';
 import { SpinnerIcon, XIcon } from './icons';
@@ -34,9 +34,6 @@ type Recipient = {
 };
 
 type Props = {
-  /** Server ID to search members from. Null = no server selected. */
-  serverId: string | null;
-  currentUserId: string | null;
   onConfirm: (
     participantIds: string[],
   ) => Promise<{ ok: true; conversation: DmConversation } | { ok: false; error: string }>;
@@ -51,10 +48,10 @@ type Props = {
 
 const MAX_GROUP_RECIPIENTS = 9; // creator auto-added = 10 total
 
-export function StartDmPicker({ serverId, currentUserId, onConfirm, onClose, triggerRef }: Props) {
+export function StartDmPicker({ onConfirm, onClose, triggerRef }: Props) {
   const [query, setQuery] = useState('');
-  const [members, setMembers] = useState<ServerMember[]>([]);
-  const [membersLoading, setMembersLoading] = useState(false);
+  const [candidates, setCandidates] = useState<DmCandidate[]>([]);
+  const [candidatesLoading, setCandidatesLoading] = useState(false);
   const [selected, setSelected] = useState<Recipient[]>([]);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -104,32 +101,34 @@ export function StartDmPicker({ serverId, currentUserId, onConfirm, onClose, tri
     return () => document.removeEventListener('keydown', handleKey, true);
   }, [onClose]);
 
-  // Load server members
+  // Load DM candidates from GET /dm/candidates (server co-members, self-excluded,
+  // who_can_dm='nobody' filtered, deduped) — no serverId gate.
   useEffect(() => {
-    if (!serverId) return;
-    setMembersLoading(true);
+    setCandidatesLoading(true);
     api
-      .getServerMembers(serverId)
+      .getDmCandidates()
       .then((res) => {
-        // Exclude self
-        setMembers(res.filter((m) => m.userId !== currentUserId));
+        setCandidates(res);
       })
-      .catch(() => setMembers([]))
-      .finally(() => setMembersLoading(false));
-  }, [serverId, currentUserId]);
+      .catch(() => setCandidates([]))
+      .finally(() => setCandidatesLoading(false));
+  }, []);
 
-  const filteredMembers = query.trim()
-    ? members.filter((m) => m.displayName.toLowerCase().includes(query.toLowerCase()))
-    : members;
+  const filteredCandidates = query.trim()
+    ? candidates.filter((m) => m.displayName.toLowerCase().includes(query.toLowerCase()))
+    : candidates;
 
   const selectedIds = new Set(selected.map((r) => r.userId));
   const atCap = selected.length >= MAX_GROUP_RECIPIENTS;
 
-  function toggleRecipient(member: ServerMember) {
-    if (selectedIds.has(member.userId)) {
-      setSelected((prev) => prev.filter((r) => r.userId !== member.userId));
+  function toggleRecipient(candidate: DmCandidate) {
+    if (selectedIds.has(candidate.userId)) {
+      setSelected((prev) => prev.filter((r) => r.userId !== candidate.userId));
     } else if (!atCap) {
-      setSelected((prev) => [...prev, { userId: member.userId, displayName: member.displayName }]);
+      setSelected((prev) => [
+        ...prev,
+        { userId: candidate.userId, displayName: candidate.displayName },
+      ]);
     }
   }
 
@@ -276,16 +275,9 @@ export function StartDmPicker({ serverId, currentUserId, onConfirm, onClose, tri
           </p>
         )}
 
-        {/* Member list */}
+        {/* Candidate list */}
         <div className="flex-1 overflow-y-auto px-2 pb-2">
-          {!serverId ? (
-            <p
-              className="text-sm px-3 py-4 text-center"
-              style={{ color: 'rgba(255,255,255,0.40)' }}
-            >
-              Join a server to find people to message.
-            </p>
-          ) : membersLoading ? (
+          {candidatesLoading ? (
             <div className="flex items-center justify-center py-8 gap-2" aria-busy="true">
               <SpinnerIcon
                 size={16}
@@ -293,31 +285,40 @@ export function StartDmPicker({ serverId, currentUserId, onConfirm, onClose, tri
                 style={{ color: 'rgba(255,255,255,0.40)' }}
               />
               <span className="text-sm" style={{ color: 'rgba(255,255,255,0.40)' }}>
-                Loading members…
+                Loading…
               </span>
             </div>
-          ) : filteredMembers.length === 0 ? (
+          ) : filteredCandidates.length === 0 ? (
             <p
               className="text-sm px-3 py-4 text-center"
               style={{ color: 'rgba(255,255,255,0.40)' }}
             >
-              {query ? `No members match "${query}"` : 'No members to message.'}
+              {query
+                ? `No people match "${query}"`
+                : candidates.length === 0
+                  ? 'No one to message yet — join a study server with others'
+                  : `No people match "${query}"`}
             </p>
           ) : (
-            <div role="listbox" tabIndex={0} aria-multiselectable="true" aria-label="Member list">
-              {filteredMembers.map((member) => {
-                const isSelected = selectedIds.has(member.userId);
+            <div
+              role="listbox"
+              tabIndex={0}
+              aria-multiselectable="true"
+              aria-label="Candidate list"
+            >
+              {filteredCandidates.map((candidate) => {
+                const isSelected = selectedIds.has(candidate.userId);
                 const isDisabledByAtCap = !isSelected && atCap;
 
                 return (
-                  <div key={member.userId}>
+                  <div key={candidate.userId}>
                     <button
                       type="button"
                       role="option"
                       aria-selected={isSelected}
-                      onClick={() => toggleRecipient(member)}
+                      onClick={() => toggleRecipient(candidate)}
                       disabled={isDisabledByAtCap}
-                      data-testid={`dm-picker-member-${member.userId}`}
+                      data-testid={`dm-picker-member-${candidate.userId}`}
                       className="flex items-center gap-3 w-full px-3 py-2 rounded-md text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70"
                       style={{
                         backgroundColor: isSelected ? 'rgba(16,185,129,0.10)' : 'transparent',
@@ -362,7 +363,7 @@ export function StartDmPicker({ serverId, currentUserId, onConfirm, onClose, tri
                             />
                           </svg>
                         ) : (
-                          member.displayName.slice(0, 2).toUpperCase()
+                          candidate.displayName.slice(0, 2).toUpperCase()
                         )}
                       </div>
 
@@ -371,7 +372,7 @@ export function StartDmPicker({ serverId, currentUserId, onConfirm, onClose, tri
                           className="block text-sm font-medium truncate"
                           style={{ color: isSelected ? '#10b981' : 'rgba(255,255,255,0.92)' }}
                         >
-                          {member.displayName}
+                          {candidate.displayName}
                         </span>
                       </div>
 

@@ -18,6 +18,7 @@ import type {
   CreateAssignmentInput,
   CreateScheduledSessionInput,
   CreateServerInput,
+  DmCandidate,
   EditMessageInput,
   EffectivePermissions,
   InvitePreview,
@@ -737,6 +738,15 @@ export const api = {
       `/dm/conversations/${conversationId}/messages${qs}`,
     );
   },
+
+  /**
+   * GET /dm/candidates → DmCandidate[] (bare array).
+   * Returns the caller's DM candidates — DISTINCT members of all servers the
+   * caller belongs to, excluding self and users with who_can_dm='nobody'.
+   * Ordered stably by displayName. Caller in no servers → 200 [].
+   * Throws: 401 unauthed.
+   */
+  getDmCandidates: () => request<DmCandidate[]>('/dm/candidates'),
 
   exportAccountData: async (): Promise<void> => {
     const res = await fetch(`${BASE}/profile/data/export`, { credentials: 'include' });
