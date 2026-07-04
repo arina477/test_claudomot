@@ -19,6 +19,7 @@ import { useServers } from './ServerContext';
 import { ServerRolesPage } from './ServerRolesPage';
 import { UserMenu } from './UserMenu';
 import {
+  CalendarIcon,
   CaretDownIcon,
   ClipboardTextIcon,
   GearIcon,
@@ -165,6 +166,8 @@ export function ChannelSidebar() {
     selectChannel,
     assignmentsOpen,
     openAssignments,
+    scheduleOpen,
+    openSchedule,
   } = useServers();
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [rolesPageOpen, setRolesPageOpen] = useState(false);
@@ -360,6 +363,14 @@ export function ChannelSidebar() {
                     name="Assignments"
                     active={assignmentsOpen}
                     onClick={openAssignments}
+                  />
+                </li>
+                <li>
+                  <ChannelItem
+                    icon={<CalendarIcon size={16} />}
+                    name="Schedule"
+                    active={scheduleOpen}
+                    onClick={openSchedule}
                   />
                 </li>
               </ul>

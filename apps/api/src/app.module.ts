@@ -13,6 +13,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { PresenceModule } from './presence/presence.module';
 import { PrivacyModule } from './privacy/privacy.module';
 import { ProfileModule } from './profile/profile.module';
+import { SchedulingModule } from './scheduling/scheduling.module';
 import { ServersModule } from './servers/servers.module';
 import { VoiceModule } from './voice/voice.module';
 
@@ -42,6 +43,7 @@ import { VoiceModule } from './voice/voice.module';
     MessagingModule,
     PresenceModule,
     AssignmentsModule,
+    SchedulingModule,
     NotificationsModule,
     VoiceModule,
     PrivacyModule,

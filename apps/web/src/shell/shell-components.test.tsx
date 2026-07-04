@@ -62,6 +62,9 @@ function makeServerCtx(override: Partial<ServerContextValue> = {}): ServerContex
     assignmentsOpen: false,
     openAssignments: vi.fn(),
     closeAssignments: vi.fn(),
+    scheduleOpen: false,
+    openSchedule: vi.fn(),
+    closeSchedule: vi.fn(),
     ...override,
   };
 }

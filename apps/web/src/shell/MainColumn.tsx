@@ -19,6 +19,7 @@ import type { MessageResponse, ValidatedAttachment } from '@studyhall/shared';
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { api } from '../auth/api';
 import { AssignmentsPanel } from './AssignmentsPanel';
+import { ClassCalendar } from './ClassCalendar';
 import { type ConnectionState, ConnectionStateIndicator } from './ConnectionStateIndicator';
 import { HeaderBell } from './HeaderBell';
 import { MessageComposer } from './MessageComposer';
@@ -44,6 +45,8 @@ export function MainColumn({ connectionState = 'online', onToggleSidebar }: Prop
     selectedId,
     assignmentsOpen,
     closeAssignments,
+    scheduleOpen,
+    closeSchedule,
     selectedDetail,
   } = useServers();
   const { profile } = useContext(ProfileContext);
@@ -156,6 +159,19 @@ export function MainColumn({ connectionState = 'online', onToggleSidebar }: Prop
         style={{ backgroundColor: '#1c1c1f' }}
       >
         <AssignmentsPanel onClose={closeAssignments} />
+      </main>
+    );
+  }
+
+  // When schedule panel is open, render ClassCalendar instead of the messaging view
+  if (scheduleOpen) {
+    return (
+      <main
+        data-testid="main-column"
+        className="relative flex min-w-0 flex-1"
+        style={{ backgroundColor: '#1c1c1f' }}
+      >
+        <ClassCalendar onClose={closeSchedule} />
       </main>
     );
   }
