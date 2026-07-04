@@ -115,6 +115,8 @@ export class SchedulingService {
       recurrence: (row.recurrence === 'weekly' ? 'weekly' : 'none') as 'none' | 'weekly',
       recurrenceUntil: row.recurrence_until?.toISOString() ?? null,
       organizer: organizerIdentity,
+      createdAt: row.created_at.toISOString(),
+      updatedAt: row.updated_at.toISOString(),
     };
   }
 
