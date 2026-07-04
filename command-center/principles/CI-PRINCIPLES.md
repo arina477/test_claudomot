@@ -152,4 +152,4 @@ pr_conventions:
 8. File a stabilization task for a test that passes alone but fails in full-suite parallel CI across 3+ runs.
    Why: A carried parallel-state flake grows the chance it masks a real regression over time.
 9. After applying a migration, assert each expected table physically exists; never trust the migration ledger row alone.
-   Why: A committed ledger row without its DDL makes migrate skip the migration and the app 500s on missing tables.
+   Why: A ledger row with no DDL makes migrate skip it silently, and the app 500s on missing tables.

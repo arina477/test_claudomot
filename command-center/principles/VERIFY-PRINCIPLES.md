@@ -74,6 +74,6 @@ Promoted at L-2 Distill from `process/waves/wave-<N>/blocks/L/observations.md` b
    Why: Reverting correct shipped behavior to a weaker spec ships the worse option; the spec was the defect.
 
 3. Re-verify a fast-fix against the reviewer's live reproduction on deployed state, never on source review alone.
-   Why: A source-clean fix can still fail live; a date round-trip can silently drop precision the source hides.
+   Why: A source-clean fix can still fail live; deployed re-run on real state is the only proof.
 
 ---
