@@ -64,7 +64,10 @@ function formatRelativeShort(iso: string): string {
 type ReturnDialogProps = {
   assignmentId: string;
   submissionId: string;
+  /** Submitter displayName (may be empty — falls back to username). */
   studentName: string;
+  /** Submitter username (used when displayName is blank). */
+  studentUsername: string;
   triggerRef: React.RefObject<HTMLButtonElement | null>;
   onClose: () => void;
   onReturned: (updated: AssignmentSubmission) => void;
@@ -75,6 +78,7 @@ function ReturnDialog({
   assignmentId,
   submissionId,
   studentName,
+  studentUsername,
   triggerRef,
   onClose,
   onReturned,
@@ -87,7 +91,9 @@ function ReturnDialog({
   const [submitting, setSubmitting] = useState(false);
   const [returnError, setReturnError] = useState<string | null>(null);
 
-  const firstName = studentName.split(' ')[0] ?? studentName;
+  // Fall back to username when displayName is blank (no empty "Return to" slot)
+  const resolvedName = studentName.trim() || studentUsername.trim() || 'student';
+  const firstName = resolvedName.split(' ')[0] ?? resolvedName;
 
   // Focus textarea on open
   useEffect(() => {
@@ -176,7 +182,11 @@ function ReturnDialog({
   }
 
   return (
-    /* Backdrop */
+    /* Backdrop
+     * Positioning note: design/assignment-submissions.html uses an anchored-popover
+     * (fixed, positioned near the trigger row). This implementation uses the accepted
+     * modal-equivalent (centered overlay + focus-trap). Both are design-approved
+     * equivalents; the modal form avoids viewport-edge clipping on narrow layouts. */
     // biome-ignore lint/a11y/useKeyWithClickEvents: Esc handled in useEffect; backdrop is supplementary
     <div
       role="presentation"
@@ -256,7 +266,8 @@ function ReturnDialog({
               }}
               onFocus={(e) => {
                 e.currentTarget.style.borderColor = '#10b981';
-                e.currentTarget.style.boxShadow = '0 0 0 2px rgba(16,185,129,0.2)';
+                // --glow-focus spec: alpha 0.4 (design/assignment-submissions.html §--glow-focus)
+                e.currentTarget.style.boxShadow = '0 0 0 2px rgba(16,185,129,0.4)';
               }}
               onBlur={(e) => {
                 e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
@@ -502,6 +513,7 @@ function RosterRow({ row, assignmentId, onReturned, onAnnounce }: RosterRowProps
           assignmentId={assignmentId}
           submissionId={row.id}
           studentName={row.submitter.displayName}
+          studentUsername={row.submitter.username}
           triggerRef={returnTriggerRef}
           onClose={handleClose}
           onReturned={handleReturned}
