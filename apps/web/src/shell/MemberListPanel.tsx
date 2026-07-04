@@ -494,8 +494,8 @@ function MemberItem({ member, online, canModerate, serverId, onMutedChange }: Me
         {member.displayName}
       </span>
 
-      {/* Right slot: muted indicator + kebab */}
-      <div className="flex items-center gap-1 shrink-0 pl-1">
+      {/* Right slot: muted indicator + kebab — pr-2 matches DS §3 8px gutter (roster-row right edge) */}
+      <div className="flex items-center gap-1 shrink-0 pl-1 pr-2">
         {/* Amber muted indicator — visible to ALL when timed out (wave-41 design) */}
         {memberIsMuted && (
           <span data-testid={`muted-indicator-${member.userId}`}>
