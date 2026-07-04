@@ -3,7 +3,7 @@
 **Block:** P (Product)
 **Wave topic:** M8 class scheduling — educator creates/edits/deletes scheduled sessions (one-off + simple recurring) + student calendar view + session detail (CRUD only, no reminders/RSVP/ICS)
 **Block exit gate:** P-4
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 
@@ -13,7 +13,7 @@
 | P-1 | stages/P-1-decompose.md | done | multi-spec PROCEED, floor met, design_gap_flag=true |
 | P-2 | stages/P-2-spec.md | done | 3-block multi-spec contract written to seed task |
 | P-3 | stages/P-3-plan.md | done | approach+plan; 1 migration, 5 endpoints, compute-on-read recurrence, specialists validated |
-| P-4 | blocks/P/gate-verdict.md | pending | |
+| P-4 | blocks/P/gate-verdict.md | done | Phase1 APPROVED; Phase2 Karen+jenny APPROVE, Gemini UNAVAILABLE(429) |
 
 ## Block-specific context
 
