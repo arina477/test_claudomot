@@ -90,11 +90,7 @@ export const UpdateScheduledSessionSchema = z
   )
   .refine(
     (data) => {
-      if (
-        data.recurrence === 'weekly' &&
-        data.recurrenceUntil != null &&
-        data.startsAt != null
-      ) {
+      if (data.recurrence === 'weekly' && data.recurrenceUntil != null && data.startsAt != null) {
         return new Date(data.recurrenceUntil) >= new Date(data.startsAt);
       }
       return true;

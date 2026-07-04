@@ -13,10 +13,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import type {
-  ScheduledSession,
-  ScheduledSessionListResponse,
-} from '@studyhall/shared';
+import type { ScheduledSession, ScheduledSessionListResponse } from '@studyhall/shared';
 import { CreateScheduledSessionSchema, UpdateScheduledSessionSchema } from '@studyhall/shared';
 import { AuthGuard } from '../auth/auth.guard';
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
@@ -139,10 +136,7 @@ export class SchedulingController {
   @Delete('scheduled-sessions/:id')
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteSession(
-    @Param('id') id: string,
-    @Req() req: SessionAugmentedRequest,
-  ): Promise<void> {
+  async deleteSession(@Param('id') id: string, @Req() req: SessionAugmentedRequest): Promise<void> {
     const userId = req.session.getUserId();
     return this.schedulingService.softDeleteSession(id, userId);
   }

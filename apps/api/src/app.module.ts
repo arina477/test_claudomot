@@ -4,7 +4,6 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AssignmentsModule } from './assignments/assignments.module';
-import { SchedulingModule } from './scheduling/scheduling.module';
 import { AuthModule } from './auth/auth.module';
 import { FilesModule } from './files/files.module';
 import { HealthModule } from './health/health.module';
@@ -14,6 +13,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { PresenceModule } from './presence/presence.module';
 import { PrivacyModule } from './privacy/privacy.module';
 import { ProfileModule } from './profile/profile.module';
+import { SchedulingModule } from './scheduling/scheduling.module';
 import { ServersModule } from './servers/servers.module';
 import { VoiceModule } from './voice/voice.module';
 

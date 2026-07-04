@@ -180,8 +180,7 @@ export class SchedulingService {
         starts_at: startsAt,
         ends_at: endsAt,
         recurrence: input.recurrence ?? 'none',
-        recurrence_until:
-          input.recurrenceUntil != null ? new Date(input.recurrenceUntil) : null,
+        recurrence_until: input.recurrenceUntil != null ? new Date(input.recurrenceUntil) : null,
       })
       .returning();
 
@@ -334,10 +333,7 @@ export class SchedulingService {
       .select()
       .from(scheduled_sessions)
       .where(
-        and(
-          eq(scheduled_sessions.server_id, serverId),
-          eq(scheduled_sessions.is_deleted, false),
-        ),
+        and(eq(scheduled_sessions.server_id, serverId), eq(scheduled_sessions.is_deleted, false)),
       )
       .orderBy(asc(scheduled_sessions.starts_at));
 
