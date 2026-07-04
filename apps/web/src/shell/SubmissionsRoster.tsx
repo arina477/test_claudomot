@@ -7,7 +7,7 @@
  *       isOrganizer={true}).  The backend also enforces (403 on list/return endpoints).
  *
  * Layout:
- *   - Header: "Submissions Roster" + submitted/total count chip.
+ *   - Header: "Submissions Roster" + returned/total count chip.
  *   - Rows: avatar + display name + submitted-at + text/attachment preview + status badge.
  *     - Amber "Awaiting" badge for unretirned submissions.
  *     - Emerald "Returned" badge for returned submissions (row dimmed).

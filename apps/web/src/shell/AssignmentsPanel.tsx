@@ -415,6 +415,7 @@ export function AssignmentsPanel({ onClose }: Props) {
                       onStatusChange={handleStatusChange}
                       onClick={handleCardClick}
                       onAnnounce={announce}
+                      isOrganizer={isOrganizer}
                     />
                     {/* Educator submissions roster — manage_assignments gated */}
                     {isOrganizer && (

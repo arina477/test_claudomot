@@ -617,6 +617,11 @@ export type AssignmentCardProps = {
   onClick: (assignment: Assignment) => void;
   /** Announce messages for a11y live region (parent owns). */
   onAnnounce?: (msg: string) => void;
+  /**
+   * When true the viewer holds manage_assignments; the student "Your Work" submit
+   * section is hidden — organizers see the assignment details + SubmissionsRoster only.
+   */
+  isOrganizer?: boolean;
 };
 
 // ---------------------------------------------------------------------------
@@ -629,6 +634,7 @@ export function AssignmentCard({
   onStatusChange,
   onClick,
   onAnnounce,
+  isOrganizer = false,
 }: AssignmentCardProps) {
   const checkboxId = useId();
   const isDone = assignment.myStatus === 'done';
@@ -816,32 +822,37 @@ export function AssignmentCard({
         </div>
       </button>
 
-      {/* Student submission section — below the card body, not inside the button */}
-      {/* biome-ignore lint/a11y/useKeyWithClickEvents: click-stop only; keyboard handled by children */}
-      <div className="px-5 pb-5" onClick={(e) => e.stopPropagation()}>
-        <div className="pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          <h5 className="text-sm font-semibold mb-3" style={{ color: 'rgba(255,255,255,0.92)' }}>
-            Your Work
-          </h5>
+      {/* Student submission section — hidden for organizers; they see SubmissionsRoster instead */}
+      {!isOrganizer && (
+        // biome-ignore lint/a11y/useKeyWithClickEvents: click-stop only; keyboard handled by children
+        <div className="px-5 pb-5" onClick={(e) => e.stopPropagation()}>
+          <div className="pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <h5 className="text-sm font-semibold mb-3" style={{ color: 'rgba(255,255,255,0.92)' }}>
+              Your Work
+            </h5>
 
-          {/* Show submit form when: no submission yet OR explicitly editing */}
-          {(submission == null || editing) && (
-            <StudentSubmitForm
-              assignmentId={assignment.id}
-              serverId={serverId}
-              prefillText={editing && submission?.text ? submission.text : undefined}
-              onAnnounce={announce}
-              onSubmitSuccess={handleSubmitSuccess}
-              onCancel={editing ? () => setEditing(false) : undefined}
-            />
-          )}
+            {/* Show submit form when: no submission yet OR explicitly editing */}
+            {(submission == null || editing) && (
+              <StudentSubmitForm
+                assignmentId={assignment.id}
+                serverId={serverId}
+                prefillText={editing && submission?.text ? submission.text : undefined}
+                onAnnounce={announce}
+                onSubmitSuccess={handleSubmitSuccess}
+                onCancel={editing ? () => setEditing(false) : undefined}
+              />
+            )}
 
-          {/* Show own submission card when submitted and not editing */}
-          {submission != null && !editing && (
-            <OwnSubmissionCard submission={submission} onEditSubmission={() => setEditing(true)} />
-          )}
+            {/* Show own submission card when submitted and not editing */}
+            {submission != null && !editing && (
+              <OwnSubmissionCard
+                submission={submission}
+                onEditSubmission={() => setEditing(true)}
+              />
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </article>
   );
 }
