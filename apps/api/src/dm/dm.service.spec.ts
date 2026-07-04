@@ -1,5 +1,6 @@
 /**
  * DmService unit tests — wave-46 M8 direct messages (tasks a48f1910 + 32f5d29e)
+ *                         wave-47 M8 DM entry-point (task 10967558)
  *
  * Covers:
  *   who_can_dm enforcement:
@@ -27,6 +28,14 @@
  *   listConversations:
  *     - caller with no DMs → [] (200)
  *     - caller with conversations → returns list with participant details
+ *
+ *   getDmCandidates (wave-47):
+ *     - co-members returned with displayName + avatarUrl
+ *     - caller excluded from own candidate list
+ *     - who_can_dm='nobody' co-member excluded
+ *     - co-member shared across multiple servers appears once (dedup)
+ *     - caller with no servers → 200 []
+ *     - caller with servers but no co-members → 200 []
  */
 
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
@@ -735,5 +744,154 @@ describe('DmService — createConversation find-or-create (1:1)', () => {
     expect(r2.id).toBe('conv-new-002');
     expect(r1.id).not.toBe(r2.id);
     expect(mockTransaction).toHaveBeenCalledTimes(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: getDmCandidates (wave-47 task 10967558)
+// ---------------------------------------------------------------------------
+
+describe('DmService — getDmCandidates', () => {
+  let service: DmService;
+  let emitter: ReturnType<typeof makeEventEmitter>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    emitter = makeEventEmitter();
+    // biome-ignore lint/suspicious/noExplicitAny: test mock
+    service = new DmService(emitter as any);
+  });
+
+  it('returns co-members with displayName and avatarUrl', async () => {
+    // First select: caller's server memberships (getServerIdsForUser step)
+    // Second selectDistinctOn: co-member join with users
+    mockSelect.mockReturnValueOnce(makeSelectChain([{ server_id: 'server-001' }]));
+    mockSelectDistinctOn.mockReturnValueOnce(
+      makeSelectChain([
+        {
+          userId: TARGET_A_ID,
+          displayName: 'Alice',
+          email: 'alice@example.com',
+          avatarUrl: 'https://example.com/alice.png',
+          who_can_dm: 'everyone',
+        },
+        {
+          userId: TARGET_B_ID,
+          displayName: 'Bob',
+          email: 'bob@example.com',
+          avatarUrl: null,
+          who_can_dm: 'server-members',
+        },
+      ]),
+    );
+
+    const result = await service.getDmCandidates(CREATOR_ID);
+
+    expect(result).toHaveLength(2);
+    // sorted by displayName: Alice < Bob
+    expect(result[0]).toEqual({
+      userId: TARGET_A_ID,
+      displayName: 'Alice',
+      avatarUrl: 'https://example.com/alice.png',
+    });
+    expect(result[1]).toEqual({
+      userId: TARGET_B_ID,
+      displayName: 'Bob',
+      avatarUrl: null,
+    });
+  });
+
+  it('excludes who_can_dm=nobody co-members (filter happens in query — mock verifies contract)', async () => {
+    // The nobody filter is enforced in the DB query (ne(users.who_can_dm, 'nobody')).
+    // The mock simulates the DB already having filtered them out — only the
+    // allowed user is returned, which is what the real query produces.
+    mockSelect.mockReturnValueOnce(makeSelectChain([{ server_id: 'server-001' }]));
+    mockSelectDistinctOn.mockReturnValueOnce(
+      // nobody user is absent — DB filtered it; only TARGET_A_ID present
+      makeSelectChain([
+        {
+          userId: TARGET_A_ID,
+          displayName: 'Alice',
+          email: 'alice@example.com',
+          avatarUrl: null,
+          who_can_dm: 'everyone',
+        },
+      ]),
+    );
+
+    const result = await service.getDmCandidates(CREATOR_ID);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.userId).toBe(TARGET_A_ID);
+  });
+
+  it('deduplicates co-members shared across multiple servers (each user appears once)', async () => {
+    // DISTINCT ON is in the DB query; mock returns already-deduped rows to
+    // simulate what the real query produces.
+    mockSelect.mockReturnValueOnce(
+      makeSelectChain([{ server_id: 'server-001' }, { server_id: 'server-002' }]),
+    );
+    mockSelectDistinctOn.mockReturnValueOnce(
+      // TARGET_A_ID was a member of both servers but appears once (DISTINCT ON)
+      makeSelectChain([
+        {
+          userId: TARGET_A_ID,
+          displayName: 'Alice',
+          email: 'alice@example.com',
+          avatarUrl: null,
+          who_can_dm: 'everyone',
+        },
+      ]),
+    );
+
+    const result = await service.getDmCandidates(CREATOR_ID);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.userId).toBe(TARGET_A_ID);
+  });
+
+  it('returns [] when caller belongs to no servers', async () => {
+    // getServerIdsForUser step returns empty → short-circuit, no selectDistinctOn
+    mockSelect.mockReturnValueOnce(makeSelectChain([]));
+
+    const result = await service.getDmCandidates(CREATOR_ID);
+
+    expect(result).toEqual([]);
+    // selectDistinctOn must NOT be called when there are no servers
+    expect(mockSelectDistinctOn).not.toHaveBeenCalled();
+  });
+
+  it('returns [] when caller has servers but no other co-members', async () => {
+    mockSelect.mockReturnValueOnce(makeSelectChain([{ server_id: 'server-solo' }]));
+    // No other members in the server
+    mockSelectDistinctOn.mockReturnValueOnce(makeSelectChain([]));
+
+    const result = await service.getDmCandidates(CREATOR_ID);
+
+    expect(result).toEqual([]);
+  });
+
+  it('self is excluded from candidates (self-exclusion in query)', async () => {
+    // ne(alias.user_id, callerId) is in the WHERE clause — mock returns only
+    // the co-member (caller is absent from results, as the real query produces).
+    mockSelect.mockReturnValueOnce(makeSelectChain([{ server_id: 'server-001' }]));
+    mockSelectDistinctOn.mockReturnValueOnce(
+      makeSelectChain([
+        {
+          userId: TARGET_A_ID,
+          displayName: 'Alice',
+          email: 'alice@example.com',
+          avatarUrl: null,
+          who_can_dm: 'everyone',
+        },
+      ]),
+    );
+
+    const result = await service.getDmCandidates(CREATOR_ID);
+
+    // Caller (CREATOR_ID) must not appear in candidates
+    const selfInResult = result.some((c) => c.userId === CREATOR_ID);
+    expect(selfInResult).toBe(false);
+    expect(result).toHaveLength(1);
   });
 });

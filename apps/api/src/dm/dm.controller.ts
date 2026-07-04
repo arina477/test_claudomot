@@ -1,7 +1,9 @@
 /**
  * DmController — wave-46 M8 direct messages (tasks a48f1910 + 32f5d29e)
+ * DmCandidatesController — wave-47 M8 DM entry-point (task 10967558)
  *
  * Routes:
+ *   GET  /dm/candidates                           — list DM candidates (server co-members)
  *   POST /dm/conversations                        — create a new conversation
  *   GET  /dm/conversations                        — list caller's conversations
  *   POST /dm/conversations/:id/messages           — send a message (participant-gated)
@@ -29,6 +31,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type {
+  DmCandidate,
   DmConversation,
   DmConversationListResponse,
   DmMessage,
@@ -135,5 +138,36 @@ export class DmController {
   ): Promise<DmMessageListResponse> {
     const callerId = req.session.getUserId();
     return await this.dmService.listMessages(conversationId, callerId, cursor, limit);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// DmCandidatesController — GET /dm/candidates
+//
+// Separate controller at @Controller('dm') to avoid restructuring the existing
+// DmController (which is anchored at 'dm/conversations').
+//
+// Returns DmCandidate[] — DISTINCT server co-members of the caller, excluding
+// the caller and users with who_can_dm='nobody'. Bare array response (mirrors
+// GET /servers/:id/members convention).
+// ---------------------------------------------------------------------------
+
+@Controller('dm')
+export class DmCandidatesController {
+  constructor(private readonly dmService: DmService) {}
+
+  // -------------------------------------------------------------------------
+  // GET /dm/candidates
+  //
+  // Session-auth; callerId from session (never client param).
+  // Returns 200 DmCandidate[] (may be empty []).
+  // -------------------------------------------------------------------------
+
+  @Get('candidates')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async getDmCandidates(@Req() req: SessionAugmentedRequest): Promise<DmCandidate[]> {
+    const callerId = req.session.getUserId();
+    return await this.dmService.getDmCandidates(callerId);
   }
 }
