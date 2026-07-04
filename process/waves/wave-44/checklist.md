@@ -7,12 +7,12 @@ PRODUCT:
 - [x] P-1 Decompose
 - [x] P-2 Spec
 - [x] P-3 Plan
-- [ ] P-4 Gate
+- [x] P-4 Gate
 
 DESIGN (skip block if non-UI wave):
-- [ ] D-1 Brief
-- [ ] D-2 Variants (with bounded iteration)
-- [ ] D-3 Review & adopt
+- [x] D-1 (SKIPPED — design_gap_flag=false, no new UI surface)
+- [x] D-2 (SKIPPED)
+- [x] D-3 (SKIPPED)
 
 BUILD:
 - [ ] B-0 Branch & schema
