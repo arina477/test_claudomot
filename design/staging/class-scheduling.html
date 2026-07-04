@@ -7,7 +7,7 @@
 
     <!-- 
       aesthetic_dna: Deep Zinc Academic, Asymmetric Focus, Bento 2.0
-      ui_paradigm: Multi-pane software shell with inline detail drawer and spatial modal orchestration.
+      ui_paradigm: Multi-pane software shell with inline detail drawer and discrete modal orchestration.
       palette: Zinc (Base), Emerald (Primary), Amber (Soon/Warn), Red (Danger)
     -->
 
@@ -74,11 +74,21 @@
             background: var(--surface-500);
         }
 
+        /* Hardware acceleration / reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+
         /* Utilities */
         .glass-panel {
-            background-color: var(--surface-800);
+            background-color: var(--surface-900);
             border: 1px solid var(--border-hairline);
-            box-shadow: var(--shadow-liquid), var(--shadow-sm);
+            box-shadow: var(--shadow-liquid), var(--shadow-pop);
         }
         
         .glow-focus:focus-visible {
@@ -118,32 +128,32 @@
             animation: shimmer 1.5s infinite linear;
         }
 
-        /* Conditional Rendering based on Parent State */
+        /* Global States */
         .app-loading .data-view { display: none; }
         .app-loading .empty-view { display: none; }
-        
         .app-loaded .skeleton-view { display: none; }
         .app-loaded .empty-view { display: none; }
-        
         .app-empty .skeleton-view { display: none; }
         .app-empty .data-view { display: none; }
-
         .member-view .organizer-only { display: none !important; }
 
-        /* Panel transitions */
+        /* Detail Panel Transition */
         #detail-panel {
             transition: all 0.5s var(--ease-out-expo);
             transform-origin: right center;
         }
-        
         #detail-panel.closed {
             opacity: 0;
             transform: translateX(20px) scaleX(0.95);
             pointer-events: none;
             width: 0 !important;
-            margin-left: 0 !important;
             border-left-width: 0 !important;
         }
+
+        /* Detail View Sub-States */
+        #detail-panel.not-found-state #detail-content { display: none; }
+        #detail-panel.not-found-state #detail-footer { display: none; }
+        #detail-panel:not(.not-found-state) #detail-empty { display: none; }
 
         /* Modal transitions */
         .modal-overlay {
@@ -157,7 +167,7 @@
         }
         .modal-content {
             transform: translateY(20px) scale(0.98);
-            transition: all 0.4s var(--spring);
+            transition: transform 0.4s var(--spring);
         }
         .modal-overlay.open .modal-content {
             transform: translateY(0) scale(1);
@@ -166,6 +176,7 @@
         /* Recurrence Layout toggle */
         #until-container { display: none; }
         #recurrence-select[value="weekly"] ~ #until-container { display: block; }
+
     </style>
 
     <script>
@@ -217,17 +228,25 @@
 </head>
 <body class="flex flex-col min-h-[100dvh] w-full text-sm app-loading organizer-view" id="app-root">
 
-    <!-- DEV TESTING TOGGLES (Invisible to normal flow, fixed top right) -->
-    <div class="fixed top-4 right-4 z-[999] flex gap-2 p-2 bg-surface-900 rounded-lg shadow-pop border border-border-hairline text-[11px] font-mono text-text-muted transition-opacity hover:opacity-100 opacity-20">
-        <button onclick="document.getElementById('app-root').className = 'flex flex-col min-h-[100dvh] w-full text-sm app-loaded organizer-view'" class="hover:text-text-primary">Load Organizer</button> |
-        <button onclick="document.getElementById('app-root').className = 'flex flex-col min-h-[100dvh] w-full text-sm app-loaded member-view'" class="hover:text-text-primary">Load Member</button> |
-        <button onclick="document.getElementById('app-root').className = 'flex flex-col min-h-[100dvh] w-full text-sm app-empty organizer-view'" class="hover:text-text-primary">Empty</button>
+    <!-- DEV TESTING TOGGLES (Invisible to normal user) -->
+    <div class="fixed top-4 right-4 z-[999] flex flex-col gap-2 p-3 bg-surface-900 rounded-lg shadow-pop border border-border-hairline text-[11px] font-mono text-text-muted transition-opacity hover:opacity-100 opacity-10">
+        <div class="flex gap-2">
+            <button onclick="document.getElementById('app-root').className = 'flex flex-col min-h-[100dvh] w-full text-sm app-loaded organizer-view'" class="hover:text-text-primary">View: Organizer</button> |
+            <button onclick="document.getElementById('app-root').className = 'flex flex-col min-h-[100dvh] w-full text-sm app-loaded member-view'" class="hover:text-text-primary">View: Member</button> |
+            <button onclick="document.getElementById('app-root').className = 'flex flex-col min-h-[100dvh] w-full text-sm app-empty organizer-view'" class="hover:text-text-primary">State: Empty</button>
+        </div>
+        <div class="flex gap-2 border-t border-border-hairline pt-2">
+            <label class="flex items-center gap-1 cursor-pointer hover:text-text-primary">
+                <input type="checkbox" id="dev-sim-error" class="checked:accent-danger"> Simulate Save Error
+            </label> |
+            <button onclick="openDetail('not-found')" class="hover:text-text-primary text-danger-text">Test 404 Panel</button>
+        </div>
     </div>
 
     <!-- MACRO SHELL -->
     <div class="flex flex-1 h-[100dvh] overflow-hidden">
         
-        <!-- Server Rail (Collapses partially on mobile, but keeping simple for desktop-first) -->
+        <!-- Server Rail -->
         <nav class="hidden md:flex flex-col w-[72px] bg-surface-900 border-r border-border-hairline py-4 items-center gap-2 relative z-10 shrink-0 shadow-[inset_-1px_0_0_rgba(255,255,255,0.02)]">
             <button class="w-12 h-12 rounded-[24px] hover:rounded-[12px] bg-surface-700 flex items-center justify-center transition-all duration-300 text-text-primary hover:bg-accent-emerald focus-visible:outline-none focus-visible:ring-2 ring-accent-emerald ring-offset-2 ring-offset-surface-900">
                 <i class="ph ph-compass text-2xl"></i>
@@ -254,25 +273,6 @@
             
             <div class="flex-1 overflow-y-auto px-2 py-4 space-y-6">
                 <!-- Category 1 -->
-                <div>
-                    <h2 class="text-[11px] font-semibold text-text-muted uppercase tracking-wider px-2 mb-1 flex items-center gap-1 hover:text-text-secondary cursor-pointer">
-                        <i class="ph ph-caret-down text-[10px]"></i> Information
-                    </h2>
-                    <ul class="space-y-0.5">
-                        <li>
-                            <button class="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-surface-700 text-text-secondary hover:text-text-primary transition-colors text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-emerald">
-                                <i class="ph ph-hash text-lg text-text-muted"></i> syllabus
-                            </button>
-                        </li>
-                        <li>
-                            <button class="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-surface-700 text-text-secondary hover:text-text-primary transition-colors text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-emerald">
-                                <i class="ph ph-hash text-lg text-text-muted"></i> announcements
-                            </button>
-                        </li>
-                    </ul>
-                </div>
-
-                <!-- Category 2 -->
                 <div>
                     <h2 class="text-[11px] font-semibold text-text-muted uppercase tracking-wider px-2 mb-1 flex items-center gap-1 hover:text-text-secondary cursor-pointer">
                         <i class="ph ph-caret-down text-[10px]"></i> Coursework
@@ -302,11 +302,7 @@
                 </div>
                 <div class="flex flex-col flex-1 min-w-0">
                     <span class="text-xs font-medium text-text-primary truncate">Prof. Davis</span>
-                    <span class="text-[11px] text-text-muted truncate">#4921</span>
                 </div>
-                <button class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-surface-700 text-text-secondary focus-visible:outline-none focus-visible:ring-1 ring-accent-emerald">
-                    <i class="ph ph-gear"></i>
-                </button>
             </div>
         </aside>
 
@@ -324,10 +320,6 @@
                 </h2>
                 
                 <div class="ml-auto flex items-center gap-2">
-                    <button class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-surface-700 text-text-secondary transition-colors focus-visible:outline-none focus-visible:ring-1 ring-accent-emerald">
-                        <i class="ph ph-clock-counter-clockwise text-lg"></i>
-                    </button>
-                    <!-- CTA: Only visible to organizers -->
                     <button onclick="openModal('create')" class="organizer-only h-8 px-3 bg-accent-emerald hover:bg-emerald-400 text-surface-950 font-medium rounded-md text-sm transition-colors flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 ring-accent-emerald ring-offset-2 ring-offset-surface-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.3)]">
                         <i class="ph ph-plus-circle text-lg"></i> New session
                     </button>
@@ -339,7 +331,7 @@
                 
                 <!-- PRIMARY LIST (Agenda) -->
                 <div class="flex-1 h-full overflow-y-auto w-full">
-                    <div class="max-w-4xl mx-auto p-4 md:p-6 lg:padding-8 pb-32 flex flex-col gap-8 min-h-full">
+                    <div class="max-w-4xl mx-auto p-4 md:p-6 lg:p-8 pb-32 flex flex-col gap-8 min-h-full">
                         
                         <!-- SKELETON STATE -->
                         <div class="skeleton-view w-full space-y-8">
@@ -348,25 +340,21 @@
                                 <div class="h-[72px] rounded-lg skeleton-block w-full"></div>
                                 <div class="h-[72px] rounded-lg skeleton-block w-full"></div>
                             </div>
-                            <div class="space-y-3">
-                                <div class="w-32 h-6 rounded-md skeleton-block"></div>
-                                <div class="h-[72px] rounded-lg skeleton-block w-full"></div>
-                            </div>
                         </div>
 
                         <!-- EMPTY STATE -->
                         <div class="empty-view flex-1 flex flex-col items-center justify-center m-auto text-center max-w-sm">
-                            <div class="w-16 h-16 rounded-2xl bg-surface-900 border border-border-hairline shadow-liquid flex items-center justify-center mb-6">
+                            <div class="w-16 h-16 rounded-2xl bg-surface-900 border border-border-hairline shadow-sm flex items-center justify-center mb-6">
                                 <i class="ph ph-calendar-blank text-3xl text-text-muted"></i>
                             </div>
-                            <h3 class="text-xl font-semibold text-text-primary mb-2 text-balanced">No sessions scheduled yet</h3>
+                            <h3 class="text-xl font-semibold text-text-primary mb-2 text-balanced">No sessions scheduled</h3>
                             <p class="text-text-secondary leading-relaxed mb-6 text-balanced">The class calendar is currently empty. Recurring study groups and lectures will appear here.</p>
                             <button onclick="openModal('create')" class="organizer-only h-10 px-4 bg-accent-emerald hover:bg-emerald-400 text-surface-950 font-medium rounded-md transition-colors flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 ring-accent-emerald ring-offset-2 ring-offset-surface-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.3)] hover:-translate-y-[1px] active:scale-[0.98]">
                                 <i class="ph ph-plus-circle text-lg"></i> Schedule first session
                             </button>
                         </div>
 
-                        <!-- DATA STATE (Meso Architecture) -->
+                        <!-- DATA STATE (Agenda List) -->
                         <div class="data-view w-full space-y-10">
                             
                             <!-- Date Group 1 (Today) -->
@@ -376,22 +364,21 @@
                                 </h3>
                                 <div class="space-y-1">
                                     
-                                    <!-- Session Card (Active/Soon) -->
-                                    <div tabindex="0" onclick="openDetail('session-1')" class="group relative flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-surface-900 border border-border-hairline rounded-lg hover:border-border-hover hover:bg-surface-700/50 cursor-pointer transition-all duration-200 outline-none glow-focus">
+                                    <!-- Session Card -->
+                                    <div tabindex="0" onclick="openDetail('session-1')" class="card-row group relative flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-surface-900 border border-border-hairline rounded-lg hover:border-border-hover hover:bg-surface-700/50 cursor-pointer transition-colors duration-200 outline-none glow-focus">
                                         <!-- Amber Indicator -->
-                                        <div class="absolute left-0 top-3 bottom-3 w-1 bg-accent-amber rounded-r-full shadow-[0_0_8px_rgba(245,158,11,0.4)]"></div>
+                                        <div class="absolute left-0 top-3 bottom-3 w-1 bg-accent-amber rounded-r-full shadow-sm"></div>
                                         
                                         <div class="flex-1 min-w-0 pl-2">
-                                            <div class="flex items-center gap-2 mb-1 hidden-mobile-wrap">
+                                            <div class="flex items-center gap-2 mb-1">
                                                 <h4 class="text-base font-semibold text-text-primary truncate">CS492 Architecture Review</h4>
-                                                
                                                 <span class="inline-flex items-center gap-1 h-5 px-2 rounded-full bg-surface-800 border border-surface-600 text-[11px] font-medium text-accent-emerald whitespace-nowrap">
                                                     <i class="ph ph-arrows-clockwise text-[10px]"></i> Weekly
                                                 </span>
                                             </div>
                                             <div class="flex items-center justify-between text-xs text-text-secondary">
                                                 <div class="flex items-center gap-3">
-                                                    <span class="flex items-center gap-1 text-accent-amber bg-accent-amber/10 px-1.5 rounded-md -ml-1.5 rounded-sm">
+                                                    <span class="flex items-center gap-1 text-accent-amber bg-accent-amber/10 px-1.5 py-0.5 rounded-sm -ml-1.5">
                                                         <i class="ph-fill ph-clock"></i> 2:00 PM — 4:00 PM
                                                     </span>
                                                     <span class="hidden sm:flex items-center gap-1.5 before:content-[''] before:w-1 before:h-1 before:bg-surface-500 before:rounded-full before:-ml-1.5">
@@ -402,12 +389,12 @@
                                             </div>
                                         </div>
 
-                                        <!-- Row Actions (Organizer Only logic implied by CSS class) -->
+                                        <!-- Row Actions -->
                                         <div class="sm:pr-2 flex items-center justify-end sm:justify-start gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
                                             <button aria-label="Edit session" onclick="event.stopPropagation(); openModal('edit')" class="organizer-only w-8 h-8 rounded text-text-secondary hover:text-text-primary hover:bg-surface-600 flex items-center justify-center transition-colors focus-visible:outline-none ring-1 ring-inset ring-transparent focus-visible:ring-accent-emerald">
                                                 <i class="ph ph-pencil-simple text-lg"></i>
                                             </button>
-                                            <button aria-label="Delete session" onclick="event.stopPropagation(); deleteSession(this)" class="organizer-only w-8 h-8 rounded text-text-secondary hover:text-danger hover:bg-danger/10 flex items-center justify-center transition-colors focus-visible:outline-none ring-1 ring-inset ring-transparent focus-visible:ring-danger">
+                                            <button aria-label="Delete session" onclick="event.stopPropagation(); openDeleteModal(this)" class="organizer-only w-8 h-8 rounded text-text-secondary hover:text-danger-text hover:bg-danger/10 flex items-center justify-center transition-colors focus-visible:outline-none ring-1 ring-inset ring-transparent focus-visible:ring-danger">
                                                 <i class="ph ph-trash text-lg"></i>
                                             </button>
                                         </div>
@@ -422,9 +409,9 @@
                                     Tomorrow <span class="text-text-muted font-normal normal-case tracking-normal">— Oct 13</span>
                                 </h3>
                                 <div class="space-y-1">
-                                    <!-- Session Card Standard -->
-                                    <div tabindex="0" onclick="openDetail('session-2')" class="group relative flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-surface-900 border border-border-hairline rounded-lg hover:border-border-hover hover:bg-surface-700/50 cursor-pointer transition-all duration-200 outline-none glow-focus">
-                                        <div class="flex-1 min-w-0 pl-2">
+                                    <!-- Standard Card -->
+                                    <div tabindex="0" onclick="openDetail('session-2')" class="card-row group relative flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-surface-900 border border-border-hairline rounded-lg hover:border-border-hover hover:bg-surface-700/50 cursor-pointer transition-colors duration-200 outline-none glow-focus">
+                                        <div class="flex-1 min-w-0 pl-2 mt-0">
                                             <div class="flex items-center gap-2 mb-1">
                                                 <h4 class="text-base font-semibold text-text-primary truncate">Study Group: Pointers</h4>
                                             </div>
@@ -433,59 +420,14 @@
                                                     <span class="flex items-center gap-1">
                                                         <i class="ph ph-clock"></i> 6:00 PM — 7:30 PM
                                                     </span>
-                                                    <span class="hidden sm:flex items-center gap-1.5 before:content-[''] before:w-1 before:h-1 before:bg-surface-500 before:rounded-full before:-ml-1.5">
-                                                        <img src="https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?auto=format&fit=crop&w=32&h=32&q=80" alt="Sarah J." class="w-4 h-4 rounded-full">
-                                                        Sarah J.
-                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
-
                                         <div class="sm:pr-2 flex items-center justify-end sm:justify-start gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
                                             <button aria-label="Edit session" onclick="event.stopPropagation(); openModal('edit')" class="organizer-only w-8 h-8 rounded text-text-secondary hover:text-text-primary hover:bg-surface-600 flex items-center justify-center transition-colors focus-visible:outline-none ring-1 ring-inset ring-transparent focus-visible:ring-accent-emerald">
                                                 <i class="ph ph-pencil-simple text-lg"></i>
                                             </button>
-                                            <button aria-label="Delete session" onclick="event.stopPropagation(); deleteSession(this)" class="organizer-only w-8 h-8 rounded text-text-secondary hover:text-danger hover:bg-danger/10 flex items-center justify-center transition-colors focus-visible:outline-none ring-1 ring-inset ring-transparent focus-visible:ring-danger">
-                                                <i class="ph ph-trash text-lg"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Date Group 3 (Future) -->
-                            <div class="stagger-item" style="--idx: 2">
-                                <h3 class="text-[13px] font-semibold text-text-primary uppercase tracking-widest mb-3 flex items-center gap-2">
-                                    Thursday <span class="text-text-muted font-normal normal-case tracking-normal">— Oct 15</span>
-                                </h3>
-                                <div class="space-y-1">
-                                    <div tabindex="0" onclick="openDetail('session-3')" class="group relative flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-surface-900 border border-border-hairline rounded-lg hover:border-border-hover hover:bg-surface-700/50 cursor-pointer transition-all duration-200 outline-none glow-focus">
-                                        <div class="flex-1 min-w-0 pl-2">
-                                            <div class="flex items-center gap-2 mb-1">
-                                                <h4 class="text-base font-semibold text-text-primary truncate">CS492 Architecture Review</h4>
-                                                
-                                                <span class="inline-flex items-center gap-1 h-5 px-2 rounded-full bg-surface-800 border border-surface-600 text-[11px] font-medium text-accent-emerald whitespace-nowrap">
-                                                    <i class="ph ph-arrows-clockwise text-[10px]"></i> Weekly
-                                                </span>
-                                            </div>
-                                            <div class="flex items-center justify-between text-xs text-text-secondary">
-                                                <div class="flex items-center gap-3">
-                                                    <span class="flex items-center gap-1">
-                                                        <i class="ph ph-clock"></i> 2:00 PM — 4:00 PM
-                                                    </span>
-                                                    <span class="hidden sm:flex items-center gap-1.5 before:content-[''] before:w-1 before:h-1 before:bg-surface-500 before:rounded-full before:-ml-1.5">
-                                                        <img src="https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=32&h=32&q=80" alt="Prof. Davis" class="w-4 h-4 rounded-full">
-                                                        Prof. Davis
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="sm:pr-2 flex items-center justify-end sm:justify-start gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
-                                            <button aria-label="Edit session" onclick="event.stopPropagation(); openModal('edit')" class="organizer-only w-8 h-8 rounded text-text-secondary hover:text-text-primary hover:bg-surface-600 flex items-center justify-center transition-colors focus-visible:outline-none ring-1 ring-inset ring-transparent focus-visible:ring-accent-emerald">
-                                                <i class="ph ph-pencil-simple text-lg"></i>
-                                            </button>
-                                            <button aria-label="Delete session" onclick="event.stopPropagation(); deleteSession(this)" class="organizer-only w-8 h-8 rounded text-text-secondary hover:text-danger hover:bg-danger/10 flex items-center justify-center transition-colors focus-visible:outline-none ring-1 ring-inset ring-transparent focus-visible:ring-danger">
+                                            <button aria-label="Delete session" onclick="event.stopPropagation(); openDeleteModal(this)" class="organizer-only w-8 h-8 rounded text-text-secondary hover:text-danger-text hover:bg-danger/10 flex items-center justify-center transition-colors focus-visible:outline-none ring-1 ring-inset ring-transparent focus-visible:ring-danger">
                                                 <i class="ph ph-trash text-lg"></i>
                                             </button>
                                         </div>
@@ -493,8 +435,8 @@
                                 </div>
                             </div>
                             
-                            <!-- End of list marker -->
-                            <div class="pt-8 pb-4 flex items-center justify-center gap-4 text-text-muted stagger-item" style="--idx: 3">
+                            <!-- End marker -->
+                            <div class="pt-8 pb-4 flex items-center justify-center gap-4 text-text-muted stagger-item" style="--idx: 2">
                                 <div class="h-px w-8 bg-surface-600"></div>
                                 <i class="ph-fill ph-asterisk text-xs"></i>
                                 <div class="h-px w-8 bg-surface-600"></div>
@@ -505,21 +447,30 @@
                 </div>
 
                 <!-- SECONDARY INLINE PANEL (Details - Bento Paradigm) -->
-                <!-- Defaults to closed, takes structural width when open -->
                 <aside id="detail-panel" class="closed w-[360px] xl:w-[400px] h-full bg-surface-900 border-l border-border-hairline shrink-0 flex flex-col relative hidden sm:flex">
                     
                     <header class="h-14 flex items-center justify-between px-5 border-b border-border-hairline shrink-0">
-                        <span class="text-xs font-semibold uppercase tracking-widest text-text-secondary">Session Details</span>
-                        <button onclick="closeDetail()" class="w-8 h-8 rounded-md flex items-center justify-center text-text-secondary hover:bg-surface-700 hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-1 ring-accent-emerald" aria-label="Close details">
+                        <h2 class="text-xs font-semibold uppercase tracking-widest text-text-secondary">Session Details</h2>
+                        <button onclick="closeDetail()" class="w-8 h-8 rounded-md flex items-center justify-center text-text-secondary hover:bg-surface-700 hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-1 ring-accent-emerald" aria-label="Close panel">
                             <i class="ph ph-x text-lg"></i>
                         </button>
                     </header>
 
-                    <div class="flex-1 overflow-y-auto p-6 flex flex-col gap-8 pb-20">
+                    <!-- STATE: NOT FOUND -->
+                    <div id="detail-empty" class="flex-1 flex flex-col items-center justify-center p-6 text-center m-auto max-w-[280px]">
+                        <div class="w-12 h-12 rounded-full bg-surface-800 flex items-center justify-center mb-4 text-text-muted">
+                            <i class="ph ph-calendar-x text-2xl"></i>
+                        </div>
+                        <h3 class="text-lg font-medium text-text-primary mb-2">Session not found</h3>
+                        <p class="text-sm text-text-secondary leading-relaxed">This session may have been deleted, or the link is invalid.</p>
+                    </div>
+
+                    <!-- STATE: LOADED -->
+                    <div id="detail-content" class="flex-1 overflow-y-auto w-full p-6 flex flex-col gap-8 pb-20">
                         
                         <!-- Header Data -->
                         <div>
-                            <h2 class="text-[22px] leading-tight font-semibold text-text-primary mb-3">CS492 Architecture Review</h2>
+                            <h3 class="text-[22px] leading-tight font-semibold text-text-primary mb-3">CS492 Architecture Review</h3>
                             
                             <div class="flex flex-wrap gap-2 mb-6">
                                 <span class="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-md bg-accent-amber/10 border border-accent-amber/20 text-xs font-medium text-accent-amber">
@@ -535,7 +486,7 @@
                                 <div class="flex items-start gap-3">
                                     <i class="ph ph-calendar-blank text-text-secondary mt-0.5 text-lg"></i>
                                     <div>
-                                        <p class="text-text-primary font-medium">Tomorrow, Oct 12</p>
+                                        <p class="text-text-primary font-medium">Today, Oct 12</p>
                                         <p class="text-text-secondary text-xs mt-0.5">2:00 PM — 4:00 PM (2hrs)</p>
                                     </div>
                                 </div>
@@ -552,18 +503,17 @@
 
                         <!-- Description Data -->
                         <div>
-                            <h3 class="text-sm font-semibold text-text-primary mb-2">Description</h3>
+                            <h4 class="text-sm font-semibold text-text-primary mb-2">Description</h4>
                             <div class="text-text-secondary leading-relaxed text-[14px] space-y-3 p-4 bg-surface-800 rounded-lg border border-border-hairline min-h-[120px]">
-                                <p>Mandatory midterm architecture review session. We will be covering the principles of caching, memory management (malloc/free implementations), and the x86 stack layout.</p>
-                                <p>Please bring your draft diagrams for Assignment 4.</p>
+                                <p>Mandatory midterm architecture review session. We will be covering the principles of caching, memory management, and the x86 stack layout.</p>
+                                <p>Please bring your draft diagrams.</p>
                             </div>
                         </div>
-
                     </div>
 
-                    <!-- Panel Footer (Organizer Actions) -->
-                    <footer class="organizer-only absolute bottom-0 left-0 right-0 p-4 border-t border-border-hairline bg-surface-900/90 backdrop-blur-md flex justify-end gap-2">
-                        <button onclick="deleteSession()" class="h-9 px-4 bg-transparent hover:bg-danger/10 text-text-secondary hover:text-danger rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 ring-danger shadow-sm border border-transparent hover:border-danger/20">
+                    <!-- Panel Footer -->
+                    <footer id="detail-footer" class="organizer-only absolute bottom-0 left-0 right-0 p-4 border-t border-border-hairline bg-surface-900/90 backdrop-blur-md flex justify-end gap-2">
+                        <button onclick="openDeleteModal(document.getElementById('detail-panel'))" class="h-9 px-4 bg-transparent hover:bg-danger/10 text-text-secondary hover:text-danger-text rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 ring-danger shadow-sm border border-transparent hover:border-danger/20">
                             Delete
                         </button>
                         <button onclick="openModal('edit')" class="h-9 px-4 bg-surface-700 hover:bg-surface-600 border border-border-hairline text-text-primary rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 ring-accent-emerald shadow-sm">
@@ -572,34 +522,35 @@
                     </footer>
 
                 </aside>
-                
             </div>
         </main>
     </div>
 
-    <!-- AUTHORING MODAL (Dialog Pattern) -->
+    <!-- AUTHORING MODAL -->
     <div id="authoring-modal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center sm:p-4 bg-black/60 backdrop-blur-[2px]" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-        <div class="modal-content glass-panel w-full h-full sm:h-auto sm:max-w-lg sm:rounded-xl shadow-pop flex flex-col bg-surface-900 overflow-hidden relative">
+        <div class="modal-content glass-panel w-full h-full sm:h-auto sm:max-w-lg sm:rounded-xl flex flex-col relative">
             
             <header class="h-16 flex items-center justify-between px-6 border-b border-border-hairline shrink-0">
                 <h2 id="modal-title" class="text-lg font-semibold text-text-primary tracking-tight">New session</h2>
-                <button onclick="closeModal()" aria-label="Close dialogue" class="w-8 h-8 -mr-1 rounded-md flex items-center justify-center text-text-secondary hover:bg-surface-700 hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 ring-accent-emerald">
+                <button type="button" onclick="closeModal()" aria-label="Close dialog" class="w-8 h-8 -mr-1 rounded-md flex items-center justify-center text-text-secondary hover:bg-surface-700 hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 ring-accent-emerald">
                     <i class="ph ph-x text-xl"></i>
                 </button>
             </header>
 
             <form id="session-form" onsubmit="event.preventDefault(); submitForm();" class="flex-1 overflow-y-auto px-6 py-6 pb-24 sm:pb-6 space-y-6">
                 
-                <!-- Simulated Error banner -->
-                <div id="form-error" class="hidden mb-4 p-3 bg-danger/10 border border-danger/20 rounded-md flex items-start gap-2 text-sm text-danger-text">
-                    <i class="ph-fill ph-warning-circle text-lg shrink-0 mt-0.5"></i>
-                    <p>End time must be after start time.</p>
+                <!-- Inline Error State (Failed Submit/Validation) -->
+                <div id="form-error" class="hidden p-3 bg-danger/10 border border-danger/20 rounded-md flex flex-col gap-1 text-sm text-danger-text" role="alert">
+                    <div class="flex items-start gap-2">
+                        <i class="ph-fill ph-warning-circle text-lg shrink-0 mt-0.5"></i>
+                        <p id="form-error-msg" class="font-medium">Couldn't save session — try again.</p>
+                    </div>
                 </div>
 
-                <!-- Title & Desc -->
+                <!-- Details -->
                 <div class="space-y-4">
                     <div class="space-y-1.5">
-                        <label for="f-title" class="block text-xs font-medium text-text-secondary">Session Title <span class="text-danger">*</span></label>
+                        <label for="f-title" class="block text-xs font-medium text-text-secondary">Session Title <span class="text-danger-text">*</span></label>
                         <input type="text" id="f-title" required class="w-full h-10 px-3 bg-surface-950/50 border border-surface-600 rounded-md text-sm text-text-primary placeholder:text-text-muted transition-colors glow-focus hover:border-surface-500" placeholder="e.g. Study Group: Pointers">
                     </div>
                     
@@ -611,10 +562,10 @@
 
                 <div class="h-px bg-border-hairline w-full"></div>
 
-                <!-- Date & Time (Grid) -->
+                <!-- DateTime Grid -->
                 <div class="grid grid-cols-2 gap-4">
                     <div class="space-y-1.5 col-span-2">
-                        <label for="f-date" class="block text-xs font-medium text-text-secondary">Date <span class="text-danger">*</span></label>
+                        <label for="f-date" class="block text-xs font-medium text-text-secondary">Date <span class="text-danger-text">*</span></label>
                         <div class="relative">
                             <input type="date" id="f-date" required class="w-full h-10 pl-10 pr-3 bg-surface-950/50 border border-surface-600 rounded-md text-sm text-text-primary transition-colors glow-focus hover:border-surface-500 [color-scheme:dark]">
                             <i class="ph ph-calendar-blank absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-lg pointer-events-none"></i>
@@ -622,7 +573,7 @@
                     </div>
 
                     <div class="space-y-1.5">
-                        <label for="f-start" class="block text-xs font-medium text-text-secondary">Start Time <span class="text-danger">*</span></label>
+                        <label for="f-start" class="block text-xs font-medium text-text-secondary">Start Time <span class="text-danger-text">*</span></label>
                         <div class="relative">
                             <input type="time" id="f-start" required class="w-full h-10 pl-10 pr-3 bg-surface-950/50 border border-surface-600 rounded-md text-sm text-text-primary transition-colors glow-focus hover:border-surface-500 [color-scheme:dark]">
                             <i class="ph ph-clock absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-lg pointer-events-none"></i>
@@ -630,7 +581,7 @@
                     </div>
 
                     <div class="space-y-1.5">
-                        <label for="f-end" class="block text-xs font-medium text-text-secondary">End Time <span class="text-danger">*</span></label>
+                        <label for="f-end" class="block text-xs font-medium text-text-secondary">End Time <span class="text-danger-text">*</span></label>
                         <div class="relative">
                             <input type="time" id="f-end" required class="w-full h-10 pl-10 pr-3 bg-surface-950/50 border border-surface-600 rounded-md text-sm text-text-primary transition-colors glow-focus hover:border-surface-500 [color-scheme:dark]">
                             <i class="ph ph-clock absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-lg pointer-events-none"></i>
@@ -654,8 +605,7 @@
                         </div>
                     </div>
                     
-                    <!-- Conditional Until Date (Handled mostly via JS logic in real app, relying on CSS :has or ~ selector for MVP visual) -->
-                    <div id="until-container" class="space-y-1.5 pt-2 border-t border-border-hairline mt-4 hidden">
+                    <div id="until-container" aria-hidden="true" class="space-y-1.5 pt-2 border-t border-border-hairline mt-4 hidden">
                         <label for="f-until" class="block text-xs font-medium text-text-secondary flex justify-between">
                             Repeat Until <span class="text-text-muted font-normal">(Optional)</span>
                         </label>
@@ -672,128 +622,177 @@
                 <button type="button" onclick="closeModal()" class="h-9 px-4 rounded-md text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-800 transition-colors focus-visible:outline-none focus-visible:ring-2 ring-surface-500">
                     Cancel
                 </button>
-                <button type="button" onclick="submitForm(this)" id="save-btn" class="h-9 px-5 rounded-md text-sm font-medium bg-accent-emerald hover:bg-emerald-400 text-surface-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.3)] transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 ring-accent-emerald ring-offset-2 ring-offset-surface-900 flex items-center justify-center min-w-[70px]">
+                <button type="button" onclick="submitForm()" id="save-btn" class="h-9 px-5 rounded-md text-sm font-medium bg-accent-emerald hover:bg-emerald-400 text-surface-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.3)] transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 ring-accent-emerald ring-offset-2 ring-offset-surface-900 flex items-center justify-center min-w-[70px]">
                     <span class="btn-text">Save</span>
                     <i class="ph ph-spinner animate-spin text-lg hidden btn-spinner"></i>
                 </button>
             </footer>
 
-            <div aria-live="assertive" id="modal-announcer" class="sr-only"></div>
+            <div aria-live="polite" id="modal-announcer" class="sr-only"></div>
         </div>
     </div>
 
+
+    <!-- DELETE CONFIRMATION MODAL -->
+    <div id="delete-modal" class="modal-overlay fixed inset-0 z-[60] flex items-center justify-center sm:p-4 bg-black/60 backdrop-blur-[2px]" aria-labelledby="delete-title" role="dialog" aria-modal="true">
+        <div class="modal-content glass-panel w-full h-full sm:h-auto sm:w-[400px] sm:max-w-md sm:rounded-xl flex flex-col relative">
+            <header class="h-16 flex items-center justify-between px-6 border-b border-border-hairline shrink-0">
+                <h2 id="delete-title" class="text-lg font-semibold text-text-primary tracking-tight">Delete session?</h2>
+                <button type="button" onclick="closeDeleteModal()" aria-label="Close dialog" class="w-8 h-8 -mr-1 rounded-md flex items-center justify-center text-text-secondary hover:bg-surface-700 hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 ring-accent-emerald">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+            </header>
+            
+            <div class="px-6 py-5 text-sm text-text-secondary leading-relaxed flex-1 overflow-y-auto">
+                Are you sure you want to delete this session? This action cannot be undone and it will be removed from the class calendar immediately.
+            </div>
+
+            <footer class="h-16 flex items-center justify-end px-6 border-t border-border-hairline bg-surface-900 shrink-0 gap-3">
+                <button type="button" onclick="closeDeleteModal()" class="h-9 px-4 rounded-md text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-800 transition-colors focus-visible:outline-none focus-visible:ring-2 ring-surface-500">
+                    Cancel
+                </button>
+                <button type="button" onclick="confirmDelete()" class="h-9 px-5 rounded-md text-sm font-medium bg-danger border border-transparent hover:bg-red-600 text-white shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 ring-danger ring-offset-2 ring-offset-surface-900 active:scale-[0.98]">
+                    Delete
+                </button>
+            </footer>
+        </div>
+    </div>
+
+
     <!-- JS Logic Engine -->
     <script>
-        // Initialization Boot Sequence
+        // Init
         document.addEventListener('DOMContentLoaded', () => {
-            // Simulate network load
             setTimeout(() => {
                 document.getElementById('app-root').classList.remove('app-loading');
                 document.getElementById('app-root').classList.add('app-loaded');
-            }, 1200);
-
-            // Esc key bindings globally
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') {
-                    if (document.getElementById('authoring-modal').classList.contains('open')) {
-                        closeModal();
-                    } else if (!document.getElementById('detail-panel').classList.contains('closed')) {
-                        closeDetail();
-                    }
-                }
-            });
+            }, 800);
         });
 
-        // Toggle Until Field in Modal based on select value
+        // Global Focus Trap Utility
+        function trapFocus(e, modalEl) {
+            const focusableStr = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+            const focusableElements = Array.from(modalEl.querySelectorAll(focusableStr)).filter(el => {
+                 // Check visibility
+                 return el.offsetWidth > 0 || el.offsetHeight > 0 || el.getClientRects().length > 0;
+            });
+            
+            if(focusableElements.length === 0) return;
+
+            const first = focusableElements[0];
+            const last = focusableElements[focusableElements.length - 1];
+
+            if (e.key === 'Tab') {
+                if (e.shiftKey) { // Shift + Tab
+                    if (document.activeElement === first) {
+                        last.focus();
+                        e.preventDefault();
+                    }
+                } else { // Tab
+                    if (document.activeElement === last) {
+                        first.focus();
+                        e.preventDefault();
+                    }
+                }
+            }
+        }
+
+        let activeModalId = null;
+        let activeTriggerElement = null;
+        let sessionToActOn = null;
+
+        // Global Keyboard Listener
+        document.addEventListener('keydown', (e) => {
+            // Focus trap routing
+            if (e.key === 'Tab' && activeModalId) {
+                trapFocus(e, document.getElementById(activeModalId));
+            }
+            // Escape handling
+            else if (e.key === 'Escape') {
+                if (activeModalId === 'delete-modal') closeDeleteModal();
+                else if (activeModalId === 'authoring-modal') closeModal();
+                else if (!document.getElementById('detail-panel').classList.contains('closed')) closeDetail();
+            }
+        });
+
+        // Toggle Recurrence until display
         function toggleUntilDate(select) {
             const container = document.getElementById('until-container');
             if(select.value === 'weekly') {
                 container.style.display = 'block';
+                container.setAttribute('aria-hidden', 'false');
             } else {
                 container.style.display = 'none';
+                container.setAttribute('aria-hidden', 'true');
             }
         }
 
-        // Inline Detail Panel Management
+        // --- Detail Panel Logic ---
         function openDetail(sessionId) {
             const panel = document.getElementById('detail-panel');
             panel.classList.remove('closed');
             
-            // In a real app, we'd fetch data and inject here.
-            // Remove outline from all cards, add to selected.
-            document.querySelectorAll('.data-view > div > div > div').forEach(el => {
-                 el.classList.remove('ring-1', 'ring-border-hover', 'bg-surface-700/30');
-            });
-            event.currentTarget.classList.add('ring-1', 'ring-border-hover', 'bg-surface-700/30');
+            document.querySelectorAll('.card-row').forEach(el => el.classList.remove('ring-1', 'ring-border-hover', 'bg-surface-700/30'));
+            
+            if(sessionId === 'not-found') {
+                panel.classList.add('not-found-state');
+            } else {
+                panel.classList.remove('not-found-state');
+                if(event && event.currentTarget.classList.contains('card-row')){
+                    event.currentTarget.classList.add('ring-1', 'ring-border-hover', 'bg-surface-700/30');
+                }
+            }
         }
 
         function closeDetail() {
-            const panel = document.getElementById('detail-panel');
-            panel.classList.add('closed');
-            
-            // Clear selection styles
-            document.querySelectorAll('.data-view > div > div > div').forEach(el => {
-                 el.classList.remove('ring-1', 'ring-border-hover', 'bg-surface-700/30');
-            });
+            document.getElementById('detail-panel').classList.add('closed');
+            document.querySelectorAll('.card-row').forEach(el => el.classList.remove('ring-1', 'ring-border-hover', 'bg-surface-700/30'));
         }
 
-        // Space/Enter handler for keyboard a11y on custom cards
-        document.querySelectorAll('.data-view [tabindex="0"]').forEach(card => {
-            card.addEventListener('keydown', (e) => {
-                if(e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    card.click();
-                }
-            });
-        });
-
-        // Modal Lifecycle Management
-        let previousFocus = null;
-        const modal = document.getElementById('authoring-modal');
-        const formError = document.getElementById('form-error');
-
+        // --- Authoring Modal Logic ---
         function openModal(mode = 'create') {
-            previousFocus = document.activeElement;
+            activeTriggerElement = document.activeElement;
+            const modal = document.getElementById('authoring-modal');
             modal.classList.add('open');
+            activeModalId = 'authoring-modal';
+            
             document.getElementById('modal-title').textContent = mode === 'create' ? 'New session' : 'Edit session';
             
-            // Reset form + errors
-            formError.classList.add('hidden');
+            // Cleanup
+            document.getElementById('form-error').classList.add('hidden');
             if (mode === 'create') document.getElementById('session-form').reset();
+            toggleUntilDate(document.getElementById('recurrence-select')); // sync select state
             
-            // Wait for transition, then focus trap
-            setTimeout(() => {
-                document.getElementById('f-title').focus();
-            }, 300);
+            setTimeout(() => document.getElementById('f-title').focus(), 300);
         }
 
         function closeModal() {
-            modal.classList.remove('open');
-            
-            // Restore focus
-            if (previousFocus) {
-                setTimeout(() => previousFocus.focus(), 300);
-            }
+            document.getElementById('authoring-modal').classList.remove('open');
+            activeModalId = null;
+            if (activeTriggerElement) setTimeout(() => activeTriggerElement.focus(), 300);
         }
 
-        // Form Submission Simulation
-        function submitForm(btnEl) {
-            
+        function submitForm() {
+            const btnEl = document.getElementById('save-btn');
+            const formError = document.getElementById('form-error');
+            const errorMsg = document.getElementById('form-error-msg');
             const startStr = document.getElementById('f-start').value;
             const endStr = document.getElementById('f-end').value;
+            const simError = document.getElementById('dev-sim-error').checked;
 
-            // Basic Client Validation simulation
+            // UI Validation Error
             if(startStr && endStr && startStr >= endStr) {
                 formError.classList.remove('hidden');
+                errorMsg.textContent = "End time must be after start time.";
                 document.getElementById('modal-announcer').textContent = "Error: End time must be after start time.";
                 document.getElementById('f-end').classList.add('border-danger', 'focus-visible:ring-danger');
                 return;
-            } else {
-                formError.classList.add('hidden');
-                document.getElementById('f-end').classList.remove('border-danger', 'focus-visible:ring-danger');
             }
 
-            // Simulate Loading State
+            document.getElementById('f-end').classList.remove('border-danger', 'focus-visible:ring-danger');
+            formError.classList.add('hidden');
+
+            // Simulate Loading
             const textSpan = btnEl.querySelector('.btn-text');
             const spinner = btnEl.querySelector('.btn-spinner');
             
@@ -803,30 +802,79 @@
             document.getElementById('modal-announcer').textContent = "Saving session...";
 
             setTimeout(() => {
-                closeModal();
-                // Reset button state
                 btnEl.disabled = false;
                 textSpan.classList.remove('hidden');
                 spinner.classList.add('hidden');
-                document.getElementById('modal-announcer').textContent = "Session saved successfully.";
-                
-                // Show list if it was empty, just as a trick to demonstrate functionality
-                if(document.getElementById('app-root').classList.contains('app-empty')) {
-                      document.getElementById('app-root').classList.remove('app-empty');
-                      document.getElementById('app-root').classList.add('app-loaded');
+
+                if (simError) {
+                    // API Save Error State
+                    formError.classList.remove('hidden');
+                    errorMsg.textContent = "Couldn't save session — try again.";
+                    document.getElementById('modal-announcer').textContent = "Save failed. Try again.";
+                    // Form stays open
+                } else {
+                    // Success
+                    document.getElementById('modal-announcer').textContent = "Session saved successfully.";
+                    closeModal();
+                    
+                    if(document.getElementById('app-root').classList.contains('app-empty')) {
+                        document.getElementById('app-root').className = 'flex flex-col min-h-[100dvh] w-full text-sm app-loaded organizer-view';
+                    }
                 }
             }, 800);
         }
 
-        // Delete Simulation
-        function deleteSession(btn) {
-            if(confirm("Are you sure you want to cancel this session? This action cannot be undone.")) {
-                // In real app: call API, hide card. For UI:
-                const cardRow = btn ? btn.closest('.group') : document.getElementById('detail-panel').previousElementSibling; // Rough targeting
-                if(cardRow) cardRow.style.opacity = '0';
-                if(!document.getElementById('detail-panel').classList.contains('closed')) closeDetail();
-            }
+        // --- Delete Confirmation Modal Logic ---
+        function openDeleteModal(btnElement) {
+            activeTriggerElement = document.activeElement;
+            sessionToActOn = btnElement.closest('.card-row'); // Try to find row context
+            
+            const modal = document.getElementById('delete-modal');
+            modal.classList.add('open');
+            activeModalId = 'delete-modal';
+            
+            // Focus on cancel first (safe default for destructive actions)
+            setTimeout(() => {
+                modal.querySelectorAll('button')[1].focus();
+            }, 300);
         }
+
+        function closeDeleteModal() {
+            document.getElementById('delete-modal').classList.remove('open');
+            activeModalId = null;
+            sessionToActOn = null;
+            if (activeTriggerElement) setTimeout(() => activeTriggerElement.focus(), 300);
+        }
+
+        function confirmDelete() {
+            // Dismiss detail panel if open
+            if(!document.getElementById('detail-panel').classList.contains('closed')) closeDetail();
+
+            // Dom manipulate to mimic delete
+            if(sessionToActOn) {
+                // Fade out element for smoothness
+                sessionToActOn.style.transition = "opacity 0.3s ease";
+                sessionToActOn.style.opacity = '0';
+                setTimeout(() => sessionToActOn.remove(), 300);
+            }
+            
+            closeDeleteModal();
+            
+            // Announce deletion
+            document.getElementById('modal-announcer').textContent = "Session deleted.";
+        }
+
+        // Card Accessibility Keyboard Handling (Space/Enter click replication)
+        document.querySelectorAll('.card-row').forEach(card => {
+            card.addEventListener('keydown', (e) => {
+                if(e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if(e.target === card) {
+                        card.click();
+                    }
+                }
+            });
+        });
     </script>
 </body>
 </html>
