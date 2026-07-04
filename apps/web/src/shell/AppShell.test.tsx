@@ -68,6 +68,9 @@ const defaultCtx: ServerContextValue = {
   assignmentsOpen: false,
   openAssignments: vi.fn(),
   closeAssignments: vi.fn(),
+  scheduleOpen: false,
+  openSchedule: vi.fn(),
+  closeSchedule: vi.fn(),
 };
 
 function renderShell(ctxOverride: Partial<ServerContextValue> = {}) {
