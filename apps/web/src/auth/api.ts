@@ -693,6 +693,51 @@ export const api = {
    * temporary anchor with download="studyhall-account-data.json".
    * Throws on non-2xx response.
    */
+  // ── Direct message endpoints (wave-46 M8) ────────────────────────────────
+
+  /**
+   * POST /dm/conversations {participantIds, isGroup?} → DmConversation.
+   * Creates a new 1:1 or group DM. who_can_dm enforced server-side.
+   * Throws: 400 (cap/invalid), 403 (policy), 401 unauthed.
+   */
+  createDmConversation: (body: import('@studyhall/shared').CreateConversationInput) =>
+    request<import('@studyhall/shared').DmConversation>('/dm/conversations', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  /**
+   * GET /dm/conversations → DmConversationListResponse.
+   * Returns conversations where the caller is a participant, ordered by
+   * last-message recency.
+   * Throws: 401 unauthed.
+   */
+  listDmConversations: () =>
+    request<import('@studyhall/shared').DmConversationListResponse>('/dm/conversations'),
+
+  /**
+   * POST /dm/conversations/:id/messages {content, idempotencyKey} → DmMessage.
+   * Caller must be a participant. Idempotent on (conversationId, idempotencyKey).
+   * Throws: 403/404 non-participant, 401 unauthed.
+   */
+  sendDmMessage: (conversationId: string, body: import('@studyhall/shared').SendDmMessageInput) =>
+    request<import('@studyhall/shared').DmMessage>(`/dm/conversations/${conversationId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  /**
+   * GET /dm/conversations/:id/messages?cursor= → DmMessageListResponse.
+   * Cursor-paginated; caller must be a participant.
+   * Throws: 403/404 non-participant, 401 unauthed.
+   */
+  listDmMessages: (conversationId: string, cursor?: string) => {
+    const qs = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
+    return request<import('@studyhall/shared').DmMessageListResponse>(
+      `/dm/conversations/${conversationId}/messages${qs}`,
+    );
+  },
+
   exportAccountData: async (): Promise<void> => {
     const res = await fetch(`${BASE}/profile/data/export`, { credentials: 'include' });
     if (!res.ok) {
