@@ -41,7 +41,7 @@ import type {
   DmMessageListResponse,
   SendDmMessageInput,
 } from '@studyhall/shared';
-import { and, count, desc, eq, inArray, or, sql } from 'drizzle-orm';
+import { and, count, desc, eq, getTableColumns, inArray, or, sql } from 'drizzle-orm';
 import { db } from '../db/index';
 import {
   dm_conversations,
@@ -57,23 +57,19 @@ import {
 // the ms-truncation boundary re-emission bug (F-I4).
 // ---------------------------------------------------------------------------
 
-function encodeCursor(createdAt: Date, id: string): string {
-  const epochMicros = Math.round(createdAt.getTime() * 1000).toString();
-  return Buffer.from(`${epochMicros}|${id}`).toString('base64url');
+function encodeCursor(createdAtStr: string, id: string): string {
+  return Buffer.from(`${createdAtStr}|${id}`).toString('base64url');
 }
 
-function decodeCursor(cursor: string): { createdAt: Date; id: string } | null {
+function decodeCursor(cursor: string): { createdAtStr: string; id: string } | null {
   try {
     const raw = Buffer.from(cursor, 'base64url').toString('utf8');
     const sep = raw.indexOf('|');
     if (sep === -1) return null;
-    const epochMicros = raw.slice(0, sep);
+    const createdAtStr = raw.slice(0, sep);
     const id = raw.slice(sep + 1);
-    const ms = Number(epochMicros) / 1000;
-    if (!Number.isFinite(ms)) return null;
-    const createdAt = new Date(ms);
-    if (Number.isNaN(createdAt.getTime())) return null;
-    return { createdAt, id };
+    if (!createdAtStr) return null;
+    return { createdAtStr, id };
   } catch {
     return null;
   }
@@ -582,29 +578,34 @@ export class DmService {
 
     const safeLimit = Math.min(Math.max(1, limit), 100);
 
-    let rows: (typeof dm_messages.$inferSelect)[];
+    const selectShape = {
+      ...getTableColumns(dm_messages),
+      created_at_text: sql<string>`${dm_messages.created_at}::text`.as('created_at_text'),
+    };
+    type RowWithText = typeof dm_messages.$inferSelect & { created_at_text: string };
+    let rows: RowWithText[];
 
     if (cursor) {
       const decoded = decodeCursor(cursor);
       if (!decoded) {
         // Invalid cursor — treat as first page
         rows = await db
-          .select()
+          .select(selectShape)
           .from(dm_messages)
           .where(eq(dm_messages.conversation_id, conversationId))
           .orderBy(sql`${dm_messages.created_at} ASC, ${dm_messages.id} ASC`)
           .limit(safeLimit + 1);
       } else {
         rows = await db
-          .select()
+          .select(selectShape)
           .from(dm_messages)
           .where(
             and(
               eq(dm_messages.conversation_id, conversationId),
               or(
-                sql`${dm_messages.created_at} > ${decoded.createdAt.toISOString()}`,
+                sql`${dm_messages.created_at} > ${decoded.createdAtStr}`,
                 and(
-                  sql`${dm_messages.created_at} = ${decoded.createdAt.toISOString()}`,
+                  sql`${dm_messages.created_at} = ${decoded.createdAtStr}`,
                   sql`${dm_messages.id} > ${decoded.id}`,
                 ),
               ),
@@ -615,7 +616,7 @@ export class DmService {
       }
     } else {
       rows = await db
-        .select()
+        .select(selectShape)
         .from(dm_messages)
         .where(eq(dm_messages.conversation_id, conversationId))
         .orderBy(sql`${dm_messages.created_at} ASC, ${dm_messages.id} ASC`)
@@ -627,7 +628,7 @@ export class DmService {
 
     const lastRow = rows[rows.length - 1];
     const nextCursor =
-      hasMore && lastRow !== undefined ? encodeCursor(lastRow.created_at, lastRow.id) : null;
+      hasMore && lastRow !== undefined ? encodeCursor(lastRow.created_at_text, lastRow.id) : null;
 
     return {
       messages: rows.map(dmMessageRowToDto),
