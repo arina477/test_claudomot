@@ -1,0 +1,23 @@
+# C-block (CI/CD) manifest — wave-45
+block: C
+status: complete
+owner: head-ci-cd
+mode: automatic
+stages:
+  C-1:
+    verdict: PASS
+    deliverable: process/waves/wave-45/stages/C-1-pr-ci-merge.md
+    pr_number: 59
+    pr_url: https://github.com/arina477/test_claudomot/pull/59
+    merge_commit_sha: ae22380c7809f1625b26431752ead4afd9b8558b
+  C-2:
+    verdict: PASS
+    deliverable: process/waves/wave-45/stages/C-2-deploy-and-verify.md
+    deploy_platform: railway
+    web_deployment_id: 47453bab-2420-4db0-98b7-f1378c9806c7
+    deploy_status: SUCCESS
+    verified_commit: ae22380c7809f1625b26431752ead4afd9b8558b
+    health: "200 (/ and /health)"
+    canary_status: skipped
+    rollback_target: a406cb58-e3e5-4ecd-94f8-0f1e3c812739
+ready_for_test: true

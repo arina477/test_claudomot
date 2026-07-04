@@ -1,0 +1,5 @@
+=== inline poll: web deploy 47453bab-2420-4db0-98b7-f1378c9806c7 (cap 600s) ===
+2026-07-04T06:44:54Z | poll=1 | elapsed=0s | id=47453bab-2420-4db0-98b7-f1378c9806c7 | status=BUILDING | commit=ae22380c7809
+2026-07-04T06:45:14Z | poll=2 | elapsed=20s | id=47453bab-2420-4db0-98b7-f1378c9806c7 | status=BUILDING | commit=ae22380c7809
+2026-07-04T06:45:34Z | poll=3 | elapsed=40s | id=47453bab-2420-4db0-98b7-f1378c9806c7 | status=BUILDING | commit=ae22380c7809
+2026-07-04T06:45:54Z | poll=4 | elapsed=60s | id=47453bab-2420-4db0-98b7-f1378c9806c7 | status=SUCCESS | commit=ae22380c7809
