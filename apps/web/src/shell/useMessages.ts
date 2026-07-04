@@ -115,7 +115,7 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
         (target, body) =>
           target.kind === 'channel'
             ? api.sendMessage(target.channelId, body)
-            : Promise.reject(new Error('DM drain not handled by channel hook')),
+            : api.sendDmMessage(target.conversationId, body),
         (idempotencyKey, confirmedId) => {
           if (!mountedRef.current) return;
           // Reconcile: add confirmed message to real list, remove optimistic.
@@ -542,7 +542,7 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
               (target, body) =>
                 target.kind === 'channel'
                   ? api.sendMessage(target.channelId, body)
-                  : Promise.reject(new Error('DM drain not handled by channel hook')),
+                  : api.sendDmMessage(target.conversationId, body),
               (deliveredKey, confirmedId) => {
                 if (!mountedRef.current) return;
                 setRealMessages((prev) => {

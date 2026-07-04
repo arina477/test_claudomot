@@ -690,6 +690,101 @@ describe('outbox drain — exactly-once + in-order (gating proof)', () => {
     expect(await db.outbox.toArray()).toHaveLength(0);
   });
 
+  // ── Test 14: Mixed-queue drain (C1 fix) ──────────────────────────────────────
+  //
+  // CRITICAL fix proof: a pending channel item followed by a pending DM item
+  // (or vice-versa) must BOTH flush when the SendFn is a bidirectional router.
+  // Neither kind must reject or halt the drain for the other kind.
+  // This test proves the C1 fix: the off-kind item no longer rejects + stops the drain.
+
+  it('mixed channel+DM queue: both items flush; neither kind rejects the other', async () => {
+    // Channel item queued first (older createdAt).
+    await enqueue(db, { kind: 'channel', channelId: 'mixed-channel-1' }, 'channel message first');
+
+    // DM item queued second (newer createdAt).
+    await enqueue(db, { kind: 'dm', conversationId: 'mixed-conv-1' }, 'dm message second');
+
+    // Verify both rows are pending.
+    const pending = await loadPending(db);
+    expect(pending).toHaveLength(2);
+
+    // Build a bidirectional router send fn (matches the fix applied to all 3 call-sites).
+    const calls: Array<{ target: OutboxTarget; idempotencyKey: string }> = [];
+    const bidrectionalRouter: SendFn = (target, body) => {
+      calls.push({ target, idempotencyKey: body.idempotencyKey });
+      // Both kinds succeed — no rejection.
+      return Promise.resolve({ id: crypto.randomUUID() });
+    };
+
+    const delivered: string[] = [];
+    const failed: string[] = [];
+
+    await drain(
+      db,
+      bidrectionalRouter,
+      (k) => delivered.push(k),
+      (k) => failed.push(k),
+    );
+
+    // BOTH items sent — neither kind rejected or halted the drain.
+    expect(calls).toHaveLength(2);
+
+    // The first call is the channel item (older createdAt); second is DM.
+    expect(calls[0]?.target.kind).toBe('channel');
+    if (calls[0]?.target.kind === 'channel') {
+      expect(calls[0].target.channelId).toBe('mixed-channel-1');
+    }
+    expect(calls[1]?.target.kind).toBe('dm');
+    if (calls[1]?.target.kind === 'dm') {
+      expect(calls[1].target.conversationId).toBe('mixed-conv-1');
+    }
+
+    // Both delivered, none failed.
+    expect(delivered).toHaveLength(2);
+    expect(failed).toHaveLength(0);
+
+    // Outbox empty — no items stranded.
+    expect(await db.outbox.toArray()).toHaveLength(0);
+  });
+
+  it('mixed DM+channel queue (DM first): both items flush regardless of ordering', async () => {
+    // DM item queued first this time.
+    await enqueue(db, { kind: 'dm', conversationId: 'mixed-conv-reverse' }, 'dm message first');
+
+    // Channel item queued second.
+    await enqueue(
+      db,
+      { kind: 'channel', channelId: 'mixed-channel-reverse' },
+      'channel message second',
+    );
+
+    const calls: Array<{ target: OutboxTarget; idempotencyKey: string }> = [];
+    const bidirectionalRouter: SendFn = (target, body) => {
+      calls.push({ target, idempotencyKey: body.idempotencyKey });
+      return Promise.resolve({ id: crypto.randomUUID() });
+    };
+
+    const delivered: string[] = [];
+    const failed: string[] = [];
+
+    await drain(
+      db,
+      bidirectionalRouter,
+      (k) => delivered.push(k),
+      (k) => failed.push(k),
+    );
+
+    // Both items sent in enqueue order (DM first, then channel).
+    expect(calls).toHaveLength(2);
+    expect(calls[0]?.target.kind).toBe('dm');
+    expect(calls[1]?.target.kind).toBe('channel');
+
+    // Both delivered, none failed, outbox empty.
+    expect(delivered).toHaveLength(2);
+    expect(failed).toHaveLength(0);
+    expect(await db.outbox.toArray()).toHaveLength(0);
+  });
+
   // ── Test 13: Legacy IDB row (no target field) falls back to channel routing ──
   //
   // Pre-wave-46 rows in IDB have no `target` field. The drain must fall back to
