@@ -3,7 +3,7 @@
 **Block:** B (Build)
 **Wave topic:** Assignment collect/return — submission (table + submit + member-presign) + educator roster + return-with-comment
 **Block exit gate:** B-6
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 
@@ -15,7 +15,7 @@
 | B-3 | stages/B-3-frontend.md | done | submit + roster + return dialog; typecheck+biome clean; permission-gated |
 | B-4 | stages/B-4-wiring.md | done | repo typecheck 4/4 clean; 4 routes registered; no drift |
 | B-5 | stages/B-5-verify.md | done | lint/unit(354)/build all green; live smoke → T-block |
-| B-6 | stages/B-6-review.md | pending | |
+| B-6 | stages/B-6-review.md | done | head-builder APPROVED (attempt2); /review CLEAN (H1+L1 fixed) |
 
 ## Block-specific context
 
@@ -36,3 +36,15 @@ none
 ## Gate verdict log
 
 <appended by fresh head-builder spawn at B-6>
+
+## Block exit / handoff
+```yaml
+build_block_status:    complete
+branch:                wave-42-assignment-submissions
+stages_run:            [B-0, B-1, B-2, B-3, B-4, B-5, B-6]
+stages_skipped:        []
+review_verdict:        APPROVE
+deviations_logged:     ["frontend single-commit (shared UI) — ratified", "attachment.id=object_key inline", "barrel exports in shared/index.ts"]
+last_commit_sha:       cef9fb8
+ready_for_ci:          true
+```
