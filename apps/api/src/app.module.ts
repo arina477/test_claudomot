@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AssignmentsModule } from './assignments/assignments.module';
 import { AuthModule } from './auth/auth.module';
+import { DmModule } from './dm/dm.module';
 import { FilesModule } from './files/files.module';
 import { HealthModule } from './health/health.module';
 import { MeModule } from './me/me.module';
@@ -36,6 +37,7 @@ import { VoiceModule } from './voice/voice.module';
     ScheduleModule.forRoot(),
     HealthModule,
     AuthModule,
+    DmModule,
     MeModule,
     ProfileModule,
     FilesModule,
