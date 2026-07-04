@@ -12,7 +12,7 @@
 | P-0 | stages/P-0-frame.md | done | PROCEED; recurrence-boundedness + compute-on-read → P-1/P-3 |
 | P-1 | stages/P-1-decompose.md | done | multi-spec PROCEED, floor met, design_gap_flag=true |
 | P-2 | stages/P-2-spec.md | done | 3-block multi-spec contract written to seed task |
-| P-3 | stages/P-3-plan.md | pending | |
+| P-3 | stages/P-3-plan.md | done | approach+plan; 1 migration, 5 endpoints, compute-on-read recurrence, specialists validated |
 | P-4 | blocks/P/gate-verdict.md | pending | |
 
 ## Block-specific context
