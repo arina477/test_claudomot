@@ -3,7 +3,7 @@
 **Block:** B (Build)
 **Wave topic:** M8 tech-debt hygiene — Playwright bundled-chromium runner default + biome lint cleanup
 **Block exit gate:** B-6
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 
@@ -15,7 +15,7 @@
 | B-3 | process/waves/wave-45/stages/B-3-frontend.md | pending | playwright.config.ts (devops-engineer) + useTyping/ServerRolesPage (react-specialist) |
 | B-4 | process/waves/wave-45/stages/B-4-wiring.md | pending | |
 | B-5 | process/waves/wave-45/stages/B-5-verify.md | pending | |
-| B-6 | process/waves/wave-45/stages/B-6-review.md | pending | |
+| B-6 | process/waves/wave-45/stages/B-6-review.md | done | PASS — head-builder APPROVED; /review 0 crit/high (1 med+1 low fixed) |
 
 ## Block-specific context
 
