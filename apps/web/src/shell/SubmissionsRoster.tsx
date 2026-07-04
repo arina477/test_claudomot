@@ -63,7 +63,7 @@ function formatRelativeShort(iso: string): string {
 
 type ReturnDialogProps = {
   assignmentId: string;
-  submissionUserId: string;
+  submissionId: string;
   studentName: string;
   triggerRef: React.RefObject<HTMLButtonElement | null>;
   onClose: () => void;
@@ -73,7 +73,7 @@ type ReturnDialogProps = {
 
 function ReturnDialog({
   assignmentId,
-  submissionUserId,
+  submissionId,
   studentName,
   triggerRef,
   onClose,
@@ -154,7 +154,7 @@ function ReturnDialog({
     setSubmitting(true);
     onAnnounce('Processing return…');
     try {
-      const updated = await api.returnSubmission(assignmentId, submissionUserId, {
+      const updated = await api.returnSubmission(assignmentId, submissionId, {
         comment: comment.trim() || null,
       });
       onAnnounce(`Submission marked as returned for ${firstName}.`);
@@ -500,7 +500,7 @@ function RosterRow({ row, assignmentId, onReturned, onAnnounce }: RosterRowProps
       {dialogOpen && (
         <ReturnDialog
           assignmentId={assignmentId}
-          submissionUserId={row.submitter.userId}
+          submissionId={row.id}
           studentName={row.submitter.displayName}
           triggerRef={returnTriggerRef}
           onClose={handleClose}

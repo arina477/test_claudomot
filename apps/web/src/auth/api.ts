@@ -502,16 +502,17 @@ export const api = {
     request<AssignmentSubmissionsListResponse>(`/assignments/${id}/submissions`),
 
   /**
-   * POST /assignments/:id/submissions/:submissionUserId/return {comment?} → AssignmentSubmission.
-   * Organizer-only. Throws: 401, 403, 404.
+   * POST /assignments/:id/submissions/:submissionId/return {comment?} → AssignmentSubmission.
+   * Organizer-only. :submissionId is the submission UUID PK (not the submitter's userId).
+   * Throws: 401, 403, 404.
    */
   returnSubmission: (
     assignmentId: string,
-    submissionUserId: string,
+    submissionId: string,
     data: ReturnSubmissionInput,
   ): Promise<AssignmentSubmission> =>
     request<AssignmentSubmission>(
-      `/assignments/${assignmentId}/submissions/${submissionUserId}/return`,
+      `/assignments/${assignmentId}/submissions/${submissionId}/return`,
       { method: 'POST', body: JSON.stringify(data) },
     ),
 
