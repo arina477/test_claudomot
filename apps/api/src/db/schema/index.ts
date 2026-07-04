@@ -7,3 +7,4 @@ export * from './attachments';
 export * from './assignments';
 export * from './assignment-reminder';
 export * from './notifications';
+export * from './scheduling';
