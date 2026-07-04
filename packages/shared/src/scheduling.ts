@@ -24,6 +24,8 @@ export const ScheduledSessionSchema = z.object({
     username: z.string(),
     avatarUrl: z.string().nullable(),
   }),
+  createdAt: z.string(), // ISO 8601 — created_at timestamptz
+  updatedAt: z.string(), // ISO 8601 — updated_at timestamptz
 });
 export type ScheduledSession = z.infer<typeof ScheduledSessionSchema>;
 

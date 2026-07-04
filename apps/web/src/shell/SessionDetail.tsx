@@ -294,7 +294,7 @@ export type SessionDetailProps = {
   sessionId: string;
   isOrganizer: boolean;
   onClose: () => void;
-  onEdit: (session: ScheduledSession) => void;
+  onEdit: (session: ScheduledSession, triggerEl?: HTMLButtonElement) => void;
   onDeleted: (sessionId: string) => void;
   onAnnounce: (msg: string) => void;
 };
@@ -614,7 +614,7 @@ export function SessionDetail({
               </button>
               <button
                 type="button"
-                onClick={() => onEdit(session)}
+                onClick={(e) => onEdit(session, e.currentTarget)}
                 className="h-9 px-4 rounded-md text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2"
                 style={{
                   backgroundColor: '#27272a',
