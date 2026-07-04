@@ -3,7 +3,7 @@
 **Block:** B (Build)
 **Wave topic:** Class scheduling — scheduled_sessions entity + scheduling module (5 endpoints) + authoring modal + calendar view + session detail
 **Block exit gate:** B-6
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 
@@ -15,7 +15,7 @@
 | B-3 | stages/B-3-frontend.md | done | SessionForm+ClassCalendar+SessionDetail+wiring; typecheck+biome clean |
 | B-4 | stages/B-4-wiring.md | done | repo typecheck 4/4; 5 routes + module registered; no drift |
 | B-5 | stages/B-5-verify.md | done | lint 0-errors (after biome-fix)/unit(551+354)/build green |
-| B-6 | stages/B-6-review.md | pending | |
+| B-6 | stages/B-6-review.md | done | head-builder APPROVED; /review CLEAN (H1+M2+M1 fixed) |
 
 ## Block-specific context
 
@@ -36,3 +36,15 @@ none
 ## Gate verdict log
 
 <appended by fresh head-builder spawn at B-6>
+
+## Block exit / handoff
+```yaml
+build_block_status:    complete
+branch:                wave-43-class-scheduling
+stages_run:            [B-0, B-1, B-2, B-3, B-4, B-5, B-6]
+stages_skipped:        []
+review_verdict:        APPROVE
+deviations_logged:     []
+last_commit_sha:       dfb659e
+ready_for_ci:          true
+```
