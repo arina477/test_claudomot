@@ -43,6 +43,10 @@ export type ServerContextValue = {
   assignmentsOpen: boolean;
   openAssignments: () => void;
   closeAssignments: () => void;
+  /** Whether the class schedule panel is the active main-column view (wave-43). */
+  scheduleOpen: boolean;
+  openSchedule: () => void;
+  closeSchedule: () => void;
 };
 
 export const ServerContext = createContext<ServerContextValue>({
@@ -63,6 +67,9 @@ export const ServerContext = createContext<ServerContextValue>({
   assignmentsOpen: false,
   openAssignments: () => {},
   closeAssignments: () => {},
+  scheduleOpen: false,
+  openSchedule: () => {},
+  closeSchedule: () => {},
 });
 
 export function useServers(): ServerContextValue {
@@ -81,6 +88,7 @@ export function ServerProvider({ children }: Props) {
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
   const [selectedChannelName, setSelectedChannelName] = useState<string | null>(null);
   const [assignmentsOpen, setAssignmentsOpen] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
 
   // Prevent state updates after unmount
   const mounted = useRef(true);
@@ -146,16 +154,19 @@ export function ServerProvider({ children }: Props) {
     setSelectedChannelId(null);
     setSelectedChannelName(null);
     setAssignmentsOpen(false);
+    setScheduleOpen(false);
   }, []);
 
   const selectChannel = useCallback((channelId: string, channelName: string) => {
     setSelectedChannelId(channelId);
     setSelectedChannelName(channelName);
     setAssignmentsOpen(false);
+    setScheduleOpen(false);
   }, []);
 
   const openAssignments = useCallback(() => {
     setAssignmentsOpen(true);
+    setScheduleOpen(false);
     // Clear channel selection when entering the assignments view
     setSelectedChannelId(null);
     setSelectedChannelName(null);
@@ -163,6 +174,18 @@ export function ServerProvider({ children }: Props) {
 
   const closeAssignments = useCallback(() => {
     setAssignmentsOpen(false);
+  }, []);
+
+  const openSchedule = useCallback(() => {
+    setScheduleOpen(true);
+    setAssignmentsOpen(false);
+    // Clear channel selection when entering the schedule view
+    setSelectedChannelId(null);
+    setSelectedChannelName(null);
+  }, []);
+
+  const closeSchedule = useCallback(() => {
+    setScheduleOpen(false);
   }, []);
 
   const appendServer = useCallback((s: ServerResponse) => {
@@ -205,6 +228,9 @@ export function ServerProvider({ children }: Props) {
         assignmentsOpen,
         openAssignments,
         closeAssignments,
+        scheduleOpen,
+        openSchedule,
+        closeSchedule,
       }}
     >
       {children}
