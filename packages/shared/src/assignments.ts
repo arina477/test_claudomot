@@ -10,6 +10,7 @@ import { AttachmentRefSchema } from './messaging.js';
 // ---------------------------------------------------------------------------
 
 export const AssignmentSubmissionSchema = z.object({
+  id: z.string(), // assignment_submissions.id UUID PK — needed by educator return route
   userId: z.string(),
   assignmentId: z.string(),
   text: z.string().nullable(),

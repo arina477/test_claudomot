@@ -250,6 +250,7 @@ export class AssignmentsService {
   // -------------------------------------------------------------------------
 
   private async submissionRowToDto(row: {
+    id: string;
     user_id: string;
     assignment_id: string;
     text: string | null;
@@ -275,6 +276,7 @@ export class AssignmentsService {
     }
 
     return {
+      id: row.id,
       userId: row.user_id,
       assignmentId: row.assignment_id,
       text: row.text ?? null,
