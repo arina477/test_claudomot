@@ -13,8 +13,8 @@
 | B-1 | stages/B-1-contracts.md | done | 4 schemas + refines; shared typecheck clean |
 | B-2 | stages/B-2-backend.md | done | 5 endpoints, IDOR-safe, recurrence compute-on-read; api typecheck clean |
 | B-3 | stages/B-3-frontend.md | done | SessionForm+ClassCalendar+SessionDetail+wiring; typecheck+biome clean |
-| B-4 | stages/B-4-wiring.md | pending | |
-| B-5 | stages/B-5-verify.md | pending | |
+| B-4 | stages/B-4-wiring.md | done | repo typecheck 4/4; 5 routes + module registered; no drift |
+| B-5 | stages/B-5-verify.md | done | lint 0-errors (after biome-fix)/unit(551+354)/build green |
 | B-6 | stages/B-6-review.md | pending | |
 
 ## Block-specific context
