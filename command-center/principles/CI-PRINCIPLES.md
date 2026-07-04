@@ -151,3 +151,5 @@ pr_conventions:
    Why: A redeploy rebuilds the same source to a new digest, so digest-diff passes on stale code.
 8. File a stabilization task for a test that passes alone but fails in full-suite parallel CI across 3+ runs.
    Why: A carried parallel-state flake grows the chance it masks a real regression over time.
+9. After applying a migration, assert each expected table physically exists; never trust the migration ledger row alone.
+   Why: A committed ledger row without its DDL makes migrate skip the migration and the app 500s on missing tables.
