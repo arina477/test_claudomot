@@ -16,6 +16,7 @@ import type {
   AttachmentPresignResponse,
   AvatarPresignResponse,
   CreateAssignmentInput,
+  CreateScheduledSessionInput,
   CreateServerInput,
   EditMessageInput,
   EffectivePermissions,
@@ -33,6 +34,8 @@ import type {
   ReactionToggleInput,
   ReactionToggleResponse,
   ReturnSubmissionInput,
+  ScheduledSession,
+  ScheduledSessionListResponse,
   SendMessageInput,
   ServerDetail,
   ServerMember,
@@ -43,6 +46,7 @@ import type {
   UpdateAssignmentInput,
   UpdatePrivacyInput,
   UpdateProfileInput,
+  UpdateScheduledSessionInput,
   ValidatedAttachment,
 } from '@studyhall/shared';
 
@@ -515,6 +519,57 @@ export const api = {
       `/assignments/${assignmentId}/submissions/${submissionId}/return`,
       { method: 'POST', body: JSON.stringify(data) },
     ),
+
+  // ── Scheduled session endpoints (wave-43 M10) ───────────────────────────
+
+  /**
+   * POST /servers/:serverId/scheduled-sessions {title,description,startsAt,endsAt,recurrence,recurrenceUntil}
+   * → 201 ScheduledSession.
+   * Organizer-only (manage_assignments). Throws: 401, 403, 400.
+   */
+  createSession: (serverId: string, data: CreateScheduledSessionInput): Promise<ScheduledSession> =>
+    request<ScheduledSession>(`/servers/${serverId}/scheduled-sessions`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  /**
+   * GET /servers/:serverId/scheduled-sessions?from=&to= → ScheduledSessionListResponse.
+   * Member-visible. Expands weekly occurrences in the window.
+   * Throws: 401 unauthed, 403 non-member.
+   */
+  listSessions: (
+    serverId: string,
+    from: string,
+    to: string,
+  ): Promise<ScheduledSessionListResponse> => {
+    const qs = `?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+    return request<ScheduledSessionListResponse>(`/servers/${serverId}/scheduled-sessions${qs}`);
+  },
+
+  /**
+   * GET /scheduled-sessions/:id → ScheduledSession.
+   * Member-visible. Throws: 401 unauthed, 403 non-member, 404 not found.
+   */
+  getSession: (id: string): Promise<ScheduledSession> =>
+    request<ScheduledSession>(`/scheduled-sessions/${id}`),
+
+  /**
+   * PATCH /scheduled-sessions/:id → updated ScheduledSession.
+   * Organizer-only partial update. Throws: 401, 403, 404.
+   */
+  updateSession: (id: string, data: UpdateScheduledSessionInput): Promise<ScheduledSession> =>
+    request<ScheduledSession>(`/scheduled-sessions/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  /**
+   * DELETE /scheduled-sessions/:id → 204 void.
+   * Organizer-only. Throws: 401, 403, 404.
+   */
+  deleteSession: (id: string): Promise<void> =>
+    requestNoContent(`/scheduled-sessions/${id}`, { method: 'DELETE' }),
 
   // ── Voice endpoints (wave-31 M6) ─────────────────────────────────────────
 
