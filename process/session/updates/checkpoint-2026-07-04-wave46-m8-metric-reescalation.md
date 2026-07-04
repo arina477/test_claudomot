@@ -20,3 +20,7 @@ If you'd rather I point the next wave at a **different direction entirely** — 
 
 ## What happens now
 The loop is **paused** until I hear from you. Nothing is lost or broken — everything shipped stays live, and the small parked cleanup items (a couple of test-coverage tickets) are still queued and will run as soon as we're moving again. Just reply with your success measure (and, if you like, which feature first), and I'll pick straight back up.
+
+---
+## RESOLVED 2026-07-04
+Founder answered in-chat: build **direct + group messages first** ("go with B and connect it yourself"); metric delegated. M8 success-metric set as working default (see product-decisions 2026-07-04). Loop resumed (STATUS: RUNNING); wave-46 = M8 direct-messages feature. Deploy-tooling request declined + surfaced (no such CLI exists; the GraphQL API is the working method; the guard is permanent).

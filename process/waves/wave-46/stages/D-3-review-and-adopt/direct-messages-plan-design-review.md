@@ -1,45 +1,55 @@
-# D-3 Design Review — direct-messages.html
-**Reviewer:** Reviewer A — /plan-design-review lens
-**Wave:** 46
-**Verdict:** APPROVE (with minor nits)
+# D-3 Design Review — Direct Messages (Reviewer A / /plan-design-review lens)
+**File reviewed:** `design/staging/direct-messages.html` (iteration 1, post-refine)
+**Brief:** `process/waves/wave-46/stages/D-1-brief/direct-messages-brief.md`
+**Design System:** `design/DESIGN-SYSTEM.md`
+**Reviewer role:** Independent (no awareness of other reviewers or prior review rounds)
 
 ---
 
-## Scoring Matrix
+## Verdict
 
-### 1. Visual Hierarchy — 8 / 10
-
-The three-panel structure (server rail / conversation-list rail / thread canvas) reads cleanly. The active conversation row drives sufficient visual weight: `bg-surface-700` fill + emerald left-pip + emerald participant name (Row 1) is unambiguous and mirrors the ChannelSidebar active pattern correctly. The thread header holds the participant avatar, name, and role subtitle at a comfortable 56px — consistent with the ChannelHeader height established in prior art.
-
-The composer is anchored to the absolute bottom with a gradient fade from `surface-800`, which provides the correct visual separation without a heavy border. Hierarchy reads top-to-bottom as expected: header > date dividers > message rows > composer.
-
-Minor gaps:
-- The "Direct Messages" heading in the rail uses `text-base` (16px, weight 600) rather than `text-xl` (20px) called for in brief §4 for screen/section titles. This is the panel label and the brief explicitly lists `text-xl` for this role. Not a blocking error but it should be corrected at implementation.
-- The unread timestamp in Row 2 of the conversation list uses `text-accent-emerald` for the time label. Brief §4 assigns emerald to "active conversation, primary actions, online presence, unread" — color-coding a timestamp as emerald is an overloaded reuse. The unread badge dot (emerald dot) already signals unread; the timestamp color adds noise rather than clarity. Preferred: keep timestamp at `text-text-secondary` and let the dot carry unread signal alone.
-
-**What would make it a 10:** Promote "Direct Messages" heading to `text-xl`; revert unread-row timestamp to `text-secondary`.
+**APPROVE** (with minor nits — none blocking)
 
 ---
 
-### 2. Spacing Rhythm — 8 / 10
+## Score card (0–10 per lens axis)
 
-Conversation rows use `p-2` (8px all sides), which maps cleanly to the brief's "8px×12px sidebar item padding (ChannelSidebar rhythm)" on the vertical axis. Horizontal is 8px not 12px — this is slightly tighter than the spec but consistent within the mockup and not disqualifying; it is a nit to align with the ChannelSidebar item pattern at implementation.
-
-Message rows use `py-1` (4px vertical) for grouped messages and `py-1` for first-in-group — the DESIGN-SYSTEM.md §3 calls for "message-row vertical rhythm 8px." The first-in-group rows technically have additional gap from the name/timestamp line, so effective spacing reads adequately. Grouped rows (the pending message at --index 5) use `py-0.5` (2px), which is tighter than the 8px spec target. This is a minor drift, not a misdesign.
-
-Panel padding on the thread canvas is `px-4 lg:px-8` (16px / 32px) — 16px is the correct panel-padding value from §3. The composer uses `px-4 lg:px-6 pb-6` — the bottom 24px clear is appropriate to avoid clipping the send button.
-
-The ghost padding-bottom spacer at `pb-[120px]` on the message area is pragmatically justified (keeps last message from hiding under composer) but could be tightened to match the actual composer height; this is a detail for implementation to tune.
-
-**What would make it a 10:** Tighten conversation-row `px-2` to `px-3` (12px) to match the brief §4 "8px×12px" spec; ensure message row `py-1` resolves consistently to 8px effective rhythm at implementation.
+| Axis | Score | Notes |
+|------|-------|-------|
+| Visual hierarchy | 9 | Three-pane structure reads cleanly; active row is unambiguous; thread header holds context well |
+| Spacing rhythm | 8 | Row rhythm and panel padding broadly match §4; one stagger animation implementation nit; grouped-message py tighter than spec |
+| Brand coherence | 9 | Full token fidelity; calm academic aesthetic held; no out-of-system hex |
+| Edge-case handling | 9 | All seven §3 states present in this iteration; restricted picker row and offline wedge correctly differentiated |
 
 ---
 
-### 3. Brand Coherence — 9 / 10
+## Detailed findings
 
-The palette is disciplined. Every hex used in the Tailwind config maps exactly to DESIGN-SYSTEM.md §1 tokens:
+### Visual hierarchy
 
-| Config value | DS token | Match |
+The three-column layout correctly maps `--surface-950` app frame to `--surface-900` server rail and conversation-list rail to `--surface-800` thread canvas (DESIGN-SYSTEM §1). The active conversation row uses `--surface-700` fill with an emerald left-indicator pip and emerald-colored participant name — this is unambiguous and mirrors the ChannelSidebar active pattern exactly. The thread header is 56px, consistent with brief §4, with an avatar, participant name at `text-base font-semibold`, and a role subtitle in `text-xs text-secondary` — clean two-line hierarchy.
+
+The composer anchors to the absolute bottom behind a gradient fade from `surface-800`, providing natural visual separation without a harsh border cut. Hierarchy top-to-bottom reads correctly: thread header > date dividers > message rows > composer dock.
+
+One minor note on the rail title: "Direct Messages" is styled `text-xl font-semibold` (20px weight 600). Brief §4 explicitly calls for `text-xl` for the screen/page title role. This is correctly applied.
+
+Unread-row timestamp in conversation row 2 uses `text-accent-emerald`. Brief §4 assigns emerald to "active conversation, primary actions, online presence, unread" — applying emerald to the timestamp overloads the signal. The unread badge dot already carries the unread indicator; the timestamp color adds noise. Preferred at implementation: revert unread timestamp to `text-text-secondary` and let the dot alone carry unread state. Minor nit.
+
+### Spacing rhythm
+
+Conversation rows use `p-2` (8px all sides) with `gap-3` for avatar-to-copy spacing. Brief §4 specifies "conversation-row padding 8px×12px (ChannelSidebar item rhythm)." The horizontal is 8px rather than 12px — slightly tighter than spec, consistent within the mockup. Nit for implementation alignment: prefer `px-3` (12px) horizontal to match the brief.
+
+Message rows use `py-1` (4px vertical) for first-in-group messages and `py-0.5` (2px) for grouped follow-ons. DESIGN-SYSTEM §3 calls for "message-row vertical rhythm 8px." With the name/timestamp line above, the effective spacing for first-in-group reads adequately; grouped rows at 2px are tight. Minor drift, not a misdesign — implementation note to revisit.
+
+Thread canvas panel padding is `px-4 lg:px-8` (16px/32px) — 16px is the correct panel-padding value from §3. Composer uses `px-4 lg:px-6 pb-6`. The `pb-[32px]` ghost spacer at message area bottom is appropriate to keep last message clear of the composer.
+
+The stagger-list animation uses `animation: fadeIn calc(var(--index, 0) * 80ms)` which sets the animation **duration** as the index multiple rather than using `animation-delay`. This causes higher-indexed items to animate more slowly rather than starting later. The visual result at low indices is acceptable but the intent is a staggered delay, not an expanding duration. Developer handoff note: replace with `animation-delay: calc(var(--index, 0) * 80ms)` and a fixed duration.
+
+### Brand coherence
+
+All hex values in the Tailwind config map exactly to DESIGN-SYSTEM §1 tokens. Full audit:
+
+| Config value | DS token | Result |
 |---|---|---|
 | `#0a0a0b` | `--surface-950` | PASS |
 | `#121214` | `--surface-900` | PASS |
@@ -57,118 +67,134 @@ The palette is disciplined. Every hex used in the Tailwind config maps exactly t
 | `#ef4444` | `--danger` | PASS |
 | `#f87171` | `--danger-text` | PASS |
 
-No invented hues. No gaming-neon. Shadow values match §5 (`shadow-sm`, `shadow-pop`, `glow-focus`/`emerald-glow`). The calm academic tone is well-held: the server-rail icon morph (rounded-[24px] → rounded-[16px] on hover) matches §4's server-rail squircle/radius convention.
+Zero out-of-system hex values. Shadow tokens: `shadow-sm` on composer and thread header, `shadow-pop` on modal — correct per DESIGN-SYSTEM §5. Focus ring uses `ring-2 ring-accent-emerald/40` — matches `--glow-focus: 0 0 0 2px rgba(16,185,129,0.4)`. Radius tokens: `rounded-md` on rows/buttons/inputs/chips (§4 `--radius-md`), `rounded-lg` on modal and composer box (§4 `--radius-lg`), `rounded-full` on avatars and presence dots — all correct.
 
-One small color note: `hover:bg-emerald-400` on primary buttons (`Start a Conversation`, modal footer "Start Group DM") uses a Tailwind utility that resolves to `#34d399`, which is not an explicit DS token — it is a hover-lighten of emerald that is semantically correct per the Button primitive spec ("hover: lighten 8%"), but ideally the design system would name this `--accent-emerald-hover`. Flagging as a token-naming gap for the design system, not a blocking color violation.
+The `animate-pulse-slow` on the offline connection dot is a 3s cubic-bezier pulse — calm and non-distracting. The `prefers-reduced-motion: no-preference` guard on stagger-list entries correctly disables non-essential entry animations (DESIGN-SYSTEM §6). Server-rail icon morph (`rounded-[24px]` default → `rounded-[16px]` active) matches §4's squircle/radius convention.
 
-**What would make it a 10:** Formalize `--accent-emerald-hover` in DESIGN-SYSTEM.md §1 and use it explicitly rather than bare Tailwind `emerald-400`.
+Aesthetic tone is held throughout: no color cycling, no neon gradients, no playful bouncy easing. The hover interaction on server icons (300ms `transition-all` rounded morph) is the only elevated motion — correct per §6 "Elevated/active morphs: 300ms ease."
 
----
+### Edge-case handling
 
-### 4. Edge-Case Handling — 9 / 10
+All seven states required by brief §3 are present in this iteration:
 
-All required states are present or togglable:
+**Loading skeleton (Demo Section A):** Skeleton rows use `skeleton-shimmer` (`linear-gradient surface-700 → surface-600 → surface-700`, 1.6s infinite shimmer at 800px background-size). The skeleton covers server rail, conversation list header and rows, thread header, message rows, and composer dock — full-fidelity loading state. Matches DESIGN-SYSTEM §8 ("skeleton rows using surface-700 shimmer; never spinners for content lists"). The section is a labeled demo block visible to reviewers without interaction. PASS.
 
-**Empty-list state:** rendered in `#state-empty-list` with centered icon (`ph-chat-circle-text`), headline "No direct messages yet", descriptive subtext, and a primary "Start a Conversation" CTA button. Matches brief §3 and §9 empty-list requirement. The icon is 4xl / text-muted, appropriately quiet. PASS.
+**Loaded state (main view):** Four-row conversation list with 1:1 and group rows, open thread with date dividers, grouped message blocks, pending message, and failed message. PASS.
 
-**Offline / pending state:** The `connection-wedge` pill in the thread header (`bg-danger/10 border border-danger/20`, danger text "Offline — 1 pending") and the pending message row (60% opacity body + amber clock icon + "Sending…" label) correctly implement the ConnectionStateIndicator + MessageRow pending pattern from DESIGN-SYSTEM.md §8. Amber is the correct semantic for "pending/reconnecting" per §1. The pending row uses `text-accent-amber` for the indicator — correct. PASS.
+**Empty list (toggleable via debug button):** "No direct messages yet" with `ph-chat-circle-text` icon (size text-4xl, text-muted — appropriately quiet), one-line sub-copy, and an emerald primary "Start a Conversation" CTA. Matches the Empty state primitive from DESIGN-SYSTEM §8 ("icon + headline + one-line + primary CTA"). PASS.
 
-The `connection-wedge` is currently `hidden` by default (class `hidden md:flex`). A reviewer must open the browser inspector to un-hide it, since the debug toggle only covers the empty list, not the connection wedge. The wedge should be visible by default in the staging mockup or made togglable via the debug bar. This is a mockup-completeness nit, not a design correctness issue.
+**Empty thread (Demo Section B):** Distinct from empty list — the thread canvas shows the other participant's avatar (large 80px), display name as `text-lg font-semibold`, username and role as `text-xs text-muted`, and "This is the beginning of your direct message history…" prose. The composer is fully enabled with a non-disabled Send button, correctly inviting the first message. The conversation list row for this state shows "No messages yet" in `text-xs text-muted italic` as the preview. Correctly differentiates empty-thread from empty-list per brief §3. PASS.
 
-**Restricted-target picker row (who-can-DM):** Alex Mercer's row is `opacity-50 grayscale` with `cursor-not-allowed`, a lock-icon overlay on the avatar, strikethrough name, and inline `ph-shield-warning` + "Only accepts messages from server members" reason text in `text-danger-text`. The reason is both color-coded AND present as text — satisfies the non-color-only accessibility requirement from brief §6 and §9. No checkbox is rendered, making non-selectability unambiguous. PASS.
+**Error state (Demo Section C):** Two-level error — conversation list error ("Couldn't load conversations") and thread canvas error ("Failed to load messages"). Both show `ph-warning-circle` (danger color), prose cause text, and a Retry button with `aria-label` and `focus-visible:ring-2 focus-visible:ring-accent-emerald/50`. Matches DESIGN-SYSTEM §8 "Error: danger icon + cause + retry." PASS.
 
-**Group vs 1:1 header:** The thread header shows a single participant (Dr. Aris Thorne, 1:1 mode) with the single-avatar + role subtitle pattern. The conversation list shows Row 2 ("Capstone Project Alpha") with a multi-avatar overlap pattern — satisfying the group DM visual in the rail. However, the thread canvas itself does not show a rendered group-DM header state (multi-avatar + participant names in the header). The brief §9 requires "Group DM rendered: multi-avatar header + participant names." This is missing from the thread header — only the rail-row satisfies it. The modal does show two selected recipients (chips for Dr. Aris Thorne and Elena Rossi), which partially demonstrates group logic, but the open-thread group header state is absent. Flagging as a concrete fixable gap.
+**Offline / pending (main thread):** ConnectionStateIndicator wedge in thread header: `role="status"` `aria-live="polite"`, red danger dot + "Offline — 1 pending" text. Pending message row: 60% opacity body + amber `ph-clock` + "Sending..." text. Failed message row: 60% opacity body + danger `ph-warning` + "Failed to send" text + inline Retry button with `aria-label="Retry sending failed message"`. All three components of the offline wedge pattern are present. PASS.
 
-**Empty-thread state (new conversation, no messages):** Not rendered. Brief §3 explicitly names this state. The thread canvas always shows messages. This is a gap.
+**Picker states (modal + Demo Section D):**
+- Default/suggested list: section header "Suggested," selectable rows with avatar/name/role, empty checkbox state.
+- Selected state: row 2 (Elena Rossi) has `aria-selected="true"`, emerald filled checkmark with `shadow-emerald-glow`, and recipient chip in the input area.
+- Recipient chips: removable with `ph-x`, `aria-label="Remove [Name]"`, focus ring on remove button.
+- Restricted target (Alex Mercer): `opacity-50 grayscale cursor-not-allowed`, lock icon overlay on avatar, strikethrough name, `ph-shield-warning` + "Only accepts messages from server members" in `text-danger-text`. Non-selectable, non-color-only reason text. Satisfies brief §6 and §9 a11y requirement.
+- Searching state (Demo Section D picker): active emerald border + focus ring on search input, `<mark>` tag with `bg-accent-emerald/20 text-accent-emerald` highlighting matched substring ("Aris"), "Results for 'aris'" section header, "No other results" trailing section. PASS for all picker states.
 
-**Error state (load failed + retry):** Not rendered. Brief §3 includes this. Not present.
+**Group vs 1:1 thread header:**
+- 1:1 (main view): single avatar (28px) + name + role subtitle. PASS.
+- Group (Demo Section D): two-avatar overlap stack (bottom-left `z-0` + top-right `z-10`, `border-2 border-surface-800` separation) + "Elena Rossi, Sarah Kim" + "Group DM · 3 members" subtitle. Overflow annotation notes "+N badge for groups >3." PASS per brief §9.
 
-**Loading / skeleton state:** Not rendered. Brief §3 names "loading (skeleton conversation rows + skeleton message rows)" as a required state.
+### Token fidelity (DESIGN-SYSTEM §1/§4/§5)
 
-The three missing states (empty-thread, error, skeleton/loading) are design gaps against brief §3 and §9. They are concrete and fixable rather than fundamental — the mockup demonstrates the design language correctly; the states simply need to be authored as togglable sections using the same debug-toggle pattern already in place.
+Verified above. No issues. Danger-text usage on restricted-row tinted background uses `#f87171` (`--danger-text`) on `bg-danger/5` — this follows the DESIGN-SYSTEM §1 note exactly: `--danger-text` computes 6.30:1 on danger/10 tint (WCAG AA PASS). Correct.
 
-**What would make it a 10:** Add togglable skeleton-loading, empty-thread, and error states to the debug controls; add a group-DM thread header variant with multi-avatar + participant name list.
+### Phosphor icon names (DESIGN-SYSTEM §7)
 
----
+All icon class names verified:
 
-## Additional Token / Primitive Fidelity Checks
+| Icon class | Valid | Use |
+|---|---|---|
+| `ph-fill ph-chat-teardrop` | PASS | DM home active |
+| `ph-plus` | PASS | New DM, add server |
+| `ph-magnifying-glass` | PASS | Search |
+| `ph-list` | PASS | Mobile drawer toggle |
+| `ph-clock` | PASS | Pending/Sending indicator |
+| `ph-warning` | PASS | Failed message |
+| `ph-plus-circle` | PASS | Attach |
+| `ph-smiley` | PASS | Emoji |
+| `ph-fill ph-paper-plane-right` | PASS | Send (filled active) |
+| `ph-chat-circle-text` | PASS | Empty list |
+| `ph-circle-notch` | PASS | Loading demo label spinner |
+| `ph-chat-circle-dots` | PASS | Empty thread demo label |
+| `ph-warning-circle` | PASS | Error state |
+| `ph-arrow-clockwise` | PASS | Retry |
+| `ph-users` | PASS | Group DM header, members |
+| `ph-x` | PASS | Close modal, remove chip |
+| `ph-bold ph-check` | PASS | Selected checkmark |
+| `ph-fill ph-lock` | PASS | Restricted target overlay |
+| `ph-shield-warning` | PASS | Restriction reason |
+| `ph-bold ph-arrow-right` | PASS | Modal CTA |
 
-**Phosphor icon names** — all referenced icon names are valid Phosphor identifiers:
-- `ph-fill ph-chat-teardrop` — PASS (filled chat-teardrop icon)
-- `ph-plus` — PASS
-- `ph-magnifying-glass` — PASS
-- `ph-list` (mobile drawer toggle) — PASS
-- `ph-plus-circle` (composer attach) — PASS
-- `ph-smiley` (emoji) — PASS
-- `ph-fill ph-paper-plane-right` (send) — PASS
-- `ph ph-x` (close) — PASS
-- `ph-bold ph-check` (selected checkmark) — PASS
-- `ph-fill ph-lock` (restricted row) — PASS
-- `ph ph-shield-warning` (restriction reason) — PASS
-- `ph ph-clock` (pending "Sending…") — PASS
-- `ph ph-chat-circle-text` (empty state) — PASS
-- `ph-bold ph-arrow-right` (modal footer CTA) — PASS
+Zero invented or invalid icon names.
 
-No invented icon names found. PASS.
+### Accessibility (brief §9, DESIGN-SYSTEM §8)
 
-**Radius tokens** — rows use `rounded-md` (6px, correct for §4 `--radius-md`); modal uses `rounded-lg` (correct for §4 `--radius-lg`); avatars use `rounded-full` (correct for §4 `--radius-full`); server-rail icons use `rounded-[16px]` / `rounded-[24px]` for the morph (acceptable Discord-familiar squircle approximation matching §4 note). PASS.
+**Rail nav list:** `<nav aria-label="Conversations">` with `<a>` elements; active row has `aria-current="page"`. Server rail is `<nav aria-label="Servers">`. PASS.
 
-**Shadow tokens** — composer uses `shadow-sm` (correct §5); modal uses `shadow-pop` (correct §5); focus ring uses `ring-accent-emerald/40` (matches `--glow-focus` = `0 0 0 2px rgba(16,185,129,0.4)` in §5). PASS.
+**Modal:** `role="dialog"` `aria-modal="true"` `aria-labelledby="modal-title"`. Esc closes via `keydown` listener. Close button has `aria-label="Close modal"`. `autofocus` on the search input brings focus into the modal on open. Full programmatic focus-trap (tab cycle) is a build-time implementation detail; the semantics and Esc behavior are correctly established at mockup stage. PASS.
 
-**Primitive reuse** — the mockup correctly reuses:
-- MessageRow pattern (avatar + name + timestamp + body, grouped messages, pending state)
-- MessageComposer pattern (auto-grow textarea, attach/emoji/send bar, surface-900 bg, emerald focus ring)
-- ChannelHeader pattern (56px header, participant info left, actions right)
-- ChannelSidebar item pattern (conversation list rows with avatar, name, preview, unread)
-- ConnectionStateIndicator pattern (wedge pill, danger / amber states)
-- Modal/Dialog pattern (scrim, shadow-pop, focus trap via Esc, role=dialog aria-modal, labelled title)
-- Avatar with presence dot (bottom-right, correct border color matches parent surface)
-- Empty state (icon + headline + CTA)
+**Presence in text not color alone:**
+- ConnectionStateIndicator wedge: "Offline — 1 pending" text + color. PASS.
+- Pending message: "Sending..." text + amber color. PASS.
+- Failed message: "Failed to send" text + danger color. PASS.
+- Conversation list presence dots (online/idle/offline): color-only — no `aria-label` or `sr-only` text on the dot elements. This is a gap against brief §9 and DESIGN-SYSTEM §8 MemberListItem ("presence conveyed by text too"). Minor implementation note: add `aria-label="Online"` / `"Idle"` / `"Offline"` on each presence dot `<div>` or a `<span class="sr-only">` child. Not a design failure at mockup stage.
 
-No bespoke re-invention of messaging chrome observed. PASS.
+**Composer label:** `<textarea aria-label="Message Dr. Aris Thorne">` — explicitly labelled per brief §9 requirement. PASS.
 
----
+**Listbox:** Main modal picker `role="listbox"` with `aria-multiselectable="true"`. Individual rows use `role="option"`. Selected row has `aria-selected="true"`. Restricted row has `aria-disabled="true"`. The main modal listbox div lacks an `aria-label` (Demo D version has `aria-label="Search results"` — main modal should follow). Minor nit.
 
-## Accessibility Signals
+**Disabled Send button:** Main Send button uses `opacity-50 cursor-not-allowed` visually but no `aria-disabled="true"` or `disabled` attribute. Demo D "Open DM" button correctly uses `disabled aria-disabled="true"`. Main Send should be consistent. Minor nit.
 
-**Rail nav list:** `<aside>` contains `<nav>` with `<a>` elements; active row has `aria-current="page"`. PASS.
-
-**Modal semantics:** `role="dialog" aria-modal="true" aria-labelledby="modal-title"` — correct. Esc key closes via JS event listener. Focus trap is not explicitly coded (no JS focus-trap loop), but `autofocus` on the search input brings focus into the modal on open. A full focus-trap implementation is a build-time concern, not a staging gap; the intent is correctly established. PASS.
-
-**Presence conveyed beyond color:** Offline presence dot uses `bg-surface-500` (grey) with no text label in the rail row — this is color-only for offline presence in the conversation list. Brief §9 and DESIGN-SYSTEM.md §8 (MemberListItem) require "presence conveyed by text too." The thread header does better (the danger pill "Offline — 1 pending" is text + color). The rail rows should include a visually-hidden or tooltip-level text label for the presence dot state (e.g. `sr-only` "Offline"). Flagging as a fixable accessibility gap.
-
-**Composer labelled:** `textarea` has `placeholder="Message @Dr. Aris Thorne"` but no explicit `<label>` or `aria-label`. Brief §9 requires "composer labelled." This is a build-time fix; placeholder alone is not sufficient for screen reader labelling. Flag for implementation.
-
-**Picker listbox:** `role="listbox" aria-multiselectable="true"` is present on the picker list. `role="option"` on rows with `aria-selected="true"` for selected, `aria-disabled="true"` for restricted. PASS.
-
-**Send button disabled state:** The send button uses `opacity-50 cursor-not-allowed` visually but is not `disabled` or `aria-disabled`. At implementation, add `disabled` or `aria-disabled="true"` when the composer is empty.
-
----
-
-## Consolidated Concerns
-
-1. **[Brief §4 / DS §2] "Direct Messages" heading uses `text-base` (16px) — brief §4 specifies `text-xl` for the screen title.** Fixable at implementation.
-
-2. **[Brief §3 / §9] Missing states: empty-thread, error (load failed + retry), skeleton/loading rows** — three of the nine §3 states are absent from the mockup. These should be added as togglable debug sections.
-
-3. **[Brief §9] Group-DM thread header not shown** — the thread canvas only shows the 1:1 header. A multi-avatar group header state is required by §9.
-
-4. **[Brief §3 / DS §8] Offline / connection-wedge is `hidden` by default** — not visible without inspector intervention. Should be shown by default or exposed via the debug toggle.
-
-5. **[Brief §4] Unread-row timestamp rendered in `text-accent-emerald`** — overloads the emerald token; timestamp should stay `text-text-secondary`, with the unread dot carrying the signal.
-
-6. **[DS §8 / Brief §9 / WCAG] Rail presence dot for offline contacts is color-only** — no text or `sr-only` label. Add `aria-label` or `title` on the dot, or a visually-hidden text node per brief §9 a11y requirement.
-
-7. **[Brief §9] Composer textarea lacks explicit `aria-label`** — placeholder alone is insufficient. Add `aria-label="Message @[Participant Name]"` at implementation.
-
-8. **[Brief §3 spacing] Conversation row `px-2` (8px horizontal) is tighter than brief §4's "8px×12px" spec** — minor rhythm drift; prefer `px-3` (12px) to align with the ChannelSidebar item pattern.
+**Error retry buttons:** Both retry buttons have `aria-label` ("Retry loading conversations" / "Retry loading messages") and `focus-visible:ring-2 focus-visible:ring-accent-emerald/50`. PASS.
 
 ---
 
-## Verdict
+## Minor nits (non-blocking — all implementation notes)
 
-**APPROVE**
+1. **Unread timestamp uses `text-accent-emerald`** — overloads the emerald signal; prefer `text-text-secondary` for the timestamp, letting the dot carry unread alone. DS §1 semantic mapping.
 
-The mockup faithfully applies all DESIGN-SYSTEM.md tokens (zero invented hex values, correct shadow/radius/glow usage), correctly reuses all required primitives (MessageRow, MessageComposer, ChannelHeader, Modal, Avatar, ConnectionStateIndicator, ChannelSidebar item pattern), and establishes the calm academic dark aesthetic with restraint. The structural composition is sound and provides sufficient signal for implementation.
+2. **Stagger animation sets duration not delay** — `calc(var(--index,0)*80ms)` expands duration by index. Implementation should use `animation-delay` with a fixed duration.
 
-Concerns 1, 5, 6, 7, and 8 are minor nits correctible at build time without design rework. Concerns 2, 3, and 4 are concrete missing states that should be filed as follow-up tasks on the M8 DM slice (not blocking the current wave's implementation start, given the design language is established and the missing states follow directly from the patterns already shown). No fundamental design miss, no re-invention, no token violations.
+3. **Conversation-row `px-2` (8px horizontal) is tighter than brief §4 "8px×12px"** — prefer `px-3` to match ChannelSidebar item rhythm.
+
+4. **Presence dots in conversation list are color-only** — add `aria-label` or `sr-only` text per brief §9. Brief §9 a11y.
+
+5. **Main modal picker listbox missing `aria-label`** — add `aria-label="Select recipients"`. Brief §9 a11y.
+
+6. **Main Send button missing `aria-disabled`** — add `aria-disabled="true"` (or `disabled`) when composer is empty. Brief §9 a11y.
+
+7. **`skeleton-shimmer` class in Demo C references a class defined inside Demo A's scoped `<style>` block** — works in browser (not shadow DOM), but fragile dependency order. Extract to a shared `<style>` block. Developer note.
+
+---
+
+## What would make this a 10
+
+- Apply `aria-label` to presence dots in conversation list rows.
+- Add `aria-label="Select recipients"` to the main modal listbox and `aria-disabled="true"` to the blank-state Send button.
+- Correct stagger animation to use `animation-delay`.
+- Revert unread-row timestamp from emerald to secondary.
+
+---
+
+## §9 checklist assessment (brief)
+
+| Criterion | Status |
+|-----------|--------|
+| DESIGN-SYSTEM tokens only, no new hex, dark-mode only | PASS — full token fidelity, zero out-of-system hex |
+| All §3 states rendered | PASS — loading, loaded, empty-list, empty-thread, error, offline/pending, picker default/searching/restricted/selected all present |
+| Responsive per §5 | PASS — three-pane at 1280+, drawer <1024 |
+| Matches prior-art visual language §8 | PASS — zinc surface stack, message-row layout, rail item pattern, modal card all align with channel-view / sidebar prior art |
+| Reuses MessageRow, MessageComposer, ChannelHeader, ConnectionStateIndicator, Modal, Avatar primitives | PASS — composed from system primitives; no bespoke chrome reinvention |
+| Offline wedge + pending amber + failed danger/Retry | PASS — ConnectionStateIndicator, pending opacity+amber, failed danger+Retry all present |
+| Non-color-only who-can-DM restriction reason | PASS — text reason + shield-warning icon in danger-text color |
+| All icon names real Phosphor names | PASS — all 20 icon references verified valid |
+| Group DM multi-avatar + participant names; 1:1 single participant | PASS — both variants rendered (1:1 in main thread, group in Demo D) |
+| A11y: nav list aria-current, modal focus-trap+Esc, presence text not color-only, composer labelled | PARTIAL PASS — aria-current present, Esc works, composer labelled; presence dots in rail are color-only (minor nit); modal listbox aria-label and Send aria-disabled missing. All minor implementation notes, not design failures. |
+
+All ten criteria pass or carry only minor developer-handoff notes. The design is production-ready from a visual and structural standpoint.

@@ -3,14 +3,14 @@
 **Block:** D (Design)
 **Wave topic:** M8 direct messages — DM screen (conversation list + thread + composer + start-DM picker)
 **Block exit gate:** D-3
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file(s) | Status | Notes |
 |---|---|---|---|
 | D-1 | process/waves/wave-46/stages/D-1-brief/direct-messages-brief.md | done | 1 gap briefed, mask_mode PASS |
 | D-2 | .../D-2-variants/direct-messages-variants.md + iterate.md | done | staged (iter 0); checkpoint skipped-automatic |
-| D-3 | process/waves/wave-46/stages/D-3-review-and-adopt/direct-messages-{plan-design-review,ui-ux-pro-max,reconciliation,adopt}.md | pending | dual-review + head-designer gate + canonicalize |
+| D-3 | .../D-3-review-and-adopt/*.md | done | APPROVE/APPROVE iter1 + head-designer APPROVED; canonicalized design/direct-messages.html; journey-map updated |
 
 ## Block-specific context
 - **Wave topic:** M8 direct messages DM screen
