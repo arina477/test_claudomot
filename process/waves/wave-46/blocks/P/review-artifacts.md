@@ -3,7 +3,7 @@
 **Block:** P (Product)
 **Wave topic:** M8 direct messages — feature slice 1 (1:1 + small-group DMs: schema + participant-gated backend + Socket.IO fan-out + offline-tolerant send + minimal UI)
 **Block exit gate:** P-4
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 
@@ -11,9 +11,9 @@
 |---|---|---|---|
 | P-0 | process/waves/wave-46/stages/P-0-frame.md | complete | PROCEED; 3 reviewers clear; 3 carry-forwards (who_can_dm enforce, outbox generalize, block/report deferral) |
 | P-1 | process/waves/wave-46/stages/P-1-decompose.md | done | multi-spec, PROCEED (floor met ~2800 LOC); design_gap_flag=TRUE → D-block |
-| P-2 | process/waves/wave-46/stages/P-2-spec.md | pending | |
-| P-3 | process/waves/wave-46/stages/P-3-plan.md | pending | approach + plan |
-| P-4 | process/waves/wave-46/stages/P-4-gemini-review.md | pending | Phase 2 reviewer output |
+| P-2 | process/waves/wave-46/stages/P-2-spec.md | done | multi-spec 4 blocks; spec in a48f1910.description; who_can_dm enforce (new) + outbox generalize |
+| P-3 | process/waves/wave-46/stages/P-3-plan.md | done | 3 tables+1 migration; node/typescript/react specialists; D-block before B-3 |
+| P-4 | process/waves/wave-46/blocks/P/gate-verdict.md | done | PASS — head-product APPROVED; karen+jenny APPROVE; Gemini 429 |
 
 ## Block-specific context
 
