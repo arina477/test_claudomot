@@ -152,7 +152,7 @@ describe('StudyHallDB — outbox enqueue + state', () => {
   });
 
   it('enqueues an item and reads it back as pending', async () => {
-    const { idempotencyKey } = await enqueue(db, 'ch-1', 'hello');
+    const { idempotencyKey } = await enqueue(db, { kind: 'channel', channelId: 'ch-1' }, 'hello');
     const items = await loadPending(db);
     expect(items).toHaveLength(1);
     expect(items[0]?.idempotencyKey).toBe(idempotencyKey);
@@ -161,14 +161,22 @@ describe('StudyHallDB — outbox enqueue + state', () => {
   });
 
   it('enqueue generates a unique idempotencyKey each time', async () => {
-    const { idempotencyKey: k1 } = await enqueue(db, 'ch-1', 'msg 1');
-    const { idempotencyKey: k2 } = await enqueue(db, 'ch-1', 'msg 2');
+    const { idempotencyKey: k1 } = await enqueue(
+      db,
+      { kind: 'channel', channelId: 'ch-1' },
+      'msg 1',
+    );
+    const { idempotencyKey: k2 } = await enqueue(
+      db,
+      { kind: 'channel', channelId: 'ch-1' },
+      'msg 2',
+    );
     expect(k1).not.toBe(k2);
   });
 
   it('loadPending returns only pending items (not failed)', async () => {
-    await enqueue(db, 'ch-1', 'pending msg');
-    await enqueue(db, 'ch-1', 'another pending');
+    await enqueue(db, { kind: 'channel', channelId: 'ch-1' }, 'pending msg');
+    await enqueue(db, { kind: 'channel', channelId: 'ch-1' }, 'another pending');
 
     // Mark one as failed directly.
     const allItems = await db.outbox.toArray();
@@ -221,7 +229,7 @@ describe('StudyHallDB — outbox enqueue + state', () => {
   });
 
   it('marks an item as failed after update', async () => {
-    await enqueue(db, 'ch-1', 'will fail');
+    await enqueue(db, { kind: 'channel', channelId: 'ch-1' }, 'will fail');
     const before = await db.outbox.toArray();
     const itemId = before[0]?.id;
     expect(itemId).toBeDefined();
@@ -237,7 +245,7 @@ describe('StudyHallDB — outbox enqueue + state', () => {
     const attachments = [
       { key: 'uploads/file.png', filename: 'file.png', contentType: 'image/png', sizeBytes: 1024 },
     ];
-    await enqueue(db, 'ch-1', 'with attachment', attachments);
+    await enqueue(db, { kind: 'channel', channelId: 'ch-1' }, 'with attachment', attachments);
 
     const items = await loadPending(db);
     expect(items[0]?.attachments).toHaveLength(1);
@@ -245,7 +253,7 @@ describe('StudyHallDB — outbox enqueue + state', () => {
   });
 
   it('deletes an item after delivery', async () => {
-    await enqueue(db, 'ch-1', 'delivered');
+    await enqueue(db, { kind: 'channel', channelId: 'ch-1' }, 'delivered');
     const before = await db.outbox.toArray();
     const itemId = before[0]?.id as number;
 
@@ -256,7 +264,7 @@ describe('StudyHallDB — outbox enqueue + state', () => {
   });
 
   it('idempotencyKey index is queryable', async () => {
-    const { idempotencyKey } = await enqueue(db, 'ch-1', 'test');
+    const { idempotencyKey } = await enqueue(db, { kind: 'channel', channelId: 'ch-1' }, 'test');
     const count = await db.outbox.where('idempotencyKey').equals(idempotencyKey).count();
     expect(count).toBe(1);
   });

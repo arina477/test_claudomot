@@ -24,11 +24,20 @@
  */
 
 import type { StudyHallDB } from './db';
-import type { OutboxItem } from './types';
+import type { OutboxItem, OutboxTarget } from './types';
 
-// POST callback type — matches api.sendMessage signature without binding api.
+// POST callback type — dispatches by target kind.
+//
+// Wave-46 M8 generalization: SendFn now accepts an OutboxTarget discriminator
+// instead of a bare channelId. Callers supply either:
+//   {kind:'channel', channelId} → POST /channels/:channelId/messages
+//   {kind:'dm', conversationId} → POST /dm/conversations/:conversationId/messages
+//
+// The body shape is identical in both cases (content + idempotencyKey + optional
+// attachments). Channel send behaviour is UNCHANGED — callers that previously
+// passed a string channelId now pass {kind:'channel', channelId} instead.
 export type SendFn = (
-  channelId: string,
+  target: OutboxTarget,
   body: {
     content: string;
     idempotencyKey: string;
@@ -49,6 +58,11 @@ const MAX_ATTEMPTS = 3;
 /**
  * Enqueue a new message in the durable outbox.
  *
+ * Wave-46: accepts an OutboxTarget discriminator (channel | dm).
+ * Channel enqueues pass {kind:'channel', channelId}; DM enqueues pass
+ * {kind:'dm', conversationId}. The legacy `channelId` field is populated
+ * for backwards compat with the Dexie index; DM items use '' as sentinel.
+ *
  * - Generates a stable idempotencyKey (UUID) ONCE here.
  * - Does NOT check for duplicates — callers are responsible for not
  *   double-enqueueing the same compose action.
@@ -57,15 +71,19 @@ const MAX_ATTEMPTS = 3;
  */
 export async function enqueue(
   store: StudyHallDB,
-  channelId: string,
+  target: OutboxTarget,
   content: string,
   attachments?: OutboxItem['attachments'],
 ): Promise<{ id: number; idempotencyKey: string }> {
   const idempotencyKey = crypto.randomUUID();
   const now = new Date().toISOString();
 
+  // Populate the legacy channelId field for backwards compat / Dexie index.
+  const legacyChannelId = target.kind === 'channel' ? target.channelId : '';
+
   const item: Omit<OutboxItem, 'id'> = {
-    channelId,
+    target,
+    channelId: legacyChannelId,
     idempotencyKey,
     content,
     state: 'pending',
@@ -173,7 +191,14 @@ async function _drainImpl(
     const outboxId = item.id as number;
 
     try {
-      const confirmed = await send(item.channelId, {
+      // Resolve the routing target for this item.
+      // Pre-wave-46 rows lack `target` — fall back to legacy channelId field.
+      const resolvedTarget: import('./types').OutboxTarget = item.target ?? {
+        kind: 'channel',
+        channelId: item.channelId,
+      };
+
+      const confirmed = await send(resolvedTarget, {
         content: item.content,
         idempotencyKey: item.idempotencyKey,
         ...(item.attachments && item.attachments.length > 0
