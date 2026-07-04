@@ -9,7 +9,7 @@
 | Stage | Deliverable file(s) | Status | Notes |
 |---|---|---|---|
 | D-1 | process/waves/wave-46/stages/D-1-brief/direct-messages-brief.md | done | 1 gap briefed, mask_mode PASS |
-| D-2 | process/waves/wave-46/stages/D-2-variants/direct-messages-variants.md | pending | /aidesigner generation + iterate loop |
+| D-2 | .../D-2-variants/direct-messages-variants.md + iterate.md | done | staged (iter 0); checkpoint skipped-automatic |
 | D-3 | process/waves/wave-46/stages/D-3-review-and-adopt/direct-messages-{plan-design-review,ui-ux-pro-max,reconciliation,adopt}.md | pending | dual-review + head-designer gate + canonicalize |
 
 ## Block-specific context
