@@ -20,10 +20,10 @@ DESIGN (skip block if non-UI wave):
 BUILD:
 - [x] B-0 Branch & schema
 - [x] B-1 (SKIP — no contracts/frontend) Contracts
-- [ ] B-2 Backend
+- [x] B-2 Backend
 - [x] B-3 (SKIP — no contracts/frontend) Frontend
-- [ ] B-4 Wiring
-- [ ] B-5 Verify
+- [x] B-4 Wiring
+- [x] B-5 Verify
 - [ ] B-6 Review
 
 CI/CD:
