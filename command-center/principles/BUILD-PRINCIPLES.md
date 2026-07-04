@@ -90,3 +90,6 @@ Promoted at L-2 Distill from `process/waves/wave-<N>/blocks/L/observations.md` b
 
 8. Gate commits with a pre-commit hook running the format/import-sort check on staged files so violations cannot be committed.
    Why: A rule prescribing what to run is advisory and gets skipped; a hook enforces it at every commit.
+
+9. Author an integration spec exercising every new service or DB boundary in the B-block, before the C-1 merge.
+   Why: A deferred spec leaves the CI integration job green on new code it never exercises.
