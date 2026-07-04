@@ -169,6 +169,13 @@ export class SchedulingService {
     if (endsAt <= startsAt) {
       throw new BadRequestException('endsAt must be after startsAt');
     }
+    if (
+      input.recurrence === 'weekly' &&
+      input.recurrenceUntil != null &&
+      new Date(input.recurrenceUntil) < new Date(input.startsAt)
+    ) {
+      throw new BadRequestException('recurrenceUntil must be on or after startsAt');
+    }
 
     const [inserted] = await db
       .insert(scheduled_sessions)
