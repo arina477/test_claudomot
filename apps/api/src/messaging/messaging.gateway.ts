@@ -23,11 +23,13 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import type {
+  DmMessage,
   MentionEvent,
   MessageResponse,
   ThreadReplyDeletedEvent,
   ThreadReplyEvent,
 } from '@studyhall/shared';
+import { DM_MESSAGE_EVENT } from '@studyhall/shared';
 import type { Server, Socket } from 'socket.io';
 import { installWsAuthMiddleware } from '../common/ws-auth';
 // biome-ignore lint/style/useImportType: value import required — emitDecoratorMetadata needs the runtime symbol for NestJS DI
@@ -288,5 +290,45 @@ export class MessagingGateway implements OnGatewayInit, OnGatewayConnection {
     this.logger.debug(
       `Pushed mention event to user:${payload.mentionedUserId} for msg=${payload.messageId} channel=${payload.channelId}`,
     );
+  }
+
+  // -------------------------------------------------------------------------
+  // dm.message → fan-out to OTHER participants' per-user rooms (wave-46 M8)
+  //
+  // Emitted by DmService.sendMessage() after a new DM message is inserted.
+  //
+  // Fan-out is participant-scoped: only sockets whose userId is in the
+  // conversation's participant list receive the event. The SENDER is excluded
+  // (spec: sender uses optimistic local render, not the fan-out echo).
+  //
+  // Room strategy: each authenticated socket is already in 'user:<userId>'
+  // (joined at handleConnection). The DM fan-out emits to those per-user rooms
+  // for each OTHER participant — no new join/room needed for clients.
+  //
+  // participantIds is resolved by DmService and passed with the event payload
+  // so the gateway stays decoupled from DB queries.
+  // -------------------------------------------------------------------------
+
+  @OnEvent('dm.message')
+  handleDmMessage(payload: {
+    conversationId: string;
+    message: DmMessage;
+    senderId: string;
+    participantIds: string[];
+  }): void {
+    const dmEvent = {
+      conversationId: payload.conversationId,
+      message: payload.message,
+    };
+
+    for (const participantId of payload.participantIds) {
+      // Exclude the sender — they use optimistic render
+      if (participantId === payload.senderId) continue;
+
+      this.server.to(`user:${participantId}`).emit(DM_MESSAGE_EVENT, dmEvent);
+      this.logger.debug(
+        `DM fan-out: dm:message conv=${payload.conversationId} msg=${payload.message.id} → user:${participantId}`,
+      );
+    }
   }
 }
