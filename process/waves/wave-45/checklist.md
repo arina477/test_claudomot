@@ -29,15 +29,15 @@ CI/CD:
 - [x] C-2 Deploy & verify (canary armed when real users > 1000)
 
 TEST:
-- [ ] T-1 Static
-- [ ] T-2 Unit
-- [ ] T-3 Contract
-- [ ] T-4 Integration
-- [ ] T-5 E2E
-- [ ] T-6 Layout
-- [ ] T-7 Perf
-- [ ] T-8 Security
-- [ ] T-9 Journey
+- [x] T-1 Static
+- [x] T-2 Unit
+- [x] T-3 Contract (skip — no API/SDK/contract surface change)
+- [x] T-4 Integration (skip — no schema/service change)
+- [x] T-5 E2E (acceptance proof: fixed runner launched bundled chromium 5/5 green vs live deploy)
+- [x] T-6 Layout (skip — no UI-surface delta; byte-identical)
+- [x] T-7 Perf (skip — not heavy; bundle-neutral)
+- [x] T-8 Security (skip — non-auth; secret-grep clean)
+- [x] T-9 Journey (T-block gate PASS)
 
 VERIFY:
 - [ ] V-1 Independent reviews (Karen + jenny, parallel)
