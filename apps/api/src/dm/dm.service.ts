@@ -52,11 +52,14 @@ import {
 } from '../db/schema/index';
 
 // ---------------------------------------------------------------------------
-// Cursor helpers — mirror messages.service.ts convention: base64url(iso|id)
+// Cursor helpers — base64url(epochMicros|id)
+// epochMicros preserves full DB timestamptz microsecond precision, avoiding
+// the ms-truncation boundary re-emission bug (F-I4).
 // ---------------------------------------------------------------------------
 
 function encodeCursor(createdAt: Date, id: string): string {
-  return Buffer.from(`${createdAt.toISOString()}|${id}`).toString('base64url');
+  const epochMicros = Math.round(createdAt.getTime() * 1000).toString();
+  return Buffer.from(`${epochMicros}|${id}`).toString('base64url');
 }
 
 function decodeCursor(cursor: string): { createdAt: Date; id: string } | null {
@@ -64,9 +67,11 @@ function decodeCursor(cursor: string): { createdAt: Date; id: string } | null {
     const raw = Buffer.from(cursor, 'base64url').toString('utf8');
     const sep = raw.indexOf('|');
     if (sep === -1) return null;
-    const iso = raw.slice(0, sep);
+    const epochMicros = raw.slice(0, sep);
     const id = raw.slice(sep + 1);
-    const createdAt = new Date(iso);
+    const ms = Number(epochMicros) / 1000;
+    if (!Number.isFinite(ms)) return null;
+    const createdAt = new Date(ms);
     if (Number.isNaN(createdAt.getTime())) return null;
     return { createdAt, id };
   } catch {
@@ -278,6 +283,7 @@ export class DmService {
           .select({
             user_id: dm_participants.user_id,
             display_name: users.display_name,
+            username: users.username,
             avatar_url: users.avatar_url,
           })
           .from(dm_participants)
@@ -299,7 +305,7 @@ export class DmService {
             isGroup: existingConv.is_group,
             participants: participantRows.map((p) => ({
               userId: p.user_id,
-              displayName: p.display_name ?? p.user_id,
+              displayName: p.display_name ?? p.username ?? p.user_id,
               avatar: p.avatar_url,
             })),
             lastMessage: null,
@@ -340,6 +346,7 @@ export class DmService {
       .select({
         user_id: dm_participants.user_id,
         display_name: users.display_name,
+        username: users.username,
         avatar_url: users.avatar_url,
       })
       .from(dm_participants)
@@ -351,7 +358,7 @@ export class DmService {
       isGroup: conversation.is_group,
       participants: participantRows.map((p) => ({
         userId: p.user_id,
-        displayName: p.display_name ?? p.user_id,
+        displayName: p.display_name ?? p.username ?? p.user_id,
         avatar: p.avatar_url,
       })),
       lastMessage: null,
@@ -400,6 +407,7 @@ export class DmService {
         conversation_id: dm_participants.conversation_id,
         user_id: dm_participants.user_id,
         display_name: users.display_name,
+        username: users.username,
         avatar_url: users.avatar_url,
       })
       .from(dm_participants)
@@ -430,7 +438,7 @@ export class DmService {
       const existing = participantsByConv.get(p.conversation_id) ?? [];
       existing.push({
         userId: p.user_id,
-        displayName: p.display_name ?? p.user_id,
+        displayName: p.display_name ?? p.username ?? p.user_id,
         avatar: p.avatar_url,
       });
       participantsByConv.set(p.conversation_id, existing);
