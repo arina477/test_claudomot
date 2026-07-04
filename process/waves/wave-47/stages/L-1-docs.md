@@ -50,7 +50,7 @@ l_stage_verdict: COMPLETE
 verdict_evidence:
   - "CHANGELOG.md:80 (Added — wave-46 groundwork bullet upgraded to now-usable DM feature entry)"
   - "milestone M8 (84e17739): no UPDATE — open_count=7>0 after L-2 done-mark, stays in_progress (mechanical no-op)"
-  - "commit: <SHA>"
+  - "commit: 20912fc (pushed to main)"
 changelog_entry_added: true
 roadmap_milestones_progressed: []
 roadmap_skip_reason: "M8 stays in_progress — open_count=7>0 after L-2 done-marks 2 wave-47 tasks (done 20->22); no milestone transition; mechanical no-op, no BOARD"
