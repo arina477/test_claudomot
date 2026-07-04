@@ -3,16 +3,16 @@
 **Block:** P (Product)
 **Wave topic:** M8 DM entry-point completion (F-A) — make DMs startable via UI (candidate source + GET /dm/candidates + picker fix + username/userId id-space fix, cures F7)
 **Block exit gate:** P-4
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
 |---|---|---|---|
 | P-0 | process/waves/wave-47/stages/P-0-frame.md | complete | PROCEED; candidate-source=server-co-members (BOARD-resolvable, recorded) |
-| P-1 | process/waves/wave-47/stages/P-1-decompose.md | pending | |
-| P-2 | process/waves/wave-47/stages/P-2-spec.md | pending | |
-| P-3 | process/waves/wave-47/stages/P-3-plan.md | pending | |
-| P-4 | process/waves/wave-47/stages/P-4-gemini-review.md | pending | |
+| P-1 | process/waves/wave-47/stages/P-1-decompose.md | done | multi-spec; sub-floor override (standing precedent+ceo HOLD-SCOPE); design_gap_flag=false |
+| P-2 | .../P-2-spec.md | done | multi-spec, 2 blocks; spec in 10967558 |
+| P-3 | .../P-3-plan.md | done | GET /dm/candidates + picker rewire; typescript/node/react; no D-block |
+| P-4 | .../blocks/P/gate-verdict.md | done | PASS — head-product APPROVED; karen+jenny APPROVE; Gemini 429 |
 
 ## Block-specific context
 - **Wave topic:** M8 DM entry-point completion (F-A CRITICAL follow-up from wave-46)
