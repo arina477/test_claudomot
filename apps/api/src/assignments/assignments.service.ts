@@ -60,7 +60,7 @@ export class AssignmentsService {
   ) {}
 
   // -------------------------------------------------------------------------
-  // assertOrganizer — gate on can(userId, serverId, 'manage_channels')
+  // assertOrganizer — gate on can(userId, serverId, 'manage_assignments')
   // Single call site per G3 annotation. Throws 403 on failure.
   // -------------------------------------------------------------------------
 
@@ -290,7 +290,7 @@ export class AssignmentsService {
   // -------------------------------------------------------------------------
   // createAssignment — POST /servers/:serverId/assignments
   //
-  // Organizer authz: can(organizerId, serverId, 'manage_channels').
+  // Organizer authz: can(organizerId, serverId, 'manage_assignments').
   // Attachment: headAttachment BEFORE assignment_attachments INSERT (anti-spoof).
   // -------------------------------------------------------------------------
 

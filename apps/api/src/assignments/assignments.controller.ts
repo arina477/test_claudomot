@@ -50,7 +50,7 @@ import { AssignmentsService } from './assignments.service';
 //
 // Security:
 //   - @UseGuards(AuthGuard) on every route.
-//   - Organizer authz: service.assertOrganizer → can(userId, serverId, 'manage_channels')
+//   - Organizer authz: service.assertOrganizer → can(userId, serverId, 'manage_assignments')
 //     G3 carry: single call site; owner passes via superuser.
 //   - Member authz: service.assertMember → server_members check.
 //   - For /assignments/:id routes: serverId is derived from the assignment row
