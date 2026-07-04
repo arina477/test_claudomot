@@ -1,3 +1,4 @@
 # Wave 46 — D-2 iterate log — direct-messages
 - iteration_counter: 0
 - iteration 0 (first pass): refine prompt (empty); staging design/staging/direct-messages.html; checkpoint outcome: skipped-mode-automatic (D-2 Action 3 skip — autonomous mode).
+- iteration 1 (D-3 backedge from APPROVE+REVISE): aidesigner refine ATTEMPTED but blocked HTTP 403 "Insufficient credits" (account out of prepaid credits — money/account matter, surfaced to founder non-blocking at process/session/updates/note-2026-07-04-aidesigner-credits.md). DEGRADATION: canonical generator unavailable → ui-designer applied Reviewer B's 18 enumerated fixes SURGICALLY to design/staging/direct-messages.html (7 blocking + 5 medium + 6 minor — all applied; no regeneration, approved design preserved). checkpoint outcome: skipped-mode-automatic. iteration_counter: 1.
