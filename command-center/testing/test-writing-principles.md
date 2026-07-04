@@ -274,6 +274,12 @@ Why: encoding a cursor at millisecond precision against a microsecond timestamp 
 ### 25. When realtime fan-out reaches the sender's own client, dedup the inbound echo against the pending optimistic row by its client key, not only by the confirmed server id.
 Why: if the socket echo arrives before the REST confirmation reconciles the optimistic row, an id-only dedup misses it and the sender's own message double-renders.
 
+### 26. Prove a query-level filter (WHERE / DISTINCT ON) against a real DB, not with a unit mock that returns pre-filtered rows.
+Why: a mock that hands back already-excluded rows tests only the mapper, so deleting the filter clause passes green — the filter lives in the query the mock replaces.
+
+### 27. Drive a feature's entry-point flow through the real UI affordance, never via a direct API call that skips the screen the user must click.
+Why: an API-shortcut E2E marks a feature green while its actual entry point is an unreachable dead-end in the UI.
+
 ---
 
 ## 14. Production E2E testing — principles

@@ -49,5 +49,6 @@ findings_total:       11
 findings_critical:    0
 findings_aggregate:   process/waves/wave-47/blocks/T/findings-aggregate.md
 journey_map_updated:  true
+  journey_map_commit:   73824ac
 ready_for_verify:     true
 ```

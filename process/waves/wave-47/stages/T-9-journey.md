@@ -43,6 +43,6 @@ scenarios_run: 0
 scenarios_failed: 0
 regressions_critical: 0
 regressions_significant: 0
-journey_map_commit: "<committed below>"
+journey_map_commit: "73824ac"
 findings: []
 ```
