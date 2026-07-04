@@ -77,6 +77,7 @@ All notable changes to StudyHall are documented here. Format follows
 - Collect and return submissions: an organizer with the manage-assignments permission sees a roster of everyone's submissions (newest first) and can mark one returned with an optional comment, while a member only ever sees their own — enforced server-side, so no student can read another's work. (#56)
 - Class scheduling: an organizer with the manage-assignments permission can schedule a session — title, optional details, start and end time, and an optional weekly repeat with an end date — then edit or remove it, all enforced server-side so only organizers can change the schedule. (#57)
 - See the class schedule: every member gets a calendar and agenda of upcoming sessions (weekly repeats fill in automatically) and can open any session for its full details, with a calm empty state when nothing is scheduled. (#57)
+- Direct messages — groundwork: the private 1:1 messaging engine is now live end-to-end (private conversations, real-time delivery to both people, and offline-tolerant sending), with permission checks so you can only message people you're allowed to. The way to *start* a new direct message from the app isn't switchable on yet — who you're allowed to message is a setting still being finalized — so this isn't a usable feature for people quite yet; a follow-up turns on the "start a DM" entry point. (#60)
 
 ### Changed
 
