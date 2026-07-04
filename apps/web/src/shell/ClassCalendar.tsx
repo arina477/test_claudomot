@@ -392,24 +392,29 @@ export function ClassCalendar({ onClose }: Props) {
 
   const handleFormSuccess = useCallback(
     (saved: ScheduledSession) => {
-      setSessions((prev) => {
-        const exists = prev.some((s) => s.id === saved.id);
-        const next = exists ? prev.map((s) => (s.id === saved.id ? saved : s)) : [...prev, saved];
-        return [...next].sort(
-          (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
-        );
-      });
+      // Re-fetch the full list so that occurrence-expanded weekly sessions
+      // (which all share the same base id) are reflected correctly. Splicing
+      // the single returned DTO would collapse N occurrences to N identical
+      // rows and cause React key collisions.
+      loadSessions();
       setFormOpen(false);
       setEditTarget(null);
       announce(saved.title ? `Session "${saved.title}" saved.` : 'Session saved.');
     },
-    [announce],
+    [announce, loadSessions],
   );
 
-  const handleDeleted = useCallback((id: string) => {
-    setSessions((prev) => prev.filter((s) => s.id !== id));
-    setSelectedSessionId((prev) => (prev === id ? null : prev));
-  }, []);
+  const handleDeleted = useCallback(
+    (id: string) => {
+      // Re-fetch instead of filtering by id: all weekly occurrences share the
+      // same base id, so an id-filter splice would remove every occurrence in
+      // the list on a single-occurrence delete (or leave stale rows after a
+      // series delete). Re-fetching gives the canonical post-delete state.
+      loadSessions();
+      setSelectedSessionId((prev) => (prev === id ? null : prev));
+    },
+    [loadSessions],
+  );
 
   function openCreate() {
     setEditTarget(null);
@@ -654,7 +659,7 @@ export function ClassCalendar({ onClose }: Props) {
                       <div className="space-y-1">
                         {group.sessions.map((session) => (
                           <SessionRow
-                            key={session.id}
+                            key={`${session.id}-${session.startsAt}`}
                             session={session}
                             isToday={isGroupToday}
                             isSelected={selectedSessionId === session.id}
