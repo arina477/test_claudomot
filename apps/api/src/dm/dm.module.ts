@@ -1,10 +1,12 @@
 /**
  * DmModule — wave-46 M8 direct messages (tasks a48f1910 + 32f5d29e)
+ *             wave-47 M8 DM entry-point (task 10967558)
  *
  * Provides:
- *   DmService    — createConversation / listConversations / sendMessage / listMessages
- *   DmController — REST endpoints at /dm/conversations[/:id/messages]
- *   DmParticipantGuard — participant-gated IDOR-safe guard for :id routes
+ *   DmService              — createConversation / listConversations / sendMessage / listMessages / getDmCandidates
+ *   DmController           — REST endpoints at /dm/conversations[/:id/messages]
+ *   DmCandidatesController — GET /dm/candidates (server co-members)
+ *   DmParticipantGuard     — participant-gated IDOR-safe guard for :id routes
  *
  * EventEmitterModule is imported at AppModule level; DmService receives
  * EventEmitter2 via NestJS DI without a local import.
@@ -16,11 +18,11 @@
 
 import { Module } from '@nestjs/common';
 import { DmParticipantGuard } from './dm-participant.guard';
-import { DmController } from './dm.controller';
+import { DmCandidatesController, DmController } from './dm.controller';
 import { DmService } from './dm.service';
 
 @Module({
-  controllers: [DmController],
+  controllers: [DmController, DmCandidatesController],
   providers: [DmService, DmParticipantGuard],
   exports: [DmService],
 })

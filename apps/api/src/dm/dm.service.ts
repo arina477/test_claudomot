@@ -35,13 +35,14 @@ import {
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import type {
   CreateConversationInput,
+  DmCandidate,
   DmConversation as DmConversationDto,
   DmConversationListResponse,
   DmMessage as DmMessageDto,
   DmMessageListResponse,
   SendDmMessageInput,
 } from '@studyhall/shared';
-import { and, count, desc, eq, getTableColumns, inArray, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, getTableColumns, inArray, ne, or, sql } from 'drizzle-orm';
 import { db } from '../db/index';
 import {
   dm_conversations,
@@ -648,5 +649,74 @@ export class DmService {
       .where(eq(dm_participants.conversation_id, conversationId));
 
     return rows.map((r) => r.user_id);
+  }
+
+  // -------------------------------------------------------------------------
+  // getDmCandidates — GET /dm/candidates
+  //
+  // Returns DISTINCT co-members of every server the caller belongs to,
+  // excluding the caller and excluding users whose who_can_dm='nobody'.
+  //
+  // who_can_dm policy at candidate time:
+  //   everyone      → included (unrestricted)
+  //   server-members → included (co-members satisfy the shared-server condition)
+  //   nobody        → excluded
+  //
+  // Query strategy: single JOIN chain (no N+1).
+  //   caller_rows  = server_members WHERE user_id = callerId   (caller's servers)
+  //   co_rows      = server_members WHERE server_id IN (caller_rows.server_id)
+  //                  AND user_id != callerId                    (co-members)
+  //   users        = joined to get displayName / avatarUrl / who_can_dm
+  //
+  // Dedup via DISTINCT ON (users.id) ordered by (users.id, display_name ASC)
+  // — picks one row per user; final ORDER BY display_name for stable output.
+  //
+  // Caller in no servers / no co-members → 200 [].
+  // -------------------------------------------------------------------------
+
+  async getDmCandidates(callerId: string): Promise<DmCandidate[]> {
+    // Step 1: get caller's server IDs (mirrors presence.getServerIdsForUser)
+    const callerServerRows = await db
+      .select({ server_id: server_members.server_id })
+      .from(server_members)
+      .where(eq(server_members.user_id, callerId));
+
+    if (callerServerRows.length === 0) return [];
+
+    const callerServerIds = callerServerRows.map((r) => r.server_id);
+
+    // Step 2: fetch co-members (mirrors presence.getCoMemberUserIds) joined to
+    // users for DTO fields + who_can_dm filter.
+    // DISTINCT ON (users.id) dedups users shared across multiple servers.
+    const alias = server_members;
+    const rows = await db
+      .selectDistinctOn([users.id], {
+        userId: users.id,
+        displayName: users.display_name,
+        email: users.email,
+        avatarUrl: users.avatar_url,
+        who_can_dm: users.who_can_dm,
+      })
+      .from(alias)
+      .innerJoin(users, eq(alias.user_id, users.id))
+      .where(
+        and(
+          inArray(alias.server_id, callerServerIds),
+          ne(alias.user_id, callerId),
+          ne(users.who_can_dm, 'nobody'),
+        ),
+      )
+      .orderBy(users.id, asc(users.display_name));
+
+    // Final stable sort by displayName (DISTINCT ON orders by the key first)
+    const candidates: DmCandidate[] = rows
+      .map((r) => ({
+        userId: r.userId,
+        displayName: r.displayName ?? r.email.split('@')[0] ?? r.userId,
+        avatarUrl: r.avatarUrl,
+      }))
+      .sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+    return candidates;
   }
 }

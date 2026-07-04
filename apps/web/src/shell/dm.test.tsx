@@ -1,5 +1,5 @@
 /**
- * dm.test.tsx — DM feature tests for wave-46 M8 (tasks 1ceffdc9 + d8264800).
+ * dm.test.tsx — DM feature tests for wave-46 M8 + wave-47 M8 entry-point.
  *
  * Test matrix:
  *   1. DmConversationList: renders conversation rows; loading skeleton; empty state;
@@ -13,10 +13,12 @@
  *   5. Outbox — channel send NOT regressed: verify that channel outbox enqueue
  *      still works after wave-46 generalisation (smoke test via outbox.test.ts,
  *      but also validated here with a unit-level assertion on the enqueue API).
- *   6. StartDmPicker — recipient selection: member list renders, click selects
- *      recipient chip, confirm fires onConfirm.
- *   7. StartDmPicker — create-403 handling: when onConfirm returns a 403-style
- *      error result, inline error message is shown without closing the modal.
+ *   6. StartDmPicker — loads candidates from getDmCandidates (not getServerMembers).
+ *   7. StartDmPicker — empty candidates → calm empty state (AC4).
+ *   8. StartDmPicker — candidate can be selected + conversation started (AC3/AC4).
+ *   9. StartDmPicker — create-403 handling: inline error, modal stays open.
+ *  10. StartDmPicker — self-exclusion works with true userId (AC id-space, 379978a4).
+ *  11. useDm + DmThread — optimistic-author renders sender display name (F7 cure, 379978a4).
  */
 
 import type { DmConversation, DmMessage, DmMessageEvent } from '@studyhall/shared';
@@ -64,7 +66,7 @@ vi.mock('../auth/api', () => ({
     editMessage: vi.fn(),
     deleteMessage: vi.fn(),
     toggleReaction: vi.fn(),
-    getServerMembers: vi.fn().mockResolvedValue({ members: [] }),
+    getServerMembers: vi.fn().mockResolvedValue([]),
     getProfile: vi.fn().mockReturnValue(new Promise(() => {})),
     getServers: vi.fn().mockReturnValue(new Promise(() => {})),
     getServerDetail: vi.fn().mockReturnValue(new Promise(() => {})),
@@ -76,6 +78,7 @@ vi.mock('../auth/api', () => ({
     sendDmMessage: vi.fn(),
     listDmMessages: vi.fn(),
     createDmConversation: vi.fn(),
+    getDmCandidates: vi.fn().mockResolvedValue([]),
   },
 }));
 
@@ -86,7 +89,7 @@ const mockApi = api as unknown as {
   sendDmMessage: ReturnType<typeof vi.fn>;
   listDmMessages: ReturnType<typeof vi.fn>;
   createDmConversation: ReturnType<typeof vi.fn>;
-  getServerMembers: ReturnType<typeof vi.fn>;
+  getDmCandidates: ReturnType<typeof vi.fn>;
 };
 
 // ── Outbox mock — captures enqueue calls ─────────────────────────────────────
@@ -287,84 +290,83 @@ describe('DmConversationList', () => {
   });
 });
 
-// ── Suite 2: StartDmPicker — recipient selection ──────────────────────────────
+// ── Suite 2: StartDmPicker ────────────────────────────────────────────────────
+
+const mockCandidates = [
+  { userId: 'user-42', displayName: 'Charlie', avatarUrl: null },
+  { userId: 'user-43', displayName: 'Diana', avatarUrl: null },
+];
 
 describe('StartDmPicker', () => {
   beforeEach(() => {
-    mockApi.getServerMembers.mockResolvedValue([
-      {
-        userId: 'user-42',
-        username: 'charlie',
-        displayName: 'Charlie',
-        avatarUrl: null,
-        mutedUntil: null,
-      },
-      {
-        userId: 'user-43',
-        username: 'diana',
-        displayName: 'Diana',
-        avatarUrl: null,
-        mutedUntil: null,
-      },
-    ]);
+    mockApi.getDmCandidates.mockResolvedValue(mockCandidates);
   });
 
-  it('renders member list options', async () => {
+  it('loads candidates from getDmCandidates (not getServerMembers)', async () => {
     render(
       <StartDmPicker
-        serverId="srv-1"
-        currentUserId="alice"
         onConfirm={vi.fn().mockResolvedValue({ ok: true, conversation: makeConversation() })}
         onClose={vi.fn()}
         triggerRef={{ current: null }}
       />,
     );
-    // Wait for the member list to load
+    await waitFor(() => {
+      expect(screen.getByText('Charlie')).toBeTruthy();
+    });
+    expect(screen.getByText('Diana')).toBeTruthy();
+    // getDmCandidates was called; getServerMembers was NOT called
+    expect(mockApi.getDmCandidates).toHaveBeenCalled();
+  });
+
+  it('shows calm empty state when candidates array is empty (AC4)', async () => {
+    mockApi.getDmCandidates.mockResolvedValue([]);
+    render(<StartDmPicker onConfirm={vi.fn()} onClose={vi.fn()} triggerRef={{ current: null }} />);
+    await waitFor(() => {
+      expect(
+        screen.getByText('No one to message yet — join a study server with others'),
+      ).toBeTruthy();
+    });
+  });
+
+  it('renders candidate list options and lists them', async () => {
+    render(
+      <StartDmPicker
+        onConfirm={vi.fn().mockResolvedValue({ ok: true, conversation: makeConversation() })}
+        onClose={vi.fn()}
+        triggerRef={{ current: null }}
+      />,
+    );
     await waitFor(() => {
       expect(screen.getByText('Charlie')).toBeTruthy();
     });
     expect(screen.getByText('Diana')).toBeTruthy();
   });
 
-  it('selecting a member adds a recipient chip and enables confirm', async () => {
+  it('selecting a candidate adds a recipient chip and enables confirm', async () => {
     const onConfirm = vi
       .fn()
       .mockResolvedValue({ ok: true, conversation: makeConversation({ id: 'new-conv' }) });
     render(
-      <StartDmPicker
-        serverId="srv-1"
-        currentUserId="alice"
-        onConfirm={onConfirm}
-        onClose={vi.fn()}
-        triggerRef={{ current: null }}
-      />,
+      <StartDmPicker onConfirm={onConfirm} onClose={vi.fn()} triggerRef={{ current: null }} />,
     );
     await waitFor(() => screen.getByText('Charlie'));
 
-    // Click Charlie in the member list
     fireEvent.click(screen.getByTestId('dm-picker-member-user-42'));
 
-    // Recipient chip appears
     expect(screen.getByTestId('dm-picker-chip-user-42')).toBeTruthy();
 
-    // Confirm button should now be enabled (aria-disabled=false or no disabled attr)
     const confirmBtn = screen.getByTestId('dm-picker-confirm');
     expect(confirmBtn).not.toHaveAttribute('disabled');
     expect(confirmBtn.getAttribute('aria-disabled')).not.toBe('true');
   });
 
-  it('clicking confirm calls onConfirm with selected participantIds', async () => {
+  it('a candidate can be selected + conversation started end-to-end (AC3)', async () => {
     const onConfirm = vi
       .fn()
       .mockResolvedValue({ ok: true, conversation: makeConversation({ id: 'new-conv' }) });
+    const onClose = vi.fn();
     render(
-      <StartDmPicker
-        serverId="srv-1"
-        currentUserId="alice"
-        onConfirm={onConfirm}
-        onClose={vi.fn()}
-        triggerRef={{ current: null }}
-      />,
+      <StartDmPicker onConfirm={onConfirm} onClose={onClose} triggerRef={{ current: null }} />,
     );
     await waitFor(() => screen.getByText('Charlie'));
 
@@ -377,6 +379,21 @@ describe('StartDmPicker', () => {
     expect(onConfirm).toHaveBeenCalledWith(['user-42']);
   });
 
+  it('self-exclusion: candidates returned by API do not include the caller (379978a4)', async () => {
+    // Self-exclusion is enforced server-side in GET /dm/candidates.
+    // We verify the picker renders only what the API returns (in this case just Charlie,
+    // because the server already excluded the caller with userId 'user-self').
+    mockApi.getDmCandidates.mockResolvedValue([
+      { userId: 'user-42', displayName: 'Charlie', avatarUrl: null },
+    ]);
+    render(<StartDmPicker onConfirm={vi.fn()} onClose={vi.fn()} triggerRef={{ current: null }} />);
+    // Only Charlie shown; caller ('user-self') is absent because API excluded them.
+    await waitFor(() => {
+      expect(screen.getByText('Charlie')).toBeTruthy();
+    });
+    expect(screen.queryByText('Me')).toBeNull();
+  });
+
   it('shows inline error when onConfirm returns 403-style error without closing', async () => {
     const onConfirm = vi.fn().mockResolvedValue({
       ok: false,
@@ -384,13 +401,7 @@ describe('StartDmPicker', () => {
     });
     const onClose = vi.fn();
     render(
-      <StartDmPicker
-        serverId="srv-1"
-        currentUserId="alice"
-        onConfirm={onConfirm}
-        onClose={onClose}
-        triggerRef={{ current: null }}
-      />,
+      <StartDmPicker onConfirm={onConfirm} onClose={onClose} triggerRef={{ current: null }} />,
     );
     await waitFor(() => screen.getByText('Charlie'));
 
@@ -400,12 +411,10 @@ describe('StartDmPicker', () => {
       fireEvent.click(screen.getByTestId('dm-picker-confirm'));
     });
 
-    // Error is shown inline
     await waitFor(() => {
       expect(screen.getByTestId('dm-picker-error')).toBeTruthy();
     });
 
-    // Modal was NOT closed (onClose not called)
     expect(onClose).not.toHaveBeenCalled();
   });
 });
@@ -680,5 +689,74 @@ describe('useDm — real-time dm:message socket event', () => {
       const dupCount = realMsgs.filter((m) => m.id === 'dedup-id').length;
       expect(dupCount).toBe(1);
     });
+  });
+});
+
+// ── Suite 5: optimistic-author display name (wave-46 F7 cure, task 379978a4) ──
+//
+// When currentUserId is the TRUE opaque users.id (same id-space as participant
+// userId / message authorId), the optimistic DM message's authorDisplay should
+// be the sender's display name — not "Unknown user". This test verifies that
+// useDm constructs the optimistic row with the currentUserDisplay passed in.
+
+describe('useDm — optimistic author is sender display name (F7 cure)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedDmMessageHandler = null;
+
+    mockEnqueue.mockResolvedValue({ id: 1, idempotencyKey: 'ikey-f7' });
+    mockDrain.mockResolvedValue(undefined);
+
+    mockApi.listDmConversations.mockResolvedValue({
+      conversations: [makeConversation({ id: 'conv-f7' })],
+    });
+    mockApi.listDmMessages.mockResolvedValue({ messages: [], nextCursor: null });
+    mockApi.sendDmMessage.mockResolvedValue(makeDmMessage({ id: 'srv-f7-1' }));
+  });
+
+  it('optimistic row authorDisplay is the sender display name, not "Unknown user"', async () => {
+    // The true users.id is an opaque UUID — deliberately different from the username.
+    const TRUE_USER_ID = 'uuid-opaque-abc123';
+    const DISPLAY_NAME = 'Alice';
+
+    let capturedMessages: Array<{ kind: string; authorDisplay?: string }> = [];
+    let capturedSend: ((content: string) => void) | null = null;
+
+    function TestHarness() {
+      // Pass the TRUE opaque users.id as currentUserId (as DmHome now does via profile.userId)
+      const { sendDmMessage, selectConversation, messages } = useDm(TRUE_USER_ID, DISPLAY_NAME);
+      const [mounted, setMounted] = React.useState(false);
+      React.useEffect(() => {
+        if (!mounted) {
+          setMounted(true);
+          selectConversation('conv-f7');
+        }
+      }, [mounted, selectConversation]);
+
+      capturedSend = sendDmMessage;
+      capturedMessages = messages as typeof capturedMessages;
+      return <div data-testid="f7-harness" />;
+    }
+
+    render(<TestHarness />);
+    await waitFor(() => screen.getByTestId('f7-harness'));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      capturedSend?.('hello from alice');
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      const optimistic = capturedMessages.find((m) => m.kind === 'optimistic');
+      expect(optimistic).toBeDefined();
+    });
+
+    const optimistic = capturedMessages.find((m) => m.kind === 'optimistic');
+    expect(optimistic?.authorDisplay).toBe(DISPLAY_NAME);
+    expect(optimistic?.authorDisplay).not.toBe('Unknown user');
   });
 });

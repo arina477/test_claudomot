@@ -7,22 +7,27 @@
  * Reachable from the server rail's DM-home icon button (chat teardrop icon).
  * Acts as the entry point for the entire DM feature.
  *
- * wave-46 M8 task 1ceffdc9.
+ * wave-47 M8 task 10967558 + 379978a4:
+ *   - Removed serverId gate (StartDmPicker now uses GET /dm/candidates).
+ *   - currentUserId sourced from profile.userId (true opaque users.id) so
+ *     self-exclusion and optimistic-author resolution use the same id-space
+ *     as candidate.userId and dm participant/author ids (fixes wave-46 F7).
  */
 
 import { useContext, useRef, useState } from 'react';
 import { DmConversationList } from './DmConversationList';
 import { DmThread } from './DmThread';
 import { ProfileContext } from './ProfileContext';
-import { useServers } from './ServerContext';
 import { StartDmPicker } from './StartDmPicker';
 import { useDm } from './useDm';
 
 export function DmHome() {
   const { profile } = useContext(ProfileContext);
-  const { selectedId: serverId } = useServers();
 
-  const currentUserId = profile?.username ?? null;
+  // Use the true opaque users.id (NOT profile.username) — ensures self-exclusion
+  // in the candidate picker and the optimistic-author display name both resolve
+  // correctly against the same id-space as DM participant / author ids.
+  const currentUserId = profile?.userId ?? null;
   const currentUserDisplay = profile?.displayName ?? profile?.username ?? 'Me';
 
   const {
@@ -102,8 +107,6 @@ export function DmHome() {
       {/* StartDmPicker modal */}
       {pickerOpen && (
         <StartDmPicker
-          serverId={serverId}
-          currentUserId={currentUserId}
           onConfirm={handleCreateConversation}
           onClose={() => setPickerOpen(false)}
           triggerRef={startDmBtnRef}

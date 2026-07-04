@@ -175,6 +175,7 @@ export {
   DmMessageListResponseSchema,
   DmMessageEventSchema,
   DM_MESSAGE_EVENT,
+  DmCandidateSchema,
 } from './dm.js';
 export type {
   DmParticipant,
@@ -185,6 +186,7 @@ export type {
   DmConversationListResponse,
   DmMessageListResponse,
   DmMessageEvent,
+  DmCandidate,
 } from './dm.js';
 
 export { AccountDataResponseSchema } from './account-data.js';

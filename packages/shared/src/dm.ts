@@ -151,3 +151,26 @@ export type DmMessageEvent = z.infer<typeof DmMessageEventSchema>;
 
 /** Socket.IO event name for an inbound DM message. */
 export const DM_MESSAGE_EVENT = 'dm:message' as const;
+
+// ---------------------------------------------------------------------------
+// DmCandidateSchema — a server member eligible to start a DM with
+// wave-47 M8 DM entry-point
+//
+// Mirrors ServerMemberSchema (servers.ts) field names and nullability exactly:
+//   userId        — string (non-nullable)
+//   displayName   — string (non-nullable)
+//   avatarUrl     — string | null  (user may have no avatar)
+//
+// NOTE: avatarUrl follows the ServerMemberSchema name (NOT DmParticipantSchema
+// which uses `avatar`).  Candidates ARE server members returned from
+// GET /dm/candidates, and the response is a BARE array — mirroring the
+// GET /servers/:id/members convention (bare ServerMember[]) rather than the
+// wrapped DmConversationListResponse / DmMessageListResponse convention.
+// ---------------------------------------------------------------------------
+
+export const DmCandidateSchema = z.object({
+  userId: z.string(),
+  displayName: z.string(),
+  avatarUrl: z.string().nullable(),
+});
+export type DmCandidate = z.infer<typeof DmCandidateSchema>;
