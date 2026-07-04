@@ -320,6 +320,37 @@ describe('DmService — participant cap', () => {
     expect(result.participants).toHaveLength(10);
   });
 
+  it('succeeds for 1:1 (is_group=false) with exactly 2 total participants (creator + 1 target, who_can_dm=everyone)', async () => {
+    let selectCallCount = 0;
+    mockSelect.mockImplementation(() => {
+      selectCallCount++;
+      if (selectCallCount === 1) {
+        // enforceWhoCanDm: fetch target user's who_can_dm
+        return makeSelectChain([{ who_can_dm: 'everyone' }]);
+      }
+      // fetchParticipantDetails after transaction
+      return makeSelectChain([
+        { user_id: CREATOR_ID, display_name: 'Alice', avatar_url: null },
+        { user_id: TARGET_A_ID, display_name: 'Bob', avatar_url: null },
+      ]);
+    });
+
+    mockTransaction.mockImplementation(async (fn: (tx: unknown) => unknown) => {
+      const txInsert = vi.fn().mockReturnValue(makeInsertChain([mockConvRow]));
+      const tx = { insert: txInsert };
+      return fn(tx);
+    });
+
+    const result = await service.createConversation(CREATOR_ID, {
+      participantIds: [TARGET_A_ID],
+      isGroup: false,
+    });
+
+    expect(result.id).toBe(CONV_ID);
+    expect(result.isGroup).toBe(false);
+    expect(result.participants).toHaveLength(2);
+  });
+
   it('rejects 1:1 (is_group=false) with 3 total participants (400)', async () => {
     await expect(
       service.createConversation(CREATOR_ID, {
