@@ -64,7 +64,7 @@ verdict_evidence:
   - "CHANGELOG.md:76-77 (Added, #56, 2 bullets)"
   - "milestones 84e17739 UPDATE: none — stays in_progress (open_count=4)"
   - "README.md: skipped (no env/command/install/breaking change)"
-  - "commit SHA: <filled by Action 4 push>"
+  - "commit SHA: b8f2581 (pushed to main)"
 changelog_entry_added: true
 roadmap_milestones_progressed: []          # M8 progressed within-milestone (5→ still 4 open); no status transition
 roadmap_skip_reason: ""                     # not skipped — evaluated, verdict = stay in_progress
