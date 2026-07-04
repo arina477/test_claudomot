@@ -15,7 +15,7 @@ DESIGN (skip block if non-UI wave):
 - [x] D-3 (SKIPPED)
 
 BUILD:
-- [ ] B-0 Branch & schema
+- [x] B-0 Branch & schema
 - [ ] B-1 Contracts
 - [ ] B-2 Backend
 - [ ] B-3 Frontend
