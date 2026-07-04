@@ -481,6 +481,109 @@ describe('useDm — outbox enqueue target', () => {
   });
 });
 
+// ── Suite 3b: useDm — optimistic send via outbox / single send path ───────────
+//
+// Regression guard for the double-send race fix: the sender's optimistic
+// message MUST appear in the thread (after enqueue resolves), and there must
+// be exactly ONE send path — the outbox/drain — not a separate direct POST.
+//
+// The canonical pattern (mirroring useMessages.sendMessage) means the optimistic
+// row is appended inside enqueue().then(), so mockEnqueue must resolve and we
+// assert via waitFor.
+
+describe('useDm — outbox-only send (single send path)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedDmMessageHandler = null;
+
+    // enqueue resolves immediately with a stable key — same as the real outbox.
+    mockEnqueue.mockResolvedValue({ id: 1, idempotencyKey: 'test-ikey-sync' });
+    // drain resolves immediately (no-op in unit context).
+    mockDrain.mockResolvedValue(undefined);
+
+    mockApi.listDmConversations.mockResolvedValue({
+      conversations: [makeConversation({ id: 'conv-sync' })],
+    });
+    mockApi.listDmMessages.mockResolvedValue({ messages: [], nextCursor: null });
+    // sendDmMessage should NOT be called directly — only drain's sendFn calls it.
+    // We leave it as a spy to assert call count.
+    mockApi.sendDmMessage.mockResolvedValue(makeDmMessage({ id: 'srv-sync-1' }));
+  });
+
+  it('optimistic row appears after enqueue resolves (waitFor) and NO direct api.sendDmMessage call', async () => {
+    let capturedSend: ((content: string) => void) | null = null;
+    let capturedMessages: Array<{ kind: string; content?: string; state?: string }> = [];
+
+    function TestHarness() {
+      const { sendDmMessage, selectConversation, messages } = useDm('alice', 'Alice');
+      const [mounted, setMounted] = React.useState(false);
+      React.useEffect(() => {
+        if (!mounted) {
+          setMounted(true);
+          selectConversation('conv-sync');
+        }
+      }, [mounted, selectConversation]);
+
+      capturedSend = sendDmMessage;
+      capturedMessages = messages as typeof capturedMessages;
+      return (
+        <div data-testid="sync-harness">
+          {messages.map((m) =>
+            m.kind === 'optimistic' ? (
+              <div
+                key={(m as { idempotencyKey: string }).idempotencyKey}
+                data-testid="dm-optimistic-row"
+              >
+                {(m as { content: string }).content}
+              </div>
+            ) : null,
+          )}
+        </div>
+      );
+    }
+
+    render(<TestHarness />);
+    await waitFor(() => screen.getByTestId('sync-harness'));
+
+    // Allow selectConversation async side-effects to settle.
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // Call sendDmMessage inside act() so React flushes state updates.
+    await act(async () => {
+      capturedSend?.('hello sync world');
+      // Allow enqueue().then() microtask to run.
+      await Promise.resolve();
+    });
+
+    // (a) Optimistic row is present after enqueue resolves.
+    await waitFor(() => {
+      expect(screen.getByTestId('dm-optimistic-row')).toBeTruthy();
+    });
+    expect(screen.getByText('hello sync world')).toBeTruthy();
+
+    // enqueue was called with the DM target.
+    expect(mockEnqueue).toHaveBeenCalled();
+    const [[, target]] = mockEnqueue.mock.calls as [[unknown, { kind: string }]];
+    expect(target.kind).toBe('dm');
+
+    // The message is captured as optimistic+pending.
+    const optimistic = capturedMessages.find((m) => m.kind === 'optimistic');
+    expect(optimistic).toBeDefined();
+    expect(optimistic?.state).toBe('pending');
+    expect(optimistic?.content).toBe('hello sync world');
+
+    // (b) Single send path: api.sendDmMessage is NOT called directly by useDm.
+    // drain() is the sole send path; in this unit test drain is mocked so
+    // api.sendDmMessage call count is 0 — confirming no separate direct POST.
+    expect(mockApi.sendDmMessage).not.toHaveBeenCalled();
+
+    // drain() was called (the outbox is the send path).
+    expect(mockDrain).toHaveBeenCalled();
+  });
+});
+
 // ── Suite 4: real-time dm:message socket event ────────────────────────────────
 
 describe('useDm — real-time dm:message socket event', () => {

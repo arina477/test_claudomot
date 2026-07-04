@@ -304,69 +304,92 @@ export function useDm(currentUserId: string | null, currentUserDisplay: string):
     (content: string) => {
       if (!openConversationId || !currentUserId || !db) return;
 
-      const now = new Date().toISOString();
       const target: OutboxTarget = { kind: 'dm', conversationId: openConversationId };
+      const store = db;
 
-      // Enqueue in outbox first (durable), then attempt network POST.
-      enqueue(db, target, content).then(({ idempotencyKey }) => {
-        // Append optimistic row immediately.
-        const optimistic: DisplayDmMessage = {
-          kind: 'optimistic',
-          idempotencyKey,
-          conversationId: openConversationId,
-          content,
-          authorDisplay: currentUserDisplay,
-          state: 'pending',
-          createdAt: now,
-        };
-        setMessages((prev) => [...prev, optimistic]);
+      // Enqueue to the durable outbox FIRST (outbox is the SINGLE source of
+      // truth for send), then reflect optimistic state, then trigger drain() —
+      // no separate direct POST. This prevents the double-send race (direct
+      // POST + drain re-POSTing same item with a different key).
+      enqueue(store, target, content)
+        .then(({ idempotencyKey }) => {
+          const now = new Date().toISOString();
 
-        // Attempt immediate network send.
-        api
-          .sendDmMessage(openConversationId, { content, idempotencyKey })
-          .then((confirmed) => {
-            // Remove from outbox
-            if (db) {
-              db.outbox
-                .where('idempotencyKey')
-                .equals(idempotencyKey)
-                .delete()
-                .catch(() => {});
-            }
-            // Reconcile optimistic → real
-            setMessages((prev) =>
-              prev.map((m) => {
-                if (m.kind !== 'optimistic' || m.idempotencyKey !== idempotencyKey) return m;
-                return {
-                  kind: 'real' as const,
-                  id: confirmed.id,
-                  conversationId: openConversationId,
-                  authorId: currentUserId,
-                  content: confirmed.content,
-                  createdAt: confirmed.createdAt,
+          // Reflect as pending in UI — enqueue().then() is ~1 ms after the IDB
+          // write; feels instant. idempotencyKey is the SINGLE key for this send
+          // through the entire lifecycle (optimistic row, outbox row, server dedup).
+          const optimistic: DisplayDmMessage = {
+            kind: 'optimistic',
+            idempotencyKey,
+            conversationId: openConversationId,
+            content,
+            authorDisplay: currentUserDisplay,
+            state: 'pending',
+            createdAt: now,
+          };
+          setMessages((prev) => [...prev, optimistic]);
+
+          // Trigger drain — the outbox handles the actual POST. drain() is
+          // re-entrant-safe (module-level guard): concurrent calls are de-duped.
+          // If offline, the row stays pending until next reconnect.
+          void drain(
+            store,
+            (drainTarget, body) => {
+              if (drainTarget.kind === 'dm') {
+                return api.sendDmMessage(drainTarget.conversationId, body) as Promise<{
+                  id: string;
+                  [key: string]: unknown;
+                }>;
+              }
+              return Promise.reject(new Error('Channel drain not handled by DM hook'));
+            },
+            // onDelivered: reconcile optimistic → real
+            (deliveredKey, confirmedId) => {
+              setMessages((prev) =>
+                prev.map((m) => {
+                  if (m.kind !== 'optimistic' || m.idempotencyKey !== deliveredKey) return m;
+                  return {
+                    kind: 'real' as const,
+                    id: confirmedId,
+                    conversationId: openConversationId,
+                    authorId: currentUserId,
+                    content: m.content,
+                    createdAt: m.createdAt,
+                  };
+                }),
+              );
+              // Update conversation list preview on delivery.
+              setConversations((prev) => {
+                const idx = prev.findIndex((c) => c.id === openConversationId);
+                if (idx === -1) return prev;
+                const updated: DmConversation = {
+                  ...(prev[idx] as DmConversation),
+                  lastMessage: {
+                    content,
+                    createdAt: new Date().toISOString(),
+                    authorId: currentUserId,
+                  },
                 };
-              }),
-            );
-            // Update conversation list preview
-            setConversations((prev) => {
-              const idx = prev.findIndex((c) => c.id === openConversationId);
-              if (idx === -1) return prev;
-              const updated: DmConversation = {
-                ...(prev[idx] as DmConversation),
-                lastMessage: {
-                  content: confirmed.content,
-                  createdAt: confirmed.createdAt,
-                  authorId: currentUserId,
-                },
-              };
-              return [updated, ...prev.filter((_, i) => i !== idx)];
-            });
-          })
-          .catch(() => {
-            // Network failed — leave the outbox row; drain will retry.
-            // Optimistic row stays as 'pending' (outbox holds it).
-          });
-      });
+                return [updated, ...prev.filter((_, i) => i !== idx)];
+              });
+            },
+            // onFailed: flip optimistic row to 'failed'
+            (failedKey) => {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.kind === 'optimistic' && m.idempotencyKey === failedKey
+                    ? { ...m, state: 'failed' as const }
+                    : m,
+                ),
+              );
+            },
+          );
+        })
+        .catch(() => {
+          // IDB enqueue failed (e.g. QuotaExceededError) — the message cannot
+          // be durably queued; surface nothing (the composer is still enabled
+          // and the user can retry).
+        });
     },
     [openConversationId, currentUserId, currentUserDisplay],
   );
