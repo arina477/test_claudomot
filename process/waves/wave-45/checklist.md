@@ -40,9 +40,9 @@ TEST:
 - [x] T-9 Journey (T-block gate PASS)
 
 VERIFY:
-- [ ] V-1 Independent reviews (Karen + jenny, parallel)
-- [ ] V-2 Triage
-- [ ] V-3 Fast-fix loop (or close)
+- [x] V-1 Independent reviews (Karen + jenny, parallel) — both APPROVE; 0 spec drift; F1/F2 pre-existing debt → V-2
+- [x] V-2 Triage — 0 blocking; F1+F2 → non-blocking M8 follow-ups (f8eb49c1, a1dda389; wave_id NULL, N-2 seedable); N1+N2 noise-suppressed; fast-fix queue empty
+- [x] V-3 Fast-fix loop (or close) — Phase 1 gate APPROVED (fresh head-verifier); Phase 2 skipped (empty fast-fix queue); block exits clean to L
 
 LEARN:
 - [ ] L-1 Docs
