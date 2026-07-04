@@ -3,7 +3,7 @@
 **Block:** T (Test)
 **Wave topic:** Class scheduling — scheduled_sessions + educator authoring + member calendar + session detail (no reminders/RSVP/ICS)
 **Block exit gate:** T-9
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Pattern | Status | Notes |
@@ -16,7 +16,7 @@
 | T-6 | stages/T-6-layout.md | active | done | layout+token PASS; 1 MAJOR responsive (1024 detail-drawer crush) + 2 minor |
 | T-7 | stages/T-7-perf.md | — | skipped | not heavy (recurrence bounded 90d, no perf budget at risk) |
 | T-8 | stages/T-8-security.md | active | done | CLEAN 0 findings (IDOR/serverId-smuggle/bad-UUID→400/90d-cap/rate-limit) |
-| T-9 | stages/T-9-journey.md | active | pending | gate + journey regen |
+| T-9 | stages/T-9-journey.md | active | done | head-tester APPROVED; journey map v0.30 |
 
 ## Block-specific context
 - **Wave topic:** class scheduling lifecycle.
@@ -32,3 +32,14 @@ none
 
 ## Gate verdict log
 <appended by fresh head-tester spawn at T-9>
+
+## Block exit / handoff
+```yaml
+test_block_status:    complete
+stages_run:           [T-1, T-2, T-3, T-4, T-5, T-6, T-8, T-9]
+stages_skipped:       [T-7 (not heavy)]
+findings_total:       10
+findings_critical:    0
+findings_aggregate:   process/waves/wave-43/blocks/T/findings-aggregate.md
+ready_for_verify:     true
+```
