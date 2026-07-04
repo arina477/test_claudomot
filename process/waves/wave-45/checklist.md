@@ -49,6 +49,6 @@ LEARN:
 - [x] L-2 Distill
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers — BOARD 7/7 PAUSE (N-1-wave-46-disposition); founder-reserved M8 metric re-escalated; loop paused (no wave-46 opened)
+- [ ] N-2 Seed — NOT RUN (paused at N-1; no wave-46)
+- [ ] N-3 Handoff — NOT RUN (paused at N-1; wave-45 waves row stays 'running' until resume)
