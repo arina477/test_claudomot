@@ -33,12 +33,8 @@ import {
 } from './pg-harness';
 
 // SUT imports AFTER harness so the lazy db proxy resolves to the test DB.
-import {
-  BadRequestException,
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
-import type { AssignmentSubmission, AssignmentSubmissionRosterRow } from '@studyhall/shared';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import type { AssignmentSubmission } from '@studyhall/shared';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AssignmentsService } from '../../src/assignments/assignments.service';
 import { FilesService } from '../../src/files/files.service';
@@ -65,7 +61,7 @@ const NON_MEMBER_ID = 'asgn-sub-nonmember';
 
 // Assignment IDs (uuid)
 const ASSIGNMENT_ID = 'e1000000-0000-0000-0000-000000000001';
-const ASSIGNMENT_B_ID = 'e1000000-0000-0000-0000-000000000002'; // cross-assignment guard
+const _ASSIGNMENT_B_ID = 'e1000000-0000-0000-0000-000000000002'; // cross-assignment guard
 
 // ---------------------------------------------------------------------------
 // Local fixture helpers — assignments + submissions (raw SQL via harnessQuery)
@@ -242,7 +238,10 @@ describe.skipIf(SKIP)(
       await insertSubmissionRow(ASSIGNMENT_ID, MEMBER_ID, 'initial', pastReturn, 'Needs work');
 
       // Verify the returned state is present before resubmit
-      const before = await harnessQuery<{ returned_at: Date | null; organizer_comment: string | null }>(
+      const before = await harnessQuery<{
+        returned_at: Date | null;
+        organizer_comment: string | null;
+      }>(
         'SELECT returned_at, organizer_comment FROM assignment_submissions WHERE assignment_id = $1 AND user_id = $2',
         [ASSIGNMENT_ID, MEMBER_ID],
       );
@@ -258,7 +257,10 @@ describe.skipIf(SKIP)(
       expect(result.organizerComment).toBeNull();
 
       // Assert — DB row reflects cleared return
-      const after = await harnessQuery<{ returned_at: Date | null; organizer_comment: string | null }>(
+      const after = await harnessQuery<{
+        returned_at: Date | null;
+        organizer_comment: string | null;
+      }>(
         'SELECT returned_at, organizer_comment FROM assignment_submissions WHERE assignment_id = $1 AND user_id = $2',
         [ASSIGNMENT_ID, MEMBER_ID],
       );
@@ -319,17 +321,17 @@ describe.skipIf(SKIP)(
         expect(row.submitter).toBeDefined();
         expect(typeof row.submitter.userId).toBe('string');
         // No grade/score field on the roster row (case 8 guard — checked here too)
-        expect((row as unknown as Record<string, unknown>)['grade']).toBeUndefined();
-        expect((row as unknown as Record<string, unknown>)['score']).toBeUndefined();
+        expect((row as unknown as Record<string, unknown>).grade).toBeUndefined();
+        expect((row as unknown as Record<string, unknown>).score).toBeUndefined();
       }
     });
 
     it('plain member cannot list submissions → ForbiddenException (403)', async () => {
       await sut.submitAssignment(ASSIGNMENT_ID, MEMBER_ID, { text: 'answer' });
 
-      await expect(
-        sut.listSubmissions(ASSIGNMENT_ID, MEMBER_ID),
-      ).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(sut.listSubmissions(ASSIGNMENT_ID, MEMBER_ID)).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
     });
 
     it('organizer lists submissions for assignment with no submissions → 200 empty list', async () => {
@@ -359,10 +361,12 @@ describe.skipIf(SKIP)(
       expect(result.organizerComment).toBe('Good work!');
 
       // Assert — DB row reflects the return
-      const rows = await harnessQuery<{ returned_at: Date | null; organizer_comment: string | null }>(
-        'SELECT returned_at, organizer_comment FROM assignment_submissions WHERE id = $1',
-        [submissionId],
-      );
+      const rows = await harnessQuery<{
+        returned_at: Date | null;
+        organizer_comment: string | null;
+      }>('SELECT returned_at, organizer_comment FROM assignment_submissions WHERE id = $1', [
+        submissionId,
+      ]);
       expect(rows[0]?.returned_at).not.toBeNull();
       expect(rows[0]?.organizer_comment).toBe('Good work!');
     });
@@ -418,17 +422,17 @@ describe.skipIf(SKIP)(
 
       // Assert — the DTO type and runtime object both lack grade/score
       const asRecord = result as unknown as Record<string, unknown>;
-      expect(asRecord['grade']).toBeUndefined();
-      expect(asRecord['score']).toBeUndefined();
-      expect(asRecord['gradeValue']).toBeUndefined();
+      expect(asRecord.grade).toBeUndefined();
+      expect(asRecord.score).toBeUndefined();
+      expect(asRecord.gradeValue).toBeUndefined();
 
       // Also verify the roster row (AssignmentSubmissionRosterRow) lacks grade/score
       await sut.submitAssignment(ASSIGNMENT_ID, MEMBER_B_ID, { text: 'also no grades' });
       const roster = await sut.listSubmissions(ASSIGNMENT_ID, ORGANIZER_ID);
       for (const row of roster) {
         const rosterRecord = row as unknown as Record<string, unknown>;
-        expect(rosterRecord['grade']).toBeUndefined();
-        expect(rosterRecord['score']).toBeUndefined();
+        expect(rosterRecord.grade).toBeUndefined();
+        expect(rosterRecord.score).toBeUndefined();
       }
     });
   },
@@ -436,13 +440,7 @@ describe.skipIf(SKIP)(
 
 // When DATABASE_URL_TEST is not set, emit a clear skip message (not a silent pass).
 if (SKIP) {
-  describe(
-    'AssignmentsService — assignment-submissions collect/return lifecycle (wave-42 tasks db8e082a + 1746f72a + b859984b)',
-    () => {
-      it.skip(
-        'SKIPPED: DATABASE_URL_TEST is not set — set it to a real Postgres URL to run integration tests locally',
-        () => {},
-      );
-    },
-  );
+  describe('AssignmentsService — assignment-submissions collect/return lifecycle (wave-42 tasks db8e082a + 1746f72a + b859984b)', () => {
+    it.skip('SKIPPED: DATABASE_URL_TEST is not set — set it to a real Postgres URL to run integration tests locally', () => {});
+  });
 }
