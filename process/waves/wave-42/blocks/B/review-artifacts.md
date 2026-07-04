@@ -14,7 +14,7 @@
 | B-2 | stages/B-2-backend.md | done | 4 endpoints, IDOR-safe, resubmit-clears-return, member-presign; api typecheck clean |
 | B-3 | stages/B-3-frontend.md | done | submit + roster + return dialog; typecheck+biome clean; permission-gated |
 | B-4 | stages/B-4-wiring.md | done | repo typecheck 4/4 clean; 4 routes registered; no drift |
-| B-5 | stages/B-5-verify.md | pending | |
+| B-5 | stages/B-5-verify.md | done | lint/unit(354)/build all green; live smoke → T-block |
 | B-6 | stages/B-6-review.md | pending | |
 
 ## Block-specific context
