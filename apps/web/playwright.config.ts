@@ -1,4 +1,17 @@
+import os from 'node:os';
+import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
+
+// Resolve bundled chromium from the user-local default cache. This equals
+// Playwright's default (~/.cache/ms-playwright), so it is a no-op in normal
+// CI environments where that path is already correct. It neutralises a broken
+// ambient PLAYWRIGHT_BROWSERS_PATH (e.g. a root-owned /opt/ms-playwright set
+// by the host) that would otherwise cause Playwright to fail to find its
+// managed chromium build when invoked directly via `playwright test` or
+// `pnpm exec playwright test` — paths that bypass the npm script env prefix.
+// Setting it here (config is loaded on every invocation) makes this the single
+// source of truth regardless of call path.
+process.env.PLAYWRIGHT_BROWSERS_PATH = path.join(os.homedir(), '.cache', 'ms-playwright');
 
 /**
  * Playwright config — E2E against the live web deployment.
