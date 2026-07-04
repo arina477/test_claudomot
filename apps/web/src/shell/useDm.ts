@@ -94,6 +94,10 @@ export function useDm(currentUserId: string | null, currentUserDisplay: string):
   const openConvIdRef = useRef<string | null>(null);
   openConvIdRef.current = openConversationId;
 
+  // Ref to currentUserId so the socket handler can identify own-sender echoes
+  const currentUserIdRef = useRef<string | null>(null);
+  currentUserIdRef.current = currentUserId;
+
   // ── Fetch conversation list ────────────────────────────────────────────────
 
   const fetchConversations = useCallback(async () => {
@@ -199,11 +203,22 @@ export function useDm(currentUserId: string | null, currentUserDisplay: string):
       // If this is the open conversation, append to thread (dedup by id).
       if (openConvIdRef.current === conversationId) {
         setMessages((prev) => {
-          // Reconcile: if an optimistic row with matching idempotencyKey exists,
-          // the sender's own confirmation arrives via REST response (not socket).
-          // For OTHER participants the message is new — dedup by id.
-          const alreadyPresent = prev.some((m) => m.kind === 'real' && m.id === message.id);
-          if (alreadyPresent) return prev;
+          // Dedup real-id: ignore if a confirmed row with this id is already present.
+          if (prev.some((m) => m.kind === 'real' && m.id === message.id)) return prev;
+          // Reconcile own-sender echo: if the echo is from the current user and a
+          // pending optimistic row with matching content exists, promote it in-place
+          // instead of appending a duplicate. The echo DTO carries no idempotencyKey,
+          // so we match by (authorId === self) + content against the first pending row.
+          if (message.authorId === currentUserIdRef.current) {
+            const idx = prev.findIndex(
+              (m) =>
+                m.kind === 'optimistic' && m.state === 'pending' && m.content === message.content,
+            );
+            if (idx !== -1) {
+              const promoted: DisplayDmMessage = { kind: 'real' as const, ...message };
+              return [...prev.slice(0, idx), promoted, ...prev.slice(idx + 1)];
+            }
+          }
           return [...prev, { kind: 'real' as const, ...message }];
         });
       }
