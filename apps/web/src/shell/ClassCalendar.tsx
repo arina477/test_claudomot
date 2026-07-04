@@ -386,9 +386,13 @@ export function ClassCalendar({ onClose }: Props) {
     });
   }, []);
 
-  // Esc dismisses the narrow overlay
+  // Esc dismisses the narrow overlay.
+  // Gated on !formOpen: while the SessionForm is mounted (z-50), it owns Esc via
+  // its own bubble-phase handler.  Keeping the capture-phase listener active here
+  // would intercept Esc first (capture fires before bubble) and dismiss the overlay
+  // behind the still-open form instead of letting the form close itself.
   useEffect(() => {
-    if (!selectedSessionId || !isNarrow) return;
+    if (!selectedSessionId || !isNarrow || formOpen) return;
     function handleEsc(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         e.stopPropagation();
@@ -397,7 +401,7 @@ export function ClassCalendar({ onClose }: Props) {
     }
     document.addEventListener('keydown', handleEsc, true);
     return () => document.removeEventListener('keydown', handleEsc, true);
-  }, [selectedSessionId, isNarrow, closeNarrowOverlay]);
+  }, [selectedSessionId, isNarrow, formOpen, closeNarrowOverlay]);
 
   // Focus trap: keep Tab inside the narrow overlay while it is open
   useEffect(() => {
