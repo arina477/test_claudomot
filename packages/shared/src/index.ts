@@ -105,20 +105,32 @@ export type {
 } from './messaging.js';
 
 export {
+  AssignmentSubmissionSchema,
   AssignmentSchema,
   CreateAssignmentSchema,
   UpdateAssignmentSchema,
   AssignmentStatusSchema,
   AssignmentListResponseSchema,
   AssignmentPresignResponseSchema,
+  SubmitAssignmentSchema,
+  AssignmentSubmissionPresignResponseSchema,
+  AssignmentSubmissionRosterRowSchema,
+  AssignmentSubmissionsListResponseSchema,
+  ReturnSubmissionSchema,
 } from './assignments.js';
 export type {
+  AssignmentSubmission,
   Assignment,
   CreateAssignmentInput,
   UpdateAssignmentInput,
   AssignmentStatusInput,
   AssignmentListResponse,
   AssignmentPresignResponse,
+  SubmitAssignmentInput,
+  AssignmentSubmissionPresignResponse,
+  AssignmentSubmissionRosterRow,
+  AssignmentSubmissionsListResponse,
+  ReturnSubmissionInput,
 } from './assignments.js';
 
 export {

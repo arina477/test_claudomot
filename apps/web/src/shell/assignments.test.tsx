@@ -26,6 +26,7 @@ vi.mock('../auth/api', () => ({
   api: {
     setAssignmentStatus: vi.fn(),
     listAssignments: vi.fn(),
+    listAssignmentSubmissions: vi.fn(),
     getMe: vi.fn(),
     getMyPermissions: vi.fn(),
     getServerMembers: vi.fn(),
@@ -38,6 +39,7 @@ import { api } from '../auth/api';
 const mockApi = api as unknown as {
   setAssignmentStatus: ReturnType<typeof vi.fn>;
   listAssignments: ReturnType<typeof vi.fn>;
+  listAssignmentSubmissions: ReturnType<typeof vi.fn>;
   getMe: ReturnType<typeof vi.fn>;
   getMyPermissions: ReturnType<typeof vi.fn>;
   getServerMembers: ReturnType<typeof vi.fn>;
@@ -296,6 +298,7 @@ describe('AssignmentsPanel', () => {
     mockApi.getServerMembers.mockResolvedValue([]);
     mockApi.listRoles.mockResolvedValue([]);
     mockApi.getProfile.mockResolvedValue(null);
+    mockApi.listAssignmentSubmissions.mockResolvedValue({ submissions: [] });
   });
 
   function renderPanel(ctxOverride: Partial<ServerContextValue> = {}) {

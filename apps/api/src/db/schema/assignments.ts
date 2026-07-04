@@ -116,3 +116,53 @@ export const assignment_attachments = pgTable(
 
 export type AssignmentAttachment = InferSelectModel<typeof assignment_attachments>;
 export type NewAssignmentAttachment = InferInsertModel<typeof assignment_attachments>;
+
+// ---------------------------------------------------------------------------
+// assignment_submissions table — wave-42 assignment collect/return lifecycle
+//
+// One submission row per user per assignment (UNIQUE(assignment_id, user_id)
+// enables idempotent upsert at submit time).
+// user_id → users.id (text — matches users PK type, no cascade)
+// assignment_id → assignments.id ON DELETE CASCADE
+//
+// Optional on-row attachment mirrors assignment_attachments column shape;
+// all four attachment columns are nullable (submission may be text-only).
+//
+// returned_at + organizer_comment folded into initial CREATE (P-0 finding #2)
+// so the return sibling task needs no later ALTER.
+//
+// INDEX(assignment_id) — roster fetch (all submissions for one assignment).
+// ---------------------------------------------------------------------------
+
+export const assignment_submissions = pgTable(
+  'assignment_submissions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    assignment_id: uuid('assignment_id')
+      .notNull()
+      .references(() => assignments.id, { onDelete: 'cascade' }),
+    user_id: text('user_id')
+      .notNull()
+      .references(() => users.id),
+    text: text('text'),
+    object_key: text('object_key'),
+    filename: text('filename'),
+    content_type: text('content_type'),
+    size_bytes: integer('size_bytes'),
+    submitted_at: timestamp('submitted_at', { withTimezone: true }).defaultNow().notNull(),
+    returned_at: timestamp('returned_at', { withTimezone: true }),
+    organizer_comment: text('organizer_comment'),
+    created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    // UNIQUE(assignment_id, user_id) — one submission per user per assignment;
+    // enables idempotent upsert (INSERT ON CONFLICT DO UPDATE).
+    unique('assignment_submissions_assignment_user').on(table.assignment_id, table.user_id),
+    // INDEX(assignment_id) — roster fetch (all submissions for one assignment)
+    index('assignment_submissions_assignment_id_idx').on(table.assignment_id),
+  ],
+);
+
+export type AssignmentSubmission = InferSelectModel<typeof assignment_submissions>;
+export type NewAssignmentSubmission = InferInsertModel<typeof assignment_submissions>;

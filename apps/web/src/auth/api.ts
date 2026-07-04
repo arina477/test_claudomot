@@ -10,6 +10,9 @@ import type {
   AssignmentListResponse,
   AssignmentPresignResponse,
   AssignmentStatusInput,
+  AssignmentSubmission,
+  AssignmentSubmissionPresignResponse,
+  AssignmentSubmissionsListResponse,
   AttachmentPresignResponse,
   AvatarPresignResponse,
   CreateAssignmentInput,
@@ -29,11 +32,13 @@ import type {
   ProfileResponse,
   ReactionToggleInput,
   ReactionToggleResponse,
+  ReturnSubmissionInput,
   SendMessageInput,
   ServerDetail,
   ServerMember,
   ServerResponse,
   ServerSummary,
+  SubmitAssignmentInput,
   UnreadCountResponse,
   UpdateAssignmentInput,
   UpdatePrivacyInput,
@@ -446,6 +451,70 @@ export const api = {
     }).then((res) => {
       if (!res.ok) throw new Error(`Storage PUT failed: ${res.status}`);
     }),
+
+  // ── Assignment submission endpoints (wave-42 M9) ─────────────────────────
+
+  /**
+   * POST /assignments/:id/submit {text?, attachment?} → AssignmentSubmission.
+   * At least one of text or attachment required.
+   * Throws: 401 unauthed, 403 non-member, 404 not found, 400 bad input.
+   */
+  submitAssignment: (id: string, data: SubmitAssignmentInput): Promise<AssignmentSubmission> =>
+    request<AssignmentSubmission>(`/assignments/${id}/submit`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  /**
+   * POST /servers/:serverId/assignments/submissions/presign
+   * {contentType, filename} → AssignmentSubmissionPresignResponse {uploadUrl, key}.
+   * Member-gated. Throws: 401, 403, 400.
+   */
+  presignSubmissionAttachment: (
+    serverId: string,
+    contentType: string,
+    filename: string,
+  ): Promise<AssignmentSubmissionPresignResponse> =>
+    request<AssignmentSubmissionPresignResponse>(
+      `/servers/${serverId}/assignments/submissions/presign`,
+      { method: 'POST', body: JSON.stringify({ contentType, filename }) },
+    ),
+
+  /**
+   * PUT a submission attachment file directly to object storage.
+   * NOTE: no credentials:include — goes to the S3-compatible endpoint.
+   */
+  putSubmissionAttachmentToStorage: (uploadUrl: string, file: File): Promise<void> =>
+    fetch(uploadUrl, {
+      method: 'PUT',
+      body: file,
+      headers: { 'Content-Type': file.type },
+    }).then((res) => {
+      if (!res.ok) throw new Error(`Storage PUT failed: ${res.status}`);
+    }),
+
+  /**
+   * GET /assignments/:id/submissions → AssignmentSubmissionsListResponse.
+   * Organizer-only (manage_assignments); 403 otherwise.
+   * Throws: 401 unauthed, 403 non-organizer, 404 not found.
+   */
+  listAssignmentSubmissions: (id: string): Promise<AssignmentSubmissionsListResponse> =>
+    request<AssignmentSubmissionsListResponse>(`/assignments/${id}/submissions`),
+
+  /**
+   * POST /assignments/:id/submissions/:submissionId/return {comment?} → AssignmentSubmission.
+   * Organizer-only. :submissionId is the submission UUID PK (not the submitter's userId).
+   * Throws: 401, 403, 404.
+   */
+  returnSubmission: (
+    assignmentId: string,
+    submissionId: string,
+    data: ReturnSubmissionInput,
+  ): Promise<AssignmentSubmission> =>
+    request<AssignmentSubmission>(
+      `/assignments/${assignmentId}/submissions/${submissionId}/return`,
+      { method: 'POST', body: JSON.stringify(data) },
+    ),
 
   // ── Voice endpoints (wave-31 M6) ─────────────────────────────────────────
 
