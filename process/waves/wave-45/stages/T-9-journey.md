@@ -47,7 +47,7 @@ scenarios_run: 0
 scenarios_failed: 0
 regressions_critical: 0
 regressions_significant: 0
-journey_map_commit: <populated at commit>
+journey_map_commit: 20f7c406132739c4cc61607f20365171a74fe9d6
 findings:
   - {severity: low, journey: "typing indicator label", description: "F1 — buildTypingLabel transition table has no dedicated unit test; V-2 debt."}
   - {severity: medium, journey: "delete-any-message 2-client fan-out", description: "F2 — pre-existing wave-44 soft-check; single-client-realtime honesty gap; V-2 debt, out of wave-45 scope."}

@@ -20,7 +20,7 @@ stages_skipped:       [
 findings_total:       2
 findings_critical:    0
 findings_aggregate:   process/waves/wave-45/blocks/T/findings-aggregate.md
-journey_map_commit:   <populated at commit>
+journey_map_commit:   20f7c406132739c4cc61607f20365171a74fe9d6
 ready_for_verify:     true
 ```
 
