@@ -12,10 +12,10 @@
 | T-2 | stages/T-2-unit.md | ci-verified | done | unit green (551+354); 1 LOW coverage gap |
 | T-3 | stages/T-3-contract.md | ci-verified | done | Zod CI-validated; 1 LOW (refine neg-case→T-4) |
 | T-4 | stages/T-4-integration.md | active | done | 22 real-PG cases PASS in CI (run 28693093402); caught+fixed createSession guard |
-| T-5 | stages/T-5-e2e.md | active | pending | live E2E (direct-playwright) |
-| T-6 | stages/T-6-layout.md | active | pending | calendar layout |
-| T-7 | stages/T-7-perf.md | — | pending | SKIP (not heavy) |
-| T-8 | stages/T-8-security.md | active | pending | authz/IDOR live probes |
+| T-5 | stages/T-5-e2e.md | active | done | all 6 PASS live (weekly 5-occ, edit/delete, validation); 2 LOW a11y/cosmetic |
+| T-6 | stages/T-6-layout.md | active | done | layout+token PASS; 1 MAJOR responsive (1024 detail-drawer crush) + 2 minor |
+| T-7 | stages/T-7-perf.md | — | skipped | not heavy (recurrence bounded 90d, no perf budget at risk) |
+| T-8 | stages/T-8-security.md | active | done | CLEAN 0 findings (IDOR/serverId-smuggle/bad-UUID→400/90d-cap/rate-limit) |
 | T-9 | stages/T-9-journey.md | active | pending | gate + journey regen |
 
 ## Block-specific context
