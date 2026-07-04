@@ -3,7 +3,7 @@
 **Block:** V (Verify)
 **Wave topic:** Assignment collect/return — student submission + educator roster + return-with-comment (no grading), LIVE
 **Block exit gate:** V-3
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 
@@ -11,7 +11,7 @@
 |---|---|---|---|
 | V-1 | stages/V-1-karen.md + V-1-jenny.md + V-1-summary.md | done | Karen APPROVE (8/8) / jenny APPROVE (0 drift) |
 | V-2 | stages/V-2-triage.md | done | 0 blocking; 6 non-blocking→2 rows; 4 noise; fast-fix queue EMPTY |
-| V-3 | stages/V-3-fast-fix.md | pending | |
+| V-3 | stages/V-3-fast-fix.md | done | head-verifier APPROVED; queue empty (0 blocking) |
 
 ## Block-specific context
 
@@ -30,3 +30,16 @@ none
 ## Gate verdict log
 
 <appended by fresh head-verifier spawn at V-3>
+
+## Block exit / handoff
+```yaml
+verify_block_status:    complete
+karen_verdict:          APPROVE
+jenny_verdict:          APPROVE
+triaged_findings:
+  blocking_resolved:    []
+  non_blocking_task_ids: [683fec9b, 8d971bc2]
+  noise_suppressed:     4
+fast_fix_cycles:        0
+ready_for_learn:        true
+```
