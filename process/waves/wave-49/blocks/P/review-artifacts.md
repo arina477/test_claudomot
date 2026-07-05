@@ -5,9 +5,9 @@
 | Stage | Deliverable | Status | Notes |
 |---|---|---|---|
 | P-0 | stages/P-0-frame.md | done | PROCEED-w-adjustments: model-pin + presence-add + configure-defer |
-| P-1 | stages/P-1-decompose.md | pending | expect design_gap_flag=true (timer widget) |
-| P-2 | stages/P-2-spec.md | pending | |
-| P-3 | stages/P-3-plan.md | pending | |
+| P-1 | stages/P-1-decompose.md | done | multi-spec; sub-floor override; design_gap_flag=TRUE → D |
+| P-2 | stages/P-2-spec.md | done | multi-spec 4 blocks; compute-on-read model bound |
+| P-3 | stages/P-3-plan.md | done | node/typescript/react; D before B-3; no timer-loop |
 | P-4 | blocks/P/gate-verdict.md | pending | |
 
 ## Block-specific context
