@@ -1,2 +1,3 @@
 # Wave 49 — D-2 iterate log — study-timer
 - iteration_counter: 0 (first pass); checkpoint: skipped-mode-automatic.
+- iteration 1 (D-3 backedge, REVISE+REVISE): aidesigner refine HTTP 200 (32KB). Applied: aria-live phase + role=status; prefers-reduced-motion block; icon-btn title→aria-label; roster non-color differentiator + amber-rings-on-Break (distinctness from online-presence); restore --border-hairline/hover + remove inset shadow adds; collapse ad-hoc neon shadows to --glow-focus; replace bouncy easing; paused text-3xl + idle gap-2 + slim-bar 1024. checkpoint: skipped-mode-automatic. iteration_counter: 1.

@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StudyHall — Shared Study Timer System Component</title>
+  <title>StudyHall — Shared Study Timer Component</title>
   
   <!-- 
-    aesthetic_dna: Calm, academic focus tool. Deep zinc layered surfaces, high-contrast precise typography, subtle materiality without gamers-neon.
-    ui_paradigm: Architectural Systems Dashboard (Bento Layout). Presents the widget contextually at global scale, then dissects discrete states (meso/micro architecture) individually.
+    aesthetic_dna: Calm, academic focus tool. Deep zinc layered surfaces, high-contrast precise typography, strictly token-compliant.
+    ui_paradigm: Architectural Systems Dashboard.
     palette: --surface-800/900/950 (Zinc scale), --accent-emerald (Focus/Work), --accent-amber (Break/Alerts), --danger (Red).
   -->
 
@@ -16,14 +16,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
   
-  <!-- Icons -->
+  <!-- Phosphor Icons -->
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   
   <style>
-    /* Baseline Configuration Variables & Explicit Tokens */
+    /* Baseline Configuration Variables & Explicit Tokens (Strict Fidelity) */
     :root {
       /* Surfaces (Deep Zinc) */
       --surface-950: #0a0a0b;
@@ -34,8 +34,8 @@
       --surface-500: #52525b;
       
       /* Borders */
-      --border-hairline: rgba(255, 255, 255, 0.08); /* slightly bumped for pure visibility */
-      --border-hover: rgba(255, 255, 255, 0.15);
+      --border-hairline: rgba(255, 255, 255, 0.06); 
+      --border-hover: rgba(255, 255, 255, 0.10);
       
       /* Text */
       --text-primary: rgba(255, 255, 255, 0.92);
@@ -55,8 +55,8 @@
       --radius-full: 9999px;
       
       /* Elevation */
-      --shadow-sm: 0 1px 2px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04);
-      --shadow-pop: 0 8px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+      --shadow-pop: 0 8px 24px rgba(0,0,0,0.5);
       --glow-focus: 0 0 0 2px rgba(16, 185, 129, 0.4);
       --glow-subtle: 0 0 15px rgba(255, 255, 255, 0.05);
     }
@@ -71,7 +71,7 @@
       font-family: 'Geist Mono', ui-monospace, monospace;
     }
 
-    /* Hardware Accelerated Physics & Refraction */
+    /* Standard Primitive Classes */
     .glass-panel {
       background: var(--surface-800);
       border: 1px solid var(--border-hairline);
@@ -79,16 +79,15 @@
       box-shadow: var(--shadow-sm);
       position: relative;
       overflow: hidden;
-      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      transition: all 300ms ease;
     }
     
     .glass-panel:hover {
       border-color: var(--border-hover);
       box-shadow: var(--shadow-sm), var(--glow-subtle);
-      transform: translateY(-1px);
     }
 
-    /* Standard Button Reset & Base */
+    /* Button Reset & Base */
     .btn {
       display: inline-flex;
       align-items: center;
@@ -96,7 +95,7 @@
       gap: 0.5rem;
       border-radius: var(--radius-md);
       font-weight: 600;
-      transition: all 0.15s ease;
+      transition: transition-colors 150ms ease;
       cursor: pointer;
       user-select: none;
     }
@@ -106,6 +105,7 @@
     }
     .btn:active:not(:disabled) {
       transform: scale(0.96);
+      transition: all 150ms ease;
     }
     .btn:disabled {
       opacity: 0.4;
@@ -121,7 +121,6 @@
       background-color: var(--accent-emerald);
       color: #fff;
       border: 1px solid transparent;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.2);
     }
     .btn-primary:hover { filter: brightness(1.1); }
     
@@ -150,7 +149,16 @@
       letter-spacing: -0.02em;
     }
 
-    /* Shimmer Skeleton */
+    /* Micro-interactions & Loading */
+    @keyframes fade-tick {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+    .animate-colon {
+      display: inline-block;
+      animation: fade-tick 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+    }
+
     @keyframes shimmer {
       0% { background-position: -200% 0; }
       100% { background-position: 200% 0; }
@@ -165,27 +173,6 @@
       border-radius: var(--radius-sm);
     }
 
-    /* Micro-interactions */
-    @keyframes fade-tick {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
-    .animate-colon {
-      display: inline-block;
-      animation: fade-tick 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
-    }
-
-    /* Mesh/Noise Underlay for the page context */
-    .noise-bg {
-      position: fixed;
-      inset: 0;
-      z-index: -1;
-      opacity: 0.15;
-      mix-blend-mode: overlay;
-      pointer-events: none;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-    }
-
     /* Staggered Reveals */
     .stagger-1 { animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) calc(1 * 100ms) both; }
     .stagger-2 { animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) calc(2 * 100ms) both; }
@@ -196,33 +183,54 @@
       from { opacity: 0; transform: translateY(16px); }
       to { opacity: 1; transform: translateY(0); }
     }
-    
-    /* Scrollbar */
+
+    /* Environment Elements */
+    .noise-bg {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      opacity: 0.15;
+      mix-blend-mode: overlay;
+      pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    }
+
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--surface-600); border-radius: var(--radius-full); }
     ::-webkit-scrollbar-thumb:hover { background: var(--surface-500); }
+
+    /* PREFERS-REDUCED-MOTION (A11y Blocker Fix) */
+    @media (prefers-reduced-motion: reduce) {
+      *, ::before, ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+      .animate-colon { animation: none; opacity: 1; }
+      .skeleton-layer { animation: none; }
+      .btn:active:not(:disabled) { transform: none; }
+      .stagger-1, .stagger-2, .stagger-3, .stagger-4 { animation: none; opacity: 1; transform: none; }
+      .glass-panel:hover { transform: none; }
+    }
   </style>
 </head>
 <body class="min-h-[100dvh] flex flex-col text-[var(--text-primary)]">
   
   <div class="noise-bg"></div>
 
-  <!-- Documentation Shell Header (Not part of widget, sets stage) -->
+  <!-- Documentation Shell Header -->
   <header class="w-full px-6 py-8 border-b border-[var(--border-hairline)] bg-[var(--surface-950)]/80 backdrop-blur-md sticky top-0 z-50">
     <div class="max-w-7xl mx-auto flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--accent-emerald)] flex items-center justify-center shadow-[inset_0_1px_0_rgba(255,255,255,0.4)]">
+        <div class="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--accent-emerald)] flex items-center justify-center">
           <i class="ph ph-books text-white text-lg"></i>
         </div>
         <div>
           <h1 class="text-xl font-semibold tracking-tight text-[var(--text-primary)] leading-none">Shared Study Timer</h1>
           <p class="text-[var(--text-secondary)] text-sm tracking-wide mt-1">Component Ecosystem & State Architecture</p>
         </div>
-      </div>
-      <div class="hidden sm:flex items-center gap-4 text-sm text-[var(--text-secondary)] font-medium">
-        <span class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-[var(--accent-emerald)]"></div> Live Presence Sync</span>
-        <span class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-[var(--surface-500)]"></div> Shared Authoritative Tick</span>
       </div>
     </div>
   </header>
@@ -237,7 +245,7 @@
       <!-- Section Header -->
       <div class="px-5 py-3 border-b border-[var(--border-hairline)] bg-[var(--surface-950)] flex items-center justify-between">
         <div class="text-xs font-mono text-[var(--text-secondary)] tracking-widest uppercase">01 / Contextual Integration</div>
-        <div class="text-[10px] bg-[var(--surface-800)] px-2 py-1 rounded-[var(--radius-sm)] text-[var(--text-muted)]">Viewport: 1440px</div>
+        <div class="text-[10px] bg-[var(--surface-800)] px-2 py-1 rounded-[var(--radius-sm)] text-[var(--text-muted)]">Viewport: > 1024px</div>
       </div>
 
       <!-- Mock App Canvas -->
@@ -251,36 +259,37 @@
             <span class="text-sm text-[var(--text-secondary)] truncate max-w-[200px] sm:max-w-none">Midterm prep sessions. Silent focus.</span>
           </div>
           <div class="flex items-center gap-3 text-[var(--text-secondary)]">
-            <i class="ph ph-plugs-connected text-lg hover:text-[var(--text-primary)] transition-colors cursor-pointer" title="Connected"></i>
-            <i class="ph ph-users text-lg hover:text-[var(--text-primary)] transition-colors cursor-pointer"></i>
+            <i class="ph ph-plugs-connected text-lg hover:text-[var(--text-primary)] transition-colors cursor-pointer" aria-label="Connected to sync server"></i>
+            <i class="ph ph-users text-lg hover:text-[var(--text-primary)] transition-colors cursor-pointer" aria-label="View members"></i>
           </div>
         </div>
 
         <!-- ***** THE ACTIVE WIDGET (RUNNING - WORK) ***** -->
         <!-- region: aria-label="Shared Study Timer Focus Phase" -->
         <div class="glass-panel w-full group relative" role="region" aria-label="Shared Study Timer">
-          <!-- Subtle environmental background glow to signify active state -->
-          <div class="absolute inset-0 bg-gradient-to-r from-[var(--accent-emerald)]/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
           
-          <div class="flex flex-col md:flex-row md:items-center justify-between p-4 md:px-5 md:py-4 gap-4 relative z-10">
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between p-4 lg:px-5 lg:py-4 gap-4 relative z-10 transition-all duration-300">
             
             <!-- Left: Base Data (Clock + Pill) -->
             <div class="flex items-center gap-5">
               <!-- Hero Countdown -->
-              <div class="font-mono text-[32px] md:text-[40px] leading-none font-semibold text-[var(--text-primary)] tabular-countdown drop-shadow-[0_2px_10px_rgba(16,185,129,0.15)] flex items-center">
-                24<span class="animate-colon text-[var(--text-secondary)]">:</span>59
+              <div class="font-mono text-[32px] lg:text-[40px] leading-none font-semibold text-[var(--text-primary)] tabular-countdown flex items-center">
+                24<span class="animate-colon pr-[1px] text-[var(--text-secondary)]">:</span>59
               </div>
               
-              <!-- Phase Pill -->
-              <div class="flex items-center gap-1.5 px-3 py-1 rounded-[var(--radius-full)] bg-[var(--accent-emerald)]/10 border border-[var(--accent-emerald)]/20 shadow-[inset_0_1px_0_rgba(16,185,129,0.2)]">
-                <div class="w-1.5 h-1.5 rounded-full bg-[var(--accent-emerald)] shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
-                <span class="text-[var(--accent-emerald)] text-xs font-medium tracking-wide uppercase">Focus</span>
+              <!-- Phase Pill (A11y Block Fix: Uses role="status" and pure tokens, no neon glows) -->
+              <div role="status" aria-live="polite" aria-atomic="true" class="flex items-center gap-1.5 px-3 py-1 rounded-[var(--radius-full)] bg-[var(--surface-900)] border border-[var(--border-hairline)] overflow-hidden relative">
+                <!-- Subtle indicator base tint -->
+                <div class="absolute inset-0 bg-[var(--accent-emerald)] opacity-10 pointer-events-none"></div>
+                <!-- Crisp emerald dot -->
+                <div class="w-1.5 h-1.5 rounded-full bg-[var(--accent-emerald)] relative z-10"></div>
+                <span class="text-[var(--text-primary)] text-xs font-medium tracking-wide uppercase relative z-10">Focus</span>
               </div>
             </div>
 
             <!-- Middle: Controls -->
             <div class="flex items-center gap-2">
-              <button class="btn btn-md btn-secondary text-sm backdrop-blur-md" aria-label="Pause session">
+              <button class="btn btn-md btn-secondary text-sm" aria-label="Pause session">
                 <i class="ph-fill ph-pause"></i> Pause
               </button>
               <button class="btn btn-md btn-ghost text-[var(--text-secondary)] hover:text-[var(--danger-text)] transition-colors" aria-label="Reset timer">
@@ -288,8 +297,8 @@
               </button>
             </div>
 
-            <!-- Right: Ephemeral Presence Roster -->
-            <div class="flex items-center gap-4 border-t md:border-t-0 md:border-l border-[var(--border-hairline)] pt-3 md:pt-0 md:pl-5">
+            <!-- Right: Ephemeral Presence Roster (A11y Block Fix: Hourglass diff indicator) -->
+            <div class="flex items-center gap-4 border-t lg:border-t-0 lg:border-l border-[var(--border-hairline)] pt-3 lg:pt-0 lg:pl-5">
               <div class="flex flex-col items-end">
                 <span class="text-xs font-medium text-[var(--text-primary)]">8 studying</span>
                 <span class="text-[10px] text-[var(--accent-emerald)]">Live sync</span>
@@ -298,23 +307,35 @@
               <!-- Roster Cluster -->
               <div class="flex items-center -space-x-2.5">
                 <!-- Avatar 1 -->
-                <div class="w-8 h-8 rounded-full shadow-sm ring-2 ring-[var(--surface-800)] z-[4] relative group/avatar cursor-pointer">
-                  <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80" alt="Sarah Connor" class="w-full h-full rounded-full object-cover">
-                  <!-- The custom emerald border specifically meaning "Active in Timer" -->
-                  <div class="absolute inset-0 rounded-full border border-[var(--accent-emerald)] shadow-[0_0_6px_rgba(16,185,129,0.4)] pointer-events-none"></div>
+                <div class="relative z-[4] group/avatar cursor-pointer">
+                  <div class="w-8 h-8 rounded-full border-2 border-[var(--accent-emerald)] ring-2 ring-[var(--surface-800)] relative z-10 overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80" alt="Sarah Connor" class="w-full h-full object-cover">
+                  </div>
+                  <!-- Non-color differentiator: Timer badge showing active focus session presence -->
+                  <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-[var(--surface-900)] ring-2 ring-[var(--surface-800)] flex items-center justify-center z-20">
+                     <i class="ph-fill ph-timer text-[8px] text-[var(--accent-emerald)]"></i>
+                  </div>
                 </div>
                 <!-- Avatar 2 -->
-                <div class="w-8 h-8 rounded-full shadow-sm ring-2 ring-[var(--surface-800)] z-[3] relative group/avatar cursor-pointer">
-                  <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=80&q=80" alt="Marcus Chen" class="w-full h-full rounded-full object-cover">
-                  <div class="absolute inset-0 rounded-full border border-[var(--accent-emerald)] shadow-[0_0_6px_rgba(16,185,129,0.4)] pointer-events-none"></div>
+                <div class="relative z-[3] group/avatar cursor-pointer">
+                  <div class="w-8 h-8 rounded-full border-2 border-[var(--accent-emerald)] ring-2 ring-[var(--surface-800)] relative z-10 overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=80&q=80" alt="Marcus Chen" class="w-full h-full object-cover">
+                  </div>
+                  <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-[var(--surface-900)] ring-2 ring-[var(--surface-800)] flex items-center justify-center z-20">
+                     <i class="ph-fill ph-timer text-[8px] text-[var(--accent-emerald)]"></i>
+                  </div>
                 </div>
                 <!-- Avatar 3 -->
-                <div class="w-8 h-8 rounded-full shadow-sm ring-2 ring-[var(--surface-800)] z-[2] relative group/avatar cursor-pointer bg-[var(--surface-700)] flex items-center justify-center">
-                  <span class="text-xs font-medium text-[var(--text-primary)]">AJ</span>
-                  <div class="absolute inset-0 rounded-full border border-[var(--accent-emerald)] shadow-[0_0_6px_rgba(16,185,129,0.4)] pointer-events-none"></div>
+                <div class="relative z-[2] group/avatar cursor-pointer">
+                  <div class="w-8 h-8 rounded-full border-2 border-[var(--accent-emerald)] ring-2 ring-[var(--surface-800)] relative z-10 bg-[var(--surface-700)] flex items-center justify-center overflow-hidden">
+                    <span class="text-xs font-medium text-[var(--text-primary)]">AJ</span>
+                  </div>
+                  <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-[var(--surface-900)] ring-2 ring-[var(--surface-800)] flex items-center justify-center z-20">
+                     <i class="ph-fill ph-timer text-[8px] text-[var(--accent-emerald)]"></i>
+                  </div>
                 </div>
                 <!-- Overflow -->
-                <div class="w-8 h-8 rounded-full shadow-sm ring-2 ring-[var(--surface-800)] z-[1] bg-[var(--surface-900)] border border-[var(--border-hairline)] flex items-center justify-center cursor-pointer hover:bg-[var(--surface-700)] transition-colors">
+                <div class="w-8 h-8 rounded-full ring-2 ring-[var(--surface-800)] z-[1] bg-[var(--surface-900)] border border-[var(--border-hairline)] flex items-center justify-center cursor-pointer hover:bg-[var(--surface-700)] transition-colors relative">
                   <span class="text-[10px] font-semibold text-[var(--text-secondary)]">+5</span>
                 </div>
               </div>
@@ -325,7 +346,7 @@
         <!-- ***** END ACTIVE WIDGET ***** -->
 
         <!-- Mock background content to show layering -->
-        <div class="flex-1 opacity-40 pointer-events-none">
+        <div class="flex-1 opacity-40 pointer-events-none mt-2">
           <div class="flex gap-4 mb-4">
             <div class="w-10 h-10 rounded-full bg-[var(--surface-700)] mt-1"></div>
             <div class="flex-1 flex flex-col gap-2">
@@ -356,11 +377,12 @@
             </div>
             <div class="text-sm text-[var(--text-secondary)]">Start a focus session</div>
           </div>
-          <div class="flex items-center gap-4">
+          <!-- Idle gap-2 fix applied -->
+          <div class="flex items-center gap-2">
             <button class="btn btn-md btn-primary">
               <i class="ph-fill ph-play"></i> Start
             </button>
-            <div class="h-6 w-px bg-[var(--border-hairline)] hidden sm:block"></div>
+            <div class="h-6 w-px bg-[var(--border-hairline)] hidden sm:block mx-1"></div>
             <!-- Empty Roster / Just you -->
             <div class="flex items-center gap-2">
               <span class="text-[10px] text-[var(--text-muted)] uppercase tracking-wide">Empty</span>
@@ -383,28 +405,42 @@
         
         <div class="glass-panel w-full p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div class="flex items-center gap-4 flex-1">
-            <div class="font-mono text-3xl font-semibold text-[var(--text-primary)] tabular-countdown">
-              04<span class="animate-colon text-[var(--text-secondary)]">:</span>59
+            <div class="font-mono text-3xl font-semibold text-[var(--text-primary)] tabular-countdown flex items-center">
+              04<span class="animate-colon pr-[1px] text-[var(--text-secondary)]">:</span>59
             </div>
-            <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--radius-full)] bg-[var(--accent-amber)]/10 border border-[var(--accent-amber)]/20">
-              <i class="ph ph-coffee text-[var(--accent-amber)] text-xs"></i>
-              <span class="text-[var(--accent-amber)] text-xs font-medium uppercase tracking-wide">Break</span>
+            <div role="status" aria-live="polite" aria-atomic="true" class="flex items-center gap-1.5 px-3 py-1 rounded-[var(--radius-full)] bg-[var(--surface-900)] border border-[var(--border-hairline)] overflow-hidden relative">
+              <div class="absolute inset-0 bg-[var(--accent-amber)] opacity-10 pointer-events-none"></div>
+              <i class="ph ph-coffee text-[var(--accent-amber)] text-xs relative z-10"></i>
+              <span class="text-[var(--text-primary)] text-xs font-medium uppercase tracking-wide relative z-10">Break</span>
             </div>
           </div>
+          <!-- A11y aria-label replace title fix applied -->
           <div class="flex items-center gap-2">
-            <button class="btn btn-sm btn-ghost text-[var(--text-primary)]" title="Skip Break">
+            <button class="btn btn-sm btn-ghost text-[var(--text-primary)]" aria-label="Skip Break">
               <i class="ph-fill ph-fast-forward"></i>
             </button>
-            <button class="btn btn-sm btn-ghost" title="Pause">
+            <button class="btn btn-sm btn-ghost" aria-label="Pause timer">
               <i class="ph-fill ph-pause"></i>
             </button>
           </div>
+          
+          <!-- Roster Cluster - Amber borders keeping timer context distinct vs grayscale drop -->
           <div class="flex items-center -space-x-1.5 pl-3 border-l border-[var(--border-hairline)]">
-             <div class="w-6 h-6 rounded-full ring-2 ring-[var(--surface-800)] relative cursor-pointer opacity-70 grayscale transition-all hover:grayscale-0 hover:opacity-100">
-                <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=80&q=80" alt="Mia" class="w-full h-full rounded-full object-cover">
+             <div class="relative z-[2] cursor-pointer">
+               <div class="w-6 h-6 rounded-full border border-[var(--accent-amber)] ring-2 ring-[var(--surface-800)] relative z-10 overflow-hidden">
+                 <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=80&q=80" alt="Mia" class="w-full h-full object-cover">
+               </div>
+               <div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[var(--surface-900)] ring-1 ring-[var(--surface-800)] flex items-center justify-center z-20">
+                  <i class="ph-fill ph-timer text-[6px] text-[var(--accent-amber)]"></i>
+               </div>
              </div>
-             <div class="w-6 h-6 rounded-full ring-2 ring-[var(--surface-800)] relative cursor-pointer opacity-70 grayscale transition-all hover:grayscale-0 hover:opacity-100">
-                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&q=80" alt="John" class="w-full h-full rounded-full object-cover">
+             <div class="relative z-[1] cursor-pointer">
+               <div class="w-6 h-6 rounded-full border border-[var(--accent-amber)] ring-2 ring-[var(--surface-800)] relative z-10 overflow-hidden">
+                 <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&q=80" alt="John" class="w-full h-full object-cover">
+               </div>
+               <div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[var(--surface-900)] ring-1 ring-[var(--surface-800)] flex items-center justify-center z-20">
+                  <i class="ph-fill ph-timer text-[6px] text-[var(--accent-amber)]"></i>
+               </div>
              </div>
           </div>
         </div>
@@ -417,14 +453,15 @@
       <div class="px-4 py-2 border-b border-[var(--border-hairline)] bg-[var(--surface-950)]/50">
         <span class="text-[11px] font-mono text-[var(--text-secondary)] uppercase tracking-wider">04 / State: Paused</span>
       </div>
-      <div class="p-6 flex-1 flex items-center justify-center bg-[var(--surface-800)] opacity-80 mix-blend-luminosity hover:mix-blend-normal hover:opacity-100 transition-all duration-300">
+      <div class="p-6 flex-1 flex items-center justify-center bg-[var(--surface-800)] opacity-80 hover:opacity-100 transition-opacity duration-300 group">
         
-        <div class="w-full p-4 border border-[var(--border-hairline)] rounded-[var(--radius-lg)] bg-[var(--surface-900)] flex flex-col items-center gap-3">
-          <div class="flex items-center gap-3">
-            <div class="font-mono text-2xl font-medium text-[var(--text-primary)] tabular-countdown opacity-70">
+        <div class="w-full p-4 border border-[var(--border-hairline)] rounded-[var(--radius-lg)] bg-[var(--surface-900)] flex flex-col items-center gap-3 shadow-[var(--shadow-sm)] group-hover:border-[var(--border-hover)] transition-colors">
+          <div class="flex items-center gap-3 text-center">
+            <!-- text-3xl consistency fix applied -->
+            <div class="font-mono text-3xl font-medium text-[var(--text-primary)] tabular-countdown opacity-70">
               12:34
             </div>
-            <div class="px-2 py-0.5 rounded-[var(--radius-full)] bg-[var(--surface-700)] text-[var(--text-secondary)] text-[10px] font-medium uppercase border border-[var(--border-hairline)]">
+            <div role="status" aria-live="polite" class="px-2 py-0.5 rounded-[var(--radius-full)] bg-[var(--surface-700)] text-[var(--text-secondary)] text-[10px] font-medium uppercase border border-[var(--border-hairline)]">
               Paused
             </div>
           </div>
@@ -437,18 +474,18 @@
       </div>
     </article>
 
-    <!-- State: Narrow / Slim Mobile Fallback (<1024 simulation) -->
+    <!-- State: Narrow / Slim Mobile Fallback (<1024 breakpoint fix applied via lg vs md logic and label) -->
     <article class="col-span-1 lg:col-span-4 stagger-3 bg-[var(--surface-900)] border border-[var(--border-hairline)] rounded-[var(--radius-lg)] shadow-[var(--shadow-sm)] flex flex-col">
       <div class="px-4 py-2 border-b border-[var(--border-hairline)] bg-[var(--surface-950)]/50 flex justify-between">
         <span class="text-[11px] font-mono text-[var(--text-secondary)] uppercase tracking-wider">05 / Compact Layout</span>
-        <span class="text-[10px] text-[var(--text-muted)]">w-64</span>
+        <span class="text-[10px] text-[var(--text-muted)]">Viewport &lt; 1024px</span>
       </div>
       <div class="p-6 flex-1 flex items-center justify-center bg-[var(--surface-800)]">
         
         <!-- Faking a narrow viewport container -->
         <div class="w-64 glass-panel p-2 flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <button class="btn btn-sm btn-ghost p-1 text-[var(--accent-emerald)]"><i class="ph-fill ph-play"></i></button>
+            <button class="btn btn-sm btn-ghost p-1 text-[var(--accent-emerald)]" aria-label="Resume tracking"><i class="ph-fill ph-play"></i></button>
             <div class="font-mono text-sm font-semibold text-[var(--text-primary)] tabular-countdown">18:02</div>
           </div>
           <div class="flex items-center gap-1.5 pl-2 border-l border-[var(--border-hairline)]">
@@ -490,10 +527,10 @@
       <div class="px-4 py-2 border-b border-[var(--border-hairline)] bg-[var(--surface-950)]/50 flex items-center gap-2">
         <span class="text-[11px] font-mono text-[var(--danger)] uppercase tracking-wider">07 / Error & Disconnect Recovery</span>
       </div>
-      <div class="p-6 md:p-8 flex-1 flex flex-col md:flex-row items-center gap-6 bg-[var(--surface-800)]">
+      <div class="p-6 md:p-8 flex-1 flex flex-col lg:flex-row items-center gap-6 bg-[var(--surface-800)]">
         
         <!-- Error Presentation -->
-        <div class="glass-panel border-[var(--danger)]/30 w-full md:w-auto flex-1 p-4 flex flex-col sm:flex-row items-center gap-4 bg-[var(--danger)]/5 shadow-[0_0_20px_rgba(239,68,68,0.05)]">
+        <div role="alert" class="glass-panel border-[var(--danger)]/30 w-full lg:w-auto flex-1 p-4 flex flex-col sm:flex-row items-center gap-4 bg-[var(--danger)]/5 shadow-none transition-colors hover:border-[var(--danger)]/40 hover:bg-[var(--danger)]/10">
            <div class="w-10 h-10 rounded-full bg-[var(--danger)]/10 flex items-center justify-center shrink-0">
              <i class="ph ph-warning-circle text-[var(--danger)] text-xl"></i>
            </div>
@@ -506,25 +543,24 @@
            </button>
         </div>
 
-        <!-- Connection State Indicator Primitive (The Wedge) mapped onto timer context -->
-        <div class="flex-1 flex items-center justify-center border border-dashed border-[var(--border-hairline)] rounded-[var(--radius-lg)] p-6 bg-[var(--surface-950)]/50 w-full">
-           <div class="flex flex-col items-center gap-3">
-              <span class="text-xs text-[var(--text-muted)] font-mono mb-1">Primitive: ConnectionStateIndicator</span>
-              
-              <!-- Indicator: Reconnecting -->
-              <div class="flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-md)] bg-[var(--surface-800)] border border-[var(--border-hairline)] text-sm shadow-sm w-full max-w-[240px]">
-                 <div class="w-2 h-2 rounded-full bg-[var(--accent-amber)] animate-pulse"></div>
-                 <span class="text-[var(--text-primary)] font-medium flex-1">Reconnecting...</span>
-                 <i class="ph ph-spinner animate-spin text-[var(--text-muted)]"></i>
-              </div>
+        <!-- Connection State Indicator Primitive (The Wedge) -->
+        <!-- A11y block fix: role status aria live added -->
+        <div role="status" aria-live="polite" class="flex-1 flex flex-col items-center justify-center border border-dashed border-[var(--border-hairline)] rounded-[var(--radius-lg)] p-6 bg-[var(--surface-950)]/50 w-full gap-3">
+            <span class="text-xs text-[var(--text-muted)] font-mono mb-1">Primitive: ConnectionStateIndicator</span>
+            
+            <!-- Indicator: Reconnecting -->
+            <div class="flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-md)] bg-[var(--surface-800)] border border-[var(--border-hairline)] text-sm shadow-[var(--shadow-sm)] w-full max-w-[240px]">
+               <div class="w-2 h-2 rounded-full bg-[var(--accent-amber)] animate-pulse" aria-hidden="true"></div>
+               <span class="text-[var(--text-primary)] font-medium flex-1">Reconnecting...</span>
+               <i class="ph ph-spinner animate-spin text-[var(--text-muted)]"></i>
+            </div>
 
-               <!-- Indicator: Offline -->
-               <div class="flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-md)] bg-[var(--surface-800)] border border-[var(--danger)]/30 text-sm shadow-sm w-full max-w-[240px]">
-                 <div class="w-2 h-2 rounded-full bg-[var(--surface-500)]"></div>
-                 <span class="text-[var(--text-secondary)] font-medium flex-1">Offline</span>
-                 <span class="text-xs text-[var(--danger-text)] font-mono">Sync halted</span>
-              </div>
-           </div>
+             <!-- Indicator: Offline -->
+             <div class="flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-md)] bg-[var(--surface-800)] border border-[var(--danger)]/30 text-sm shadow-[var(--shadow-sm)] w-full max-w-[240px]">
+               <div class="w-2 h-2 rounded-full bg-[var(--surface-500)]" aria-hidden="true"></div>
+               <span class="text-[var(--text-primary)] font-medium flex-1">Offline</span>
+               <span class="text-xs text-[var(--danger-text)] font-mono">Sync halted</span>
+            </div>
         </div>
 
       </div>
@@ -532,16 +568,14 @@
 
   </main>
 
-  <!-- Interaction Engine (For Hero Component Demonstration Only) -->
+  <!-- Interaction Engine (Demonstration Only - Vanilla JS to avoid frameworks) -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      // Small interactivity script to show attention to detail.
-      // This is purely visual to simulate click-interactions without external dependencies.
-      
       const pauseBtn = document.querySelector('button[aria-label="Pause session"]');
       const timerDisplay = document.querySelector('.tabular-countdown');
       let isPaused = false;
 
+      // Basic physical button push mock purely for the playground hero demonstration
       if(pauseBtn) {
         pauseBtn.addEventListener('click', (e) => {
           e.preventDefault();
@@ -549,21 +583,23 @@
           
           if(isPaused) {
             pauseBtn.innerHTML = '<i class="ph-fill ph-play"></i> Resume';
+            pauseBtn.setAttribute('aria-label', 'Resume session');
             pauseBtn.classList.remove('btn-secondary');
             pauseBtn.classList.add('bg-[var(--accent-amber)]', 'text-[var(--surface-900)]', 'border-transparent');
             timerDisplay.classList.add('opacity-70');
             timerDisplay.querySelector('.animate-colon')?.classList.remove('animate-colon');
           } else {
             pauseBtn.innerHTML = '<i class="ph-fill ph-pause"></i> Pause';
+            pauseBtn.setAttribute('aria-label', 'Pause session');
             pauseBtn.classList.add('btn-secondary');
             pauseBtn.classList.remove('bg-[var(--accent-amber)]', 'text-[var(--surface-900)]', 'border-transparent');
             timerDisplay.classList.remove('opacity-70');
-            timerDisplay.querySelector('span')?.classList.add('animate-colon');
+            
+            // Respect prefers-reduced-motion for the re-addition
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+              timerDisplay.querySelector('span')?.classList.add('animate-colon');
+            }
           }
-          
-          // Trigger CSS physical button press simulation
-          pauseBtn.style.transform = 'scale(0.92)';
-          setTimeout(() => pauseBtn.style.transform = 'none', 100);
         });
       }
     });
