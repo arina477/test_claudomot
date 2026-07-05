@@ -6,7 +6,7 @@
 ## Wave 49 stage completion
 
 PRODUCT:
-- [ ] P-0 Frame (discover + reframe)
+- [x] P-0 Frame (discover + reframe)
 - [ ] P-1 Decompose
 - [ ] P-2 Spec
 - [ ] P-3 Plan
