@@ -4,6 +4,16 @@
 
 ---
 
+## [2026-07-05] wave-50 P-1 — sub-floor feature-completion wave: floor waived (override-ship), resolve-by-rule
+- **Decision:** wave-50 (M8 study-group slice 2 = per-server custom Pomodoro durations f4b3659e + F-1 slim-bar fix ffd98a36) is ~450 net LOC / 2 specs, **below the multi-spec floor (>2,500 LOC OR ≥6 specs)**. Floor **waived; ship as-scoped** (recursion-guard override-ship path).
+- **Why no expansion:** all 3 P-0 reviewers unanimously scope-fenced against it — problem-framer (scope ONE work/break pair), ceo-reviewer/HOLD-SCOPE (adjacent scope = joinable study-sessions + whiteboard, both big standalone slices, each its own wave), mvp-thinner OK + `floor_constraint_active` (expanding a prior-THIN deferral = double-cutting). The floor's purpose (block wasteful tiny waves) doesn't apply: this completes a founder-committed deferred feature + fixes a shipped LIVE regression, reusing existing substrate.
+- **Why no BOARD:** `board-process.md` fires-list covers the P-1 monolith (max-split), not floor-merge; "resolve by rule, never convene" + anti-pattern #1 direct routine sizing to rule-resolution. The strategic BOARD seat (ceo-reviewer) already ruled HOLD-SCOPE on this exact scope at P-0.
+- **Strategic next-wave note (ceo-reviewer):** the ambitious joinable focus-room / body-doubling session — the strongest "reason to open StudyHall together" draw — should be the NEXT wave as its own slice; wave-50 earns that by clearing cheap debt first.
+- **Recurring pattern → L-2 carve-out candidate:** the floor rubric mechanically trips on legitimately-small high-value reuse-heavy completion/debt-fix waves; needs an exemption clause.
+- **Status:** Active.
+
+---
+
 ## [2026-07-04] wave-45 N-1 PAUSE resolved — founder set M8 direction (DMs first) + delegated metric
 - **Founder answer (in-chat, resolving the STATUS:BLOCKED wave-45 N-1 pause):** build **M8 direct + group messages first** ("go with B and connect it yourself"); success-metric delegated to Claudomat.
 - **M8 success metric SET (working default, founder-adjustable):** a class cohort runs coursework end-to-end in StudyHall without falling back to Discord — teacher side live (roles, assignment collect/return, scheduling) AND students hold private 1:1 + small-group conversations outside class channels, real-time + offline-tolerant. First slice: direct + group messages. Replaces the prior `_TBD by founder_` bar; unblocks M8 decomposition.
