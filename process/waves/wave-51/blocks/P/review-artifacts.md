@@ -3,7 +3,7 @@
 **Block:** P (Product)
 **Wave topic:** DM route layout fix — gate the empty channel-sidebar column off on the DM route (restore canonical 3-panel)
 **Block exit gate:** P-4
-**Status:** in-progress
+**Status:** gate-passed → B-block (design_gap_flag false → D skips)
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
@@ -12,7 +12,7 @@
 | P-1 | stages/P-1-decompose.md | done | single-spec; floor waived (override-ship); design_gap_flag FALSE → skip D |
 | P-2 | stages/P-2-spec.md | done | spec in 39fc1c5e.description; AppShell dmHomeActive guard; no contracts |
 | P-3 | stages/P-3-plan.md | done | AppShell.tsx gate ChannelSidebar on !dmHomeActive (mirror :122); react-specialist; no deps |
-| P-4 | stages/P-4-gemini-review.md | pending | |
+| P-4 | stages/P-4-gemini-review.md | done | head-product APPROVED; karen+jenny APPROVE, Gemini 429/UNAVAILABLE. Gate PASSED → B (D skips). |
 
 ## Block-specific context
 - **Wave topic:** DM route drops the empty ~260px channel-sidebar column (from the 4-col server-channel layout) → canonical 3-panel (server rail + conversation list + thread); thread gets full width. Cosmetic/non-blocking (wave-46 V-2 F9).
