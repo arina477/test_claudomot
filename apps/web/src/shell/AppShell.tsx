@@ -52,7 +52,10 @@ export function AppShell({ connectionState = 'online' }: Props) {
       <ServerRail
         addServerBtnRef={addServerBtnRef}
         dmActive={dmHomeActive}
-        onDmHome={() => setDmHomeActive((v) => !v)}
+        onDmHome={() => {
+          setDmHomeActive((v) => !v);
+          setSidebarOpen(false);
+        }}
       />
 
       {/* ── Pane 2: Channel Sidebar ── */}
@@ -72,10 +75,11 @@ export function AppShell({ connectionState = 'online' }: Props) {
       )}
 
       {/* Mobile overlay backdrop */}
-      {sidebarOpen && (
+      {sidebarOpen && !dmHomeActive && (
         <button
           type="button"
           aria-label="Close channel sidebar"
+          data-testid="mobile-sidebar-backdrop"
           className="fixed inset-0 z-40 lg:hidden cursor-default"
           style={{ backgroundColor: 'rgba(0,0,0,0.50)' }}
           onClick={closeSidebar}

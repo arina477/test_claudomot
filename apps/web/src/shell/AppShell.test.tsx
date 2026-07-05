@@ -207,6 +207,33 @@ describe('AppShell — DM surface ChannelSidebar gating', () => {
     // The main column (server channel view) must be present.
     expect(screen.getByRole('main')).toBeInTheDocument();
   });
+
+  it('does not render the mobile backdrop after opening drawer then switching to DM surface', async () => {
+    // Regression for: orphaned backdrop persists on DM surface when sidebarOpen=true at
+    // DM activation time.  The backdrop must NOT be present after the DM toggle.
+    const user = userEvent.setup();
+    renderShell();
+
+    // Step 1: Open the mobile channel drawer by clicking the toggle in MainColumn.
+    // The toggle button is rendered by MainColumn; query it by accessible name.
+    const menuBtn = screen.getByRole('button', { name: /toggle channel sidebar/i });
+    await user.click(menuBtn);
+
+    // Backdrop must now be in the DOM (sidebarOpen=true, dmHomeActive=false).
+    expect(screen.getByTestId('mobile-sidebar-backdrop')).toBeInTheDocument();
+
+    // The mobile drawer must also be in the DOM.
+    expect(document.querySelector('[aria-label="Channel sidebar drawer"]')).toBeInTheDocument();
+
+    // Step 2: Switch to the DM surface.
+    await user.click(screen.getByTestId('dm-home-rail-button'));
+
+    // Backdrop must be gone — not in document (sidebarOpen reset + !dmHomeActive guard).
+    expect(screen.queryByTestId('mobile-sidebar-backdrop')).not.toBeInTheDocument();
+
+    // Drawer must also be gone (existing behaviour — gated on !dmHomeActive).
+    expect(document.querySelector('[aria-label="Channel sidebar drawer"]')).not.toBeInTheDocument();
+  });
 });
 
 // ── ConnectionStateIndicator unit tests ─────────────────────────────────────
