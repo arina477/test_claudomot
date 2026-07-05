@@ -1,5 +1,6 @@
 /**
  * StudyRoomGateway unit tests — wave-52 fix: subscribe_server_rooms handshake
+ *                               wave-53 fix: UUID-format guard + generic error mapping
  *
  * Covers the three ACs from the T-5 skeleton-stuck bug fix:
  *
@@ -18,6 +19,15 @@
  *         join the server channel.
  *   AC-5  subscribe_server_rooms: invalid payload → join_error emitted.
  *
+ * Wave-53 UUID guard + error-mapping coverage:
+ *   UUID-1  non-UUID serverId to subscribe_server_rooms → generic join_error,
+ *           no DB call, error does not contain SQL internals.
+ *   UUID-2  non-UUID serverId to create_focus_room → generic join_error, no DB call.
+ *   UUID-3  valid UUID serverId, caller not a member → exact ForbiddenException message
+ *           forwarded (not genericized).
+ *   UUID-4  unexpected error in handler → generic fallback to client, logger called.
+ *   UUID-5  valid member flow still succeeds (regression guard).
+ *
  * Mocking strategy:
  *   StudyRoomService mocked at the boundary — only the methods called by the
  *   gateway under test are stubbed.  Socket.IO Server + Socket objects are
@@ -28,6 +38,7 @@
  */
 
 import { ForbiddenException } from '@nestjs/common';
+import type { Logger } from '@nestjs/common';
 import {
   STUDY_ROOM_JOIN_ERROR_EVENT,
   STUDY_ROOM_ROOMS_EVENT,
@@ -154,7 +165,9 @@ function makeServiceMock(
 // Test suite
 // ---------------------------------------------------------------------------
 
-const SERVER_ID = 'srv-gw-001';
+// SERVER_ID must be a valid UUID — the wave-53 parse-layer guard rejects non-UUID serverIds
+// before any service call. USER_A/USER_B are SuperTokens opaque session IDs, NOT uuids.
+const SERVER_ID = '550e8400-e29b-41d4-a716-446655440000';
 const USER_A = 'user-gw-A';
 const USER_B = 'user-gw-B';
 
@@ -405,5 +418,200 @@ describe('StudyRoomGateway — subscribe_server_rooms handshake (wave-52 skeleto
     // Both are in the server channel
     expect(socketA.rooms.has(`study-room:server:${SERVER_ID}`)).toBe(true);
     expect(socketB.rooms.has(`study-room:server:${SERVER_ID}`)).toBe(true);
+  });
+});
+
+// =============================================================================
+// Wave-53: UUID-format guard + generic error mapping
+// =============================================================================
+
+// SERVER_ID (defined above) is already a valid UUID — reused in these tests.
+const VALID_ROOM_ID = '123e4567-e89b-12d3-a456-426614174000';
+
+// SQL-internal strings that must NOT leak to clients
+const SQL_LEAK_PATTERNS = [
+  'invalid input syntax',
+  'server_members',
+  'server_id',
+  'user_id',
+  'uuid',
+];
+
+describe('StudyRoomGateway — wave-53 UUID guard + generic error mapping', () => {
+  let gateway: StudyRoomGateway;
+  let fakeServer: FakeServer;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    fakeServer = makeServer();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  // ---------------------------------------------------------------------------
+  // UUID-1: non-UUID serverId to subscribe_server_rooms → parse rejection before DB
+  // ---------------------------------------------------------------------------
+
+  it('UUID-1a: non-UUID serverId to subscribe_server_rooms → generic join_error; no DB/service call', async () => {
+    const svc = makeServiceMock();
+    gateway = new StudyRoomGateway(svc as never);
+    (gateway as unknown as { server: FakeServer }).server = fakeServer;
+
+    const socket = makeSocket(USER_A);
+
+    await gateway.handleSubscribeServerRooms(socket as never, { serverId: 'not-a-uuid' });
+
+    expect(socket.emitted).toHaveLength(1);
+    expect(socket.emitted[0]?.event).toBe(STUDY_ROOM_JOIN_ERROR_EVENT);
+    // Must not contain any SQL internals
+    const msg = (socket.emitted[0]?.payload as { message: string }).message;
+    for (const pattern of SQL_LEAK_PATTERNS) {
+      expect(msg).not.toContain(pattern);
+    }
+    // assertMember / getOpenRooms must NOT have been called (parse rejection)
+    expect(svc.getOpenRooms).not.toHaveBeenCalled();
+  });
+
+  it('UUID-1b: empty serverId to subscribe_server_rooms → generic join_error; no DB call', async () => {
+    const svc = makeServiceMock();
+    gateway = new StudyRoomGateway(svc as never);
+    (gateway as unknown as { server: FakeServer }).server = fakeServer;
+
+    const socket = makeSocket(USER_A);
+
+    await gateway.handleSubscribeServerRooms(socket as never, { serverId: '' });
+
+    expect(socket.emitted[0]?.event).toBe(STUDY_ROOM_JOIN_ERROR_EVENT);
+    expect(svc.getOpenRooms).not.toHaveBeenCalled();
+  });
+
+  it('UUID-1c: SQL-ish serverId to subscribe_server_rooms → parse rejection; error message clean', async () => {
+    const svc = makeServiceMock();
+    gateway = new StudyRoomGateway(svc as never);
+    (gateway as unknown as { server: FakeServer }).server = fakeServer;
+
+    const socket = makeSocket(USER_A);
+
+    await gateway.handleSubscribeServerRooms(socket as never, {
+      serverId: "' OR '1'='1",
+    });
+
+    expect(socket.emitted[0]?.event).toBe(STUDY_ROOM_JOIN_ERROR_EVENT);
+    expect(svc.getOpenRooms).not.toHaveBeenCalled();
+  });
+
+  // ---------------------------------------------------------------------------
+  // UUID-2: non-UUID serverId to create_focus_room → parse rejection before DB
+  // ---------------------------------------------------------------------------
+
+  it('UUID-2: non-UUID serverId to create_focus_room → generic join_error; no DB call', async () => {
+    const svc = makeServiceMock();
+    gateway = new StudyRoomGateway(svc as never);
+    (gateway as unknown as { server: FakeServer }).server = fakeServer;
+
+    const socket = makeSocket(USER_A);
+
+    await gateway.handleCreateRoom(socket as never, { serverId: 'bad-id', name: 'Study Room' });
+
+    expect(socket.emitted).toHaveLength(1);
+    expect(socket.emitted[0]?.event).toBe(STUDY_ROOM_JOIN_ERROR_EVENT);
+    const msg = (socket.emitted[0]?.payload as { message: string }).message;
+    for (const pattern of SQL_LEAK_PATTERNS) {
+      expect(msg).not.toContain(pattern);
+    }
+    expect(svc.createRoom).not.toHaveBeenCalled();
+  });
+
+  // ---------------------------------------------------------------------------
+  // UUID-3: valid UUID serverId, non-member → ForbiddenException message forwarded
+  // ---------------------------------------------------------------------------
+
+  it('UUID-3: valid UUID serverId, non-member → exact ForbiddenException message forwarded (not genericized)', async () => {
+    const forbiddenMsg = 'You are not a member of this server';
+    const svc = makeServiceMock({
+      getOpenRooms: vi.fn().mockRejectedValue(new ForbiddenException(forbiddenMsg)),
+    });
+    gateway = new StudyRoomGateway(svc as never);
+    (gateway as unknown as { server: FakeServer }).server = fakeServer;
+
+    const socket = makeSocket(USER_A);
+
+    await gateway.handleSubscribeServerRooms(socket as never, { serverId: SERVER_ID });
+
+    expect(socket.emitted).toHaveLength(1);
+    expect(socket.emitted[0]?.event).toBe(STUDY_ROOM_JOIN_ERROR_EVENT);
+    const msg = (socket.emitted[0]?.payload as { message: string }).message;
+    expect(msg).toBe(forbiddenMsg);
+  });
+
+  // ---------------------------------------------------------------------------
+  // UUID-4: unexpected error in handler → generic fallback to client + logger called
+  // ---------------------------------------------------------------------------
+
+  it('UUID-4: unexpected internal error → generic fallback to client; logger.error called with detail', async () => {
+    const internalError = new Error('internal DB blowup — secret query details here');
+    const svc = makeServiceMock({
+      getOpenRooms: vi.fn().mockRejectedValue(internalError),
+    });
+    gateway = new StudyRoomGateway(svc as never);
+    (gateway as unknown as { server: FakeServer }).server = fakeServer;
+
+    // Spy on the logger before the call
+    const loggerErrorSpy = vi
+      .spyOn((gateway as unknown as { logger: Logger }).logger, 'error')
+      .mockImplementation(() => {});
+
+    const socket = makeSocket(USER_A);
+
+    await gateway.handleSubscribeServerRooms(socket as never, { serverId: SERVER_ID });
+
+    expect(socket.emitted).toHaveLength(1);
+    expect(socket.emitted[0]?.event).toBe(STUDY_ROOM_JOIN_ERROR_EVENT);
+    const msg = (socket.emitted[0]?.payload as { message: string }).message;
+    // Client gets the generic fallback, NOT the raw internal message
+    expect(msg).not.toContain('internal DB blowup');
+    expect(msg).not.toContain('secret query details');
+    // Logger must have been called with the full error detail
+    expect(loggerErrorSpy).toHaveBeenCalled();
+  });
+
+  // ---------------------------------------------------------------------------
+  // UUID-5: valid UUID serverId, legitimate member → success (regression guard)
+  // ---------------------------------------------------------------------------
+
+  it('UUID-5: valid UUID serverId, legitimate member → STUDY_ROOM_ROOMS_EVENT emitted (regression guard)', async () => {
+    const svc = makeServiceMock({
+      getOpenRooms: vi.fn().mockResolvedValue([]),
+    });
+    gateway = new StudyRoomGateway(svc as never);
+    (gateway as unknown as { server: FakeServer }).server = fakeServer;
+
+    const socket = makeSocket(USER_A);
+
+    await gateway.handleSubscribeServerRooms(socket as never, { serverId: SERVER_ID });
+
+    expect(socket.emitted).toHaveLength(1);
+    expect(socket.emitted[0]?.event).toBe(STUDY_ROOM_ROOMS_EVENT);
+    expect(svc.getOpenRooms).toHaveBeenCalledWith(USER_A, SERVER_ID);
+  });
+
+  // ---------------------------------------------------------------------------
+  // UUID-6: non-UUID serverId to join_focus_room → parse rejection
+  // ---------------------------------------------------------------------------
+
+  it('UUID-6: non-UUID serverId to join_focus_room → generic join_error; joinRoom not called', async () => {
+    const svc = makeServiceMock();
+    gateway = new StudyRoomGateway(svc as never);
+    (gateway as unknown as { server: FakeServer }).server = fakeServer;
+
+    const socket = makeSocket(USER_A);
+
+    await gateway.handleJoinRoom(socket as never, { serverId: 'bad-uuid', roomId: VALID_ROOM_ID });
+
+    expect(socket.emitted).toHaveLength(1);
+    expect(socket.emitted[0]?.event).toBe(STUDY_ROOM_JOIN_ERROR_EVENT);
+    expect(svc.joinRoom).not.toHaveBeenCalled();
   });
 });
