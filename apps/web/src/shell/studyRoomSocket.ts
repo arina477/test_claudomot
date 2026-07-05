@@ -103,12 +103,26 @@ export function getStudyRoomSocket(): Socket {
 
 /**
  * Create a new focus room in the server.
- * Server responds by broadcasting STUDY_ROOM_ROOMS_EVENT to the server room,
- * and emitting STUDY_ROOM_PRESENCE_EVENT (empty roster) + STUDY_ROOM_ROOMS_EVENT
- * to the creator as confirmation. On error: STUDY_ROOM_JOIN_ERROR_EVENT to caller.
+ * Server auto-joins the creator: responds with STUDY_ROOM_TIMER_UPDATE_EVENT +
+ * STUDY_ROOM_ROOMS_EVENT to the creator's socket, then broadcasts
+ * STUDY_ROOM_PRESENCE_EVENT (creator in roster) + STUDY_ROOM_ROOMS_EVENT to
+ * the server channel.  On error: STUDY_ROOM_JOIN_ERROR_EVENT to caller.
+ * The caller must call setActiveRoom(serverId, roomId) once the roomId is known
+ * (from the presence event) so reconnect re-join resumes correctly.
  */
 export function createFocusRoom(serverId: string, name: string): void {
   getStudyRoomSocket().emit('create_focus_room', { serverId, name });
+}
+
+/**
+ * Set the active room for reconnect re-join tracking without emitting a join verb.
+ * Used after create-auto-join: the server already joined the creator, so we
+ * must NOT emit join_focus_room again — but we still need to record the active
+ * room so the 'connect' reconnect handler re-joins after a transient disconnect.
+ */
+export function setActiveRoom(serverId: string, roomId: string): void {
+  _activeServerId = serverId;
+  _activeRoomId = roomId;
 }
 
 /**

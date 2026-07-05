@@ -54,6 +54,7 @@ vi.mock('./studyRoomSocket', () => ({
   createFocusRoom: vi.fn(),
   joinFocusRoom: vi.fn(),
   leaveFocusRoom: vi.fn(),
+  setActiveRoom: vi.fn(),
   startRoomTimer: vi.fn(),
   pauseRoomTimer: vi.fn(),
   resetRoomTimer: vi.fn(),
@@ -228,12 +229,16 @@ describe('FocusRoomPanel', () => {
     expect(createFocusRoom).not.toHaveBeenCalled();
   });
 
-  // 6. Create confirm calls createFocusRoom with serverId + name
-  it('Create confirm calls createFocusRoom(serverId, name)', async () => {
-    render(<FocusRoomPanel serverId={SERVER_ID} />);
+  // 6. Create confirm → creator lands in joined state for the new room (B-6 rework)
+  //    Backend auto-joins the creator on create; client transitions to joined via the
+  //    presence event (no second join_focus_room emitted — server already joined them).
+  it('Create confirm calls createFocusRoom and transitions creator to joined state via presence event', async () => {
+    render(<FocusRoomPanel serverId={SERVER_ID} selfUserId={SELF_USER_ID} />);
 
+    // Start from a list with an existing room so the header Create Room btn is visible
+    const existingRoom = makeRoom({ id: 'room-existing', name: 'Existing Room' });
     await act(async () => {
-      fireRoomsEvent([makeRoom()]);
+      fireRoomsEvent([existingRoom]);
     });
     await waitFor(() => screen.getByTestId('create-room-btn'));
 
@@ -243,10 +248,40 @@ describe('FocusRoomPanel', () => {
     fireEvent.change(screen.getByTestId('create-room-input'), {
       target: { value: 'Essay Writing' },
     });
-
     fireEvent.click(screen.getByTestId('create-room-confirm'));
 
+    // createFocusRoom is emitted to the server
     await waitFor(() => expect(createFocusRoom).toHaveBeenCalledWith(SERVER_ID, 'Essay Writing'));
+
+    // Simulate the backend auto-join sequence:
+    // 1. Server broadcasts updated rooms list (new room included, count=1)
+    const newRoom = makeRoom({ id: 'room-new-001', name: 'Essay Writing', count: 1 });
+    await act(async () => {
+      fireRoomsEvent([existingRoom, newRoom]);
+    });
+
+    // 2. Server broadcasts presence for the new room (creator in roster)
+    const creatorViewer = makeViewer({ userId: SELF_USER_ID, displayName: 'You' });
+    await act(async () => {
+      firePresenceEvent('room-new-001', [creatorViewer]);
+    });
+
+    // Creator should land in the JOINED state — not the list
+    await waitFor(() => expect(screen.getByTestId('joined-panel')).toBeInTheDocument());
+    expect(screen.queryByTestId('create-room-form')).not.toBeInTheDocument();
+
+    // Room name visible in the joined panel header
+    expect(screen.getByText('Essay Writing')).toBeInTheDocument();
+
+    // Roster renders (creator is present)
+    await waitFor(() => expect(screen.getByTestId('joined-roster')).toBeInTheDocument());
+
+    // Room-timer section renders (creator can start the room timer)
+    expect(screen.getByTestId('room-timer-section')).toBeInTheDocument();
+    expect(screen.getByTestId('room-timer-start')).toBeInTheDocument();
+
+    // No second join_focus_room emitted — server already joined the creator
+    expect(joinFocusRoom).not.toHaveBeenCalled();
   });
 
   // 7. Create input has accessible label

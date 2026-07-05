@@ -74,6 +74,7 @@ import {
   onTimerUpdate,
   pauseRoomTimer,
   resetRoomTimer,
+  setActiveRoom,
   startRoomTimer,
 } from './studyRoomSocket';
 
@@ -866,6 +867,11 @@ export function FocusRoomPanel({ serverId, selfUserId }: Props) {
     joinedRoomRef.current = joinedRoom;
   }, [joinedRoom]);
 
+  // Tracks the serverId during the create→auto-join flow so the presence handler
+  // can detect the server-side auto-join and transition to joined state.
+  // Set in handleCreateConfirm, cleared when the joined state is reached or on error.
+  const pendingCreateServerIdRef = useRef<string | null>(null);
+
   // ── Socket subscriptions ────────────────────────────────────────────────────
   useEffect(() => {
     // Rooms list — updated whenever rooms open/close/change count for this server
@@ -896,8 +902,42 @@ export function FocusRoomPanel({ serverId, selfUserId }: Props) {
       }
     });
 
-    // Roster — per-room roster update
+    // Roster — per-room roster update.
+    // Also handles the create→auto-join path: when pendingCreateServerIdRef is set,
+    // the first presence event signals the server auto-joined the creator to the
+    // newly created room. Transition to joined state using the roomId from the event;
+    // the rooms list (already updated via the rooms event) provides the FocusRoom shape.
+    // No second join_focus_room is emitted — the server already joined the creator.
     const unsubPresence = onPresence((event) => {
+      if (pendingCreateServerIdRef.current !== null) {
+        // Create→auto-join: presence event is for the newly created room.
+        const pendingServerId = pendingCreateServerIdRef.current;
+        pendingCreateServerIdRef.current = null;
+
+        // Register the active room for reconnect re-join (no join verb emitted).
+        setActiveRoom(pendingServerId, event.roomId);
+
+        // Find the room in the current rooms list (rooms event arrives before presence).
+        // Fall back to a minimal FocusRoom shape if the rooms event hasn't arrived yet
+        // (the rooms event that follows will update count live via joinedRoomRef logic).
+        setRooms((currentRooms) => {
+          const found = currentRooms.find((r) => r.id === event.roomId);
+          const room: FocusRoom = found ?? {
+            id: event.roomId,
+            serverId: pendingServerId,
+            name: '',
+            count: event.roster.count,
+          };
+          setJoinedRoom(room);
+          return currentRooms;
+        });
+        setRoster(event.roster.viewers);
+        setRoomTimer(null);
+        setCreating(false);
+        setPanelState('joined');
+        return;
+      }
+
       const currentJoined = joinedRoomRef.current;
       if (!currentJoined || event.roomId !== currentJoined.id) return;
       setRoster(event.roster.viewers);
@@ -915,6 +955,8 @@ export function FocusRoomPanel({ serverId, selfUserId }: Props) {
       setJoinError(event.message);
       setCreating(false);
       setJoining(null);
+      // Clear pending create flag so the presence handler doesn't misfire later
+      pendingCreateServerIdRef.current = null;
       // Stay in list state if error during join; return from creating state
       setPanelState((prev) => (prev === 'creating' ? 'list' : prev));
     });
@@ -938,16 +980,28 @@ export function FocusRoomPanel({ serverId, selfUserId }: Props) {
     (name: string) => {
       setCreating(true);
       setJoinError(null);
+      // Record the serverId so the presence handler can detect the server auto-join.
+      // The presence event (roomId + roster) arrives after create; the handler uses
+      // pendingCreateServerIdRef to identify it and transitions to the joined state.
+      // We do NOT emit join_focus_room — the backend auto-joins the creator on create;
+      // a second join verb would be redundant (server deduplicates by userId, but
+      // presence broadcast would fire twice).
+      pendingCreateServerIdRef.current = serverId;
       createFocusRoom(serverId, name);
-      // The server will respond with a rooms event + presence event for the new room
-      // We optimistically move to list; the rooms event will update the list
-      // The join happens server-side after create — we'll receive a presence event
-      // If error: onJoinError will fire and clear creating state
-      // Timeout guard so UI doesn't hang if server is slow
-      setTimeout(() => {
-        setCreating(false);
-        setPanelState('list');
-      }, 5000);
+      // Safety timeout: if neither presence nor join_error arrives within 8s,
+      // clear the pending flag and return to list so the UI is never stuck.
+      // Nominal path: presence arrives in <1s and clears pendingCreateServerIdRef first.
+      const safetyTimer = setTimeout(() => {
+        if (pendingCreateServerIdRef.current !== null) {
+          pendingCreateServerIdRef.current = null;
+          setCreating(false);
+          setPanelState('list');
+        }
+      }, 8000);
+      // Cleanup is best-effort: the timeout fires only if the normal path didn't clear
+      // pendingCreateServerIdRef, so a dangling timer that never fires is harmless
+      // (React unmounts clean up via the effect's unsubscribe, not this timer).
+      return () => clearTimeout(safetyTimer);
     },
     [serverId],
   );
