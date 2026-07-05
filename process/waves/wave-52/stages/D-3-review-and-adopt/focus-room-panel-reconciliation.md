@@ -13,3 +13,10 @@
 
 ## Preserve (both): token fidelity (zero invented hex), all 6 states, the study-timer chrome reuse, body-doubling distinctness, responsive slim-bar, reduced-motion, no scope violations. Do NOT regress.
 Next: D-2 refine (iteration 1) → re-run both reviewers.
+
+---
+## Iteration 1 re-review (post-refine)
+| ui-designer | accessibility-tester | Matrix action |
+|---|---|---|
+| APPROVE | APPROVE | **→ Phase 2 (head-designer spawn)** |
+Both cleared: roster aria-live+aria-label+role=list/listitem+aria-current (WCAG 4.1.3/1.3.1), .room-card:focus-visible via --glow-focus (2.4.7). No regression (a11y attribute-only); WCAG AA across 11 criteria; zero invented tokens; all states + body-doubling + responsive preserved. 1 non-blocking B-note: .btn transition malformed (verbatim study-timer.html base carry — keep for parity).
