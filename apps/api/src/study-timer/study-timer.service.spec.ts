@@ -53,6 +53,7 @@ import {
   StudyTimerService,
   WORK_DURATION_MS,
   computeCurrentPhase,
+  phaseDurationMs,
 } from './study-timer.service';
 
 type MockFn = ReturnType<typeof vi.fn>;
@@ -108,6 +109,12 @@ const SERVER_ID = 'srv-timer-001';
 const USER_ID = 'user-timer-001';
 const MEMBER_ROW = { id: 'mem-001' };
 
+// Default durations fixture — matches column defaults (25/5)
+const DEFAULT_DURATIONS = {
+  work_duration_ms: WORK_DURATION_MS,
+  break_duration_ms: BREAK_DURATION_MS,
+};
+
 const NOW = new Date('2026-07-05T10:00:00.000Z');
 const NOW_MS = NOW.getTime();
 const ENDS_AT_WORK = new Date(NOW_MS + WORK_DURATION_MS);
@@ -123,6 +130,8 @@ const runningRow = {
   updated_by: USER_ID,
   created_at: NOW,
   updated_at: NOW,
+  work_duration_ms: WORK_DURATION_MS,
+  break_duration_ms: BREAK_DURATION_MS,
 };
 
 const pausedRow = {
@@ -177,7 +186,7 @@ describe('computeCurrentPhase', () => {
   it('returns same phase when still within first phase window', () => {
     const startedAt = new Date(NOW_MS - 10 * 60 * 1000); // started 10 min ago
     const now = NOW;
-    const result = computeCurrentPhase('work', startedAt, now);
+    const result = computeCurrentPhase('work', startedAt, now, DEFAULT_DURATIONS);
     // 10 min elapsed, work phase is 25 min → still in work
     expect(result.phase).toBe('work');
     expect(result.newEndsAt.getTime()).toBe(startedAt.getTime() + WORK_DURATION_MS);
@@ -186,7 +195,7 @@ describe('computeCurrentPhase', () => {
   it('advances work→break after 25 min elapsed', () => {
     const startedAt = new Date(NOW_MS - 26 * 60 * 1000); // started 26 min ago
     const now = NOW;
-    const result = computeCurrentPhase('work', startedAt, now);
+    const result = computeCurrentPhase('work', startedAt, now, DEFAULT_DURATIONS);
     // 26 min elapsed: 25 min work done → now in break
     expect(result.phase).toBe('break');
     expect(result.newEndsAt.getTime()).toBe(
@@ -197,7 +206,7 @@ describe('computeCurrentPhase', () => {
   it('advances break→work after 5 min break elapsed', () => {
     const startedAt = new Date(NOW_MS - 6 * 60 * 1000); // started 6 min ago (in break)
     const now = NOW;
-    const result = computeCurrentPhase('break', startedAt, now);
+    const result = computeCurrentPhase('break', startedAt, now, DEFAULT_DURATIONS);
     // 6 min elapsed: 5 min break done → now in work
     expect(result.phase).toBe('work');
     expect(result.newEndsAt.getTime()).toBe(
@@ -210,8 +219,30 @@ describe('computeCurrentPhase', () => {
     const elapsed = 25 * 60 * 1000 + 5 * 60 * 1000 + 25 * 60 * 1000 + 60 * 1000;
     const startedAt = new Date(NOW_MS - elapsed);
     const now = NOW;
-    const result = computeCurrentPhase('work', startedAt, now);
+    const result = computeCurrentPhase('work', startedAt, now, DEFAULT_DURATIONS);
     expect(result.phase).toBe('break');
+  });
+
+  it('uses configured durations (karen-2): custom 10-min work / 2-min break walk', () => {
+    // Custom: 10 min work, 2 min break. 13 min elapsed = 10 min work + 2 min break + 1 min work
+    const customDurations = { work_duration_ms: 10 * 60_000, break_duration_ms: 2 * 60_000 };
+    const elapsed = 10 * 60_000 + 2 * 60_000 + 60_000; // 13 min into next work phase
+    const startedAt = new Date(NOW_MS - elapsed);
+    const result = computeCurrentPhase('work', startedAt, NOW, customDurations);
+    // Should be in work phase (second cycle)
+    expect(result.phase).toBe('work');
+    // newEndsAt = startedAt + 10min + 2min + 10min
+    const expectedEnd = startedAt.getTime() + 10 * 60_000 + 2 * 60_000 + 10 * 60_000;
+    expect(result.newEndsAt.getTime()).toBe(expectedEnd);
+  });
+
+  it('phaseDurationMs uses row durations (not bare constants)', () => {
+    const custom = { work_duration_ms: 3 * 60_000, break_duration_ms: 1 * 60_000 };
+    expect(phaseDurationMs('work', custom)).toBe(3 * 60_000);
+    expect(phaseDurationMs('break', custom)).toBe(1 * 60_000);
+    // Default durations
+    expect(phaseDurationMs('work', DEFAULT_DURATIONS)).toBe(WORK_DURATION_MS);
+    expect(phaseDurationMs('break', DEFAULT_DURATIONS)).toBe(BREAK_DURATION_MS);
   });
 });
 
@@ -357,7 +388,13 @@ describe('StudyTimerService — state transitions', () => {
 
   it('startTimer: upserts run_state=running phase=work; emits study-timer.updated', async () => {
     const { svc, emitter } = makeService();
-    mockSelect.mockImplementation(() => makeSelectChain([MEMBER_ROW]));
+    // startTimer: first select = assertMember, second = getTimerRow (no existing row)
+    let selectCall = 0;
+    mockSelect.mockImplementation(() => {
+      selectCall++;
+      if (selectCall === 1) return makeSelectChain([MEMBER_ROW]);
+      return makeSelectChain([]); // no existing row → fallback to default WORK_DURATION_MS
+    });
 
     const insertedRow = {
       ...runningRow,
@@ -666,7 +703,13 @@ describe('StudyTimerService — presence design confirmation', () => {
     // that service.startTimer calls db.insert (timer row) but never inserts to
     // any presence/attendance table.
     const { svc } = makeService();
-    mockSelect.mockImplementation(() => makeSelectChain([MEMBER_ROW]));
+    // startTimer fetches existing row first (getTimerRow), then upserts
+    let selectCall = 0;
+    mockSelect.mockImplementation(() => {
+      selectCall++;
+      if (selectCall === 1) return makeSelectChain([MEMBER_ROW]); // assertMember
+      return makeSelectChain([]); // getTimerRow returns null → no existing row
+    });
     mockInsert.mockImplementation(() => makeInsertChain([runningRow]));
 
     await svc.startTimer(SERVER_ID, USER_ID);
@@ -676,5 +719,184 @@ describe('StudyTimerService — presence design confirmation', () => {
     // The insert target is server_study_timer (not a presence/attendance table)
     // — verified by the test expectation that insert is called once with one call
     expect(mockInsert).toHaveBeenCalledWith(expect.any(Object));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// configureDurations — wave-50 task f4b3659e unit tests
+// ---------------------------------------------------------------------------
+
+describe('StudyTimerService — configureDurations', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('non-member → ForbiddenException', async () => {
+    const { svc } = makeService();
+    mockSelect.mockImplementation(() => makeSelectChain([])); // no member row
+
+    await expect(
+      svc.configureDurations(SERVER_ID, USER_ID, { workMinutes: 30, breakMinutes: 10 }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('timer running → ConflictException (409)', async () => {
+    const { svc } = makeService();
+    const futureRunning = { ...runningRow, ends_at: new Date(Date.now() + WORK_DURATION_MS) };
+
+    let selectCall = 0;
+    mockSelect.mockImplementation(() => {
+      selectCall++;
+      if (selectCall === 1) return makeSelectChain([MEMBER_ROW]);
+      return makeSelectChain([futureRunning]); // getTimerRow → running
+    });
+
+    const { ConflictException } = await import('@nestjs/common');
+    await expect(
+      svc.configureDurations(SERVER_ID, USER_ID, { workMinutes: 30, breakMinutes: 10 }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('timer paused → ConflictException (409)', async () => {
+    const { svc } = makeService();
+
+    let selectCall = 0;
+    mockSelect.mockImplementation(() => {
+      selectCall++;
+      if (selectCall === 1) return makeSelectChain([MEMBER_ROW]);
+      return makeSelectChain([pausedRow]); // getTimerRow → paused
+    });
+
+    const { ConflictException } = await import('@nestjs/common');
+    await expect(
+      svc.configureDurations(SERVER_ID, USER_ID, { workMinutes: 30, breakMinutes: 10 }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('timer idle → persists durations; emits study-timer.updated; returns updated DTO', async () => {
+    const { svc, emitter } = makeService();
+
+    let selectCall = 0;
+    mockSelect.mockImplementation(() => {
+      selectCall++;
+      if (selectCall === 1) return makeSelectChain([MEMBER_ROW]);
+      return makeSelectChain([idleRow]); // getTimerRow → idle
+    });
+
+    const configuredRow = {
+      ...idleRow,
+      work_duration_ms: 30 * 60_000,
+      break_duration_ms: 10 * 60_000,
+    };
+    mockInsert.mockImplementation(() => makeInsertChain([configuredRow]));
+
+    const dto = await svc.configureDurations(SERVER_ID, USER_ID, {
+      workMinutes: 30,
+      breakMinutes: 10,
+    });
+
+    expect(dto.workDurationMs).toBe(30 * 60_000);
+    expect(dto.breakDurationMs).toBe(10 * 60_000);
+    expect(dto.runState).toBe('idle');
+    expect(emitter.emit).toHaveBeenCalledWith(
+      'study-timer.updated',
+      expect.objectContaining({ serverId: SERVER_ID }),
+    );
+    // Emitted timer carries new durations
+    const emittedTimer = emitter.emit.mock.calls[0]?.[1]?.timer;
+    expect(emittedTimer?.workDurationMs).toBe(30 * 60_000);
+    expect(emittedTimer?.breakDurationMs).toBe(10 * 60_000);
+  });
+
+  it('no existing row → upsert idle row with configured durations; emits update', async () => {
+    const { svc, emitter } = makeService();
+
+    let selectCall = 0;
+    mockSelect.mockImplementation(() => {
+      selectCall++;
+      if (selectCall === 1) return makeSelectChain([MEMBER_ROW]);
+      return makeSelectChain([]); // no existing row
+    });
+
+    const newRow = {
+      ...idleRow,
+      work_duration_ms: 45 * 60_000,
+      break_duration_ms: 15 * 60_000,
+    };
+    mockInsert.mockImplementation(() => makeInsertChain([newRow]));
+
+    const dto = await svc.configureDurations(SERVER_ID, USER_ID, {
+      workMinutes: 45,
+      breakMinutes: 15,
+    });
+
+    expect(dto.workDurationMs).toBe(45 * 60_000);
+    expect(dto.breakDurationMs).toBe(15 * 60_000);
+    expect(emitter.emit).toHaveBeenCalledWith('study-timer.updated', expect.any(Object));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// rowToDto — duration fields included in DTO
+// ---------------------------------------------------------------------------
+
+describe('StudyTimerService — rowToDto includes duration fields', () => {
+  it('getTimer DTO carries workDurationMs + breakDurationMs from row', async () => {
+    const { svc } = makeService();
+    const customRow = {
+      ...runningRow,
+      ends_at: new Date(Date.now() + 30 * 60_000),
+      work_duration_ms: 30 * 60_000,
+      break_duration_ms: 10 * 60_000,
+    };
+
+    let selectCall = 0;
+    mockSelect.mockImplementation(() => {
+      selectCall++;
+      if (selectCall === 1) return makeSelectChain([MEMBER_ROW]);
+      return makeSelectChain([customRow]);
+    });
+
+    const dto = await svc.getTimer(SERVER_ID, USER_ID);
+
+    expect(dto.workDurationMs).toBe(30 * 60_000);
+    expect(dto.breakDurationMs).toBe(10 * 60_000);
+  });
+
+  it('startTimer: next start uses configured work_duration_ms (karen-2 start path)', async () => {
+    const { svc, emitter } = makeService();
+    const existingIdleRow = {
+      ...idleRow,
+      work_duration_ms: 45 * 60_000, // custom 45-min work
+      break_duration_ms: 10 * 60_000,
+    };
+
+    let selectCall = 0;
+    mockSelect.mockImplementation(() => {
+      selectCall++;
+      if (selectCall === 1) return makeSelectChain([MEMBER_ROW]); // assertMember
+      return makeSelectChain([existingIdleRow]); // getTimerRow → idle with custom durations
+    });
+
+    // The upsert should use ends_at = now + 45min (not 25min)
+    const startedRow = {
+      ...runningRow,
+      ends_at: new Date(Date.now() + 45 * 60_000),
+      work_duration_ms: 45 * 60_000,
+      break_duration_ms: 10 * 60_000,
+    };
+    mockInsert.mockImplementation(() => makeInsertChain([startedRow]));
+
+    const dto = await svc.startTimer(SERVER_ID, USER_ID);
+
+    expect(dto.workDurationMs).toBe(45 * 60_000);
+    expect(dto.breakDurationMs).toBe(10 * 60_000);
+    // endsAt should reflect custom work duration (~45 min from now)
+    const endsAtMs = new Date(dto.endsAt as string).getTime();
+    expect(endsAtMs).toBeGreaterThan(Date.now() + 44 * 60_000);
+    expect(emitter.emit).toHaveBeenCalledWith(
+      'study-timer.updated',
+      expect.objectContaining({ serverId: SERVER_ID }),
+    );
   });
 });
