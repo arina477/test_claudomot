@@ -93,3 +93,6 @@ Promoted at L-2 Distill from `process/waves/wave-<N>/blocks/L/observations.md` b
 
 9. Author an integration spec exercising every new service or DB boundary in the B-block, before the C-1 merge.
    Why: A deferred spec leaves the CI integration job green on new code it never exercises.
+
+10. B-5 verify runs the exact CI commands, full lint and full test suite, not a subset, before B-6 review.
+   Why: A subset missing the CI-identical lint or tests lets failures reach C-1 as post-merge fixes.
