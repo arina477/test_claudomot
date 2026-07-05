@@ -4,7 +4,7 @@
 | Stage | Deliverable | Status | Notes |
 |---|---|---|---|
 | B-0 | stages/B-0-branch-and-schema.md | done | branch; SCHEMA SKIP (MUST-lock 1 — no table/migration) |
-| B-1 | stages/B-1-contracts.md | in-progress | packages/shared/src/study-room.ts (FocusRoom + roster + events) |
+| B-1 | stages/B-1-contracts.md | done | study-room.ts (FocusRoom/roster/events distinct from study-timer; StudyRoomTimerSchema roomId) |
 | B-2 | stages/B-2-backend.md | pending | study-room module (gateway/service/module) — in-memory rooms + presence + room-timer |
 | B-3 | stages/B-3-frontend.md | pending | studyRoomSocket + FocusRoomPanel per design; room-timer reuses StudyTimerWidget |
 | B-4 | stages/B-4-wiring.md | pending | |
