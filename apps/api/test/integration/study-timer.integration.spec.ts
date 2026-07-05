@@ -605,50 +605,47 @@ describe.skipIf(SKIP)(
     });
 
     // Case 19 — karen-2 correctness: self-heal/compute-on-read walk uses configured durations
-    it(
-      'karen-2: custom-duration timer self-heals with configured lengths, not 25/5 defaults',
-      async () => {
-        // Configure 10-min work / 2-min break
-        await sut.resetTimer(SERVER_ID, MEMBER_ID);
-        await sut.configureDurations(SERVER_ID, MEMBER_ID, { workMinutes: 10, breakMinutes: 2 });
-        await sut.startTimer(SERVER_ID, MEMBER_ID);
+    it('karen-2: custom-duration timer self-heals with configured lengths, not 25/5 defaults', async () => {
+      // Configure 10-min work / 2-min break
+      await sut.resetTimer(SERVER_ID, MEMBER_ID);
+      await sut.configureDurations(SERVER_ID, MEMBER_ID, { workMinutes: 10, breakMinutes: 2 });
+      await sut.startTimer(SERVER_ID, MEMBER_ID);
 
-        // Manually backdating ends_at to simulate the timer running past its end
-        // (i.e. the service missed the phase transition — e.g. after a process restart).
-        // Set ends_at to 11 min ago (10-min work phase expired, 1 min into break).
-        const overduePast = new Date(Date.now() - 11 * 60_000);
-        const startedAt = new Date(Date.now() - 11 * 60_000 - 10_000); // started slightly before
-        await harnessQuery(
-          'UPDATE server_study_timer SET ends_at = $1, started_at = $2 WHERE server_id = $3',
-          [overduePast.toISOString(), startedAt.toISOString(), SERVER_ID],
-        );
-        emitter.emit.mockClear();
+      // Manually backdating ends_at to simulate the timer running past its end
+      // (i.e. the service missed the phase transition — e.g. after a process restart).
+      // Set ends_at to 11 min ago (10-min work phase expired, 1 min into break).
+      const overduePast = new Date(Date.now() - 11 * 60_000);
+      const startedAt = new Date(Date.now() - 11 * 60_000 - 10_000); // started slightly before
+      await harnessQuery(
+        'UPDATE server_study_timer SET ends_at = $1, started_at = $2 WHERE server_id = $3',
+        [overduePast.toISOString(), startedAt.toISOString(), SERVER_ID],
+      );
+      emitter.emit.mockClear();
 
-        // Calling getTimerForRoom triggers selfHealIfOverdue
-        const dto = await sut.getTimerForRoom(SERVER_ID);
+      // Calling getTimerForRoom triggers selfHealIfOverdue
+      const dto = await sut.getTimerForRoom(SERVER_ID);
 
-        // selfHealIfOverdue uses the row's 10/2 durations.
-        // 11 min elapsed from startedAt: 10min work completed → now 1 min into 2-min break.
-        expect(dto.phase).toBe('break');
-        expect(dto.runState).toBe('running');
-        // Remaining should be ~1 min (2-min break - ~1 min elapsed)
-        expect(dto.remainingMs).toBeGreaterThan(0);
-        expect(dto.remainingMs).toBeLessThanOrEqual(2 * 60_000);
+      // selfHealIfOverdue uses the row's 10/2 durations.
+      // 11 min elapsed from startedAt: 10min work completed → now 1 min into 2-min break.
+      expect(dto.phase).toBe('break');
+      expect(dto.runState).toBe('running');
+      // Remaining should be ~1 min (2-min break - ~1 min elapsed)
+      expect(dto.remainingMs).toBeGreaterThan(0);
+      expect(dto.remainingMs).toBeLessThanOrEqual(2 * 60_000);
 
-        // The healed row in the DB should have break_duration_ms-based ends_at
-        const rows = await harnessQuery<{ phase: string; ends_at: string }>(
-          'SELECT phase, ends_at FROM server_study_timer WHERE server_id = $1',
-          [SERVER_ID],
-        );
-        expect(rows[0]?.phase).toBe('break');
+      // The healed row in the DB should have break_duration_ms-based ends_at
+      const rows = await harnessQuery<{ phase: string; ends_at: string }>(
+        'SELECT phase, ends_at FROM server_study_timer WHERE server_id = $1',
+        [SERVER_ID],
+      );
+      expect(rows[0]?.phase).toBe('break');
 
-        // emitter fired for the heal broadcast
-        expect(emitter.emit).toHaveBeenCalledWith(
-          'study-timer.updated',
-          expect.objectContaining({ serverId: SERVER_ID }),
-        );
-      },
-    );
+      // emitter fired for the heal broadcast
+      expect(emitter.emit).toHaveBeenCalledWith(
+        'study-timer.updated',
+        expect.objectContaining({ serverId: SERVER_ID }),
+      );
+    });
 
     // Case 20 — backward-compat: default rows behave as 25/5
     it('backward-compat: default row (no prior config) behaves as 25/5', async () => {
