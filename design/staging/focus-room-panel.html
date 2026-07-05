@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en" class="antialiased dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyHall — Focus Room Panel</title>
+  
+  <!-- 
+    aesthetic_dna: Calm, academic focus tool. Deep zinc layered surfaces, high-contrast precise typography, strictly token-compliant.
+    ui_paradigm: Architectural Systems Dashboard - Meso-level panel layered alongside a macro widget.
+    palette: --surface-800/900/950 (Zinc scale), --accent-emerald (Focus/Work), --accent-amber (Break/Alerts), --danger (Red).
+  -->
+
+  <!-- Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <style>
+    /* Baseline Configuration Variables & Explicit Tokens (Strict Fidelity) */
+    :root {
+      /* Surfaces (Deep Zinc) */
+      --surface-950: #0a0a0b;
+      --surface-900: #121214;
+      --surface-800: #1c1c1f;
+      --surface-700: #27272a;
+      --surface-600: #3f3f46;
+      --surface-500: #52525b;
+      
+      /* Borders */
+      --border-hairline: rgba(255, 255, 255, 0.06); 
+      --border-hover: rgba(255, 255, 255, 0.10);
+      
+      /* Text */
+      --text-primary: rgba(255, 255, 255, 0.92);
+      --text-secondary: rgba(255, 255, 255, 0.60);
+      --text-muted: rgba(255, 255, 255, 0.40);
+      
+      /* Accents */
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --danger: #ef4444;
+      --danger-text: #f87171;
+      
+      /* Geometry */
+      --radius-sm: 2px;
+      --radius-md: 6px;
+      --radius-lg: 10px;
+      --radius-full: 9999px;
+      
+      /* Elevation */
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+      --shadow-pop: 0 8px 24px rgba(0,0,0,0.5);
+      --glow-focus: 0 0 0 2px rgba(16, 185, 129, 0.4);
+      --glow-subtle: 0 0 15px rgba(255, 255, 255, 0.05);
+    }
+
+    body {
+      background-color: var(--surface-950);
+      color: var(--text-primary);
+      font-family: 'Geist', -apple-system, sans-serif;
+    }
+
+    .font-mono {
+      font-family: 'Geist Mono', ui-monospace, monospace;
+    }
+
+    /* Standard Primitive Classes */
+    .glass-panel {
+      background: var(--surface-800);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      overflow: hidden;
+      transition: all 300ms ease;
+    }
+    
+    .glass-panel:hover {
+      border-color: var(--border-hover);
+      box-shadow: var(--shadow-sm), var(--glow-subtle);
+    }
+
+    /* Button Reset & Base */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      transition: transition-colors 150ms ease;
+      cursor: pointer;
+      user-select: none;
+    }
+    .btn:focus-visible {
+      outline: none;
+      box-shadow: var(--glow-focus);
+    }
+    .btn:active:not(:disabled) {
+      transform: scale(0.96);
+      transition: all 150ms ease;
+    }
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    .btn-md { height: 34px; padding: 0 12px; font-size: 0.875rem; }
+    .btn-sm { height: 28px; padding: 0 8px; font-size: 0.75rem; }
+
+    /* Button Variants */
+    .btn-primary {
+      background-color: var(--accent-emerald);
+      color: #fff;
+      border: 1px solid transparent;
+    }
+    .btn-primary:hover { filter: brightness(1.1); }
+    
+    .btn-ghost {
+      background-color: transparent;
+      color: var(--text-secondary);
+    }
+    .btn-ghost:hover {
+      background-color: var(--surface-700);
+      color: var(--text-primary);
+    }
+    
+    .btn-secondary {
+      background-color: var(--surface-700);
+      color: var(--text-primary);
+      border: 1px solid var(--border-hairline);
+    }
+    .btn-secondary:hover {
+      border-color: var(--border-hover);
+      background-color: var(--surface-600);
+    }
+
+    /* Inputs reused from system */
+    .input-base {
+      background-color: var(--surface-900);
+      border: 1px solid var(--border-hairline);
+      color: var(--text-primary);
+      border-radius: var(--radius-md);
+      padding: 0 12px;
+      font-size: 0.875rem;
+      transition: all 150ms ease;
+    }
+    .input-base:focus {
+      outline: none;
+      border-color: var(--accent-emerald);
+      box-shadow: var(--glow-focus);
+    }
+    .input-base::placeholder {
+      color: var(--text-muted);
+    }
+
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--surface-600); border-radius: var(--radius-full); }
+    ::-webkit-scrollbar-thumb:hover { background: var(--surface-500); }
+
+    /* Focus Room Specifics (Strictly token compliant) */
+    .room-card {
+      background: var(--surface-800);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-lg);
+      transition: all 200ms ease;
+      cursor: pointer;
+    }
+    .room-card:hover {
+      background: var(--surface-700);
+      border-color: var(--border-hover);
+    }
+    .room-card:active {
+      transform: scale(0.99);
+    }
+    
+    .roster-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+      gap: 12px;
+    }
+
+    /* Loading Skeletons */
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .skeleton-layer {
+      background: linear-gradient(90deg, 
+        var(--surface-700) 25%, 
+        var(--surface-600) 50%, 
+        var(--surface-700) 75%);
+      background-size: 400% 100%;
+      animation: shimmer 2s infinite ease-in-out;
+      border-radius: var(--radius-sm);
+    }
+
+    /* Stagger Animations */
+    .stagger-1 { animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) calc(1 * 75ms) both; }
+    .stagger-2 { animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) calc(2 * 75ms) both; }
+    .stagger-3 { animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) calc(3 * 75ms) both; }
+    .stagger-4 { animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) calc(4 * 75ms) both; }
+    
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @keyframes pulse-ring {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+      70% { box-shadow: 0 0 0 4px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+    .animate-presence-ring {
+      animation: pulse-ring 2.5s infinite cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    /* Accessibility / Motion Override */
+    @media (prefers-reduced-motion: reduce) {
+      *, ::before, ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+      .skeleton-layer, .animate-presence-ring { animation: none; }
+      .stagger-1, .stagger-2, .stagger-3, .stagger-4 { opacity: 1; transform: none; animation: none; }
+    }
+  </style>
+</head>
+<body class="min-h-[100dvh] flex flex-col text-[var(--text-primary)]">
+
+  <!-- Document Header -->
+  <header class="w-full px-6 py-6 border-b border-[var(--border-hairline)] bg-[var(--surface-950)]/80 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--surface-800)] border border-[var(--border-hairline)] flex items-center justify-center">
+          <i class="ph ph-users-three text-[var(--text-primary)] text-lg"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-semibold tracking-tight text-[var(--text-primary)] leading-none">Focus Room Panel</h1>
+          <p class="text-[var(--text-secondary)] text-sm tracking-wide mt-1">StudyHall Explicit-Join Body-Doubling Surface</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="px-2 py-1 bg-[var(--surface-900)] border border-[var(--border-hairline)] rounded-[var(--radius-sm)] text-xs font-mono text-[var(--text-muted)]">Design System v7</span>
+        <span class="px-2 py-1 bg-[var(--accent-emerald)]/10 text-[var(--accent-emerald)] border border-[var(--accent-emerald)]/20 rounded-[var(--radius-sm)] text-xs font-mono">D-3 Approved</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 py-10 gap-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 auto-rows-min pb-32">
+
+    <!-- ========================================== -->
+    <!-- 1. MACRO: Integrated Context (Joined State + Timer) -->
+    <!-- Visual proof that the panel coexists with the timer without crowding -->
+    <!-- ========================================== -->
+    <section class="col-span-1 lg:col-span-12 stagger-1 bg-[var(--surface-900)] border border-[var(--border-hairline)] rounded-[calc(var(--radius-lg)*1.5)] overflow-hidden shadow-[var(--shadow-sm)] flex flex-col">
+      <div class="px-5 py-3 border-b border-[var(--border-hairline)] bg-[var(--surface-950)] flex items-center justify-between">
+        <div class="text-xs font-mono text-[var(--text-secondary)] tracking-widest uppercase">01 / Contextual Integration (Joined)</div>
+        <div class="text-[10px] bg-[var(--surface-800)] px-2 py-1 rounded-[var(--radius-sm)] text-[var(--text-muted)]">Viewport: ≥ 1024px</div>
+      </div>
+
+      <div class="bg-[var(--surface-950)] p-4 sm:p-8 flex items-start gap-6 relative min-h-[400px]">
+        
+        <!-- MOCK CHANNEL SIDEBAR (Visual anchor for architecture) -->
+        <div class="hidden lg:flex w-64 flex-col gap-4 py-2 border-r border-[var(--border-hairline)] pr-6 opacity-60 pointer-events-none">
+          <div class="flex items-center gap-2 text-[var(--text-secondary)]">
+            <i class="ph ph-hash"></i><span class="text-sm font-medium">group-study-calc</span>
+          </div>
+          <div class="w-full h-8 skeleton-layer rounded"></div>
+          <div class="w-3/4 h-8 skeleton-layer rounded"></div>
+        </div>
+
+        <!-- MAIN CANVAS -->
+        <div class="flex-1 flex flex-col gap-6 w-full max-w-[800px]">
+          
+          <!-- Shared Ambient Timer (Visual Placeholder referencing standard component) -->
+          <div class="glass-panel w-full p-4 flex items-center justify-between opacity-70">
+             <div class="flex items-center gap-4">
+               <div class="font-mono text-3xl font-medium text-[var(--text-primary)] tracking-tight">24:59</div>
+               <div class="px-3 py-1 rounded-[var(--radius-full)] bg-[var(--surface-900)] border border-[var(--border-hairline)] text-[var(--text-primary)] text-xs font-medium uppercase tracking-wide">Focus</div>
+             </div>
+             <div class="text-sm text-[var(--text-secondary)] hidden sm:block">Shared ambient timer</div>
+          </div>
+
+          <!-- THE FOCUS ROOM PANEL (ACTIVE/JOINED STATE) -->
+          <!-- role="region" provides landmark for a11y -->
+          <div role="region" aria-label="Active Focus Room: Midterm Grind" class="w-full bg-[var(--surface-800)] border border-[var(--border-hairline)] rounded-[var(--radius-lg)] shadow-[var(--shadow-sm)] overflow-hidden flex flex-col">
+            
+            <!-- Panel Header -->
+            <div class="px-5 py-4 border-b border-[var(--border-hairline)] bg-[var(--surface-900)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--accent-emerald)]/10 text-[var(--accent-emerald)] flex items-center justify-center border border-[var(--accent-emerald)]/20 animate-presence-ring">
+                  <i class="ph-fill ph-check-circle text-lg"></i>
+                </div>
+                <div>
+                  <h2 class="text-[var(--text-primary)] font-semibold text-base leading-none">Midterm Grind</h2>
+                  <div class="flex items-center gap-1.5 mt-1">
+                    <div class="w-1.5 h-1.5 rounded-full bg-[var(--accent-emerald)]"></div>
+                    <span class="text-xs text-[var(--text-secondary)] inline-block" aria-live="polite">8 focusing now</span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Destructive action restrained to ghost/border hover to prevent UI noise, per prompt -->
+              <button class="btn btn-sm btn-ghost hover:text-[var(--danger-text)] hover:bg-[var(--danger)]/10 transition-colors" aria-label="Leave focus room">
+                <i class="ph ph-sign-out"></i> Leave Room
+              </button>
+            </div>
+
+            <!-- Panel Body: Live Roster (Distinct explicit-join body doubling) -->
+            <div class="p-6 bg-[var(--surface-800)]">
+              
+              <!-- Roster Grid - Higher density, explicit names vs ambient timer -->
+              <div class="flex flex-wrap gap-4">
+                
+                <!-- You (Current User) -->
+                <div class="flex flex-col items-center gap-2 group w-14">
+                  <div class="w-12 h-12 rounded-full border-2 border-[var(--accent-emerald)] relative overflow-hidden shadow-[var(--shadow-sm)]">
+                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80" alt="Sarah (You)" class="w-full h-full object-cover">
+                  </div>
+                  <span class="text-[11px] font-medium text-[var(--text-primary)] truncate w-full text-center group-hover:text-[var(--accent-emerald)] transition-colors">Sarah</span>
+                </div>
+
+                <!-- Peer 1 -->
+                <div class="flex flex-col items-center gap-2 group w-14">
+                  <div class="w-12 h-12 rounded-full border-2 border-[var(--surface-700)] relative overflow-hidden group-hover:border-[var(--text-secondary)] transition-colors">
+                    <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=80&q=80" alt="Marcus" class="w-full h-full object-cover">
+                  </div>
+                  <span class="text-[11px] font-medium text-[var(--text-secondary)] truncate w-full text-center">Marcus</span>
+                </div>
+
+                <!-- Peer 2 (Initials Fallback) -->
+                <div class="flex flex-col items-center gap-2 group w-14">
+                  <div class="w-12 h-12 rounded-full border-2 border-[var(--surface-700)] bg-[var(--surface-600)] flex items-center justify-center text-sm font-medium relative group-hover:border-[var(--text-secondary)] transition-colors">
+                    AJ
+                  </div>
+                  <span class="text-[11px] font-medium text-[var(--text-secondary)] truncate w-full text-center">AJ</span>
+                </div>
+
+                <!-- Peer 3 -->
+                <div class="flex flex-col items-center gap-2 group w-14">
+                  <div class="w-12 h-12 rounded-full border-2 border-[var(--surface-700)] relative overflow-hidden group-hover:border-[var(--text-secondary)] transition-colors">
+                    <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=80&q=80" alt="Elara" class="w-full h-full object-cover">
+                  </div>
+                  <span class="text-[11px] font-medium text-[var(--text-secondary)] truncate w-full text-center">Elara</span>
+                </div>
+
+                 <!-- Peer 4 -->
+                 <div class="flex flex-col items-center gap-2 group w-14">
+                  <div class="w-12 h-12 rounded-full border-2 border-[var(--surface-700)] relative overflow-hidden group-hover:border-[var(--text-secondary)] transition-colors">
+                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&q=80" alt="Jin" class="w-full h-full object-cover">
+                  </div>
+                  <span class="text-[11px] font-medium text-[var(--text-secondary)] truncate w-full text-center">Jin</span>
+                </div>
+                
+                <!-- Overflow / Implicit peers -->
+                <div class="flex flex-col items-center justify-center gap-2 w-14">
+                  <div class="w-12 h-12 rounded-full border-2 border-dashed border-[var(--surface-600)] bg-[var(--surface-900)] flex items-center justify-center text-xs font-medium text-[var(--text-muted)] hover:border-[var(--text-secondary)] cursor-default transition-colors">
+                    +3
+                  </div>
+                </div>
+
+              </div>
+            </div>
+            <!-- End Panel Body -->
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 2. MESO: Component States & The Lobby Grid -->
+    <!-- ========================================== -->
+
+    <!-- Panel Header (Shared across lobby states) -->
+    <div class="col-span-1 lg:col-span-12 stagger-2 flex items-center justify-between mt-8 border-b border-[var(--border-hairline)] pb-4">
+      <div>
+        <h3 class="text-lg font-semibold text-[var(--text-primary)]">Open Focus Rooms</h3>
+        <p class="text-sm text-[var(--text-secondary)]">Join an active session or start your own.</p>
+      </div>
+      <button class="btn btn-md btn-primary" aria-label="Create new focus room">
+        <i class="ph ph-plus-circle text-lg"></i> Create Room
+      </button>
+    </div>
+
+    <!-- State: Populated List (Not Joined) -->
+    <article class="col-span-1 lg:col-span-4 stagger-2 bg-[var(--surface-900)] border border-[var(--border-hairline)] rounded-[var(--radius-lg)] shadow-[var(--shadow-sm)] flex flex-col h-[380px]">
+      <div class="px-4 py-2 border-b border-[var(--border-hairline)] bg-[var(--surface-950)]/50">
+        <span class="text-[11px] font-mono text-[var(--text-secondary)] uppercase tracking-wider">02 / Open Rooms List</span>
+      </div>
+      <div class="p-4 flex-1 flex flex-col gap-3 overflow-y-auto">
+        
+        <!-- Room Item: High Capacity -->
+        <div class="room-card p-3 flex flex-col gap-3 group" tabindex="0" role="button" aria-label="Join Deep Work Lofi, 4 focusing">
+          <div class="flex items-start justify-between">
+            <div>
+              <h4 class="text-sm font-medium text-[var(--text-primary)] group-hover:text-[var(--accent-emerald)] transition-colors">Deep Work + Lofi</h4>
+              <p class="text-xs text-[var(--text-secondary)] mt-0.5">4 focusing</p>
+            </div>
+            <!-- Roster preview cluster -->
+            <div class="flex items-center -space-x-1.5">
+              <div class="w-6 h-6 rounded-full ring-2 ring-[var(--surface-800)] z-30 overflow-hidden"><img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=40&q=80" alt=""></div>
+              <div class="w-6 h-6 rounded-full ring-2 ring-[var(--surface-800)] z-20 bg-[var(--surface-600)] flex items-center justify-center text-[8px] font-medium">MC</div>
+              <div class="w-6 h-6 rounded-full ring-2 ring-[var(--surface-800)] z-10 overflow-hidden"><img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=40&q=80" alt=""></div>
+            </div>
+          </div>
+          <div class="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+            <span class="text-xs font-semibold text-[var(--accent-emerald)] flex items-center gap-1">Click to join <i class="ph ph-arrow-right"></i></span>
+          </div>
+        </div>
+
+        <!-- Room Item: Quiet -->
+        <div class="room-card p-3 flex flex-col gap-3 group" tabindex="0" role="button" aria-label="Join Calculus Psets, 1 focusing">
+          <div class="flex items-start justify-between">
+            <div>
+              <h4 class="text-sm font-medium text-[var(--text-primary)] group-hover:text-[var(--accent-emerald)] transition-colors">Calculus Psets</h4>
+              <p class="text-xs text-[var(--text-secondary)] mt-0.5">1 focusing</p>
+            </div>
+            <div class="flex items-center -space-x-1.5">
+              <div class="w-6 h-6 rounded-full ring-2 ring-[var(--surface-800)] z-10 overflow-hidden"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=40&q=80" alt=""></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </article>
+
+    <!-- State: Creating (Inline Input) -->
+    <article class="col-span-1 lg:col-span-4 stagger-3 bg-[var(--surface-900)] border border-[var(--border-hairline)] rounded-[var(--radius-lg)] shadow-[var(--shadow-sm)] flex flex-col h-[380px]">
+      <div class="px-4 py-2 border-b border-[var(--border-hairline)] bg-[var(--surface-950)]/50">
+        <span class="text-[11px] font-mono text-[var(--text-secondary)] uppercase tracking-wider">03 / State: Creating Inline</span>
+      </div>
+      <div class="p-4 flex-1 flex flex-col gap-3 bg-[var(--surface-800)]">
+        
+        <!-- Inline Create Form -->
+        <div class="bg-[var(--surface-900)] border border-[var(--accent-emerald)]/50 rounded-[var(--radius-lg)] p-3 shadow-[var(--glow-subtle)] ring-1 ring-[var(--glow-focus)]">
+           <label for="room-name-input" class="sr-only">Room Name</label>
+           <input type="text" id="room-name-input" class="input-base w-full h-8 px-2 text-sm bg-[var(--surface-950)] mb-3" placeholder="e.g. Essay Writing" value="Coding Sprint" autofocus>
+           <div class="flex items-center justify-end gap-2">
+             <button class="btn btn-sm btn-ghost text-[var(--text-secondary)]">Cancel</button>
+             <button class="btn btn-sm btn-primary">Start Room</button>
+           </div>
+        </div>
+
+        <!-- Dimmed underlying list to show z-context -->
+        <div class="room-card p-3 flex items-start justify-between opacity-40 pointer-events-none">
+          <div>
+            <h4 class="text-sm font-medium text-[var(--text-primary)]">Calculus Psets</h4>
+            <p class="text-xs text-[var(--text-secondary)] mt-0.5">1 focusing</p>
+          </div>
+        </div>
+
+      </div>
+    </article>
+
+    <!-- State: Empty (No rooms) -->
+    <article class="col-span-1 lg:col-span-4 stagger-3 bg-[var(--surface-900)] border border-[var(--border-hairline)] rounded-[var(--radius-lg)] shadow-[var(--shadow-sm)] flex flex-col h-[380px]">
+      <div class="px-4 py-2 border-b border-[var(--border-hairline)] bg-[var(--surface-950)]/50">
+        <span class="text-[11px] font-mono text-[var(--text-secondary)] uppercase tracking-wider">04 / State: Empty Lobby</span>
+      </div>
+      <div class="p-6 flex-1 flex flex-col items-center justify-center text-center bg-[var(--surface-800)] gap-4">
+        
+        <div class="w-16 h-16 rounded-full bg-[var(--surface-900)] border border-dashed border-[var(--surface-600)] flex items-center justify-center mb-2">
+          <i class="ph ph-books text-2xl text-[var(--text-muted)]"></i>
+        </div>
+        <div>
+          <h4 class="text-base font-semibold text-[var(--text-primary)]">No active rooms</h4>
+          <p class="text-sm text-[var(--text-secondary)] max-w-[200px] mt-1 mx-auto">It's quiet in here. Start the first body-doubling session.</p>
+        </div>
+        <button class="btn btn-md btn-primary mt-2">
+          <i class="ph ph-plus-circle text-lg"></i> Create Room
+        </button>
+
+      </div>
+    </article>
+
+
+    <!-- ========================================== -->
+    <!-- 3. MICRO: Fallbacks & Edge Cases -->
+    <!-- ========================================== -->
+
+    <!-- State: Narrow/Slim Fallback (<1024px) -->
+    <article class="col-span-1 lg:col-span-4 stagger-4 bg-[var(--surface-900)] border border-[var(--border-hairline)] rounded-[var(--radius-lg)] shadow-[var(--shadow-sm)] flex flex-col">
+      <div class="px-4 py-2 border-b border-[var(--border-hairline)] bg-[var(--surface-950)]/50 flex justify-between">
+        <span class="text-[11px] font-mono text-[var(--text-secondary)] uppercase tracking-wider">05 / Compact Active </span>
+        <span class="text-[10px] text-[var(--text-muted)]">&lt;1024px</span>
+      </div>
+      <div class="p-6 flex-1 flex flex-col justify-center bg-[var(--surface-800)]">
+        
+        <!-- Compact Joined Bar representing panel collapse without crowding -->
+        <div class="w-full glass-panel flex flex-row items-center justify-between p-2 pl-3">
+          <div class="flex items-center gap-2 overflow-hidden pr-2">
+            <div class="w-2 h-2 rounded-full bg-[var(--accent-emerald)] shrink-0"></div>
+            <span class="text-xs font-semibold text-[var(--text-primary)] truncate">Deep Work</span>
+            <span class="text-[10px] text-[var(--text-secondary)] ml-1 border-l border-[var(--border-hairline)] pl-2 shrink-0">4 peers</span>
+          </div>
+          <button class="btn btn-sm btn-ghost p-1 text-[var(--text-muted)] hover:text-[var(--danger-text)] shrink-0" aria-label="Leave">
+            <i class="ph ph-sign-out text-base"></i>
+          </button>
+        </div>
+
+      </div>
+    </article>
+
+    <!-- State: Loading List Skeleton -->
+    <article class="col-span-1 lg:col-span-4 stagger-4 bg-[var(--surface-900)] border border-[var(--border-hairline)] rounded-[var(--radius-lg)] shadow-[var(--shadow-sm)] flex flex-col">
+      <div class="px-4 py-2 border-b border-[var(--border-hairline)] bg-[var(--surface-950)]/50">
+        <span class="text-[11px] font-mono text-[var(--text-secondary)] uppercase tracking-wider">06 / Loading Skeleton</span>
+      </div>
+      <div class="p-4 flex-1 flex flex-col gap-3 bg-[var(--surface-800)] pointer-events-none">
+        
+        <div class="room-card p-3 border-transparent shadow-none bg-[var(--surface-900)] flex items-start justify-between">
+          <div class="flex flex-col gap-2 w-full">
+            <div class="w-32 h-4 skeleton-layer"></div>
+            <div class="w-16 h-3 skeleton-layer"></div>
+          </div>
+          <div class="flex items-center -space-x-1.5 opacity-50">
+             <div class="w-6 h-6 rounded-full skeleton-layer ring-2 ring-[var(--surface-900)] z-10"></div>
+             <div class="w-6 h-6 rounded-full skeleton-layer ring-2 ring-[var(--surface-900)] z-0"></div>
+          </div>
+        </div>
+
+        <div class="room-card p-3 border-transparent shadow-none bg-[var(--surface-900)] flex items-start justify-between">
+          <div class="flex flex-col gap-2 w-full">
+            <div class="w-24 h-4 skeleton-layer"></div>
+            <div class="w-12 h-3 skeleton-layer"></div>
+          </div>
+        </div>
+
+      </div>
+    </article>
+
+    <!-- State: Error / Room Vanished -->
+    <article class="col-span-1 lg:col-span-4 stagger-4 bg-[var(--surface-900)] border border-[var(--border-hairline)] rounded-[var(--radius-lg)] shadow-[var(--shadow-sm)] flex flex-col h-full">
+      <div class="px-4 py-2 border-b border-[var(--danger)]/20 bg-[var(--danger)]/5 flex items-center justify-between">
+        <span class="text-[11px] font-mono text-[var(--danger-text)] uppercase tracking-wider">07 / Error Recovery</span>
+      </div>
+      <div class="p-4 flex-1 flex flex-col justify-center bg-[var(--surface-800)] relative">
+        
+        <!-- Graceful fallback inside the panel bounds -->
+        <div role="alert" class="flex flex-col items-center justify-center text-center p-4 border border-[var(--danger)]/20 rounded-[var(--radius-lg)] bg-[var(--danger)]/5">
+          <i class="ph ph-warning-circle text-[var(--danger-text)] text-2xl mb-2"></i>
+          <h4 class="text-sm font-semibold text-[var(--text-primary)]">Room disbanded</h4>
+          <p class="text-xs text-[var(--text-secondary)] mt-1 mb-4">The host closed this session or connection was lost.</p>
+          <button class="btn btn-sm bg-[var(--surface-700)] text-[var(--text-primary)] border border-[var(--border-hairline)] hover:bg-[var(--surface-600)]">
+            Return to List
+          </button>
+        </div>
+
+      </div>
+    </article>
+
+  </main>
+
+  <script>
+    // Vanilla JS to mimic basic interactions (creating an optimistic UI state) without React.
+    document.addEventListener('DOMContentLoaded', () => {
+      const roomCards = document.querySelectorAll('.room-card[tabindex="0"]');
+      
+      // Mimic hover/focus macro interactions accessible via keyboard
+      roomCards.forEach(card => {
+        card.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            // In a real app, this would route or mutate state. Here we simulate a physical press.
+            card.style.transform = 'scale(0.96)';
+            setTimeout(() => card.style.transform = 'none', 100);
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>
