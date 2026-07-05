@@ -1319,6 +1319,86 @@ export function ChatTeardropIcon({ size = 20, className, style }: IconProps) {
   );
 }
 
+/** Filled play triangle — study timer Start/Resume control (wave-49 M8). */
+export function PlayFillIcon({ size = 16, className, style }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      style={style}
+      aria-hidden="true"
+    >
+      <polygon points="5 3 19 12 5 21 5 3" />
+    </svg>
+  );
+}
+
+/** Filled pause (two bars) — study timer Pause control (wave-49 M8). */
+export function PauseFillIcon({ size = 16, className, style }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      style={style}
+      aria-hidden="true"
+    >
+      <rect x="6" y="4" width="4" height="16" rx="1" />
+      <rect x="14" y="4" width="4" height="16" rx="1" />
+    </svg>
+  );
+}
+
+/** Filled timer/clock — ephemeral presence roster badge (wave-49 M8). */
+export function TimerFillIcon({ size = 10, className, style }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      style={style}
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="13" r="9" />
+      <rect x="9" y="2" width="6" height="3" rx="1" />
+      <line x1="12" y1="7" x2="12" y2="13" stroke="white" strokeWidth="2" strokeLinecap="round" />
+      <line x1="12" y1="13" x2="16" y2="13" stroke="white" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** Coffee mug — break phase pill (wave-49 M8). */
+export function CoffeeIcon({ size = 12, className, style }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      style={style}
+      aria-hidden="true"
+    >
+      <path d="M17 8h1a4 4 0 0 1 0 8h-1" />
+      <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V8z" />
+      <line x1="6" y1="2" x2="6" y2="4" />
+      <line x1="10" y1="2" x2="10" y2="4" />
+      <line x1="14" y1="2" x2="14" y2="4" />
+    </svg>
+  );
+}
+
 /** Arrow left — back navigation in popovers (wave-41). */
 export function ArrowLeftIcon({ size = 14, className, style }: IconProps) {
   return (

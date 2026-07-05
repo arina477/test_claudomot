@@ -515,7 +515,9 @@ export class DmService {
     let messageRow: typeof dm_messages.$inferSelect;
 
     if (isNewInsert) {
-      messageRow = insertReturning[0]!;
+      const first = insertReturning[0];
+      if (!first) throw new Error('INSERT ... RETURNING returned empty array unexpectedly');
+      messageRow = first;
     } else {
       // Idempotent replay — fetch existing row by (conversation_id, idempotency_key)
       const [existing] = await db

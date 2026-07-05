@@ -412,6 +412,7 @@ describe('multi-page catch-up loop (runDrainAndCatchup)', () => {
     );
 
     // Both pages must be in the Dexie cache.
+    // biome-ignore lint/style/noNonNullAssertion: beforeEach always assigns testDb before this line runs
     const cached = await getCachedMessages(testDb!, 'ch-test');
     const cachedIds = new Set(cached.map((m) => m.id));
 
