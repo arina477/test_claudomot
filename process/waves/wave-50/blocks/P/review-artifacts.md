@@ -12,7 +12,7 @@
 | P-0 | stages/P-0-frame.md | done | PROCEED/HOLD-SCOPE/OK; per-server durations + F-1, scope-fenced |
 | P-1 | stages/P-1-decompose.md | done | multi-spec; floor waived (override-ship, resolve-by-rule); design_gap_flag true |
 | P-2 | stages/P-2-spec.md | done | spec in f4b3659e.description; 2 blocks; idle-only config (409); migration 0023 |
-| P-3 | stages/P-3-plan.md | pending | reuse wave-49 timer schema/service/widget |
+| P-3 | stages/P-3-plan.md | done | reuse wave-49 substrate; migration 0023; node+react specialists; no new deps |
 | P-4 | stages/P-4-gemini-review.md | pending | |
 
 ## Block-specific context
