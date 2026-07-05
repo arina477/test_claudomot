@@ -172,7 +172,21 @@ describe('StudyTimerWidget', () => {
     mockApi.getStudyTimer.mockResolvedValue(makePaused(900_000));
     render(<StudyTimerWidget serverId={SERVER_ID} />);
 
-    await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
+    // Two-phase wait:
+    // 1. paused-badge appears on the first render triggered by setTimer(makePaused())
+    //    + setLoadingInitial(false). Awaiting it ensures the paused branch controls
+    //    (btn-resume, btn-reset-paused) are in the DOM.
+    // 2. displaySeconds is updated by a separate useEffect([timer]) that fires after
+    //    that render, triggering a second re-render. We wait for timer-display to
+    //    show the paused frozen value before asserting its text content.
+    //
+    // Using waitFor for both assertions blocks until the full paused UI is committed,
+    // eliminating the sync-after-partial-waitFor race that caused ~1/3 failures under
+    // parallel full-suite load.
+    await waitFor(() => {
+      expect(screen.getByTestId('paused-badge')).toBeInTheDocument();
+      expect(screen.getByTestId('timer-display')).toHaveTextContent('15:00');
+    });
 
     expect(screen.getByTestId('timer-display')).toHaveTextContent('15:00');
     expect(screen.getByTestId('paused-badge')).toBeInTheDocument();

@@ -192,7 +192,12 @@ describe('ServerRolesPage', () => {
   it('marks role dirty and enables Save when role name changes', async () => {
     mockApi.listRoles.mockResolvedValue([makeRole()]);
     renderPage();
-    await waitFor(() => expect(screen.getByTestId('role-name-input')).toBeInTheDocument());
+    // Wait for the edit-buffer useEffect to have run: it sets editName from the
+    // selected role, so toHaveValue('TA (Admin)') proves the effect settled and
+    // dirty is definitively false before we mutate. Without this, a pending
+    // setDirty(false) from the effect can fire *after* fireEvent.change's
+    // setDirty(true), leaving the button disabled and timing out waitFor.
+    await waitFor(() => expect(screen.getByTestId('role-name-input')).toHaveValue('TA (Admin)'));
 
     const nameInput = screen.getByTestId('role-name-input');
     fireEvent.change(nameInput, { target: { value: 'New Role Name' } });
@@ -206,7 +211,9 @@ describe('ServerRolesPage', () => {
     mockApi.updateRole.mockResolvedValue({ ...role, name: 'New Name' });
 
     renderPage();
-    await waitFor(() => expect(screen.getByTestId('role-name-input')).toBeInTheDocument());
+    // Wait for the edit-buffer useEffect to settle (proves setDirty(false) from
+    // the effect has already run) before we mutate — same race as the test above.
+    await waitFor(() => expect(screen.getByTestId('role-name-input')).toHaveValue('TA (Admin)'));
 
     fireEvent.change(screen.getByTestId('role-name-input'), { target: { value: 'New Name' } });
 
@@ -236,7 +243,10 @@ describe('ServerRolesPage', () => {
     mockApi.updateRole.mockRejectedValue(new Error('409 Conflict: owner protection'));
 
     renderPage();
-    await waitFor(() => expect(screen.getByTestId('role-name-input')).toBeInTheDocument());
+    // Wait for the edit-buffer useEffect to settle before mutating — same race
+    // as the other dirty-state tests: a pending setDirty(false) from the effect
+    // must not fire after our fireEvent.change's setDirty(true).
+    await waitFor(() => expect(screen.getByTestId('role-name-input')).toHaveValue('TA (Admin)'));
 
     fireEvent.change(screen.getByTestId('role-name-input'), { target: { value: 'Changed' } });
     // Wait for the dirty-state flush so the Save button is enabled before clicking.
@@ -254,7 +264,9 @@ describe('ServerRolesPage', () => {
   it('Discard resets dirty edits to original values', async () => {
     mockApi.listRoles.mockResolvedValue([makeRole()]);
     renderPage();
-    await waitFor(() => expect(screen.getByTestId('role-name-input')).toBeInTheDocument());
+    // Wait for the edit-buffer useEffect to settle before mutating — same race
+    // as the other dirty-state tests.
+    await waitFor(() => expect(screen.getByTestId('role-name-input')).toHaveValue('TA (Admin)'));
 
     fireEvent.change(screen.getByTestId('role-name-input'), { target: { value: 'Edited' } });
     expect(screen.getByTestId('role-name-input')).toHaveValue('Edited');
@@ -283,7 +295,12 @@ describe('ServerRolesPage', () => {
     mockApi.updateRole.mockResolvedValue(updated);
 
     renderPage();
-    await waitFor(() => expect(screen.getByTestId('role-editor')).toBeInTheDocument());
+    // Wait for role-editor AND for the edit-buffer useEffect to settle. The
+    // effect sets editName from the selected role; toHaveValue proves it ran and
+    // setDirty(false) is definitively in the past — otherwise a racing
+    // setDirty(false) from the effect can fire after our fireEvent.change,
+    // leaving the button disabled.
+    await waitFor(() => expect(screen.getByTestId('role-name-input')).toHaveValue('TA (Admin)'));
 
     // The manage_server checkbox (off → on) — find the visual div toggle
     // Flags are rendered as presentation divs; click the label's div
@@ -293,7 +310,9 @@ describe('ServerRolesPage', () => {
 
     // Change name to trigger dirty
     fireEvent.change(screen.getByTestId('role-name-input'), { target: { value: 'X' } });
-    expect(saveBtn).not.toBeDisabled();
+    // Use waitFor: even though the edit buffer effect has run, React 19 may batch
+    // the setDirty(true) from handleNameChange as a deferred update under load.
+    await waitFor(() => expect(saveBtn).not.toBeDisabled());
 
     fireEvent.click(saveBtn);
     await waitFor(() => expect(mockApi.updateRole).toHaveBeenCalled());
