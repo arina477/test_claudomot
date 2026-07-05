@@ -31,14 +31,14 @@ CI/CD:
 - [x] C-2 Deploy & verify (canary skipped <1000 DAU)
 
 TEST:
-- [ ] T-1 Static
-- [ ] T-2 Unit
-- [ ] T-3 Contract
-- [ ] T-4 Integration
-- [ ] T-5 E2E
-- [ ] T-6 Layout
-- [ ] T-7 Perf (skip if not heavy)
-- [ ] T-8 Security
+- [x] T-1 Static
+- [x] T-2 Unit
+- [x] T-3 Contract (skipped)
+- [x] T-4 Integration (skipped)
+- [x] T-5 E2E
+- [x] T-6 Layout
+- [~] T-7 Perf (skipped — not heavy) (skip if not heavy)
+- [~] T-8 Security (skipped — non-auth)
 - [ ] T-9 Journey
 
 VERIFY:
