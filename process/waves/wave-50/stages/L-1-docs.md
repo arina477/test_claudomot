@@ -28,7 +28,7 @@ M8 (`84e17739-af5e-4396-beb9-b6f3d6836fc4` — "Educator tools & deeper academic
 
 ## Action 4 — Commit
 
-FS docs (CHANGELOG only) committed and pushed to `main`: `docs: L-1 wave-50 closeout (changelog)` — SHA recorded in footer.
+FS docs (CHANGELOG + this deliverable) committed and pushed to `main`: `docs: L-1 wave-50 closeout (changelog)` — commit `2e60bf3`.
 
 ---
 
