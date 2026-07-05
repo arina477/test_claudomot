@@ -9,9 +9,9 @@
 | Stage | Deliverable file | Status | Notes |
 |---|---|---|---|
 | P-0 | stages/P-0-frame.md | done | PROCEED/HOLD-SCOPE/OK; focus-room framing locked + 3 MUST-locks (ephemeral identity, room-vs-server presence, room-timer in-memory) |
-| P-1 | stages/P-1-decompose.md | pending | multi-task bundle (3); may split (ef84b378 flagged split point) |
-| P-2 | stages/P-2-spec.md | pending | no-prior-spec → full spec |
-| P-3 | stages/P-3-plan.md | pending | reuse study-timer gateway/service + Socket.IO server-rooms |
+| P-1 | stages/P-1-decompose.md | done | multi-spec; floor waived (override-ship, obs-B 3rd); design_gap_flag TRUE |
+| P-2 | stages/P-2-spec.md | done | 3-block spec in d123d9e0.desc; 3 MUST-locks encoded; NO migration |
+| P-3 | stages/P-3-plan.md | done | NEW study-room module (/study-room ns), reuse pure study-timer formulas; node+react; no deps/schema |
 | P-4 | stages/P-4-gemini-review.md | pending | |
 
 ## Block-specific context
