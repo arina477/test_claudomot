@@ -103,6 +103,19 @@ export const STUDY_ROOM_JOIN_VERB = 'join_focus_room' as const;
 /** Client emits this to leave the active focus room. Payload: { serverId, roomId }. */
 export const STUDY_ROOM_LEAVE_VERB = 'leave_focus_room' as const;
 
+/**
+ * Client emits this on panel mount (and on reconnect) to subscribe to the
+ * server's open-rooms list without joining any room.
+ * Payload: { serverId }.
+ * Server responds by joining the socket to study-room:server:<serverId> and
+ * immediately emitting STUDY_ROOM_ROOMS_EVENT with the current open-rooms list
+ * (empty array if none — resolves the loading skeleton to empty-state).
+ * Subsequent STUDY_ROOM_ROOMS_EVENT broadcasts (when others create/remove rooms)
+ * arrive automatically because the socket is now in the server channel.
+ * Re-subscribe is idempotent: server re-emits the current list, no double-join.
+ */
+export const STUDY_ROOM_SUBSCRIBE_VERB = 'subscribe_server_rooms' as const;
+
 // ---------------------------------------------------------------------------
 // Event payload schemas — server→client
 // wave-52 M8 task d123d9e0

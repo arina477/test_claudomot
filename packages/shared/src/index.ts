@@ -219,6 +219,7 @@ export {
   STUDY_ROOM_CREATE_VERB,
   STUDY_ROOM_JOIN_VERB,
   STUDY_ROOM_LEAVE_VERB,
+  STUDY_ROOM_SUBSCRIBE_VERB,
   FocusRoomRoomsEventSchema,
   FocusRoomPresenceEventSchema,
   StudyRoomTimerSchema,

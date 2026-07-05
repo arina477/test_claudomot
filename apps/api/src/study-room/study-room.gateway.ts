@@ -54,6 +54,7 @@ import {
   STUDY_ROOM_LEAVE_VERB,
   STUDY_ROOM_PRESENCE_EVENT,
   STUDY_ROOM_ROOMS_EVENT,
+  STUDY_ROOM_SUBSCRIBE_VERB,
   STUDY_ROOM_TIMER_CONFIG_VERB,
   STUDY_ROOM_TIMER_PAUSE_VERB,
   STUDY_ROOM_TIMER_RESET_VERB,
@@ -318,6 +319,62 @@ export class StudyRoomGateway implements OnGatewayInit, OnGatewayConnection, OnG
   }
 
   // -------------------------------------------------------------------------
+  // subscribe_server_rooms — push current open-rooms list to a viewer-only client
+  //
+  // Called by the client on panel mount (and on reconnect) BEFORE joining any
+  // room.  This is the fix for the chicken-and-egg skeleton-stuck bug: a client
+  // that has only connected to the namespace (connect-ack received) but has NOT
+  // joined a room needs the current rooms list so it can decide what to join,
+  // display the empty-state, or render the create affordance.
+  //
+  // Steps on receipt:
+  //   1. assertMember (403/join_error if non-member — IDOR guard).
+  //   2. ensureServerRoom: join study-room:server:<serverId> if not already in it.
+  //      From this point all subsequent STUDY_ROOM_ROOMS_EVENT broadcasts for the
+  //      server arrive automatically at this socket (live list without polling).
+  //   3. Immediately emit STUDY_ROOM_ROOMS_EVENT to THIS SOCKET ONLY with the
+  //      current open-rooms list (possibly empty [] — resolves the skeleton).
+  //
+  // Idempotent: re-subscribing re-emits the current list; socket.join on an
+  // already-joined room is a no-op at the Socket.IO level; ensureServerRoom
+  // guards the Set addition so socketServerIndex stays accurate.
+  // -------------------------------------------------------------------------
+
+  @SubscribeMessage(STUDY_ROOM_SUBSCRIBE_VERB)
+  async handleSubscribeServerRooms(socket: Socket, payload: unknown): Promise<void> {
+    const userId = socket.data.userId as string;
+
+    const parsed = parseServerPayload(payload);
+    if (!parsed) {
+      socket.emit(STUDY_ROOM_JOIN_ERROR_EVENT, {
+        message: 'Invalid payload: serverId required',
+      });
+      return;
+    }
+
+    const { serverId } = parsed;
+
+    try {
+      // Member guard — same as joinRoom / createRoom (IDOR-safe)
+      const rooms = await this.roomService.getOpenRooms(userId, serverId);
+
+      // Ensure the socket is in the server-rooms broadcast channel so it
+      // receives all future STUDY_ROOM_ROOMS_EVENT emissions for this server.
+      await this.ensureServerRoom(socket, serverId);
+
+      // Immediately push the current rooms list to resolve the loading skeleton.
+      socket.emit(STUDY_ROOM_ROOMS_EVENT, { serverId, rooms } satisfies FocusRoomRoomsEvent);
+
+      this.logger.debug(
+        `${socket.id} subscribed to server rooms: serverId=${serverId} (${rooms.length} open rooms)`,
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to subscribe to server rooms';
+      socket.emit(STUDY_ROOM_JOIN_ERROR_EVENT, { message });
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // Room-timer controls — only JOINED members can control the room timer
   // -------------------------------------------------------------------------
 
@@ -461,6 +518,13 @@ export class StudyRoomGateway implements OnGatewayInit, OnGatewayConnection, OnG
 // ---------------------------------------------------------------------------
 // Payload parsers — type-safe, avoids noExplicitAny
 // ---------------------------------------------------------------------------
+
+function parseServerPayload(payload: unknown): { serverId: string } | null {
+  if (typeof payload !== 'object' || payload === null) return null;
+  const p = payload as Record<string, unknown>;
+  if (typeof p.serverId !== 'string' || p.serverId.length === 0) return null;
+  return { serverId: p.serverId };
+}
 
 function parseCreatePayload(payload: unknown): { serverId: string; name: string } | null {
   if (typeof payload !== 'object' || payload === null) return null;

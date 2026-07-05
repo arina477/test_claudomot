@@ -51,6 +51,12 @@ const PRESENCE_EVENT = 'study-room:presence' as const;
 const JOIN_ERROR_EVENT = 'study-room:join_error' as const;
 const TIMER_UPDATE_EVENT = 'study-room:timer_update' as const;
 
+// Verb sent to the server so it joins this socket to the server-rooms channel
+// and immediately emits the current open-rooms list. Using a local const
+// (mirrors ROOMS_EVENT above) to avoid CJS named-export resolution issues
+// when importing STUDY_ROOM_SUBSCRIBE_VERB from shared dist.
+const SUBSCRIBE_SERVER_ROOMS_VERB = 'subscribe_server_rooms' as const;
+
 // ---------------------------------------------------------------------------
 // Socket singleton
 // ---------------------------------------------------------------------------
@@ -62,6 +68,12 @@ let _socket: Socket | null = null;
 // Track the active room join for reconnect re-join (one room at a time).
 let _activeServerId: string | null = null;
 let _activeRoomId: string | null = null;
+
+// Track the active server-rooms subscription for reconnect re-subscribe.
+// Panel sets this via subscribeServerRooms(); cleared when panel unmounts is
+// not strictly necessary (the backend cleans up on disconnect) but the reconnect
+// handler only re-fires when this is non-null, so stale values are harmless.
+let _activeSubscribeServerId: string | null = null;
 
 /**
  * Returns the singleton Socket.IO client for the /study-room namespace.
@@ -80,11 +92,18 @@ export function getStudyRoomSocket(): Socket {
       reconnectionDelayMax: 5000,
     });
 
-    // Reconnect re-join: after a transient drop the server loses all room
-    // memberships for this socket. Re-emit join_focus_room for the still-active
-    // room so study-room:presence / study-room:timer_update resume without waiting
-    // for a full panel remount. Mirrors studyTimerSocket reconnect pattern.
+    // Reconnect handler: after a transient drop the server loses all memberships
+    // and channel subscriptions for this socket.
+    //   1. Re-subscribe to the server-rooms channel so the open-rooms list
+    //      resumes without a full panel remount (mirrors subscribe on mount).
+    //   2. Re-join the active focus room so presence / timer_update events resume.
+    // Both re-emits are idempotent on the backend.
     _socket.on('connect', () => {
+      if (_activeSubscribeServerId) {
+        _socket?.emit(SUBSCRIBE_SERVER_ROOMS_VERB, {
+          serverId: _activeSubscribeServerId,
+        });
+      }
       if (_activeServerId && _activeRoomId) {
         _socket?.emit('join_focus_room', {
           serverId: _activeServerId,
@@ -95,6 +114,28 @@ export function getStudyRoomSocket(): Socket {
   }
 
   return _socket;
+}
+
+// ---------------------------------------------------------------------------
+// Server-rooms subscription
+// ---------------------------------------------------------------------------
+
+/**
+ * Subscribe this socket to the server's open-rooms channel.
+ * Emits STUDY_ROOM_SUBSCRIBE_VERB so the gateway joins the socket to the
+ * server-rooms channel and immediately responds with a STUDY_ROOM_ROOMS_EVENT
+ * carrying the current open-rooms list (possibly []).  That response resolves
+ * the FocusRoomPanel's loading skeleton regardless of whether rooms are empty.
+ *
+ * Tracks the active serverId so the 'connect' reconnect handler can re-subscribe
+ * after a transient socket drop without requiring a full panel remount.
+ *
+ * Must be called on panel mount when serverId is known, and the reconnect
+ * handler re-calls it automatically on every subsequent socket reconnect.
+ */
+export function subscribeServerRooms(serverId: string): void {
+  _activeSubscribeServerId = serverId;
+  getStudyRoomSocket().emit(SUBSCRIBE_SERVER_ROOMS_VERB, { serverId });
 }
 
 // ---------------------------------------------------------------------------
