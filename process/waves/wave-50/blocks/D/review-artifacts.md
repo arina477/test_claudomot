@@ -9,7 +9,7 @@
 
 | Stage | Deliverable file(s) | Status | Notes |
 |---|---|---|---|
-| D-1 | stages/D-1-brief/timer-duration-config-brief.md | in-progress | seeded at D-1 Action 0 |
+| D-1 | stages/D-1-brief/timer-duration-config-brief.md | done | 1 gap; PASS; extends adopted study-timer.html; reuses existing primitives |
 | D-2 | stages/D-2-variants/timer-duration-config-{variants,iterate}.md | pending | /aidesigner generate + bounded iteration |
 | D-3 | stages/D-3-review-and-adopt/timer-duration-config-{plan-design-review,ui-ux-pro-max,reconciliation,adopt}.md | pending | dual-reviewer gate + canonicalization |
 
