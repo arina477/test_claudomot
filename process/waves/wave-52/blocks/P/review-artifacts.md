@@ -3,7 +3,7 @@
 **Block:** P (Product)
 **Wave topic:** M8 study-group slice 3 — joinable focus room (body-doubling): backend join-presence + UI + room-scoped study timer
 **Block exit gate:** P-4
-**Status:** in-progress
+**Status:** gate-passed → D-block (design_gap_flag true)
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
@@ -12,7 +12,7 @@
 | P-1 | stages/P-1-decompose.md | done | multi-spec; floor waived (override-ship, obs-B 3rd); design_gap_flag TRUE |
 | P-2 | stages/P-2-spec.md | done | 3-block spec in d123d9e0.desc; 3 MUST-locks encoded; NO migration |
 | P-3 | stages/P-3-plan.md | done | NEW study-room module (/study-room ns), reuse pure study-timer formulas; node+react; no deps/schema |
-| P-4 | stages/P-4-gemini-review.md | pending | |
+| P-4 | stages/P-4-gemini-review.md | done | head-product APPROVED; karen+jenny APPROVE (Gemini 429). Gate PASSED → D. 6 B-carries. |
 
 ## Block-specific context
 - **Wave topic:** the joinable focus room — the founder-directed study-group headline (ceo-reviewer 2x-recommended). Seed d123d9e0 (backend join-presence) + siblings aad849ac (UI) + ef84b378 (room-scoped timer). ~2200 LOC est (decomposer).
