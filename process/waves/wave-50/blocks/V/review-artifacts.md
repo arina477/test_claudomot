@@ -7,7 +7,7 @@
 |---|---|---|---|
 | V-1 | stages/V-1-karen.md + V-1-jenny.md + V-1-summary.md | done | Karen APPROVE (0) + jenny APPROVE (1 noise) |
 | V-2 | stages/V-2-triage.md | done | 0 blocking; jenny-GAP-1 → noise; fast-fix queue EMPTY |
-| V-3 | stages/V-3-fast-fix.md | pending | |
+| V-3 | stages/V-3-fast-fix.md | done | head-verifier APPROVED; Phase 2 skipped (empty queue) |
 
 ## Block-specific context
 - **Wave topic:** per-server custom Pomodoro durations (configurable work/break, idle-only, synced) + F-1 slim-bar fix.
@@ -19,4 +19,14 @@
 none
 
 ## Gate verdict log
-<appended by fresh head-verifier spawn at V-3>
+head-verifier V-3 attempt-1: **APPROVED**. Both APPROVEs evidence-backed; karen-2 crux + F-1 spot-checked at source; GAP-1 noise; empty queue; no green-by-suppression. V-block exits clean → L.
+
+## Status — block exit
+```yaml
+verify_block_status: complete
+karen_verdict: APPROVE
+jenny_verdict: APPROVE
+fast_fix_cycles: 0
+ready_for_learn: true
+gate_status: gate-passed
+```
