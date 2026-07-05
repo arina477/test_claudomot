@@ -198,6 +198,7 @@ export {
   STUDY_TIMER_JOIN_ERROR_EVENT,
   StudyTimerUpdateEventSchema,
   StudyTimerPresenceEventSchema,
+  StudyTimerConfigSchema,
 } from './study-timer.js';
 export type {
   StudyTimerPhase,
@@ -205,6 +206,7 @@ export type {
   StudyTimer,
   StudyTimerUpdateEvent,
   StudyTimerPresenceEvent,
+  StudyTimerConfig,
 } from './study-timer.js';
 
 export { AccountDataResponseSchema } from './account-data.js';
