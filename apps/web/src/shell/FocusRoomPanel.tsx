@@ -76,6 +76,7 @@ import {
   resetRoomTimer,
   setActiveRoom,
   startRoomTimer,
+  subscribeServerRooms,
 } from './studyRoomSocket';
 
 // ---------------------------------------------------------------------------
@@ -872,6 +873,16 @@ export function FocusRoomPanel({ serverId, selfUserId }: Props) {
   // Set in handleCreateConfirm, cleared when the joined state is reached or on error.
   const pendingCreateServerIdRef = useRef<string | null>(null);
 
+  // ── Subscribe to server-rooms channel on mount (and when serverId changes) ──
+  // Emits subscribe_server_rooms so the gateway joins this socket to the
+  // server-rooms channel and immediately sends the current open-rooms list.
+  // That response (even if rooms=[]) resolves the loading skeleton.
+  // The studyRoomSocket reconnect handler re-emits this automatically on
+  // every socket reconnect, so panel remount is not required after a drop.
+  useEffect(() => {
+    subscribeServerRooms(serverId);
+  }, [serverId]);
+
   // ── Socket subscriptions ────────────────────────────────────────────────────
   useEffect(() => {
     // Rooms list — updated whenever rooms open/close/change count for this server
@@ -879,11 +890,10 @@ export function FocusRoomPanel({ serverId, selfUserId }: Props) {
       if (event.serverId !== serverId) return;
       setRooms(event.rooms);
 
-      // Transition from loading to list on first rooms event
-      setPanelState((prev) => {
-        if (prev === 'loading') return event.rooms.length === 0 ? 'list' : 'list';
-        return prev;
-      });
+      // Transition from loading to list on first rooms event.
+      // ANY rooms event (incl. empty []) resolves the skeleton — the empty-state
+      // UI is shown within list state when rooms.length === 0.
+      setPanelState((prev) => (prev === 'loading' ? 'list' : prev));
 
       // If the user is joined and the room disappears → room-vanished state
       const currentJoined = joinedRoomRef.current;
