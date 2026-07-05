@@ -218,8 +218,10 @@ export class StudyTimerService implements OnModuleDestroy {
   // phase using computeCurrentPhase(), UPDATE the row, re-arm the timeout, and
   // broadcast the corrected state so all connected clients reconcile.
   //
-  // The UPDATE WHERE run_state='running' makes this idempotent with concurrent
-  // reads: at most one concurrent request will write the healed row.
+  // The UPDATE WHERE run_state='running' AND ends_at = $observed makes this
+  // genuinely single-writer (matching doPhaseAdvance's guard): exactly one
+  // concurrent request writes the healed row; the rest return the original row
+  // and their callers resolve via the guarded-UPDATE retry path in pauseTimer.
   // -------------------------------------------------------------------------
 
   private async selfHealIfOverdue(row: ServerStudyTimer): Promise<ServerStudyTimer> {
@@ -231,6 +233,9 @@ export class StudyTimerService implements OnModuleDestroy {
     ) {
       return row; // Nothing to heal
     }
+
+    // ends_at is non-null here — guarded above
+    const observedEndsAt = row.ends_at as Date;
 
     const now = new Date();
     const phase = (row.phase === 'break' ? 'break' : 'work') as StudyTimerPhase;
@@ -248,6 +253,7 @@ export class StudyTimerService implements OnModuleDestroy {
         and(
           eq(server_study_timer.server_id, row.server_id),
           eq(server_study_timer.run_state, 'running'),
+          eq(server_study_timer.ends_at, observedEndsAt),
         ),
       )
       .returning();
