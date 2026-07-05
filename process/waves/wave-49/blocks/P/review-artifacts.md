@@ -1,5 +1,5 @@
 # Wave 49 — P-block review artifacts
-**Block:** P · **Wave topic:** M8 study-group tools slice 1 — shared/synchronized server study timer (Pomodoro): schema + backend + Socket.IO fan-out + widget + phase auto-advance · **Block exit gate:** P-4 · **Status:** in-progress · **wave_db_id:** 49210ad5-85eb-4d4f-bb67-e1915ae03d0a (wave 49)
+**Block:** P · **Wave topic:** M8 study-group tools slice 1 — shared/synchronized server study timer (Pomodoro): schema + backend + Socket.IO fan-out + widget + phase auto-advance · **Block exit gate:** P-4 · **Status:** gate-passed · **wave_db_id:** 49210ad5-85eb-4d4f-bb67-e1915ae03d0a (wave 49)
 
 ## Stage deliverables
 | Stage | Deliverable | Status | Notes |

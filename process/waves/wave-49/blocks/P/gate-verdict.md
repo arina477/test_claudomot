@@ -1,0 +1,28 @@
+# Wave 49 — P-4 Verdict
+
+**Reviewer:** head-product (fresh spawn, Phase 1)
+**Reviewed against:** process/waves/wave-49/blocks/P/review-artifacts.md
+**Attempt:** 1  (first gate)
+**Phase:** 1 (head-product)
+
+## Verdict
+APPROVED
+
+## Rationale
+This wave delivers M8 study-group tools slice 1 — a shared/synchronized Pomodoro study timer scoped to a study server — and it ladders directly to a live, founder-chosen milestone (M8, 84e17739, in_progress). The load-bearing implementation model from the P-0 problem-framer REFRAME is correctly and fully BOUND into the acceptance criteria in the source-of-truth spec (seed 1387d845 `tasks.description`), not merely in the convenience prose: (a) the schema persists anchors only with an explicit "NO stored decrementing counter" prohibition; (b) remaining-time and phase are derived compute-on-read from run_state + ends_at + now(), and the client counts down to the authoritative endsAt (anti-drift); (c) phase auto-advance is a one-shot idempotent, self-healing broadcast-on-transition; and (d) a per-server setInterval / @nestjs/schedule tick loop is explicitly FORBIDDEN in both 1387d845 (AC5) and 832b83b7 (AC1). A spec that permitted a server-timer loop would have been REWORK; this one bans it at the AC level with the load-bearing "per server" qualifier intact. Every AC is falsifiable — non-member 403, compute-on-read GET deriving remainingMs, idempotent double-transition, late-joiner reconnect reconciliation, and ephemeral (non-persisted) presence are each independently testable. The P-0 mediation is sound: the configure/custom-durations peel is deferred to a real future seed (f4b3659e — verified present: parent NULL, wave_id NULL per the N-2 seedability rule, milestone M8, status todo), the ephemeral presence roster is an appropriately scoped and genuinely cheap ceo expansion that reuses existing server-room membership with an explicit no-persistence / not-attendance guardrail (it is the differentiator that makes a "shared" timer meaningfully shared, not scope-creep), and the educator-only control gate is reasonably deferred for the MVP. The plan reuses the locked architecture (messaging.gateway per-server rooms + WS session validation, rbac can()/assertMember membership authz, Drizzle conventions, the scheduling.service compute-on-read precedent — spot-check confirmed) and adds no MVP-unneeded infrastructure. Authz is IDOR-safe (serverId from route, caller from session, assertMember server-derived). Specialist routing (node-specialist / typescript-pro / react-specialist) is valid against AGENTS.md, and D-block is correctly sequenced before B-3 for the two new member-facing surfaces (widget + presence roster). One non-blocking imprecision is logged below for B-block awareness; it does not weaken any AC.
+
+## Non-blocking notes (carry to B-block; not REWORK)
+- **N1 — "zero server-loop precedent" is imprecise.** The P-0/P-2 prose states the codebase has zero server-loop precedent. In fact `apps/api/src/notifications/reminder-scan.service.ts` uses `@Cron(CronExpression.EVERY_HOUR)`. That is a **global singleton hourly batch scan**, categorically distinct from the forbidden **per-server N-loops** pattern the model bans — so the binding is unaffected, and it usefully confirms `@nestjs/schedule` is already available if B-block chooses the keyed one-shot-timeout transition variant (over lazy-on-read). B-block should treat the forbidden pattern strictly as "per-server / per-timer tick loop," not as "any @nestjs/schedule usage."
+- **N2 — security-scope tightened gate: NOT triggered.** The wave reuses shipped auth (WS session validation, assertMember) and introduces no new auth / user-creation / cookie / session / rate-limit / CSRF surface; presence is in-memory ephemeral. It does not meet the P-4 security-tightened-gate intersection. Standard T-8 security still runs at the T-block; membership authz + participant-scoped fan-out (non-members receive no timer/presence events) are the surfaces to test there.
+
+## Footer
+- verdict_complete: true
+- rework_attempt_cap_remaining: 3
+
+---
+## Phase 2 — Karen + jenny + Gemini
+- **karen APPROVE**: 6/6 VERIFIED. Precision: the true per-server-room precedent is `presence.gateway.ts` (presence:server:<id>, can()-gated), NOT messaging.gateway (channel/user rooms) — B-2 model the study-timer server room on presence.gateway + reuse messaging.gateway's io.use() WS-session validation. No per-server timer loop exists (forbidden antipattern absent). compute-on-read precedent = scheduling.service. Deferred seed f4b3659e confirmed (wave_id NULL). Specialists valid.
+- **jenny APPROVE**: 0 drift. presence-add + configure-defer trace to recorded P-0 verdicts; ephemeral guardrail preserved (spec cb81bf03 AC2: no persistence/attendance). 3 minor: (A) per-server room is ADDITIVE not pre-existing → B-2 adds it; (B) presence-add now appended to product-decisions (done); (C) two "presence" concepts share a word → D-block/T-9 UX-clarity watch. Follow-on: B-6/T-9 verify roster non-persisted + transition not a disguised loop.
+- **Gemini UNAVAILABLE** (429) — degradable.
+## Gate result: PASS → design_gap_flag=true → D-block.
+CARRY TO B/D: (1) B-2 model server-room join on presence.gateway.ts (presence:server:<id>, can()-gated) + reuse messaging.gateway io.use() session validation; ADD the server room (not pre-existing). (2) auto-advance = one-shot at ends_at (setTimeout keyed to ends_at OR lazy-on-read), idempotent, self-healing — NOT a repeating tick loop. (3) D-block: avoid two confusing "who's here" surfaces (timer-viewer roster vs online-presence dots). (4) B-6/T-9: verify roster is NON-persisted + transition is not a disguised per-server loop.

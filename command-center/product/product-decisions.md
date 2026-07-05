@@ -607,3 +607,8 @@ These are staged for the next P-0 walk (may re-home to M7 launch-polish or a suc
 - scope DEFERRED to later M8 study-group slices: study sessions (scheduled/joinable study rooms — overlaps shipped scheduling + voice modules), collaborative whiteboard (real-time drawing canvas — largest slice), timer history/stats. Noted in seed prose for future decomposition waves.
 - caller: founder-direct (resolves the wave-49 STATUS:BLOCKED fork — founder chose study-group tools in-chat). The 7 open DM-polish follow-ups (344eabde/c5051444/5bcbd27f/874bd233/39fc1c5e/a1dda389/f8eb49c1, wave_id NULL) are V-2 stragglers, NOT this slice — left untouched, still independently seedable for N-2.
 - decomposed by: milestone-decomposer sub-agent
+
+## [2026-07-05] wave-49 P-0 scope-add — ephemeral live-presence roster on the study timer (ceo SELECTIVE-EXPANSION)
+- **Add (beyond the decomposer bundle):** an EPHEMERAL live-presence roster on the shared study timer — "N studying" + who is currently VIEWING the running server timer. Rationale (ceo-reviewer P-0): body-doubling's mechanism is awareness of co-present others; moves the slice from "a shared timer" to "a shared focus session." Cheap — reuses the fan-out server-room membership.
+- **Guardrail (binding):** EPHEMERAL only (in-memory, rebuilt from live sockets) — NO persistence, NOT attendance/history (persisted attendance is a later study-sessions slice). Distinct wire namespace `study-timer:presence` (≠ the online/voice `presence:*` module).
+- **Also recorded:** custom work/break durations DEFERRED to seed f4b3659e (wave-49 hardcodes 25/5); educator-only control gate deferred (any member controls, MVP). Model pinned: compute-on-read anchors, no per-server timer loop (problem-framer P-0).
