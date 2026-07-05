@@ -189,6 +189,23 @@ export type {
   DmCandidate,
 } from './dm.js';
 
+export {
+  STUDY_TIMER_PHASES,
+  STUDY_TIMER_RUN_STATES,
+  StudyTimerSchema,
+  STUDY_TIMER_UPDATE_EVENT,
+  STUDY_TIMER_PRESENCE_EVENT,
+  StudyTimerUpdateEventSchema,
+  StudyTimerPresenceEventSchema,
+} from './study-timer.js';
+export type {
+  StudyTimerPhase,
+  StudyTimerRunState,
+  StudyTimer,
+  StudyTimerUpdateEvent,
+  StudyTimerPresenceEvent,
+} from './study-timer.js';
+
 export { AccountDataResponseSchema } from './account-data.js';
 export type { AccountDataResponse } from './account-data.js';
 
