@@ -21,6 +21,7 @@ import { api } from '../auth/api';
 import { AssignmentsPanel } from './AssignmentsPanel';
 import { ClassCalendar } from './ClassCalendar';
 import { type ConnectionState, ConnectionStateIndicator } from './ConnectionStateIndicator';
+import { FocusRoomPanel } from './FocusRoomPanel';
 import { HeaderBell } from './HeaderBell';
 import { MessageComposer } from './MessageComposer';
 import { MessageList } from './MessageList';
@@ -285,6 +286,14 @@ export function MainColumn({ connectionState = 'online', onToggleSidebar }: Prop
         {selectedId && (
           <div className="shrink-0 px-4 pt-3">
             <StudyTimerWidget serverId={selectedId} />
+          </div>
+        )}
+
+        {/* Focus room panel — explicit-join body-doubling rooms, per-server.
+            Mounted below the server-level study timer widget (wave-52 B-3). */}
+        {selectedId && (
+          <div className="shrink-0 px-4 pt-2 pb-1">
+            <FocusRoomPanel serverId={selectedId} selfUserId={profile?.userId} />
           </div>
         )}
 

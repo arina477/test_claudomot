@@ -16,6 +16,7 @@ import { PrivacyModule } from './privacy/privacy.module';
 import { ProfileModule } from './profile/profile.module';
 import { SchedulingModule } from './scheduling/scheduling.module';
 import { ServersModule } from './servers/servers.module';
+import { StudyRoomModule } from './study-room/study-room.module';
 import { StudyTimerModule } from './study-timer/study-timer.module';
 import { VoiceModule } from './voice/voice.module';
 
@@ -51,6 +52,7 @@ import { VoiceModule } from './voice/voice.module';
     VoiceModule,
     PrivacyModule,
     StudyTimerModule,
+    StudyRoomModule,
   ],
   providers: [
     // ThrottlerGuard as APP_GUARD covers all NestJS-handled routes.
