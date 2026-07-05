@@ -12,3 +12,15 @@
 - **Fences:** NO voice/video UI; distinct from the study-timer widget presence roster.
 ## Gate verdict log
 <head-designer at D-3>
+
+## Status — block exit
+```yaml
+design_block_status: complete
+gaps_resolved: [focus-room-panel]
+gaps_deferred: []
+design_system_updates: []
+canonicalized_at: 2026-07-05
+canonical_path: design/focus-room-panel.html
+head_designer_verdict: APPROVED
+b_block_notes: [".btn transition malformed — study-timer.html base carry, keep for parity"]
+```
