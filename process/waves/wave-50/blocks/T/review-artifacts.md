@@ -9,10 +9,10 @@
 | T-2 | stages/T-2-unit.md | ci-verified | done | 647 api + 417 web (incl. duration-config + karen-2 walk) |
 | T-3 | stages/T-3-contract.md | ci-verified | done | StudyTimerSchema +2 fields + StudyTimerConfigSchema |
 | T-4 | stages/T-4-integration.md | ci-verified | done | real-PG study-timer.integration 8 config cases (incl karen-2 self-heal) |
-| T-5 | stages/T-5-e2e.md | active | pending | 2-client durations sync + config-while-running 409 + F-1 border live |
-| T-6 | stages/T-6-layout.md | active | pending | affordance per design/timer-duration-config.html + F-1 slim-bar |
+| T-5 | stages/T-5-e2e.md | active | done | 2-client durations sync PASS, config-while-running 409 PASS, F-1 border FIXED live (2px emerald/amber @800px); 0 findings |
+| T-6 | stages/T-6-layout.md | active | done | affordance matches design; F-1 border renders live; 0 token violations |
 | T-7 | stages/T-7-perf.md | active | skipped | not heavy — small delta on shipped substrate |
-| T-8 | stages/T-8-security.md | active | pending | new PATCH /config endpoint — IDOR + idle-guard + auth |
+| T-8 | stages/T-8-security.md | active | done | config endpoint IDOR-safe + idle-guard 409 server-side + no mass-assign + secret clean; 0 findings |
 | T-9 | stages/T-9-journey.md | active | pending | journey annotate + head-tester gate |
 
 ## Block-specific context
