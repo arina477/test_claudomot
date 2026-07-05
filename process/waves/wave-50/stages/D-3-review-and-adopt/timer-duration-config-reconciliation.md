@@ -18,3 +18,14 @@
 The ≥1024px full-width affordance: token-compliant, restrained hierarchy, all 5 states legible, zero invented hex, .btn/input chrome a direct copy of study-timer.html, scope-fence intact. Do NOT regress it.
 
 **Next destination:** D-2 refine (iteration 1) via `/aidesigner refine`, then re-run both reviewers.
+
+---
+
+## Iteration 1 re-review (post-refine)
+
+| Reviewer A (ui-designer) | Reviewer B (accessibility-tester) | Matrix action |
+|---|---|---|
+| APPROVE | APPROVE | **→ Phase 2 (head-designer spawn)** |
+
+Both cleared all 3 concerns: R-1 slim now a true inline reveal (no panel/title/shadow-pop, brief §10 ✓), R-2 F-1 2px emerald/amber `border-left` rendered on the slim frame ✓, R-3 validation wired aria-invalid + aria-describedby → error span in aria-live="polite" + ph-warning-circle icon+text (not color-only, DESIGN-SYSTEM §8 ✓). Reviewer B confirms WCAG 2.1 AA across all 4 principles; zero off-token values; all 5 states distinct. **4 non-blocking B-block implementation-spec notes** carried forward (in the plan-design-review file).
+

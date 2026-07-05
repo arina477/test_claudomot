@@ -3,7 +3,20 @@
 **Block:** D (Design)
 **Wave topic:** study-timer duration-config affordance (per-server custom work/break minutes)
 **Block exit gate:** D-3
-**Status:** in-progress
+**Status:** gate-passed → B-block
+
+## Status — block exit
+```yaml
+design_block_status:    complete
+gaps_resolved:          [timer-duration-config]
+gaps_deferred:          []
+design_system_updates:  []
+canonicalized_at:       2026-07-05
+canonical_path:         design/timer-duration-config.html
+head_designer_verdict:  APPROVED (attempt 1)
+phase1_reviewers:       [ui-designer APPROVE, accessibility-tester APPROVE (iter 1)]
+b_block_notes:          [slim-reveal aria wiring, F-1 border phase-toggle, locked / separator --text-muted]
+```
 
 ## Stage deliverables
 
