@@ -106,3 +106,7 @@ All notable changes to StudyHall are documented here. Format follows
 - Opening and closing a session's details is now smoother for keyboard and screen-reader users: focus returns to where you were when you close it, and the details always reflect the latest schedule. (#58)
 - On narrower screens the compact study-timer bar now shows its phase-colored edge again — emerald while in Work, amber in Break — so the current phase reads at a glance where it was previously washed out. (#64)
 - Direct messages now use the full three-panel layout: an empty leftover channel column that used to cram the conversation is gone, so the message thread gets the full width it should. (#65)
+
+### Security
+
+- Closed an information-disclosure gap in study rooms: a malformed room address could make the server echo back an internal database error; it now returns a plain "invalid request" and never exposes internal details. (#68)
