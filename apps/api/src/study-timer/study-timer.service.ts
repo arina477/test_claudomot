@@ -480,6 +480,16 @@ export class StudyTimerService implements OnModuleDestroy {
   // Freezes run_state='paused', paused_remaining_ms = max(0, ends_at - now).
   // Clears the auto-advance timeout (no transition while paused).
   // No-ops gracefully if the timer is not running.
+  //
+  // Self-healing: calls selfHealIfOverdue before computing paused_remaining_ms
+  //   so a running row whose ends_at is already in the past (missed phase
+  //   transition after a process restart) is re-derived to the correct current
+  //   phase first.  Without this, paused_remaining_ms would freeze at 0 and a
+  //   subsequent resume would set ends_at = now + 0, losing the active session.
+  //
+  // Idempotency guard: UPDATE WHERE ends_at = observedEndsAt so a concurrent
+  //   doPhaseAdvance that changes ends_at turns this pause into a retryable
+  //   no-op rather than overwriting the just-advanced row with remaining_ms=0.
   // -------------------------------------------------------------------------
 
   async pauseTimer(serverId: string, userId: string): Promise<StudyTimer> {
@@ -490,10 +500,18 @@ export class StudyTimerService implements OnModuleDestroy {
       return row ? this.rowToDto(row) : this.idleDto(serverId);
     }
 
+    // Heal any overdue running row first so ends_at reflects the correct current
+    // phase before we compute paused_remaining_ms.
+    const healed = await this.selfHealIfOverdue(row);
+    const observedEndsAt = healed.ends_at;
+
     const now = new Date();
     const pausedRemainingMs =
-      row.ends_at !== null ? Math.max(0, row.ends_at.getTime() - now.getTime()) : 0;
+      observedEndsAt !== null ? Math.max(0, observedEndsAt.getTime() - now.getTime()) : 0;
 
+    // Guard with run_state='running' AND ends_at = observedEndsAt so a concurrent
+    // doPhaseAdvance (or winning concurrent selfHeal) that changed ends_at turns
+    // this pause into a no-op rather than writing paused_remaining_ms=0.
     const [updated] = await db
       .update(server_study_timer)
       .set({
@@ -502,10 +520,24 @@ export class StudyTimerService implements OnModuleDestroy {
         updated_by: userId,
         updated_at: now,
       })
-      .where(eq(server_study_timer.server_id, serverId))
+      .where(
+        and(
+          eq(server_study_timer.server_id, serverId),
+          eq(server_study_timer.run_state, 'running'),
+          observedEndsAt !== null ? eq(server_study_timer.ends_at, observedEndsAt) : undefined,
+        ),
+      )
       .returning();
 
-    if (!updated) throw new Error('Study timer pause update failed unexpectedly');
+    if (!updated) {
+      // Concurrent advance or heal changed ends_at before our pause landed.
+      // Re-read and return current state; the caller may retry if still needed.
+      this.logger.debug(
+        `pauseTimer no-op for server=${serverId} (concurrent advance; caller may retry)`,
+      );
+      const current = await this.getTimerRow(serverId);
+      return current ? this.rowToDto(current) : this.idleDto(serverId);
+    }
 
     this.clearAutoAdvance(serverId);
 

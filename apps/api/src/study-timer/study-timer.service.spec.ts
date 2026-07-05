@@ -379,12 +379,15 @@ describe('StudyTimerService — state transitions', () => {
 
   it('pauseTimer on running: run_state=paused; paused_remaining_ms set; emits', async () => {
     const { svc, emitter } = makeService();
+    // Use a guaranteed-future ends_at so selfHealIfOverdue short-circuits without
+    // a DB write, keeping this test to one mockUpdate call (the pause UPDATE itself).
+    const futureRunningRow = { ...runningRow, ends_at: new Date(Date.now() + WORK_DURATION_MS) };
     // assertMember → member row; getTimerRow → running row
     let selectCall = 0;
     mockSelect.mockImplementation(() => {
       selectCall++;
       if (selectCall === 1) return makeSelectChain([MEMBER_ROW]);
-      return makeSelectChain([runningRow]);
+      return makeSelectChain([futureRunningRow]);
     });
 
     const pausedResult = { ...pausedRow, paused_remaining_ms: WORK_DURATION_MS - 1000 };
@@ -395,6 +398,64 @@ describe('StudyTimerService — state transitions', () => {
     expect(dto.runState).toBe('paused');
     expect(dto.running).toBe(false);
     expect(dto.remainingMs).toBe(pausedResult.paused_remaining_ms);
+    expect(emitter.emit).toHaveBeenCalledWith(
+      'study-timer.updated',
+      expect.objectContaining({ serverId: SERVER_ID }),
+    );
+  });
+
+  it('pauseTimer on overdue running row: heals before pausing; paused_remaining_ms > 0', async () => {
+    // Regression guard for the HIGH finding: a running row whose ends_at is in the
+    // past must NOT freeze paused_remaining_ms at 0.  selfHealIfOverdue re-derives
+    // the correct current phase before the pause UPDATE is written.
+    const { svc, emitter } = makeService();
+
+    // Overdue row: work phase started 26 min ago; ends_at is 1 min in the past.
+    // After healing: 26 min elapsed = 25 min work + 1 min into break.
+    // Healed ends_at = started_at + 25min + 5min = now + ~4min.
+    const overdueStartedAt = new Date(Date.now() - 26 * 60_000);
+    const overdueEndsAt = new Date(Date.now() - 60_000); // 1 min in the past
+    const overdueRow = { ...runningRow, started_at: overdueStartedAt, ends_at: overdueEndsAt };
+
+    const healedEndsAt = new Date(
+      overdueStartedAt.getTime() + WORK_DURATION_MS + BREAK_DURATION_MS,
+    );
+    const healedRow = {
+      ...overdueRow,
+      phase: 'break',
+      started_at: new Date(healedEndsAt.getTime() - BREAK_DURATION_MS),
+      ends_at: healedEndsAt,
+    };
+
+    // pausedHealedRow carries the remaining derived from the healed ends_at — positive.
+    const healedRemaining = Math.max(0, healedEndsAt.getTime() - Date.now());
+    const pausedHealedRow = {
+      ...healedRow,
+      run_state: 'paused',
+      ends_at: null,
+      paused_remaining_ms: healedRemaining,
+    };
+
+    let selectCall = 0;
+    mockSelect.mockImplementation(() => {
+      selectCall++;
+      if (selectCall === 1) return makeSelectChain([MEMBER_ROW]); // assertMember
+      return makeSelectChain([overdueRow]); // getTimerRow (pauseTimer reads the overdue row)
+    });
+
+    let updateCall = 0;
+    mockUpdate.mockImplementation(() => {
+      updateCall++;
+      if (updateCall === 1) return makeUpdateChain([healedRow]); // selfHealIfOverdue heal UPDATE
+      return makeUpdateChain([pausedHealedRow]); // pause UPDATE
+    });
+
+    const dto = await svc.pauseTimer(SERVER_ID, USER_ID);
+
+    expect(dto.runState).toBe('paused');
+    // Must NOT be frozen at 0 — remaining reflects the healed break-phase window.
+    expect(dto.remainingMs).toBeGreaterThan(0);
+    expect(updateCall).toBe(2); // selfHealIfOverdue + pause UPDATE both ran
     expect(emitter.emit).toHaveBeenCalledWith(
       'study-timer.updated',
       expect.objectContaining({ serverId: SERVER_ID }),
