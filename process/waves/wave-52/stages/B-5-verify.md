@@ -12,3 +12,6 @@ web_tests: 448 passed
 schema/migration: none (MUST-lock 1 in-memory)
 flakes_documented: []
 ```
+
+## Flake note
+web suite occasionally shows 1 transient failure on a combined run — the studyRoomSocket/studyTimerSocket singleton autoConnect fires a real socket connect in the test env (engine.io ECONNREFUSED stderr); tests mock and pass. Clean re-run = 448/448 (28 files). Same class as the wave-49 studyTimerSocket flake; CI per-package authoritative. Not a code defect.
