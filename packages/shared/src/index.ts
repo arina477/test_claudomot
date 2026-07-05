@@ -209,6 +209,36 @@ export type {
   StudyTimerConfig,
 } from './study-timer.js';
 
+export {
+  FocusRoomViewerSchema,
+  FocusRoomSchema,
+  FocusRoomRosterSchema,
+  STUDY_ROOM_ROOMS_EVENT,
+  STUDY_ROOM_PRESENCE_EVENT,
+  STUDY_ROOM_JOIN_ERROR_EVENT,
+  STUDY_ROOM_CREATE_VERB,
+  STUDY_ROOM_JOIN_VERB,
+  STUDY_ROOM_LEAVE_VERB,
+  FocusRoomRoomsEventSchema,
+  FocusRoomPresenceEventSchema,
+  StudyRoomTimerSchema,
+  STUDY_ROOM_TIMER_UPDATE_EVENT,
+  StudyRoomTimerUpdateEventSchema,
+  STUDY_ROOM_TIMER_START_VERB,
+  STUDY_ROOM_TIMER_PAUSE_VERB,
+  STUDY_ROOM_TIMER_RESET_VERB,
+  STUDY_ROOM_TIMER_CONFIG_VERB,
+} from './study-room.js';
+export type {
+  FocusRoomViewer,
+  FocusRoom,
+  FocusRoomRoster,
+  FocusRoomRoomsEvent,
+  FocusRoomPresenceEvent,
+  StudyRoomTimer,
+  StudyRoomTimerUpdateEvent,
+} from './study-room.js';
+
 export { AccountDataResponseSchema } from './account-data.js';
 export type { AccountDataResponse } from './account-data.js';
 
