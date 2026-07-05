@@ -23,7 +23,7 @@
  *  16. Paused badge has aria-atomic="true".
  *  17. Error retry calls fetchTimer (api.getStudyTimer re-invoked).
  *
- * Test matrix (wave-50 additions, 18-32):
+ * Test matrix (wave-50 additions, 18-36):
  *  18. Widget renders configured durations (workDurationMs→minutes) in inputs.
  *  19. Idle timer shows configured work duration in idle countdown display.
  *  20. Config work input rejects out-of-range values — validation error visible.
@@ -33,8 +33,8 @@
  *  24. Apply shows optimistic pending (spinner, inputs disabled).
  *  25. Config inputs disabled while timer is running; locked hint shown.
  *  26. Config inputs disabled while timer is paused; locked hint shown.
- *  27. 409 response (timer not idle) shows reset hint, inputs re-enable.
- *  28. 400 response shows inline validation error text from API.
+ *  27. 409 response shows reset hint in BOTH desktop and slim form regions (M-2 fix).
+ *  28. 400 response shows inline validation-error message in both form regions (M-1 fix).
  *  29. study-timer:update reconciles new durations into config inputs.
  *  30. Work input has aria-label="Work duration minutes".
  *  31. Break input has aria-label="Break duration minutes".
@@ -44,6 +44,7 @@
  *  34. Slim config toggle (<1024 affordance) is a <button> with aria-expanded.
  *  35. Slim config row toggles open/closed on toggle click.
  *  36. Escape closes the slim config row and returns focus to toggle.
+ *  37. Disabled Apply has aria-describedby pointing to a non-empty reason span (L-1 fix).
  */
 
 import type { StudyTimer, StudyTimerPresenceEvent, StudyTimerUpdateEvent } from '@studyhall/shared';
@@ -605,15 +606,15 @@ describe('StudyTimerWidget', () => {
     expect(lockHints.length).toBeGreaterThan(0);
   });
 
-  // 27. 409 response shows reset hint
-  it('409 from configureStudyTimer shows reset hint', async () => {
+  // 27. 409 response shows reset hint in BOTH desktop and slim form regions (M-2 fix)
+  it('409 from configureStudyTimer shows reset hint in desktop form (not slim-only)', async () => {
     mockApi.getStudyTimer.mockResolvedValue(makeIdle(25 * 60 * 1000, 5 * 60 * 1000));
     mockApi.configureStudyTimer.mockRejectedValue(new Error('409 Conflict: timer not idle'));
     render(<StudyTimerWidget serverId={SERVER_ID} />);
 
     await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
 
-    // Make dirty and open slim config to see the error display
+    // Make dirty via the desktop form work input
     const workInputs = screen.getAllByTestId(/work-input$/);
     fireEvent.change(workInputs[0] as HTMLElement, { target: { value: '30' } });
 
@@ -622,37 +623,27 @@ describe('StudyTimerWidget', () => {
       expect(applies.some((b) => !(b as HTMLButtonElement).disabled)).toBe(true);
     });
 
-    // Open slim config row first to make config-error-409 visible
-    const toggle = screen.getByTestId('slim-config-toggle');
-    fireEvent.click(toggle);
-
-    await waitFor(() => expect(screen.getByTestId('slim-config-row')).toBeInTheDocument());
-
-    // Now click the slim apply
-    await waitFor(() => {
-      const slimApply = screen.getByTestId(/^slim.*apply$/);
-      if (!(slimApply as HTMLButtonElement).disabled) {
-        fireEvent.click(slimApply);
-      }
-    });
-
-    // If we can trigger it via desktop apply
+    // Trigger via whichever Apply is enabled (desktop in jsdom)
     const applies = screen.getAllByTestId(/apply$/);
     const enabledApply = applies.find((b) => !(b as HTMLButtonElement).disabled);
-    if (enabledApply) {
-      fireEvent.click(enabledApply);
-    }
+    expect(enabledApply).toBeDefined();
+    if (enabledApply) fireEvent.click(enabledApply);
 
     await waitFor(() => expect(mockApi.configureStudyTimer).toHaveBeenCalled());
-    // After 409, configError state shows reset hint in slim row
+
+    // After 409, the reset hint is visible in the desktop form region — no slim row needed.
+    // Both desktop + slim form instances render the hint via configError prop.
     await waitFor(() => {
-      expect(screen.getByTestId('config-error-409')).toBeInTheDocument();
+      const hints = screen.getAllByTestId(/config-error-409$/);
+      // At minimum the desktop instance is rendered (jsdom doesn't apply lg:hidden CSS)
+      expect(hints.length).toBeGreaterThan(0);
+      expect(hints[0]).toHaveTextContent('Reset the timer first to change durations.');
     });
   });
 
-  // 28. 400 response — the form's own range validation prevents bad values reaching the API.
-  // Verify: if the API returns 400 anyway (e.g. integer check), the pending state clears.
-  it('400 from configureStudyTimer clears pending state', async () => {
+  // 28. 400 response shows inline validation-error message in both form regions (M-1 fix).
+  // The API may return 400 despite client validation (schema drift, future server-side rule).
+  it('400 from configureStudyTimer renders inline error message (not silent no-op)', async () => {
     mockApi.getStudyTimer.mockResolvedValue(makeIdle(25 * 60 * 1000, 5 * 60 * 1000));
     mockApi.configureStudyTimer.mockRejectedValue(new Error('400 Bad Request: invalid range'));
     render(<StudyTimerWidget serverId={SERVER_ID} />);
@@ -672,7 +663,15 @@ describe('StudyTimerWidget', () => {
     if (enabledApply) fireEvent.click(enabledApply);
 
     await waitFor(() => expect(mockApi.configureStudyTimer).toHaveBeenCalled());
-    // After error, pending clears (inputs are re-enabled)
+
+    // After 400, an inline error message must be visible (not a silent no-op).
+    await waitFor(() => {
+      const errors = screen.getAllByTestId(/config-error-400$/);
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors[0]).toHaveTextContent('Invalid duration values.');
+    });
+
+    // Pending state also clears (inputs re-enabled)
     await waitFor(() => {
       const allWorkInputs = screen.getAllByTestId(/work-input$/);
       expect((allWorkInputs[0] as HTMLInputElement).disabled).toBe(false);
@@ -805,5 +804,28 @@ describe('StudyTimerWidget', () => {
     // Press Escape
     fireEvent.keyDown(document, { key: 'Escape' });
     await waitFor(() => expect(screen.queryByTestId('slim-config-row')).not.toBeInTheDocument());
+  });
+
+  // 37. Disabled Apply has aria-describedby pointing to a non-empty reason span (L-1 fix).
+  // The dead always-undefined ternary is replaced with a real describedby wiring.
+  it('disabled Apply button has aria-describedby pointing to a non-empty hint span', async () => {
+    mockApi.getStudyTimer.mockResolvedValue(makeIdle(25 * 60 * 1000, 5 * 60 * 1000));
+    render(<StudyTimerWidget serverId={SERVER_ID} />);
+
+    await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
+
+    // All Apply buttons are initially disabled (not dirty) and not locked (idle state)
+    const applies = screen.getAllByTestId(/apply$/);
+    const disabledApply = applies.find((b) => (b as HTMLButtonElement).disabled);
+    expect(disabledApply).toBeDefined();
+
+    // The disabled Apply must have a real aria-describedby (not undefined / null)
+    const describedById = disabledApply?.getAttribute('aria-describedby');
+    expect(describedById).toBeTruthy();
+
+    // The referenced hint element must exist in the DOM and have non-empty text
+    const hintEl = document.getElementById(describedById as string);
+    expect(hintEl).toBeInTheDocument();
+    expect(hintEl?.textContent?.trim().length).toBeGreaterThan(0);
   });
 });

@@ -55,7 +55,10 @@
  *     are limited to the widget's own Start/Pause/Resume/Reset buttons.
  *   - config a11y: number inputs have aria-label; validation errors use aria-invalid +
  *     aria-describedby → error span in aria-live="polite" region + icon+text (not
- *     color-only). Disabled Apply gets aria-describedby with the reason.
+ *     color-only). Disabled Apply has aria-describedby pointing to a visible reason
+ *     span: lockHintId when locked, applyDisabledHintId when invalid/not-dirty.
+ *   - server errors (409 / 400) surface in both desktop and slim form regions via
+ *     configError prop on DurationConfigForm; aria-live="polite" announces them.
  *   - locked-state "/" separator uses --text-muted (rgba(255,255,255,0.40)).
  */
 
@@ -369,6 +372,8 @@ type DurationConfigFormProps = {
   onApply: (workMinutes: number, breakMinutes: number) => void;
   compact?: boolean;
   idPrefix: string;
+  /** Server-returned error code to surface inline. '409' = timer not idle; '400' = invalid range. */
+  configError?: string | null;
 };
 
 function DurationConfigForm({
@@ -379,6 +384,7 @@ function DurationConfigForm({
   onApply,
   compact = false,
   idPrefix,
+  configError,
 }: DurationConfigFormProps) {
   const [workVal, setWorkVal] = useState(workMinutes);
   const [breakVal, setBreakVal] = useState(breakMinutes);
@@ -397,6 +403,8 @@ function DurationConfigForm({
   const workErrId = `${idPrefix}-work-err`;
   const breakErrId = `${idPrefix}-break-err`;
   const lockHintId = `${idPrefix}-lock-hint`;
+  const applyDisabledHintId = `${idPrefix}-apply-hint`;
+  const configErrId = `${idPrefix}-config-err`;
 
   const inputH = compact ? 'h-7' : 'h-8';
   const inputW = compact ? 'w-12' : 'w-14';
@@ -542,37 +550,80 @@ function DurationConfigForm({
       </div>
 
       {/* Apply button / locked hint */}
-      <div className="flex items-center" style={{ height: compact ? '28px' : '32px' }}>
-        {isLocked ? (
-          <span
-            id={lockHintId}
-            className="text-[10px] font-medium italic whitespace-nowrap px-2"
-            style={{ color: 'rgba(255,255,255,0.40)' }}
-            data-testid={`${idPrefix}-lock-hint`}
-          >
-            Reset timer to change lengths
-          </span>
-        ) : (
-          <button
-            type="submit"
-            disabled={!isApplyEnabled}
-            aria-describedby={!isApplyEnabled && !workError && !breakError ? undefined : undefined}
-            className={[
-              'inline-flex items-center justify-center rounded-md font-semibold transition-colors duration-150',
-              'active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100',
-              compact ? 'h-7 px-3 text-[10px]' : 'h-8 px-3 text-xs',
-            ].join(' ')}
-            style={{
-              backgroundColor: '#10b981',
-              color: '#fff',
-              border: '1px solid transparent',
-            }}
-            aria-busy={isApplying ? 'true' : undefined}
-            data-testid={`${idPrefix}-apply`}
-          >
-            {isApplying ? <SpinnerIcon size={12} className="sh-animate-spin" /> : 'Apply'}
-          </button>
-        )}
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center" style={{ height: compact ? '28px' : '32px' }}>
+          {isLocked ? (
+            <span
+              id={lockHintId}
+              className="text-[10px] font-medium italic whitespace-nowrap px-2"
+              style={{ color: 'rgba(255,255,255,0.40)' }}
+              data-testid={`${idPrefix}-lock-hint`}
+            >
+              Reset timer to change lengths
+            </span>
+          ) : (
+            <>
+              {/* Visually-hidden hint for disabled Apply (a11y: L-1 fix) */}
+              {!isApplyEnabled && (
+                <span
+                  id={applyDisabledHintId}
+                  className="sr-only"
+                  data-testid={`${idPrefix}-apply-hint`}
+                >
+                  {!isDirty
+                    ? 'Change a value to enable Apply'
+                    : 'Enter valid values to enable Apply'}
+                </span>
+              )}
+              <button
+                type="submit"
+                disabled={!isApplyEnabled}
+                aria-describedby={!isApplyEnabled ? applyDisabledHintId : undefined}
+                className={[
+                  'inline-flex items-center justify-center rounded-md font-semibold transition-colors duration-150',
+                  'active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100',
+                  compact ? 'h-7 px-3 text-[10px]' : 'h-8 px-3 text-xs',
+                ].join(' ')}
+                style={{
+                  backgroundColor: '#10b981',
+                  color: '#fff',
+                  border: '1px solid transparent',
+                }}
+                aria-busy={isApplying ? 'true' : undefined}
+                data-testid={`${idPrefix}-apply`}
+              >
+                {isApplying ? <SpinnerIcon size={12} className="sh-animate-spin" /> : 'Apply'}
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Server error feedback (M-1 400 + M-2 409 on desktop): shown in both desktop and slim */}
+        <div id={configErrId} aria-live="polite" aria-atomic="true" className="min-h-0">
+          {configError === '409' && (
+            <p
+              className="text-[10px] italic whitespace-nowrap"
+              style={{ color: 'rgba(255,255,255,0.40)' }}
+              data-testid={`${idPrefix}-config-error-409`}
+            >
+              Reset the timer first to change durations.
+            </p>
+          )}
+          {configError === '400' && (
+            <span
+              className="text-[10px] font-medium flex items-center gap-1 px-2 py-0.5 rounded"
+              style={{
+                color: '#f87171',
+                backgroundColor: 'rgba(10,10,11,0.9)',
+                border: '1px solid rgba(239,68,68,0.3)',
+              }}
+              data-testid={`${idPrefix}-config-error-400`}
+            >
+              <WarningCircleIcon size={10} aria-hidden="true" />
+              Invalid duration values.
+            </span>
+          )}
+        </div>
       </div>
     </form>
   );
@@ -887,6 +938,7 @@ export function StudyTimerWidget({ serverId }: Props) {
             isApplying={isApplyingConfig}
             onApply={handleApplyConfig}
             idPrefix={`desktop${desktopId.replace(/:/g, '')}`}
+            configError={configError}
           />
         </div>
 
@@ -1044,18 +1096,9 @@ export function StudyTimerWidget({ serverId }: Props) {
               onApply={handleApplyConfig}
               compact
               idPrefix={`slim${slimId.replace(/:/g, '')}`}
+              configError={configError}
             />
           </div>
-          {/* Config error feedback (409/400 from outside the form's own validation) */}
-          {configError === '409' && (
-            <p
-              className="text-[10px] mt-2 italic"
-              style={{ color: 'rgba(255,255,255,0.40)' }}
-              data-testid="config-error-409"
-            >
-              Reset the timer first to change durations.
-            </p>
-          )}
         </div>
       )}
 
