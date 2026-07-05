@@ -1,0 +1,55 @@
+- generic [ref=f13e3]:
+  - banner [ref=f13e4]:
+    - generic [ref=f13e5]:
+      - generic [ref=f13e6]:
+        - img [ref=f13e8]
+        - generic [ref=f13e10]: StudyHall
+      - navigation [ref=f13e11]:
+        - link "Already a member? Sign in" [ref=f13e12] [cursor=pointer]:
+          - /url: /login
+        - link "Create free account" [ref=f13e13] [cursor=pointer]:
+          - /url: /signup
+  - main [ref=f13e14]:
+    - generic [ref=f13e17]:
+      - generic [ref=f13e18]: v1.0 is now available
+      - heading "The single tool that replaces Notion + Discord." [level=1] [ref=f13e20]:
+        - text: The single
+        - text: tool that
+        - text: replaces
+        - text: Notion + Discord.
+      - paragraph [ref=f13e21]:
+        - text: Study over voice, track assignments, and stay connected —
+        - strong [ref=f13e22]: even when the internet isn't.
+        - text: Built for unreliable connectivity.
+      - generic [ref=f13e23]:
+        - link "Get started for free" [ref=f13e24] [cursor=pointer]:
+          - /url: /signup
+        - paragraph [ref=f13e25]:
+          - text: No credit card required.
+          - text: Create a server in 30s.
+    - generic [ref=f13e27]:
+      - heading "Unreliable internet? Still works." [level=2] [ref=f13e28]
+      - paragraph [ref=f13e29]: Compose messages, read channels, and track assignments offline. Our sync engine handles the backlog when you reconnect.
+    - generic [ref=f13e31]:
+      - heading "Start studying smarter." [level=2] [ref=f13e32]
+      - paragraph [ref=f13e33]: Join thousands of students who have upgraded their workspace. Claim your free server in seconds.
+      - link "Get started for free" [ref=f13e34] [cursor=pointer]:
+        - /url: /signup
+      - generic [ref=f13e35]: No Ads. No Data Brokers.
+  - contentinfo [ref=f13e36]:
+    - generic [ref=f13e37]:
+      - generic [ref=f13e38]:
+        - generic [ref=f13e40]: StudyHall
+        - paragraph [ref=f13e41]: Built for students. We don't track you for ads or sell your data.
+        - generic [ref=f13e42]: © 2024 StudyHall Inc.
+      - generic [ref=f13e43]:
+        - generic [ref=f13e44]:
+          - generic [ref=f13e45]: Product
+          - link "Sign in" [ref=f13e46] [cursor=pointer]:
+            - /url: /login
+        - generic [ref=f13e47]:
+          - generic [ref=f13e48]: Legal
+          - link "Privacy" [ref=f13e49] [cursor=pointer]:
+            - /url: /privacy
+          - link "Terms" [ref=f13e50] [cursor=pointer]:
+            - /url: /terms

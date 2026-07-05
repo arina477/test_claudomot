@@ -1,0 +1,2 @@
+[     170ms] [WARNING] Error while trying to use the following icon from the Manifest: https://web-production-bce1a8.up.railway.app/icons/icon-192.png (Download error or resource isn't a valid image) @ https://web-production-bce1a8.up.railway.app/app:0
+[   23780ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://api-production-b93e.up.railway.app/me/profile:0

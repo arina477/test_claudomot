@@ -1,5 +1,8 @@
 # Founder checkpoint — one quick call on what we build next (2026-07-04)
 
+> **RESOLVED 2026-07-04** — Founder chose **study-group tools**. Loop resumed (STATUS: RUNNING). wave-49 = study-group tools slice 1 (per-wave decompose: shared timers/Pomodoro, study sessions, whiteboard). Message search deferred (still queued M8 scope). See product-decisions 2026-07-04.
+
+
 _Surfaced at wave-48 close. This one pauses the work. It's the natural follow-on to the "build direct messages first" call you made earlier today — that part is now done, so I'm back to ask which piece comes next._
 
 ## Where we are — good news first

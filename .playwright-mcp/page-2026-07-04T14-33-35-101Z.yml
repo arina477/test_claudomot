@@ -1,0 +1,47 @@
+- generic [ref=f14e5]:
+  - navigation "Server rail" [ref=f14e6]:
+    - generic [ref=f14e7]:
+      - button "Home" [ref=f14e9] [cursor=pointer]:
+        - img [ref=f14e10]
+      - tooltip "Home"
+    - generic [ref=f14e13]:
+      - button "Direct Messages" [ref=f14e14] [cursor=pointer]:
+        - img [ref=f14e15]
+      - tooltip "Direct Messages"
+    - list "Your servers" [ref=f14e18]:
+      - listitem "Loading servers" [ref=f14e19]:
+        - img [ref=f14e21]
+    - generic [ref=f14e23]:
+      - button "Add a server" [ref=f14e24] [cursor=pointer]:
+        - img [ref=f14e25]
+      - tooltip "Add a Server"
+  - complementary "Channel sidebar" [ref=f14e27]:
+    - heading "StudyHall" [level=1] [ref=f14e29] [cursor=pointer]
+    - paragraph [ref=f14e32]: Select a server from the rail to view its channels.
+    - button "Your profile and settings" [ref=f14e34] [cursor=pointer]:
+      - generic [ref=f14e36]: "?"
+      - generic [ref=f14e39]: You
+      - generic [ref=f14e40]:
+        - img [ref=f14e42]
+        - img [ref=f14e46]
+  - main [ref=f14e49]:
+    - generic [ref=f14e50]:
+      - status [ref=f14e51]:
+        - img [ref=f14e53]
+        - generic [ref=f14e55]: Reconnecting…
+      - generic [ref=f14e56]:
+        - img [ref=f14e58]
+        - heading "Select a channel" [level=2] [ref=f14e61]
+        - generic [ref=f14e62]:
+          - button "Search in channel" [ref=f14e63]:
+            - img [ref=f14e64]
+          - button "View pinned messages" [ref=f14e67]:
+            - img [ref=f14e68]
+          - button "Notifications, 0 unread" [ref=f14e70]:
+            - img [ref=f14e71]
+      - generic [ref=f14e76]:
+        - img [ref=f14e78]
+        - heading "Pick a channel" [level=3] [ref=f14e81]
+        - paragraph [ref=f14e82]: Select a channel from the sidebar to start reading and sending messages.
+  - complementary "Members" [ref=f14e84]:
+    - heading "Members" [level=2] [ref=f14e86]
