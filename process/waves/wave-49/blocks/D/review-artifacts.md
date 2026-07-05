@@ -4,7 +4,7 @@
 | Stage | Deliverable(s) | Status | Notes |
 |---|---|---|---|
 | D-1 | stages/D-1-brief/study-timer-brief.md | done | 1 gap briefed, mask_mode PASS |
-| D-2 | stages/D-2-variants/study-timer-*.md | pending | /aidesigner (credits may be depleted → design-specialist surgical fallback per wave-46) |
+| D-2 | .../D-2-variants/study-timer-*.md | done | aidesigner staged (iter 0); checkpoint skipped-automatic |
 | D-3 | stages/D-3-review-and-adopt/study-timer-*.md | pending | dual-review + head-designer gate + canonicalize |
 ## Block-specific context
 - Wave topic: shared study-timer widget in the server view (countdown + work/break phase + start/pause/reset controls + ephemeral live-presence roster "N studying").
