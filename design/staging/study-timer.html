@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en" class="antialiased dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyHall — Shared Study Timer System Component</title>
+  
+  <!-- 
+    aesthetic_dna: Calm, academic focus tool. Deep zinc layered surfaces, high-contrast precise typography, subtle materiality without gamers-neon.
+    ui_paradigm: Architectural Systems Dashboard (Bento Layout). Presents the widget contextually at global scale, then dissects discrete states (meso/micro architecture) individually.
+    palette: --surface-800/900/950 (Zinc scale), --accent-emerald (Focus/Work), --accent-amber (Break/Alerts), --danger (Red).
+  -->
+
+  <!-- Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <style>
+    /* Baseline Configuration Variables & Explicit Tokens */
+    :root {
+      /* Surfaces (Deep Zinc) */
+      --surface-950: #0a0a0b;
+      --surface-900: #121214;
+      --surface-800: #1c1c1f;
+      --surface-700: #27272a;
+      --surface-600: #3f3f46;
+      --surface-500: #52525b;
+      
+      /* Borders */
+      --border-hairline: rgba(255, 255, 255, 0.08); /* slightly bumped for pure visibility */
+      --border-hover: rgba(255, 255, 255, 0.15);
+      
+      /* Text */
+      --text-primary: rgba(255, 255, 255, 0.92);
+      --text-secondary: rgba(255, 255, 255, 0.60);
+      --text-muted: rgba(255, 255, 255, 0.40);
+      
+      /* Accents */
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --danger: #ef4444;
+      --danger-text: #f87171;
+      
+      /* Geometry */
+      --radius-sm: 2px;
+      --radius-md: 6px;
+      --radius-lg: 10px;
+      --radius-full: 9999px;
+      
+      /* Elevation */
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      --shadow-pop: 0 8px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      --glow-focus: 0 0 0 2px rgba(16, 185, 129, 0.4);
+      --glow-subtle: 0 0 15px rgba(255, 255, 255, 0.05);
+    }
+
+    body {
+      background-color: var(--surface-950);
+      color: var(--text-primary);
+      font-family: 'Geist', -apple-system, sans-serif;
+    }
+
+    .font-mono {
+      font-family: 'Geist Mono', ui-monospace, monospace;
+    }
+
+    /* Hardware Accelerated Physics & Refraction */
+    .glass-panel {
+      background: var(--surface-800);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    
+    .glass-panel:hover {
+      border-color: var(--border-hover);
+      box-shadow: var(--shadow-sm), var(--glow-subtle);
+      transform: translateY(-1px);
+    }
+
+    /* Standard Button Reset & Base */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      transition: all 0.15s ease;
+      cursor: pointer;
+      user-select: none;
+    }
+    .btn:focus-visible {
+      outline: none;
+      box-shadow: var(--glow-focus);
+    }
+    .btn:active:not(:disabled) {
+      transform: scale(0.96);
+    }
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    .btn-md { height: 34px; padding: 0 12px; font-size: 0.875rem; }
+    .btn-sm { height: 28px; padding: 0 8px; font-size: 0.75rem; }
+
+    /* Button Variants */
+    .btn-primary {
+      background-color: var(--accent-emerald);
+      color: #fff;
+      border: 1px solid transparent;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.2);
+    }
+    .btn-primary:hover { filter: brightness(1.1); }
+    
+    .btn-ghost {
+      background-color: transparent;
+      color: var(--text-secondary);
+    }
+    .btn-ghost:hover {
+      background-color: var(--surface-700);
+      color: var(--text-primary);
+    }
+    
+    .btn-secondary {
+      background-color: var(--surface-700);
+      color: var(--text-primary);
+      border: 1px solid var(--border-hairline);
+    }
+    .btn-secondary:hover {
+      border-color: var(--border-hover);
+      background-color: var(--surface-600);
+    }
+
+    /* Core Typographic Rules */
+    .tabular-countdown {
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.02em;
+    }
+
+    /* Shimmer Skeleton */
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .skeleton-layer {
+      background: linear-gradient(90deg, 
+        var(--surface-700) 25%, 
+        var(--surface-600) 50%, 
+        var(--surface-700) 75%);
+      background-size: 400% 100%;
+      animation: shimmer 2s infinite ease-in-out;
+      border-radius: var(--radius-sm);
+    }
+
+    /* Micro-interactions */
+    @keyframes fade-tick {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+    .animate-colon {
+      display: inline-block;
+      animation: fade-tick 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+    }
+
+    /* Mesh/Noise Underlay for the page context */
+    .noise-bg {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      opacity: 0.15;
+      mix-blend-mode: overlay;
+      pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    }
+
+    /* Staggered Reveals */
+    .stagger-1 { animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) calc(1 * 100ms) both; }
+    .stagger-2 { animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) calc(2 * 100ms) both; }
+    .stagger-3 { animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) calc(3 * 100ms) both; }
+    .stagger-4 { animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) calc(4 * 100ms) both; }
+    
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--surface-600); border-radius: var(--radius-full); }
+    ::-webkit-scrollbar-thumb:hover { background: var(--surface-500); }
+  </style>
+</head>
+<body class="min-h-[100dvh] flex flex-col text-[var(--text-primary)]">
+  
+  <div class="noise-bg"></div>
+
+  <!-- Documentation Shell Header (Not part of widget, sets stage) -->
+  <header class="w-full px-6 py-8 border-b border-[var(--border-hairline)] bg-[var(--surface-950)]/80 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--accent-emerald)] flex items-center justify-center shadow-[inset_0_1px_0_rgba(255,255,255,0.4)]">
+          <i class="ph ph-books text-white text-lg"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-semibold tracking-tight text-[var(--text-primary)] leading-none">Shared Study Timer</h1>
+          <p class="text-[var(--text-secondary)] text-sm tracking-wide mt-1">Component Ecosystem & State Architecture</p>
+        </div>
+      </div>
+      <div class="hidden sm:flex items-center gap-4 text-sm text-[var(--text-secondary)] font-medium">
+        <span class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-[var(--accent-emerald)]"></div> Live Presence Sync</span>
+        <span class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-[var(--surface-500)]"></div> Shared Authoritative Tick</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Showcase Grid -->
+  <main class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 py-12 gap-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 auto-rows-min pb-32">
+
+    <!-- ========================================== -->
+    <!-- 1. The Macro-Architecture Context (Hero)   -->
+    <!-- ========================================== -->
+    <section class="col-span-1 lg:col-span-12 stagger-1 bg-[var(--surface-900)] border border-[var(--border-hairline)] rounded-[calc(var(--radius-lg)*1.5)] overflow-hidden shadow-[var(--shadow-sm)] flex flex-col">
+      <!-- Section Header -->
+      <div class="px-5 py-3 border-b border-[var(--border-hairline)] bg-[var(--surface-950)] flex items-center justify-between">
+        <div class="text-xs font-mono text-[var(--text-secondary)] tracking-widest uppercase">01 / Contextual Integration</div>
+        <div class="text-[10px] bg-[var(--surface-800)] px-2 py-1 rounded-[var(--radius-sm)] text-[var(--text-muted)]">Viewport: 1440px</div>
+      </div>
+
+      <!-- Mock App Canvas -->
+      <div class="bg-[var(--surface-800)] p-4 sm:p-8 flex flex-col gap-6 relative min-h-[400px]">
+        <!-- Mock Channel Header -->
+        <div class="flex items-center justify-between pb-4 border-b border-[var(--border-hairline)] px-2">
+          <div class="flex items-center gap-3">
+            <i class="ph ph-hash text-[var(--text-secondary)] text-xl"></i>
+            <h2 class="text-[var(--text-primary)] font-semibold text-lg">group-study-calc</h2>
+            <div class="h-4 w-px bg-[var(--border-hairline)] mx-2"></div>
+            <span class="text-sm text-[var(--text-secondary)] truncate max-w-[200px] sm:max-w-none">Midterm prep sessions. Silent focus.</span>
+          </div>
+          <div class="flex items-center gap-3 text-[var(--text-secondary)]">
+            <i class="ph ph-plugs-connected text-lg hover:text-[var(--text-primary)] transition-colors cursor-pointer" title="Connected"></i>
+            <i class="ph ph-users text-lg hover:text-[var(--text-primary)] transition-colors cursor-pointer"></i>
+          </div>
+        </div>
+
+        <!-- ***** THE ACTIVE WIDGET (RUNNING - WORK) ***** -->
+        <!-- region: aria-label="Shared Study Timer Focus Phase" -->
+        <div class="glass-panel w-full group relative" role="region" aria-label="Shared Study Timer">
+          <!-- Subtle environmental background glow to signify active state -->
+          <div class="absolute inset-0 bg-gradient-to-r from-[var(--accent-emerald)]/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+          
+          <div class="flex flex-col md:flex-row md:items-center justify-between p-4 md:px-5 md:py-4 gap-4 relative z-10">
+            
+            <!-- Left: Base Data (Clock + Pill) -->
+            <div class="flex items-center gap-5">
+              <!-- Hero Countdown -->
+              <div class="font-mono text-[32px] md:text-[40px] leading-none font-semibold text-[var(--text-primary)] tabular-countdown drop-shadow-[0_2px_10px_rgba(16,185,129,0.15)] flex items-center">
+                24<span class="animate-colon text-[var(--text-secondary)]">:</span>59
+              </div>
+              
+              <!-- Phase Pill -->
+              <div class="flex items-center gap-1.5 px-3 py-1 rounded-[var(--radius-full)] bg-[var(--accent-emerald)]/10 border border-[var(--accent-emerald)]/20 shadow-[inset_0_1px_0_rgba(16,185,129,0.2)]">
+                <div class="w-1.5 h-1.5 rounded-full bg-[var(--accent-emerald)] shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
+                <span class="text-[var(--accent-emerald)] text-xs font-medium tracking-wide uppercase">Focus</span>
+              </div>
+            </div>
+
+            <!-- Middle: Controls -->
+            <div class="flex items-center gap-2">
+              <button class="btn btn-md btn-secondary text-sm backdrop-blur-md" aria-label="Pause session">
+                <i class="ph-fill ph-pause"></i> Pause
+              </button>
+              <button class="btn btn-md btn-ghost text-[var(--text-secondary)] hover:text-[var(--danger-text)] transition-colors" aria-label="Reset timer">
+                <i class="ph ph-arrow-counter-clockwise"></i>
+              </button>
+            </div>
+
+            <!-- Right: Ephemeral Presence Roster -->
+            <div class="flex items-center gap-4 border-t md:border-t-0 md:border-l border-[var(--border-hairline)] pt-3 md:pt-0 md:pl-5">
+              <div class="flex flex-col items-end">
+                <span class="text-xs font-medium text-[var(--text-primary)]">8 studying</span>
+                <span class="text-[10px] text-[var(--accent-emerald)]">Live sync</span>
+              </div>
+              
+              <!-- Roster Cluster -->
+              <div class="flex items-center -space-x-2.5">
+                <!-- Avatar 1 -->
+                <div class="w-8 h-8 rounded-full shadow-sm ring-2 ring-[var(--surface-800)] z-[4] relative group/avatar cursor-pointer">
+                  <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80" alt="Sarah Connor" class="w-full h-full rounded-full object-cover">
+                  <!-- The custom emerald border specifically meaning "Active in Timer" -->
+                  <div class="absolute inset-0 rounded-full border border-[var(--accent-emerald)] shadow-[0_0_6px_rgba(16,185,129,0.4)] pointer-events-none"></div>
+                </div>
+                <!-- Avatar 2 -->
+                <div class="w-8 h-8 rounded-full shadow-sm ring-2 ring-[var(--surface-800)] z-[3] relative group/avatar cursor-pointer">
+                  <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=80&q=80" alt="Marcus Chen" class="w-full h-full rounded-full object-cover">
+                  <div class="absolute inset-0 rounded-full border border-[var(--accent-emerald)] shadow-[0_0_6px_rgba(16,185,129,0.4)] pointer-events-none"></div>
+                </div>
+                <!-- Avatar 3 -->
+                <div class="w-8 h-8 rounded-full shadow-sm ring-2 ring-[var(--surface-800)] z-[2] relative group/avatar cursor-pointer bg-[var(--surface-700)] flex items-center justify-center">
+                  <span class="text-xs font-medium text-[var(--text-primary)]">AJ</span>
+                  <div class="absolute inset-0 rounded-full border border-[var(--accent-emerald)] shadow-[0_0_6px_rgba(16,185,129,0.4)] pointer-events-none"></div>
+                </div>
+                <!-- Overflow -->
+                <div class="w-8 h-8 rounded-full shadow-sm ring-2 ring-[var(--surface-800)] z-[1] bg-[var(--surface-900)] border border-[var(--border-hairline)] flex items-center justify-center cursor-pointer hover:bg-[var(--surface-700)] transition-colors">
+                  <span class="text-[10px] font-semibold text-[var(--text-secondary)]">+5</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+        <!-- ***** END ACTIVE WIDGET ***** -->
+
+        <!-- Mock background content to show layering -->
+        <div class="flex-1 opacity-40 pointer-events-none">
+          <div class="flex gap-4 mb-4">
+            <div class="w-10 h-10 rounded-full bg-[var(--surface-700)] mt-1"></div>
+            <div class="flex-1 flex flex-col gap-2">
+              <div class="w-32 h-4 skeleton-layer rounded"></div>
+              <div class="w-3/4 h-3 skeleton-layer rounded opacity-70"></div>
+              <div class="w-1/2 h-3 skeleton-layer rounded opacity-70"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 2. Meso-Architecture: Component States Grid -->
+    <!-- ========================================== -->
+
+    <!-- State: Idle -->
+    <article class="col-span-1 lg:col-span-6 stagger-2 bg-[var(--surface-900)] border border-[var(--border-hairline)] rounded-[var(--radius-lg)] shadow-[var(--shadow-sm)] flex flex-col">
+      <div class="px-4 py-2 border-b border-[var(--border-hairline)] bg-[var(--surface-950)]/50">
+        <span class="text-[11px] font-mono text-[var(--text-secondary)] uppercase tracking-wider">02 / State: Idle</span>
+      </div>
+      <div class="p-6 flex-1 flex items-center justify-center bg-[var(--surface-800)] bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wMykiLz48L3N2Zz4=')]">
+        
+        <div class="glass-panel w-full p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div class="flex items-center gap-4">
+            <div class="font-mono text-3xl font-medium text-[var(--text-muted)] tabular-countdown">
+              25:00
+            </div>
+            <div class="text-sm text-[var(--text-secondary)]">Start a focus session</div>
+          </div>
+          <div class="flex items-center gap-4">
+            <button class="btn btn-md btn-primary">
+              <i class="ph-fill ph-play"></i> Start
+            </button>
+            <div class="h-6 w-px bg-[var(--border-hairline)] hidden sm:block"></div>
+            <!-- Empty Roster / Just you -->
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] text-[var(--text-muted)] uppercase tracking-wide">Empty</span>
+              <div class="w-6 h-6 rounded-full border border-dashed border-[var(--text-muted)] flex items-center justify-center opacity-50">
+                <i class="ph ph-user text-[10px]"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </article>
+
+    <!-- State: Running Break -->
+    <article class="col-span-1 lg:col-span-6 stagger-2 bg-[var(--surface-900)] border border-[var(--border-hairline)] rounded-[var(--radius-lg)] shadow-[var(--shadow-sm)] flex flex-col">
+      <div class="px-4 py-2 border-b border-[var(--border-hairline)] bg-[var(--surface-950)]/50">
+         <span class="text-[11px] font-mono text-[var(--text-secondary)] uppercase tracking-wider">03 / State: Break (Amber)</span>
+      </div>
+      <div class="p-6 flex-1 flex items-center justify-center bg-[var(--surface-800)]">
+        
+        <div class="glass-panel w-full p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div class="flex items-center gap-4 flex-1">
+            <div class="font-mono text-3xl font-semibold text-[var(--text-primary)] tabular-countdown">
+              04<span class="animate-colon text-[var(--text-secondary)]">:</span>59
+            </div>
+            <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--radius-full)] bg-[var(--accent-amber)]/10 border border-[var(--accent-amber)]/20">
+              <i class="ph ph-coffee text-[var(--accent-amber)] text-xs"></i>
+              <span class="text-[var(--accent-amber)] text-xs font-medium uppercase tracking-wide">Break</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="btn btn-sm btn-ghost text-[var(--text-primary)]" title="Skip Break">
+              <i class="ph-fill ph-fast-forward"></i>
+            </button>
+            <button class="btn btn-sm btn-ghost" title="Pause">
+              <i class="ph-fill ph-pause"></i>
+            </button>
+          </div>
+          <div class="flex items-center -space-x-1.5 pl-3 border-l border-[var(--border-hairline)]">
+             <div class="w-6 h-6 rounded-full ring-2 ring-[var(--surface-800)] relative cursor-pointer opacity-70 grayscale transition-all hover:grayscale-0 hover:opacity-100">
+                <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=80&q=80" alt="Mia" class="w-full h-full rounded-full object-cover">
+             </div>
+             <div class="w-6 h-6 rounded-full ring-2 ring-[var(--surface-800)] relative cursor-pointer opacity-70 grayscale transition-all hover:grayscale-0 hover:opacity-100">
+                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&q=80" alt="John" class="w-full h-full rounded-full object-cover">
+             </div>
+          </div>
+        </div>
+
+      </div>
+    </article>
+
+    <!-- State: Paused -->
+    <article class="col-span-1 lg:col-span-4 stagger-3 bg-[var(--surface-900)] border border-[var(--border-hairline)] rounded-[var(--radius-lg)] shadow-[var(--shadow-sm)] flex flex-col">
+      <div class="px-4 py-2 border-b border-[var(--border-hairline)] bg-[var(--surface-950)]/50">
+        <span class="text-[11px] font-mono text-[var(--text-secondary)] uppercase tracking-wider">04 / State: Paused</span>
+      </div>
+      <div class="p-6 flex-1 flex items-center justify-center bg-[var(--surface-800)] opacity-80 mix-blend-luminosity hover:mix-blend-normal hover:opacity-100 transition-all duration-300">
+        
+        <div class="w-full p-4 border border-[var(--border-hairline)] rounded-[var(--radius-lg)] bg-[var(--surface-900)] flex flex-col items-center gap-3">
+          <div class="flex items-center gap-3">
+            <div class="font-mono text-2xl font-medium text-[var(--text-primary)] tabular-countdown opacity-70">
+              12:34
+            </div>
+            <div class="px-2 py-0.5 rounded-[var(--radius-full)] bg-[var(--surface-700)] text-[var(--text-secondary)] text-[10px] font-medium uppercase border border-[var(--border-hairline)]">
+              Paused
+            </div>
+          </div>
+          <div class="flex w-full gap-2 mt-1">
+             <button class="btn btn-sm btn-secondary flex-1">Resume</button>
+             <button class="btn btn-sm btn-ghost flex-1 text-[var(--text-muted)] hover:text-[var(--danger-text)]">Reset</button>
+          </div>
+        </div>
+
+      </div>
+    </article>
+
+    <!-- State: Narrow / Slim Mobile Fallback (<1024 simulation) -->
+    <article class="col-span-1 lg:col-span-4 stagger-3 bg-[var(--surface-900)] border border-[var(--border-hairline)] rounded-[var(--radius-lg)] shadow-[var(--shadow-sm)] flex flex-col">
+      <div class="px-4 py-2 border-b border-[var(--border-hairline)] bg-[var(--surface-950)]/50 flex justify-between">
+        <span class="text-[11px] font-mono text-[var(--text-secondary)] uppercase tracking-wider">05 / Compact Layout</span>
+        <span class="text-[10px] text-[var(--text-muted)]">w-64</span>
+      </div>
+      <div class="p-6 flex-1 flex items-center justify-center bg-[var(--surface-800)]">
+        
+        <!-- Faking a narrow viewport container -->
+        <div class="w-64 glass-panel p-2 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <button class="btn btn-sm btn-ghost p-1 text-[var(--accent-emerald)]"><i class="ph-fill ph-play"></i></button>
+            <div class="font-mono text-sm font-semibold text-[var(--text-primary)] tabular-countdown">18:02</div>
+          </div>
+          <div class="flex items-center gap-1.5 pl-2 border-l border-[var(--border-hairline)]">
+             <i class="ph ph-users text-[var(--text-muted)] text-[10px]"></i>
+             <span class="text-[10px] font-medium text-[var(--text-secondary)]">2</span>
+          </div>
+        </div>
+
+      </div>
+    </article>
+
+    <!-- State: Loading Skeleton -->
+    <article class="col-span-1 lg:col-span-4 stagger-3 bg-[var(--surface-900)] border border-[var(--border-hairline)] rounded-[var(--radius-lg)] shadow-[var(--shadow-sm)] flex flex-col">
+      <div class="px-4 py-2 border-b border-[var(--border-hairline)] bg-[var(--surface-950)]/50">
+        <span class="text-[11px] font-mono text-[var(--text-secondary)] uppercase tracking-wider">06 / State: Loading Sync</span>
+      </div>
+      <div class="p-6 flex-1 flex items-center justify-center bg-[var(--surface-800)]">
+        
+        <div class="w-full glass-panel p-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-transparent shadow-none bg-[var(--surface-900)]">
+          <div class="flex items-center gap-4">
+            <div class="w-20 h-8 skeleton-layer"></div>
+            <div class="w-12 h-5 skeleton-layer rounded-full"></div>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 skeleton-layer rounded-md"></div>
+            <div class="w-8 h-8 skeleton-layer rounded-md"></div>
+          </div>
+        </div>
+
+      </div>
+    </article>
+
+    <!-- ========================================== -->
+    <!-- 3. Micro-Architecture: Edge Cases          -->
+    <!-- ========================================== -->
+
+    <!-- State: Error / Offline Connection Wedge -->
+    <article class="col-span-1 lg:col-span-12 stagger-4 bg-[var(--surface-900)] border border-[var(--border-hairline)] rounded-[var(--radius-lg)] shadow-[var(--shadow-sm)] flex flex-col overflow-hidden">
+      <div class="px-4 py-2 border-b border-[var(--border-hairline)] bg-[var(--surface-950)]/50 flex items-center gap-2">
+        <span class="text-[11px] font-mono text-[var(--danger)] uppercase tracking-wider">07 / Error & Disconnect Recovery</span>
+      </div>
+      <div class="p-6 md:p-8 flex-1 flex flex-col md:flex-row items-center gap-6 bg-[var(--surface-800)]">
+        
+        <!-- Error Presentation -->
+        <div class="glass-panel border-[var(--danger)]/30 w-full md:w-auto flex-1 p-4 flex flex-col sm:flex-row items-center gap-4 bg-[var(--danger)]/5 shadow-[0_0_20px_rgba(239,68,68,0.05)]">
+           <div class="w-10 h-10 rounded-full bg-[var(--danger)]/10 flex items-center justify-center shrink-0">
+             <i class="ph ph-warning-circle text-[var(--danger)] text-xl"></i>
+           </div>
+           <div class="flex-1 text-center sm:text-left">
+             <h3 class="text-sm font-semibold text-[var(--danger-text)]">Timer sync disconnected</h3>
+             <p class="text-xs text-[var(--text-secondary)] mt-0.5 max-w-[280px]">We lost connection to the study server. Local session paused to prevent drifting.</p>
+           </div>
+           <button class="btn btn-sm bg-[var(--danger)]/10 text-[var(--danger-text)] border border-[var(--danger)]/20 hover:bg-[var(--danger)]/20 transition-colors w-full sm:w-auto">
+             Retry Connection
+           </button>
+        </div>
+
+        <!-- Connection State Indicator Primitive (The Wedge) mapped onto timer context -->
+        <div class="flex-1 flex items-center justify-center border border-dashed border-[var(--border-hairline)] rounded-[var(--radius-lg)] p-6 bg-[var(--surface-950)]/50 w-full">
+           <div class="flex flex-col items-center gap-3">
+              <span class="text-xs text-[var(--text-muted)] font-mono mb-1">Primitive: ConnectionStateIndicator</span>
+              
+              <!-- Indicator: Reconnecting -->
+              <div class="flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-md)] bg-[var(--surface-800)] border border-[var(--border-hairline)] text-sm shadow-sm w-full max-w-[240px]">
+                 <div class="w-2 h-2 rounded-full bg-[var(--accent-amber)] animate-pulse"></div>
+                 <span class="text-[var(--text-primary)] font-medium flex-1">Reconnecting...</span>
+                 <i class="ph ph-spinner animate-spin text-[var(--text-muted)]"></i>
+              </div>
+
+               <!-- Indicator: Offline -->
+               <div class="flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-md)] bg-[var(--surface-800)] border border-[var(--danger)]/30 text-sm shadow-sm w-full max-w-[240px]">
+                 <div class="w-2 h-2 rounded-full bg-[var(--surface-500)]"></div>
+                 <span class="text-[var(--text-secondary)] font-medium flex-1">Offline</span>
+                 <span class="text-xs text-[var(--danger-text)] font-mono">Sync halted</span>
+              </div>
+           </div>
+        </div>
+
+      </div>
+    </article>
+
+  </main>
+
+  <!-- Interaction Engine (For Hero Component Demonstration Only) -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Small interactivity script to show attention to detail.
+      // This is purely visual to simulate click-interactions without external dependencies.
+      
+      const pauseBtn = document.querySelector('button[aria-label="Pause session"]');
+      const timerDisplay = document.querySelector('.tabular-countdown');
+      let isPaused = false;
+
+      if(pauseBtn) {
+        pauseBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          isPaused = !isPaused;
+          
+          if(isPaused) {
+            pauseBtn.innerHTML = '<i class="ph-fill ph-play"></i> Resume';
+            pauseBtn.classList.remove('btn-secondary');
+            pauseBtn.classList.add('bg-[var(--accent-amber)]', 'text-[var(--surface-900)]', 'border-transparent');
+            timerDisplay.classList.add('opacity-70');
+            timerDisplay.querySelector('.animate-colon')?.classList.remove('animate-colon');
+          } else {
+            pauseBtn.innerHTML = '<i class="ph-fill ph-pause"></i> Pause';
+            pauseBtn.classList.add('btn-secondary');
+            pauseBtn.classList.remove('bg-[var(--accent-amber)]', 'text-[var(--surface-900)]', 'border-transparent');
+            timerDisplay.classList.remove('opacity-70');
+            timerDisplay.querySelector('span')?.classList.add('animate-colon');
+          }
+          
+          // Trigger CSS physical button press simulation
+          pauseBtn.style.transform = 'scale(0.92)';
+          setTimeout(() => pauseBtn.style.transform = 'none', 100);
+        });
+      }
+    });
+  </script>
+</body>
+</html>
