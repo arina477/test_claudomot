@@ -17,4 +17,14 @@
 - **Skipped:** T-4 (no schema — in-memory; gateway covered by 40 unit tests), T-7 (not heavy/perf-sensitive).
 - **Carries into T:** 2-client join/roster live (T-5); room-timer sync + in-memory CAS (T-5, live proxy); /study-room namespace + IDOR (T-8); focus-room panel per design (T-6); the 3 MUST-locks verified at B-6.
 ## Findings aggregation: process/waves/wave-52/blocks/T/findings-aggregate.md
-## Gate verdict log: <head-tester at T-9>
+## Gate verdict log: head-tester T-9 attempt-1 APPROVED (T-5 fix+re-run frame-verified 2-distinct-user; IDOR solid; F-1 Low→V-2). No rework.
+## Status — block exit
+```yaml
+test_block_status: complete
+stages_run: [T-1, T-2, T-3, T-5, T-6, T-8, T-9]
+stages_skipped: [T-4 (no schema/in-memory), T-7 (not heavy)]
+findings_total: 1
+findings_critical: 0
+ready_for_verify: true
+gate_status: gate-passed
+```
