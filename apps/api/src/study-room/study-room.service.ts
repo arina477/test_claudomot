@@ -205,7 +205,7 @@ export class StudyRoomService implements OnModuleDestroy {
     return this.rooms.get(serverId)?.get(roomId);
   }
 
-  private roomsListFor(serverId: string): FocusRoom[] {
+  roomsListFor(serverId: string): FocusRoom[] {
     const serverRooms = this.rooms.get(serverId);
     if (!serverRooms) return [];
     return Array.from(serverRooms.values()).map((r) => ({

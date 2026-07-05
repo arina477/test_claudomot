@@ -179,17 +179,18 @@ export class StudyRoomGateway implements OnGatewayInit, OnGatewayConnection, OnG
     const { serverId, name } = parsed;
 
     try {
-      const { rooms } = await this.roomService.createRoom(userId, serverId, name);
+      const { roomId } = await this.roomService.createRoom(userId, serverId, name);
 
-      // Ensure socket is in the server-room to receive future rooms-list updates
-      await this.ensureServerRoom(socket, serverId);
+      // AUTO-JOIN: creator is immediately added to the room roster via the same
+      // join path as handleJoinRoom. This guarantees:
+      //   1. The room is born with count=1 (no ghost count-0 rooms — MUST-LOCK 1).
+      //   2. The only removal path (last-member-leave → removeRoom) is reachable
+      //      for the creator via normal leave or disconnect.
+      //   3. All bookkeeping (socketRoomIndex, socket.join, presence broadcast)
+      //      is identical to a manual join_focus_room, so disconnect cleanup works.
+      await this.performJoin(socket, serverId, roomId);
 
-      // Broadcast updated rooms list to all members watching this server
-      this.server
-        .to(`study-room:server:${serverId}`)
-        .emit(STUDY_ROOM_ROOMS_EVENT, { serverId, rooms } satisfies FocusRoomRoomsEvent);
-
-      this.logger.debug(`Room created by ${userId} in server ${serverId}`);
+      this.logger.debug(`Room created and creator auto-joined by ${userId} in server ${serverId}`);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to create room';
       socket.emit(STUDY_ROOM_JOIN_ERROR_EVENT, { message });
@@ -202,8 +203,6 @@ export class StudyRoomGateway implements OnGatewayInit, OnGatewayConnection, OnG
 
   @SubscribeMessage(STUDY_ROOM_JOIN_VERB)
   async handleJoinRoom(socket: Socket, payload: unknown): Promise<void> {
-    const userId = socket.data.userId as string;
-
     const parsed = parseRoomPayload(payload);
     if (!parsed) {
       socket.emit(STUDY_ROOM_JOIN_ERROR_EVENT, {
@@ -213,54 +212,67 @@ export class StudyRoomGateway implements OnGatewayInit, OnGatewayConnection, OnG
     }
 
     const { serverId, roomId } = parsed;
-    const displayName = (socket.data.displayName as string | undefined) ?? userId;
-    const avatarUrl = (socket.data.avatarUrl as string | null | undefined) ?? null;
 
     try {
-      const { roster, rooms, timer } = await this.roomService.joinRoom(
-        userId,
-        serverId,
-        roomId,
-        socket.id,
-        displayName,
-        avatarUrl,
-      );
-
-      // Self-heal the room timer if it drifted while this socket was away
-      this.roomService.selfHealRoomTimerIfOverdue(roomId);
-
-      // Ensure socket is in the server-room channel
-      await this.ensureServerRoom(socket, serverId);
-
-      // Join the per-room Socket.IO room
-      await socket.join(`study-room:room:${roomId}`);
-
-      // Track for disconnect cleanup
-      const roomEntries = this.socketRoomIndex.get(socket.id) ?? [];
-      if (!roomEntries.some((e) => e.roomId === roomId && e.serverId === serverId)) {
-        roomEntries.push({ serverId, roomId });
-      }
-      this.socketRoomIndex.set(socket.id, roomEntries);
-
-      // Reconnect reconciliation: push current timer state to this socket only
-      socket.emit(STUDY_ROOM_TIMER_UPDATE_EVENT, {
-        roomId,
-        timer,
-      } satisfies StudyRoomTimerUpdateEvent);
-
-      // Push current open-rooms list to this socket (jenny-gap-1: socket-only initial state)
-      socket.emit(STUDY_ROOM_ROOMS_EVENT, { serverId, rooms } satisfies FocusRoomRoomsEvent);
-
-      // Broadcast updated roster to the whole room
-      this.broadcastRosterUpdate(roomId, roster);
-      // Broadcast updated rooms list (count changed) to the whole server channel
-      this.broadcastRoomsUpdate(serverId, rooms);
-
-      this.logger.debug(`${socket.id} joined study-room:room:${roomId}`);
+      await this.performJoin(socket, serverId, roomId);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to join room';
       socket.emit(STUDY_ROOM_JOIN_ERROR_EVENT, { message });
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // performJoin — shared join path used by handleJoinRoom AND handleCreateRoom.
+  // Adds creator/joiner to the room roster with full bookkeeping so that
+  // disconnect cleanup works identically regardless of whether the user
+  // entered via create or via join.
+  // -------------------------------------------------------------------------
+
+  private async performJoin(socket: Socket, serverId: string, roomId: string): Promise<void> {
+    const userId = socket.data.userId as string;
+    const displayName = (socket.data.displayName as string | undefined) ?? userId;
+    const avatarUrl = (socket.data.avatarUrl as string | null | undefined) ?? null;
+
+    const { roster, rooms, timer } = await this.roomService.joinRoom(
+      userId,
+      serverId,
+      roomId,
+      socket.id,
+      displayName,
+      avatarUrl,
+    );
+
+    // Self-heal the room timer if it drifted while this socket was away
+    this.roomService.selfHealRoomTimerIfOverdue(roomId);
+
+    // Ensure socket is in the server-room channel
+    await this.ensureServerRoom(socket, serverId);
+
+    // Join the per-room Socket.IO room
+    await socket.join(`study-room:room:${roomId}`);
+
+    // Track for disconnect cleanup
+    const roomEntries = this.socketRoomIndex.get(socket.id) ?? [];
+    if (!roomEntries.some((e) => e.roomId === roomId && e.serverId === serverId)) {
+      roomEntries.push({ serverId, roomId });
+    }
+    this.socketRoomIndex.set(socket.id, roomEntries);
+
+    // Reconnect reconciliation: push current timer state to this socket only
+    socket.emit(STUDY_ROOM_TIMER_UPDATE_EVENT, {
+      roomId,
+      timer,
+    } satisfies StudyRoomTimerUpdateEvent);
+
+    // Push current open-rooms list to this socket (jenny-gap-1: socket-only initial state)
+    socket.emit(STUDY_ROOM_ROOMS_EVENT, { serverId, rooms } satisfies FocusRoomRoomsEvent);
+
+    // Broadcast updated roster to the whole room (creator gets STUDY_ROOM_PRESENCE_EVENT)
+    this.broadcastRosterUpdate(roomId, roster);
+    // Broadcast updated rooms list (count changed) to the whole server channel
+    this.broadcastRoomsUpdate(serverId, rooms);
+
+    this.logger.debug(`${socket.id} joined study-room:room:${roomId}`);
   }
 
   // -------------------------------------------------------------------------
@@ -440,9 +452,9 @@ export class StudyRoomGateway implements OnGatewayInit, OnGatewayConnection, OnG
   // Testability helpers (exposed for unit tests)
   // =========================================================================
 
-  /** Get the current rooms list broadcast for a server (for tests). */
-  getRoomsForServer(serverId: string): ReturnType<StudyRoomService['getRoomIdsForSocket']> {
-    return this.roomService.getRoomIdsForSocket(serverId, '');
+  /** Get the current open rooms list for a server (for tests). */
+  getRoomsForServer(serverId: string): import('@studyhall/shared').FocusRoom[] {
+    return this.roomService.roomsListFor(serverId);
   }
 }
 
@@ -476,8 +488,14 @@ function parseConfigPayload(payload: unknown): {
   const p = payload as Record<string, unknown>;
   if (typeof p.serverId !== 'string' || p.serverId.length === 0) return null;
   if (typeof p.roomId !== 'string' || p.roomId.length === 0) return null;
-  if (typeof p.workMinutes !== 'number' || p.workMinutes <= 0) return null;
-  if (typeof p.breakMinutes !== 'number' || p.breakMinutes <= 0) return null;
+  if (typeof p.workMinutes !== 'number' || !Number.isInteger(p.workMinutes) || p.workMinutes <= 0)
+    return null;
+  if (
+    typeof p.breakMinutes !== 'number' ||
+    !Number.isInteger(p.breakMinutes) ||
+    p.breakMinutes <= 0
+  )
+    return null;
   return {
     serverId: p.serverId,
     roomId: p.roomId,

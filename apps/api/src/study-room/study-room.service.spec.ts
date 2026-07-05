@@ -289,6 +289,77 @@ describe('StudyRoomService — room lifecycle', () => {
     expect(result.roster).toHaveLength(0);
   });
 
+  // --- Creator auto-join contract (HIGH fix verification) ---
+
+  it('creator auto-join contract: create then join → count=1 (proves gateway auto-join works at service level)', async () => {
+    // The gateway's handleCreateRoom calls createRoom then joinRoom (performJoin).
+    // This test verifies that the service-level sequence produces count=1 and
+    // leaves the room in a state where leaveRoom can remove it (no ghost room).
+    const svc = makeService();
+    mockSelect.mockImplementation(() => makeSelectChain([MEMBER_ROW]));
+    const { roomId } = await svc.createRoom(USER_A, SERVER_ID, 'Auto-Join Room');
+
+    // After createRoom alone: count=0 (service does not auto-join — gateway does)
+    const listAfterCreate = svc.roomsListFor(SERVER_ID);
+    expect(listAfterCreate[0]?.count).toBe(0);
+
+    // Gateway then calls joinRoom (performJoin) for the creator
+    mockSelect.mockImplementation(() => makeSelectChain([MEMBER_ROW]));
+    const { roster, rooms } = await svc.joinRoom(
+      USER_A,
+      SERVER_ID,
+      roomId,
+      SOCKET_A1,
+      'Alice',
+      null,
+    );
+
+    // After create + join: count=1, creator in roster
+    expect(roster).toHaveLength(1);
+    expect(roster[0]?.userId).toBe(USER_A);
+    expect(rooms[0]?.count).toBe(1);
+  });
+
+  it('creator auto-join contract: room is REMOVED when creator (last member) leaves — no ghost room', async () => {
+    const svc = makeService();
+    mockSelect.mockImplementation(() => makeSelectChain([MEMBER_ROW]));
+    const { roomId } = await svc.createRoom(USER_A, SERVER_ID, 'Ghost-Fix Room');
+
+    // Gateway auto-joins creator
+    mockSelect.mockImplementation(() => makeSelectChain([MEMBER_ROW]));
+    await svc.joinRoom(USER_A, SERVER_ID, roomId, SOCKET_A1, 'Alice', null);
+
+    // Creator leaves → roster becomes empty → room is removed (MUST-LOCK 1)
+    const result = svc.leaveRoom(USER_A, SERVER_ID, roomId, SOCKET_A1);
+
+    expect(result.roomRemoved).toBe(true);
+    expect(result.rooms).toHaveLength(0);
+
+    // Confirm the room is truly gone from the in-memory map
+    const listAfterLeave = svc.roomsListFor(SERVER_ID);
+    expect(listAfterLeave).toHaveLength(0);
+  });
+
+  it('creator auto-join contract: room is REMOVED when creator disconnects (last socket) — no ghost room', async () => {
+    const svc = makeService();
+    mockSelect.mockImplementation(() => makeSelectChain([MEMBER_ROW]));
+    const { roomId } = await svc.createRoom(USER_A, SERVER_ID, 'Disconnect-Fix Room');
+
+    // Gateway auto-joins creator
+    mockSelect.mockImplementation(() => makeSelectChain([MEMBER_ROW]));
+    await svc.joinRoom(USER_A, SERVER_ID, roomId, SOCKET_A1, 'Alice', null);
+
+    // Simulate gateway handleDisconnect: leaveRoom for the creator's socket
+    const results = svc.leaveAllRoomsForSocket(USER_A, SERVER_ID, [roomId], SOCKET_A1);
+
+    expect(results).toHaveLength(1);
+    expect(results[0]?.roomRemoved).toBe(true);
+
+    // Confirm no ghost room remains
+    const listAfterDisconnect = svc.roomsListFor(SERVER_ID);
+    expect(listAfterDisconnect).toHaveLength(0);
+  });
+
   it('getOpenRooms: non-member → ForbiddenException', async () => {
     const svc = makeService();
     mockSelect.mockImplementation(() => makeSelectChain([]));
