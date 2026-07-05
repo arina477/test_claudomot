@@ -80,6 +80,7 @@ All notable changes to StudyHall are documented here. Format follows
 - Direct messages are here: start a private 1:1 conversation with anyone you share a study server with — open your direct messages, pick a person, and start talking, with messages arriving in real time and sending reliably even when your connection drops. You can only reach people in your servers (no directory to browse), and each person's messaging preference is respected. (#60, #61)
 - Shared study timer: every server gets one synchronized Pomodoro countdown that all members see tick in lockstep — start, pause, or reset it, and it auto-advances between Work and Break on its own. A live "N studying" roster shows who's in a focus session right now. (#63)
 - Set your server's own study-timer lengths: any member can change the Work and Break minutes (Work 1–120, Break 1–60), and the new lengths apply the next time the timer starts and update live on everyone's screen. Lengths can only be changed while the timer is idle — reset it first to adjust. (#64)
+- Study together in focus rooms: create or join a focus room to body-double with others, see who's studying alongside you in a live roster, and share one synchronized room timer that keeps everyone's Work and Break in step. (#66)
 
 ### Changed
 
