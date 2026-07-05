@@ -285,3 +285,37 @@ body {
     transition: none;
   }
 }
+
+/* ── Study timer — colon blink animation (wave-49 M8) ── */
+@keyframes sh-colon-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+.sh-timer-colon {
+  animation: sh-colon-blink 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sh-timer-colon {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* Study timer — slim bar phase indicator: 2px left border at <1024px viewport */
+.timer-phase-work {
+  border-left: 2px solid #10b981; /* --accent-emerald */
+}
+.timer-phase-break {
+  border-left: 2px solid #f59e0b; /* --accent-amber */
+}
+@media (min-width: 1024px) {
+  .timer-phase-work,
+  .timer-phase-break {
+    border-left: none;
+  }
+}

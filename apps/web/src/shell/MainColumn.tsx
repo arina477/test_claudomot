@@ -26,6 +26,7 @@ import { MessageComposer } from './MessageComposer';
 import { MessageList } from './MessageList';
 import { ProfileContext } from './ProfileContext';
 import { useServers } from './ServerContext';
+import { StudyTimerWidget } from './StudyTimerWidget';
 import { ThreadPanel } from './ThreadPanel';
 import { VoiceStudyRoom } from './VoiceStudyRoom';
 import { HashIcon, MagnifyingGlassIcon, MenuIcon, PushPinIcon } from './icons';
@@ -278,6 +279,14 @@ export function MainColumn({ connectionState = 'online', onToggleSidebar }: Prop
             <HeaderBell />
           </div>
         </header>
+
+        {/* Study timer widget — visible for any channel/no-channel when a server is selected.
+            Timer is per-server, not per-channel, so it shows across all text channel views. */}
+        {selectedId && (
+          <div className="shrink-0 px-4 pt-3">
+            <StudyTimerWidget serverId={selectedId} />
+          </div>
+        )}
 
         {/* No channel selected — intro state */}
         {!selectedChannelId && (

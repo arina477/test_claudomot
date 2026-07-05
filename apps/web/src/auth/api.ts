@@ -42,6 +42,7 @@ import type {
   ServerMember,
   ServerResponse,
   ServerSummary,
+  StudyTimer,
   SubmitAssignmentInput,
   UnreadCountResponse,
   UpdateAssignmentInput,
@@ -747,6 +748,61 @@ export const api = {
    * Throws: 401 unauthed.
    */
   getDmCandidates: () => request<DmCandidate[]>('/dm/candidates'),
+
+  // ── Study timer endpoints (wave-49 M8) ─────────────────────────────────────
+
+  /**
+   * GET /servers/:serverId/study-timer → StudyTimer.
+   * Returns compute-on-read authoritative timer state (remainingMs/running derived
+   * server-side from anchors). idle/no-row → calm idle DTO.
+   * Throws: 401 unauthed, 403 non-member.
+   */
+  getStudyTimer: (serverId: string): Promise<StudyTimer> =>
+    request<StudyTimer>(`/servers/${serverId}/study-timer`),
+
+  /**
+   * POST /servers/:serverId/study-timer/start → StudyTimer.
+   * Starts a new work-phase session (25 min). Idempotent if already running.
+   * Throws: 401 unauthed, 403 non-member.
+   */
+  startStudyTimer: (serverId: string): Promise<StudyTimer> =>
+    request<StudyTimer>(`/servers/${serverId}/study-timer/start`, {
+      method: 'POST',
+      body: '{}',
+    }),
+
+  /**
+   * POST /servers/:serverId/study-timer/pause → StudyTimer.
+   * Freezes the countdown (paused_remaining_ms = ends_at - now).
+   * Throws: 401 unauthed, 403 non-member.
+   */
+  pauseStudyTimer: (serverId: string): Promise<StudyTimer> =>
+    request<StudyTimer>(`/servers/${serverId}/study-timer/pause`, {
+      method: 'POST',
+      body: '{}',
+    }),
+
+  /**
+   * POST /servers/:serverId/study-timer/resume → StudyTimer.
+   * Resumes from frozen remaining (ends_at = now + paused_remaining_ms).
+   * Throws: 401 unauthed, 403 non-member.
+   */
+  resumeStudyTimer: (serverId: string): Promise<StudyTimer> =>
+    request<StudyTimer>(`/servers/${serverId}/study-timer/resume`, {
+      method: 'POST',
+      body: '{}',
+    }),
+
+  /**
+   * POST /servers/:serverId/study-timer/reset → StudyTimer.
+   * Returns to idle state (run_state='idle', phase='work', endsAt=null).
+   * Throws: 401 unauthed, 403 non-member.
+   */
+  resetStudyTimer: (serverId: string): Promise<StudyTimer> =>
+    request<StudyTimer>(`/servers/${serverId}/study-timer/reset`, {
+      method: 'POST',
+      body: '{}',
+    }),
 
   exportAccountData: async (): Promise<void> => {
     const res = await fetch(`${BASE}/profile/data/export`, { credentials: 'include' });
