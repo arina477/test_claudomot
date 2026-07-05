@@ -183,6 +183,10 @@
     .room-card:active {
       transform: scale(0.99);
     }
+    .room-card:focus-visible {
+      outline: none;
+      box-shadow: var(--glow-focus);
+    }
     
     .roster-grid {
       display: grid;
@@ -322,10 +326,10 @@
             <div class="p-6 bg-[var(--surface-800)]">
               
               <!-- Roster Grid - Higher density, explicit names vs ambient timer -->
-              <div class="flex flex-wrap gap-4">
+              <div class="flex flex-wrap gap-4" role="list" aria-live="polite" aria-label="Active roster">
                 
                 <!-- You (Current User) -->
-                <div class="flex flex-col items-center gap-2 group w-14">
+                <div class="flex flex-col items-center gap-2 group w-14" role="listitem" aria-current="true" aria-label="Sarah (You)">
                   <div class="w-12 h-12 rounded-full border-2 border-[var(--accent-emerald)] relative overflow-hidden shadow-[var(--shadow-sm)]">
                     <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80" alt="Sarah (You)" class="w-full h-full object-cover">
                   </div>
@@ -333,7 +337,7 @@
                 </div>
 
                 <!-- Peer 1 -->
-                <div class="flex flex-col items-center gap-2 group w-14">
+                <div class="flex flex-col items-center gap-2 group w-14" role="listitem">
                   <div class="w-12 h-12 rounded-full border-2 border-[var(--surface-700)] relative overflow-hidden group-hover:border-[var(--text-secondary)] transition-colors">
                     <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=80&q=80" alt="Marcus" class="w-full h-full object-cover">
                   </div>
@@ -341,7 +345,7 @@
                 </div>
 
                 <!-- Peer 2 (Initials Fallback) -->
-                <div class="flex flex-col items-center gap-2 group w-14">
+                <div class="flex flex-col items-center gap-2 group w-14" role="listitem">
                   <div class="w-12 h-12 rounded-full border-2 border-[var(--surface-700)] bg-[var(--surface-600)] flex items-center justify-center text-sm font-medium relative group-hover:border-[var(--text-secondary)] transition-colors">
                     AJ
                   </div>
@@ -349,7 +353,7 @@
                 </div>
 
                 <!-- Peer 3 -->
-                <div class="flex flex-col items-center gap-2 group w-14">
+                <div class="flex flex-col items-center gap-2 group w-14" role="listitem">
                   <div class="w-12 h-12 rounded-full border-2 border-[var(--surface-700)] relative overflow-hidden group-hover:border-[var(--text-secondary)] transition-colors">
                     <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=80&q=80" alt="Elara" class="w-full h-full object-cover">
                   </div>
@@ -357,7 +361,7 @@
                 </div>
 
                  <!-- Peer 4 -->
-                 <div class="flex flex-col items-center gap-2 group w-14">
+                 <div class="flex flex-col items-center gap-2 group w-14" role="listitem">
                   <div class="w-12 h-12 rounded-full border-2 border-[var(--surface-700)] relative overflow-hidden group-hover:border-[var(--text-secondary)] transition-colors">
                     <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&q=80" alt="Jin" class="w-full h-full object-cover">
                   </div>
@@ -365,7 +369,7 @@
                 </div>
                 
                 <!-- Overflow / Implicit peers -->
-                <div class="flex flex-col items-center justify-center gap-2 w-14">
+                <div class="flex flex-col items-center justify-center gap-2 w-14" role="listitem">
                   <div class="w-12 h-12 rounded-full border-2 border-dashed border-[var(--surface-600)] bg-[var(--surface-900)] flex items-center justify-center text-xs font-medium text-[var(--text-muted)] hover:border-[var(--text-secondary)] cursor-default transition-colors">
                     +3
                   </div>
