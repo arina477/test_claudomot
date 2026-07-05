@@ -1,0 +1,4 @@
+2026-07-05T17:06:10Z | poll=1 | elapsed=0s | api=BUILDING | web=BUILDING
+2026-07-05T17:06:40Z | poll=2 | elapsed=30s | api=BUILDING | web=BUILDING
+2026-07-05T17:07:11Z | poll=3 | elapsed=60s | api=SUCCESS | web=SUCCESS
+RESULT=SUCCESS
