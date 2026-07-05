@@ -31,13 +31,13 @@ CI/CD:
 - [x] C-2 Deploy & verify (canary armed when real users > 1000)
 
 TEST:
-- [ ] T-1 Static
-- [ ] T-2 Unit
-- [ ] T-3 Contract
-- [ ] T-4 Integration
+- [x] T-1 Static
+- [x] T-2 Unit
+- [x] T-3 Contract
+- [x] T-4 Integration
 - [ ] T-5 E2E
 - [ ] T-6 Layout
-- [ ] T-7 Perf (skip if not heavy)
+- [~] T-7 Perf (skipped — not heavy) (skip if not heavy)
 - [ ] T-8 Security
 - [ ] T-9 Journey
 
