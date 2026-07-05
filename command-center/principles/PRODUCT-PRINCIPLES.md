@@ -78,3 +78,6 @@ Promoted at L-2 Distill from `process/waves/wave-<N>/blocks/L/observations.md` b
 
 4. Gate a 'state unreachable here' claim by also checking whether it can arrive pre-set from a prior surface transition.
    Why: A flag unreachable on surface A can still arrive set from surface B, stranding UI.
+
+5. When mvp-thinner returns floor_constraint_active with zero split candidates, waive the floor; no BOARD is required.
+   Why: The floor targets wasteful greenfield micro-waves; a feature with no valid split is exempt.
