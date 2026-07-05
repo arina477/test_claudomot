@@ -516,6 +516,7 @@ export class StudyTimerService implements OnModuleDestroy {
       .update(server_study_timer)
       .set({
         run_state: 'paused',
+        ends_at: null,
         paused_remaining_ms: pausedRemainingMs,
         updated_by: userId,
         updated_at: now,
