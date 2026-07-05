@@ -75,3 +75,6 @@ Promoted at L-2 Distill from `process/waves/wave-<N>/blocks/L/observations.md` b
 
 3. Build an external-SDK feature's credential-independent ACs now with a placeholder key; defer live verify to T-5/C-2.
    Why: Waiting on a founder-supplied credential stalls work that is verifiable without it.
+
+4. Gate a 'state unreachable here' claim by also checking whether it can arrive pre-set from a prior surface transition.
+   Why: A flag unreachable on surface A can still arrive set from surface B, stranding UI.
