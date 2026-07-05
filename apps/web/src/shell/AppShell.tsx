@@ -52,7 +52,10 @@ export function AppShell({ connectionState = 'online' }: Props) {
       <ServerRail
         addServerBtnRef={addServerBtnRef}
         dmActive={dmHomeActive}
-        onDmHome={() => setDmHomeActive((v) => !v)}
+        onDmHome={() => {
+          setDmHomeActive((v) => !v);
+          setSidebarOpen(false);
+        }}
       />
 
       {/* ── Pane 2: Channel Sidebar ── */}
@@ -60,19 +63,23 @@ export function AppShell({ connectionState = 'online' }: Props) {
        * Desktop (lg+): inline flex — always visible.
        * Mobile (<lg):  absolute overlay, shown/hidden via sidebarOpen state.
        * The sidebar is always in the DOM so assistive technology can reach it.
+       * Hidden entirely in DM home view — DMs have no server channel list.
        */}
-      <div
-        aria-hidden={undefined /* the aside inside carries aria labels */}
-        className="hidden lg:flex"
-      >
-        <ChannelSidebar />
-      </div>
+      {!dmHomeActive && (
+        <div
+          aria-hidden={undefined /* the aside inside carries aria labels */}
+          className="hidden lg:flex"
+        >
+          <ChannelSidebar />
+        </div>
+      )}
 
       {/* Mobile overlay backdrop */}
-      {sidebarOpen && (
+      {sidebarOpen && !dmHomeActive && (
         <button
           type="button"
           aria-label="Close channel sidebar"
+          data-testid="mobile-sidebar-backdrop"
           className="fixed inset-0 z-40 lg:hidden cursor-default"
           style={{ backgroundColor: 'rgba(0,0,0,0.50)' }}
           onClick={closeSidebar}
@@ -80,30 +87,32 @@ export function AppShell({ connectionState = 'online' }: Props) {
       )}
 
       {/* Mobile overlay drawer */}
-      <div
-        className="fixed top-0 bottom-0 z-50 flex transition-transform duration-300 ease-in-out lg:hidden"
-        style={{
-          left: 72 /* start at ServerRail width */,
-          transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
-        }}
-        aria-label="Channel sidebar drawer"
-      >
-        <ChannelSidebar />
-        {/* Close button overlaid on drawer edge */}
-        <button
-          type="button"
-          aria-label="Close channel sidebar"
-          className="absolute right-[-40px] top-3 flex h-9 w-9 items-center justify-center rounded-full shadow-pop focus-visible:outline-none focus-visible:ring-2"
+      {!dmHomeActive && (
+        <div
+          className="fixed top-0 bottom-0 z-50 flex transition-transform duration-300 ease-in-out lg:hidden"
           style={{
-            backgroundColor: '#27272a',
-            color: 'rgba(255,255,255,0.60)',
-            border: '1px solid rgba(255,255,255,0.06)',
+            left: 72 /* start at ServerRail width */,
+            transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
           }}
-          onClick={closeSidebar}
+          aria-label="Channel sidebar drawer"
         >
-          <XIcon size={16} />
-        </button>
-      </div>
+          <ChannelSidebar />
+          {/* Close button overlaid on drawer edge */}
+          <button
+            type="button"
+            aria-label="Close channel sidebar"
+            className="absolute right-[-40px] top-3 flex h-9 w-9 items-center justify-center rounded-full shadow-pop focus-visible:outline-none focus-visible:ring-2"
+            style={{
+              backgroundColor: '#27272a',
+              color: 'rgba(255,255,255,0.60)',
+              border: '1px solid rgba(255,255,255,0.06)',
+            }}
+            onClick={closeSidebar}
+          >
+            <XIcon size={16} />
+          </button>
+        </div>
+      )}
 
       {/* ── Pane 3: Main Column OR DM Home (flex-1, always visible) ── */}
       {dmHomeActive ? (
