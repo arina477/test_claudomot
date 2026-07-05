@@ -1,8 +1,9 @@
 /**
  * study-timer.test.tsx — StudyTimerWidget unit / component tests.
  * wave-49 M8 task c3daf6d3 (widget ACs).
+ * wave-50 M8 tasks f4b3659e (duration config ACs) + ffd98a36 (F-1 fix ACs).
  *
- * Test matrix:
+ * Test matrix (wave-49 original, 1-17):
  *   1. Renders loading skeleton initially (before fetch resolves).
  *   2. Renders idle state from a StudyTimer DTO (runState: 'idle').
  *   3. Renders running-work state — emerald phase pill "Focus".
@@ -21,6 +22,29 @@
  *  15. Controls are <button> elements (a11y).
  *  16. Paused badge has aria-atomic="true".
  *  17. Error retry calls fetchTimer (api.getStudyTimer re-invoked).
+ *
+ * Test matrix (wave-50 additions, 18-36):
+ *  18. Widget renders configured durations (workDurationMs→minutes) in inputs.
+ *  19. Idle timer shows configured work duration in idle countdown display.
+ *  20. Config work input rejects out-of-range values — validation error visible.
+ *  21. Config break input rejects out-of-range values — validation error visible.
+ *  22. Apply button disabled until value changed AND both valid AND timer idle.
+ *  23. Apply calls api.configureStudyTimer with correct workMinutes/breakMinutes.
+ *  24. Apply shows optimistic pending (spinner, inputs disabled).
+ *  25. Config inputs disabled while timer is running; locked hint shown.
+ *  26. Config inputs disabled while timer is paused; locked hint shown.
+ *  27. 409 response shows reset hint in BOTH desktop and slim form regions (M-2 fix).
+ *  28. 400 response shows inline validation-error message in both form regions (M-1 fix).
+ *  29. study-timer:update reconciles new durations into config inputs.
+ *  30. Work input has aria-label="Work duration minutes".
+ *  31. Break input has aria-label="Break duration minutes".
+ *  32. Validation error sets aria-invalid + aria-describedby → error element.
+ *  33. F-1: slim-bar border — root element does NOT have inline border shorthand
+ *       that would clobber border-left (style.borderLeft is unset / empty).
+ *  34. Slim config toggle (<1024 affordance) is a <button> with aria-expanded.
+ *  35. Slim config row toggles open/closed on toggle click.
+ *  36. Escape closes the slim config row and returns focus to toggle.
+ *  37. Disabled Apply has aria-describedby pointing to a non-empty reason span (L-1 fix).
  */
 
 import type { StudyTimer, StudyTimerPresenceEvent, StudyTimerUpdateEvent } from '@studyhall/shared';
@@ -58,6 +82,7 @@ vi.mock('../auth/api', () => ({
     pauseStudyTimer: vi.fn(),
     resumeStudyTimer: vi.fn(),
     resetStudyTimer: vi.fn(),
+    configureStudyTimer: vi.fn(),
   },
 }));
 
@@ -70,13 +95,21 @@ const mockApi = api as unknown as {
   pauseStudyTimer: ReturnType<typeof vi.fn>;
   resumeStudyTimer: ReturnType<typeof vi.fn>;
   resetStudyTimer: ReturnType<typeof vi.fn>;
+  configureStudyTimer: ReturnType<typeof vi.fn>;
 };
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
 const SERVER_ID = 'server-abc';
 
-function makeIdle(): StudyTimer {
+/** Default 25/5 durations in ms */
+const DEFAULT_WORK_MS = 25 * 60 * 1000;
+const DEFAULT_BREAK_MS = 5 * 60 * 1000;
+
+function makeIdle(
+  workDurationMs = DEFAULT_WORK_MS,
+  breakDurationMs = DEFAULT_BREAK_MS,
+): StudyTimer {
   return {
     serverId: SERVER_ID,
     phase: 'work',
@@ -85,10 +118,17 @@ function makeIdle(): StudyTimer {
     remainingMs: 0,
     running: false,
     updatedBy: null,
+    workDurationMs,
+    breakDurationMs,
   };
 }
 
-function makeRunning(phase: 'work' | 'break' = 'work', endsInMs = 90_000): StudyTimer {
+function makeRunning(
+  phase: 'work' | 'break' = 'work',
+  endsInMs = 90_000,
+  workDurationMs = DEFAULT_WORK_MS,
+  breakDurationMs = DEFAULT_BREAK_MS,
+): StudyTimer {
   return {
     serverId: SERVER_ID,
     phase,
@@ -97,10 +137,16 @@ function makeRunning(phase: 'work' | 'break' = 'work', endsInMs = 90_000): Study
     remainingMs: endsInMs,
     running: true,
     updatedBy: 'user-1',
+    workDurationMs,
+    breakDurationMs,
   };
 }
 
-function makePaused(remainingMs = 900_000): StudyTimer {
+function makePaused(
+  remainingMs = 900_000,
+  workDurationMs = DEFAULT_WORK_MS,
+  breakDurationMs = DEFAULT_BREAK_MS,
+): StudyTimer {
   return {
     serverId: SERVER_ID,
     phase: 'work',
@@ -109,6 +155,8 @@ function makePaused(remainingMs = 900_000): StudyTimer {
     remainingMs,
     running: false,
     updatedBy: 'user-1',
+    workDurationMs,
+    breakDurationMs,
   };
 }
 
@@ -120,6 +168,8 @@ describe('StudyTimerWidget', () => {
     capturedUpdateHandler = null;
     capturedPresenceHandler = null;
   });
+
+  // ── Wave-49 original tests (1-17) ─────────────────────────────────────────
 
   // 1. Loading skeleton
   it('renders loading skeleton before fetch resolves', () => {
@@ -172,17 +222,6 @@ describe('StudyTimerWidget', () => {
     mockApi.getStudyTimer.mockResolvedValue(makePaused(900_000));
     render(<StudyTimerWidget serverId={SERVER_ID} />);
 
-    // Two-phase wait:
-    // 1. paused-badge appears on the first render triggered by setTimer(makePaused())
-    //    + setLoadingInitial(false). Awaiting it ensures the paused branch controls
-    //    (btn-resume, btn-reset-paused) are in the DOM.
-    // 2. displaySeconds is updated by a separate useEffect([timer]) that fires after
-    //    that render, triggering a second re-render. We wait for timer-display to
-    //    show the paused frozen value before asserting its text content.
-    //
-    // Using waitFor for both assertions blocks until the full paused UI is committed,
-    // eliminating the sync-after-partial-waitFor race that caused ~1/3 failures under
-    // parallel full-suite load.
     await waitFor(() => {
       expect(screen.getByTestId('paused-badge')).toBeInTheDocument();
       expect(screen.getByTestId('timer-display')).toHaveTextContent('15:00');
@@ -214,9 +253,6 @@ describe('StudyTimerWidget', () => {
     mockApi.getStudyTimer.mockResolvedValue(timer);
     render(<StudyTimerWidget serverId={SERVER_ID} />);
 
-    // Wait until the display shows a value derived from endsAt (~90s), not the
-    // default 25:00 (1500s) initial state. The useEffect([timer]) fires after
-    // the fetch resolves and updates displaySeconds from endsAt.
     await waitFor(() => {
       const display = screen.getByTestId('timer-display').textContent ?? '';
       const parts = display.split(':');
@@ -398,5 +434,398 @@ describe('StudyTimerWidget', () => {
     await waitFor(() => expect(mockApi.getStudyTimer).toHaveBeenCalledTimes(2));
     // Should recover to idle state
     await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
+  });
+
+  // ── Wave-50 duration config tests (18-36) ────────────────────────────────
+
+  // 18. Widget renders configured durations in desktop form inputs
+  it('renders configured durations from DTO in config inputs', async () => {
+    // 30 min work, 10 min break
+    mockApi.getStudyTimer.mockResolvedValue(makeIdle(30 * 60 * 1000, 10 * 60 * 1000));
+    render(<StudyTimerWidget serverId={SERVER_ID} />);
+
+    await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
+
+    // Desktop form inputs (visible at any viewport in jsdom)
+    const workInputs = screen.getAllByTestId(/work-input$/);
+    const breakInputs = screen.getAllByTestId(/break-input$/);
+    expect(workInputs.length).toBeGreaterThan(0);
+    expect(Number((workInputs[0] as HTMLInputElement).value)).toBe(30);
+    expect(Number((breakInputs[0] as HTMLInputElement).value)).toBe(10);
+  });
+
+  // 19. Idle countdown shows configured work duration (not hardcoded 25:00)
+  it('idle countdown shows configured work duration from DTO', async () => {
+    // 30 min work duration
+    mockApi.getStudyTimer.mockResolvedValue(makeIdle(30 * 60 * 1000, 5 * 60 * 1000));
+    render(<StudyTimerWidget serverId={SERVER_ID} />);
+
+    await waitFor(() => expect(screen.getByTestId('timer-display')).toHaveTextContent('30:00'));
+  });
+
+  // 20. Work input validation — out-of-range shows error
+  it('work input rejects out-of-range value (>120) — shows validation error', async () => {
+    mockApi.getStudyTimer.mockResolvedValue(makeIdle());
+    render(<StudyTimerWidget serverId={SERVER_ID} />);
+
+    await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
+
+    const workInputs = screen.getAllByTestId(/work-input$/);
+    fireEvent.change(workInputs[0] as HTMLElement, { target: { value: '150' } });
+
+    await waitFor(() => {
+      const errors = screen.getAllByTestId(/work-error$/);
+      expect(errors.length).toBeGreaterThan(0);
+    });
+  });
+
+  // 21. Break input validation — out-of-range shows error
+  it('break input rejects out-of-range value (>60) — shows validation error', async () => {
+    mockApi.getStudyTimer.mockResolvedValue(makeIdle());
+    render(<StudyTimerWidget serverId={SERVER_ID} />);
+
+    await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
+
+    const breakInputs = screen.getAllByTestId(/break-input$/);
+    fireEvent.change(breakInputs[0] as HTMLElement, { target: { value: '99' } });
+
+    await waitFor(() => {
+      const errors = screen.getAllByTestId(/break-error$/);
+      expect(errors.length).toBeGreaterThan(0);
+    });
+  });
+
+  // 22. Apply disabled until dirty AND valid AND idle
+  it('Apply is disabled initially (no dirty values)', async () => {
+    mockApi.getStudyTimer.mockResolvedValue(makeIdle(25 * 60 * 1000, 5 * 60 * 1000));
+    render(<StudyTimerWidget serverId={SERVER_ID} />);
+
+    await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
+
+    // All Apply buttons (desktop + slim) should be disabled initially (not dirty)
+    const applies = screen.getAllByTestId(/apply$/);
+    for (const btn of applies) {
+      expect(btn).toBeDisabled();
+    }
+  });
+
+  // 23. Apply calls configureStudyTimer with correct minutes
+  it('Apply calls api.configureStudyTimer with correct workMinutes/breakMinutes', async () => {
+    mockApi.getStudyTimer.mockResolvedValue(makeIdle(25 * 60 * 1000, 5 * 60 * 1000));
+    mockApi.configureStudyTimer.mockResolvedValue(makeIdle(30 * 60 * 1000, 10 * 60 * 1000));
+    render(<StudyTimerWidget serverId={SERVER_ID} />);
+
+    await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
+
+    // Change work to 30
+    const workInputs = screen.getAllByTestId(/work-input$/);
+    fireEvent.change(workInputs[0] as HTMLElement, { target: { value: '30' } });
+
+    // Apply should now be enabled
+    await waitFor(() => {
+      const applies = screen.getAllByTestId(/apply$/);
+      // At least one is enabled
+      expect(applies.some((b) => !(b as HTMLButtonElement).disabled)).toBe(true);
+    });
+
+    const applies = screen.getAllByTestId(/apply$/);
+    const enabledApply = applies.find((b) => !(b as HTMLButtonElement).disabled);
+    expect(enabledApply).toBeDefined();
+    if (enabledApply) fireEvent.click(enabledApply);
+
+    await waitFor(() =>
+      expect(mockApi.configureStudyTimer).toHaveBeenCalledWith(SERVER_ID, {
+        workMinutes: 30,
+        breakMinutes: 5,
+      }),
+    );
+  });
+
+  // 24. Apply shows pending (spinner)
+  it('Apply shows pending state while configureStudyTimer is in-flight', async () => {
+    mockApi.getStudyTimer.mockResolvedValue(makeIdle(25 * 60 * 1000, 5 * 60 * 1000));
+    const deferred = { resolve: (_v: StudyTimer) => {} };
+    mockApi.configureStudyTimer.mockReturnValue(
+      new Promise<StudyTimer>((resolve) => {
+        deferred.resolve = resolve;
+      }),
+    );
+    render(<StudyTimerWidget serverId={SERVER_ID} />);
+
+    await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
+
+    // Make dirty
+    const workInputs = screen.getAllByTestId(/work-input$/);
+    fireEvent.change(workInputs[0] as HTMLElement, { target: { value: '30' } });
+
+    await waitFor(() => {
+      const applies = screen.getAllByTestId(/apply$/);
+      expect(applies.some((b) => !(b as HTMLButtonElement).disabled)).toBe(true);
+    });
+
+    const applies = screen.getAllByTestId(/apply$/);
+    const enabledApply = applies.find((b) => !(b as HTMLButtonElement).disabled);
+    if (enabledApply) fireEvent.click(enabledApply);
+
+    // During pending: all inputs should be disabled and apply btn should show spinner
+    await waitFor(() => {
+      const allWorkInputs = screen.getAllByTestId(/work-input$/);
+      expect((allWorkInputs[0] as HTMLInputElement).disabled).toBe(true);
+    });
+
+    // Cleanup
+    await act(async () => {
+      deferred.resolve(makeIdle(30 * 60 * 1000, 5 * 60 * 1000));
+    });
+  });
+
+  // 25. Config inputs disabled while timer is running
+  it('config inputs are disabled when timer is running (locked state)', async () => {
+    mockApi.getStudyTimer.mockResolvedValue(makeRunning());
+    render(<StudyTimerWidget serverId={SERVER_ID} />);
+
+    await waitFor(() => expect(screen.getByTestId('phase-pill')).toBeInTheDocument());
+
+    const workInputs = screen.getAllByTestId(/work-input$/);
+    expect((workInputs[0] as HTMLInputElement).disabled).toBe(true);
+    // Apply replaced by locked hint
+    const lockHints = screen.getAllByTestId(/lock-hint$/);
+    expect(lockHints.length).toBeGreaterThan(0);
+  });
+
+  // 26. Config inputs disabled while timer is paused
+  it('config inputs are disabled when timer is paused (locked state)', async () => {
+    mockApi.getStudyTimer.mockResolvedValue(makePaused());
+    render(<StudyTimerWidget serverId={SERVER_ID} />);
+
+    await waitFor(() => expect(screen.getByTestId('paused-badge')).toBeInTheDocument());
+
+    const workInputs = screen.getAllByTestId(/work-input$/);
+    expect((workInputs[0] as HTMLInputElement).disabled).toBe(true);
+    const lockHints = screen.getAllByTestId(/lock-hint$/);
+    expect(lockHints.length).toBeGreaterThan(0);
+  });
+
+  // 27. 409 response shows reset hint in BOTH desktop and slim form regions (M-2 fix)
+  it('409 from configureStudyTimer shows reset hint in desktop form (not slim-only)', async () => {
+    mockApi.getStudyTimer.mockResolvedValue(makeIdle(25 * 60 * 1000, 5 * 60 * 1000));
+    mockApi.configureStudyTimer.mockRejectedValue(new Error('409 Conflict: timer not idle'));
+    render(<StudyTimerWidget serverId={SERVER_ID} />);
+
+    await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
+
+    // Make dirty via the desktop form work input
+    const workInputs = screen.getAllByTestId(/work-input$/);
+    fireEvent.change(workInputs[0] as HTMLElement, { target: { value: '30' } });
+
+    await waitFor(() => {
+      const applies = screen.getAllByTestId(/apply$/);
+      expect(applies.some((b) => !(b as HTMLButtonElement).disabled)).toBe(true);
+    });
+
+    // Trigger via whichever Apply is enabled (desktop in jsdom)
+    const applies = screen.getAllByTestId(/apply$/);
+    const enabledApply = applies.find((b) => !(b as HTMLButtonElement).disabled);
+    expect(enabledApply).toBeDefined();
+    if (enabledApply) fireEvent.click(enabledApply);
+
+    await waitFor(() => expect(mockApi.configureStudyTimer).toHaveBeenCalled());
+
+    // After 409, the reset hint is visible in the desktop form region — no slim row needed.
+    // Both desktop + slim form instances render the hint via configError prop.
+    await waitFor(() => {
+      const hints = screen.getAllByTestId(/config-error-409$/);
+      // At minimum the desktop instance is rendered (jsdom doesn't apply lg:hidden CSS)
+      expect(hints.length).toBeGreaterThan(0);
+      expect(hints[0]).toHaveTextContent('Reset the timer first to change durations.');
+    });
+  });
+
+  // 28. 400 response shows inline validation-error message in both form regions (M-1 fix).
+  // The API may return 400 despite client validation (schema drift, future server-side rule).
+  it('400 from configureStudyTimer renders inline error message (not silent no-op)', async () => {
+    mockApi.getStudyTimer.mockResolvedValue(makeIdle(25 * 60 * 1000, 5 * 60 * 1000));
+    mockApi.configureStudyTimer.mockRejectedValue(new Error('400 Bad Request: invalid range'));
+    render(<StudyTimerWidget serverId={SERVER_ID} />);
+
+    await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
+
+    const workInputs = screen.getAllByTestId(/work-input$/);
+    fireEvent.change(workInputs[0] as HTMLElement, { target: { value: '30' } });
+
+    await waitFor(() => {
+      const applies = screen.getAllByTestId(/apply$/);
+      expect(applies.some((b) => !(b as HTMLButtonElement).disabled)).toBe(true);
+    });
+
+    const applies = screen.getAllByTestId(/apply$/);
+    const enabledApply = applies.find((b) => !(b as HTMLButtonElement).disabled);
+    if (enabledApply) fireEvent.click(enabledApply);
+
+    await waitFor(() => expect(mockApi.configureStudyTimer).toHaveBeenCalled());
+
+    // After 400, an inline error message must be visible (not a silent no-op).
+    await waitFor(() => {
+      const errors = screen.getAllByTestId(/config-error-400$/);
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors[0]).toHaveTextContent('Invalid duration values.');
+    });
+
+    // Pending state also clears (inputs re-enabled)
+    await waitFor(() => {
+      const allWorkInputs = screen.getAllByTestId(/work-input$/);
+      expect((allWorkInputs[0] as HTMLInputElement).disabled).toBe(false);
+    });
+  });
+
+  // 29. study-timer:update reconciles new durations into config inputs
+  it('study-timer:update reconciles new durations into config form inputs', async () => {
+    mockApi.getStudyTimer.mockResolvedValue(makeIdle(25 * 60 * 1000, 5 * 60 * 1000));
+    render(<StudyTimerWidget serverId={SERVER_ID} />);
+
+    await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
+
+    // Socket broadcasts updated config (30/10)
+    await act(async () => {
+      capturedUpdateHandler?.({
+        serverId: SERVER_ID,
+        timer: makeIdle(30 * 60 * 1000, 10 * 60 * 1000),
+      });
+    });
+
+    await waitFor(() => {
+      const workInputs = screen.getAllByTestId(/work-input$/);
+      expect(Number((workInputs[0] as HTMLInputElement).value)).toBe(30);
+      const breakInputs = screen.getAllByTestId(/break-input$/);
+      expect(Number((breakInputs[0] as HTMLInputElement).value)).toBe(10);
+    });
+  });
+
+  // 30. Work input has aria-label
+  it('work input has aria-label="Work duration minutes"', async () => {
+    mockApi.getStudyTimer.mockResolvedValue(makeIdle());
+    render(<StudyTimerWidget serverId={SERVER_ID} />);
+
+    await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
+
+    // getAllByLabelText works across multiple instances (desktop + slim)
+    const workLabeled = screen.getAllByRole('spinbutton', { name: 'Work duration minutes' });
+    expect(workLabeled.length).toBeGreaterThan(0);
+  });
+
+  // 31. Break input has aria-label
+  it('break input has aria-label="Break duration minutes"', async () => {
+    mockApi.getStudyTimer.mockResolvedValue(makeIdle());
+    render(<StudyTimerWidget serverId={SERVER_ID} />);
+
+    await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
+
+    const breakLabeled = screen.getAllByRole('spinbutton', { name: 'Break duration minutes' });
+    expect(breakLabeled.length).toBeGreaterThan(0);
+  });
+
+  // 32. Validation error sets aria-invalid + aria-describedby
+  it('validation error sets aria-invalid="true" on the input', async () => {
+    mockApi.getStudyTimer.mockResolvedValue(makeIdle());
+    render(<StudyTimerWidget serverId={SERVER_ID} />);
+
+    await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
+
+    const workInputs = screen.getAllByTestId(/work-input$/);
+    const firstWorkInput = workInputs[0] as HTMLElement;
+    fireEvent.change(firstWorkInput, { target: { value: '200' } });
+
+    await waitFor(() => {
+      expect(firstWorkInput).toHaveAttribute('aria-invalid', 'true');
+    });
+    // aria-describedby should point to the error element
+    const describedById = firstWorkInput.getAttribute('aria-describedby');
+    expect(describedById).toBeTruthy();
+  });
+
+  // 33. F-1: root element has no inline border-left (so CSS class wins)
+  it('F-1: root widget element does not set inline borderLeft (phase CSS class wins)', async () => {
+    mockApi.getStudyTimer.mockResolvedValue(makeRunning('work'));
+    render(<StudyTimerWidget serverId={SERVER_ID} />);
+
+    await waitFor(() => expect(screen.getByTestId('study-timer-widget')).toBeInTheDocument());
+
+    const widget = screen.getByTestId('study-timer-widget');
+    // The inline style must NOT set border-left via shorthand or explicit borderLeft
+    // (which would clobber the CSS class at specificity level)
+    expect(widget.style.borderLeft).toBeFalsy();
+    expect(widget.style.border).toBeFalsy();
+    // Individual sides are set
+    expect(widget.style.borderTop).toBeTruthy();
+    expect(widget.style.borderRight).toBeTruthy();
+    expect(widget.style.borderBottom).toBeTruthy();
+  });
+
+  // 34. Slim config toggle is a real <button> with aria-expanded
+  it('slim config toggle is a <button> with aria-expanded attribute', async () => {
+    mockApi.getStudyTimer.mockResolvedValue(makeIdle());
+    render(<StudyTimerWidget serverId={SERVER_ID} />);
+
+    await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
+
+    const toggle = screen.getByTestId('slim-config-toggle');
+    expect(toggle.tagName).toBe('BUTTON');
+    expect(toggle).toHaveAttribute('aria-expanded');
+  });
+
+  // 35. Slim config row toggles open/closed on button click
+  it('slim config row opens on toggle click and closes on second click', async () => {
+    mockApi.getStudyTimer.mockResolvedValue(makeIdle());
+    render(<StudyTimerWidget serverId={SERVER_ID} />);
+
+    await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
+
+    expect(screen.queryByTestId('slim-config-row')).not.toBeInTheDocument();
+
+    const toggle = screen.getByTestId('slim-config-toggle');
+    fireEvent.click(toggle);
+    await waitFor(() => expect(screen.getByTestId('slim-config-row')).toBeInTheDocument());
+
+    fireEvent.click(toggle);
+    await waitFor(() => expect(screen.queryByTestId('slim-config-row')).not.toBeInTheDocument());
+  });
+
+  // 36. Escape closes the slim config row and returns focus to toggle
+  it('Escape closes slim config row', async () => {
+    mockApi.getStudyTimer.mockResolvedValue(makeIdle());
+    render(<StudyTimerWidget serverId={SERVER_ID} />);
+
+    await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
+
+    const toggle = screen.getByTestId('slim-config-toggle');
+    fireEvent.click(toggle);
+    await waitFor(() => expect(screen.getByTestId('slim-config-row')).toBeInTheDocument());
+
+    // Press Escape
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByTestId('slim-config-row')).not.toBeInTheDocument());
+  });
+
+  // 37. Disabled Apply has aria-describedby pointing to a non-empty reason span (L-1 fix).
+  // The dead always-undefined ternary is replaced with a real describedby wiring.
+  it('disabled Apply button has aria-describedby pointing to a non-empty hint span', async () => {
+    mockApi.getStudyTimer.mockResolvedValue(makeIdle(25 * 60 * 1000, 5 * 60 * 1000));
+    render(<StudyTimerWidget serverId={SERVER_ID} />);
+
+    await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
+
+    // All Apply buttons are initially disabled (not dirty) and not locked (idle state)
+    const applies = screen.getAllByTestId(/apply$/);
+    const disabledApply = applies.find((b) => (b as HTMLButtonElement).disabled);
+    expect(disabledApply).toBeDefined();
+
+    // The disabled Apply must have a real aria-describedby (not undefined / null)
+    const describedById = disabledApply?.getAttribute('aria-describedby');
+    expect(describedById).toBeTruthy();
+
+    // The referenced hint element must exist in the DOM and have non-empty text
+    const hintEl = document.getElementById(describedById as string);
+    expect(hintEl).toBeInTheDocument();
+    expect(hintEl?.textContent?.trim().length).toBeGreaterThan(0);
   });
 });

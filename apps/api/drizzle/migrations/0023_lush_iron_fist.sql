@@ -1,0 +1,2 @@
+ALTER TABLE "server_study_timer" ADD COLUMN "work_duration_ms" integer DEFAULT 1500000 NOT NULL;--> statement-breakpoint
+ALTER TABLE "server_study_timer" ADD COLUMN "break_duration_ms" integer DEFAULT 300000 NOT NULL;

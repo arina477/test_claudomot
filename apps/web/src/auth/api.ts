@@ -43,6 +43,7 @@ import type {
   ServerResponse,
   ServerSummary,
   StudyTimer,
+  StudyTimerConfig,
   SubmitAssignmentInput,
   UnreadCountResponse,
   UpdateAssignmentInput,
@@ -802,6 +803,20 @@ export const api = {
     request<StudyTimer>(`/servers/${serverId}/study-timer/reset`, {
       method: 'POST',
       body: '{}',
+    }),
+
+  /**
+   * PATCH /servers/:serverId/study-timer/config {workMinutes, breakMinutes} → StudyTimer.
+   * Updates per-server work/break durations (work 1-120 min, break 1-60 min).
+   * Config is allowed ONLY while the timer is idle; a running/paused timer returns 409.
+   * The updated DTO is broadcast to the server room via study-timer:update so all
+   * members' widgets reconcile without a page reload.
+   * Throws: 400 invalid range, 409 timer not idle, 403 non-member, 401 anon.
+   */
+  configureStudyTimer: (serverId: string, body: StudyTimerConfig): Promise<StudyTimer> =>
+    request<StudyTimer>(`/servers/${serverId}/study-timer/config`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
     }),
 
   exportAccountData: async (): Promise<void> => {

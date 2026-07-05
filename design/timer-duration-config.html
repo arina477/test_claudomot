@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en" class="antialiased dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyHall — Duration Config Affordance</title>
+  
+  <!-- 
+    aesthetic_dna: Calm, academic focus tool. Deep zinc layered surfaces, high-contrast precise typography, strictly token-compliant.
+    ui_paradigm: Architectural Systems Dashboard - Meso-level UI component states grid.
+    palette: --surface-800/900/950 (Zinc scale), --accent-emerald (Focus/Work), --accent-amber (Break/Alerts), --danger (Red).
+  -->
+
+  <!-- Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <style>
+    /* Baseline Configuration Variables & Explicit Tokens (Strict Fidelity) */
+    :root {
+      /* Surfaces (Deep Zinc) */
+      --surface-950: #0a0a0b;
+      --surface-900: #121214;
+      --surface-800: #1c1c1f;
+      --surface-700: #27272a;
+      --surface-600: #3f3f46;
+      --surface-500: #52525b;
+      
+      /* Borders */
+      --border-hairline: rgba(255, 255, 255, 0.06); 
+      --border-hover: rgba(255, 255, 255, 0.10);
+      
+      /* Text */
+      --text-primary: rgba(255, 255, 255, 0.92);
+      --text-secondary: rgba(255, 255, 255, 0.60);
+      --text-muted: rgba(255, 255, 255, 0.40);
+      
+      /* Accents */
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --danger: #ef4444;
+      --danger-text: #f87171;
+      
+      /* Geometry */
+      --radius-sm: 2px;
+      --radius-md: 6px;
+      --radius-lg: 10px;
+      --radius-full: 9999px;
+      
+      /* Elevation */
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+      --shadow-pop: 0 8px 24px rgba(0,0,0,0.5);
+      --glow-focus: 0 0 0 2px rgba(16, 185, 129, 0.4);
+      --glow-danger: 0 0 0 2px rgba(239, 68, 68, 0.4);
+      --glow-subtle: 0 0 15px rgba(255, 255, 255, 0.05);
+    }
+
+    body {
+      background-color: var(--surface-950);
+      color: var(--text-primary);
+      font-family: 'Geist', -apple-system, sans-serif;
+    }
+
+    .font-mono {
+      font-family: 'Geist Mono', ui-monospace, monospace;
+    }
+
+    /* Input Primitives (New addition aligned with DESIGN-SYSTEM.md) */
+    input[type="number"] {
+      appearance: textfield;
+      -moz-appearance: textfield;
+    }
+    input[type="number"]::-webkit-inner-spin-button, 
+    input[type="number"]::-webkit-outer-spin-button { 
+      -webkit-appearance: none; 
+      margin: 0; 
+    }
+    
+    .input-base {
+      display: inline-flex;
+      background-color: var(--surface-800);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      transition: all 150ms ease;
+    }
+    
+    .input-base:hover:not(:disabled):not(.input-error) {
+      border-color: var(--surface-700);
+    }
+    
+    .input-base:focus:not(:disabled) {
+      outline: none;
+      border-color: var(--accent-emerald);
+      box-shadow: var(--glow-focus);
+    }
+    
+    .input-base:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      border-color: transparent;
+      background-color: var(--surface-800);
+    }
+    
+    .input-error {
+      border-color: var(--danger) !important;
+      color: var(--danger-text);
+      box-shadow: none;
+    }
+    
+    .input-error:focus {
+      box-shadow: var(--glow-danger) !important;
+    }
+
+    /* Standard Primitive Classes */
+    .glass-panel {
+      background: var(--surface-800);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      overflow: visible; /* Ensure popovers/tooltips can escape */
+      transition: all 300ms ease;
+    }
+    
+    .glass-panel:hover {
+      border-color: var(--border-hover);
+      box-shadow: var(--shadow-sm), var(--glow-subtle);
+    }
+
+    /* Button Reset & Base */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      transition: transition-colors 150ms ease;
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .btn:focus-visible {
+      outline: none;
+      box-shadow: var(--glow-focus);
+    }
+    .btn:active:not(:disabled) {
+      transform: scale(0.96);
+      transition: all 150ms ease;
+    }
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    .btn-md { height: 34px; padding: 0 12px; font-size: 0.875rem; }
+    .btn-sm { height: 28px; padding: 0 8px; font-size: 0.75rem; }
+
+    /* Button Variants */
+    .btn-primary {
+      background-color: var(--accent-emerald);
+      color: #fff;
+      border: 1px solid transparent;
+    }
+    .btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
+    
+    .btn-ghost {
+      background-color: transparent;
+      color: var(--text-secondary);
+    }
+    .btn-ghost:hover:not(:disabled) {
+      background-color: var(--surface-700);
+      color: var(--text-primary);
+    }
+    
+    .btn-secondary {
+      background-color: var(--surface-700);
+      color: var(--text-primary);
+      border: 1px solid var(--border-hairline);
+    }
+    .btn-secondary:hover:not(:disabled) {
+      border-color: var(--border-hover);
+      background-color: var(--surface-600);
+    }
+
+    /* Core Typographic Rules */
+    .tabular-countdown {
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.02em;
+    }
+
+    /* Staggered Reveals */
+    .stagger-1 { animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) calc(1 * 80ms) both; }
+    .stagger-2 { animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) calc(2 * 80ms) both; }
+    .stagger-3 { animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) calc(3 * 80ms) both; }
+    .stagger-4 { animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) calc(4 * 80ms) both; }
+    
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Environment Elements */
+    .noise-bg {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      opacity: 0.12;
+      mix-blend-mode: overlay;
+      pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    }
+
+    /* PREFERS-REDUCED-MOTION */
+    @media (prefers-reduced-motion: reduce) {
+      *, ::before, ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+      .btn:active:not(:disabled) { transform: none; }
+      .stagger-1, .stagger-2, .stagger-3, .stagger-4 { animation: none; opacity: 1; transform: none; }
+    }
+  </style>
+</head>
+<body class="min-h-[100dvh] flex flex-col text-[var(--text-primary)]">
+  
+  <div class="noise-bg"></div>
+
+  <!-- Documentation Shell Header -->
+  <header class="w-full px-6 py-8 border-b border-[var(--border-hairline)] bg-[var(--surface-950)]/80 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--surface-800)] border border-[var(--border-hairline)] flex items-center justify-center shadow-sm">
+          <i class="ph ph-sliders text-[var(--text-primary)] text-lg"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-semibold tracking-tight text-[var(--text-primary)] leading-none">Timer Duration Config</h1>
+          <p class="text-[var(--text-secondary)] text-sm tracking-wide mt-1">StudyHall Settings Affordance (Per-Server)</p>
+        </div>
+      </div>
+      <!-- Action indicator -->
+      <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-[var(--surface-900)] border border-[var(--border-hairline)] rounded-full">
+         <div class="w-2 h-2 rounded-full bg-[var(--accent-emerald)] shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+         <span class="text-xs font-medium text-[var(--text-secondary)]">Live Preview</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Showcase Grid -->
+  <main class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 py-12 gap-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 auto-rows-min pb-32">
+
+    <!-- ========================================== -->
+    <!-- 1. Hero / Contextual Integration           -->
+    <!-- ========================================== -->
+    <section class="col-span-1 lg:col-span-12 stagger-1 bg-[var(--surface-900)] border border-[var(--border-hairline)] rounded-[calc(var(--radius-lg)*1.5)] overflow-hidden shadow-[var(--shadow-sm)] flex flex-col">
+      <div class="px-5 py-3 border-b border-[var(--border-hairline)] bg-[var(--surface-950)] flex items-center justify-between">
+        <div class="text-xs font-mono text-[var(--text-secondary)] tracking-widest uppercase">01 / Full Interactive Context (Idle Editable)</div>
+        <div class="text-[10px] bg-[var(--surface-800)] px-2 py-1 rounded-[var(--radius-sm)] text-[var(--text-muted)]">Viewport: > 1024px</div>
+      </div>
+
+      <!-- Mock App Canvas -->
+      <div class="bg-[var(--surface-800)] p-4 sm:p-8 flex flex-col gap-6 relative min-h-[300px]">
+        
+        <!-- Live Playable Widget -->
+        <div class="glass-panel w-full group relative z-10" id="hero-widget">
+          
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between p-4 lg:px-5 lg:py-4 gap-4 relative z-10">
+            
+            <!-- Left: Base Data (Clock + Pill) -->
+            <div class="flex items-center gap-5">
+              <div class="font-mono text-[32px] lg:text-[40px] leading-none font-semibold text-[var(--text-primary)] tabular-countdown flex items-center" id="hero-clock">
+                50<span class="pr-[1px] text-[var(--text-secondary)]">:</span>00
+              </div>
+              <div role="status" class="flex items-center gap-1.5 px-3 py-1 rounded-[var(--radius-full)] bg-[var(--surface-900)] border border-[var(--border-hairline)] relative">
+                <span class="text-[var(--text-secondary)] text-xs font-medium tracking-wide uppercase">Idle</span>
+              </div>
+            </div>
+
+            <!-- MIDDLE: The Config Affordance (Inline for >=1024px) -->
+            <div class="hidden lg:flex items-center justify-center flex-1 pr-6" id="hero-config-affordance">
+              <form class="flex items-center gap-3 pl-6 border-l border-[var(--border-hairline)]" onsubmit="event.preventDefault(); window.applyHeroSettings();">
+                 
+                 <!-- Work Input -->
+                 <div class="flex flex-col gap-1 relative group/field">
+                    <label for="hero-work" class="text-[10px] font-medium text-[var(--text-secondary)] uppercase tracking-wide">Work</label>
+                    <input id="hero-work" type="number" min="1" max="120" step="1" value="50" class="input-base w-14 h-8 text-sm text-center font-mono" aria-label="Work minutes" oninput="window.checkHeroDirty()"/>
+                    <!-- A11y Live Region for Validation -->
+                    <div id="hero-work-error-container" aria-live="polite" class="absolute top-[102%] left-0 w-max pt-1 z-20 empty:hidden"></div>
+                 </div>
+                 
+                 <span class="text-[var(--text-muted)] font-light text-lg mt-3">/</span>
+                 
+                 <!-- Break Input -->
+                 <div class="flex flex-col gap-1 relative group/field">
+                    <label for="hero-break" class="text-[10px] font-medium text-[var(--text-secondary)] uppercase tracking-wide">Break</label>
+                    <input id="hero-break" type="number" min="1" max="60" step="1" value="10" class="input-base w-14 h-8 text-sm text-center font-mono" aria-label="Break minutes" oninput="window.checkHeroDirty()"/>
+                    <!-- A11y Live Region for Validation -->
+                    <div id="hero-break-error-container" aria-live="polite" class="absolute top-[102%] left-0 w-max pt-1 z-20 empty:hidden"></div>
+                 </div>
+                 
+                 <!-- Action Area (Apply / Hint) -->
+                 <div class="w-16 h-8 mt-4 flex items-center relative">
+                    <button id="hero-apply" type="submit" class="btn btn-sm w-full btn-primary transition-all duration-200" disabled>Apply</button>
+                    <!-- Hint placeholder dynamically shown when locked + functions as accessible reason -->
+                    <span id="hero-lock-hint" class="absolute inset-0 flex items-center whitespace-nowrap text-[10px] text-[var(--text-muted)] font-medium opacity-0 pointer-events-none transition-opacity" aria-hidden="true">
+                      Reset to edit
+                    </span>
+                 </div>
+              </form>
+            </div>
+
+            <!-- Right: Controls -->
+            <div class="flex items-center gap-2 border-t lg:border-t-0 pt-3 lg:pt-0">
+              <button id="hero-start" class="btn btn-md btn-secondary text-sm" aria-label="Start session" onclick="window.toggleHeroTimer()">
+                <i class="ph-fill ph-play"></i> Start
+              </button>
+              <button id="hero-reset" class="btn btn-md btn-ghost text-[var(--text-secondary)] hover:text-[var(--danger-text)] transition-colors opacity-50 pointer-events-none" aria-label="Reset timer" onclick="window.resetHeroTimer()">
+                <i class="ph ph-arrow-counter-clockwise"></i>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 2. State Breakdown Grid                    -->
+    <!-- ========================================== -->
+
+    <!-- State: Idle-Editable -->
+    <article class="col-span-1 lg:col-span-6 stagger-2 bg-[var(--surface-900)] border border-[var(--border-hairline)] rounded-[var(--radius-lg)] shadow-[var(--shadow-sm)] flex flex-col">
+      <div class="px-4 py-2 border-b border-[var(--border-hairline)] bg-[var(--surface-950)]/50">
+        <span class="text-[11px] font-mono text-[var(--text-secondary)] uppercase tracking-wider">02 / State: Idle-Editable</span>
+      </div>
+      <div class="p-8 flex-1 flex flex-col justify-center bg-[var(--surface-800)] gap-2">
+        <p class="text-xs text-[var(--text-secondary)] mb-2">Timer is idle. Inputs are active. "Apply" enables on change.</p>
+        
+        <!-- Extracted Component View -->
+        <div class="flex items-start gap-4 bg-[var(--surface-900)] p-4 rounded-[var(--radius-lg)] border border-[var(--border-hairline)] w-max max-w-full overflow-x-auto">
+          <div class="flex flex-col gap-1.5 focus-within:outline-none">
+             <label class="text-[10px] font-medium text-[var(--text-secondary)] uppercase pl-1">Work</label>
+             <input type="number" value="25" class="input-base w-[60px] h-8 text-sm text-center font-mono focus:ring-[var(--accent-emerald)]" />
+          </div>
+          <span class="text-[var(--text-muted)] pt-6">/</span>
+          <div class="flex flex-col gap-1.5">
+             <label class="text-[10px] font-medium text-[var(--text-secondary)] uppercase pl-1">Break</label>
+             <input type="number" value="5" class="input-base w-[60px] h-8 text-sm text-center font-mono focus:ring-[var(--accent-emerald)]" />
+          </div>
+          <div class="pt-6 pl-2">
+             <button class="btn btn-sm btn-primary">Apply</button>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- State: Locked (Timer Running) -->
+    <article class="col-span-1 lg:col-span-6 stagger-2 bg-[var(--surface-900)] border border-[var(--border-hairline)] rounded-[var(--radius-lg)] shadow-[var(--shadow-sm)] flex flex-col">
+      <div class="px-4 py-2 border-b border-[var(--border-hairline)] bg-[var(--surface-950)]/50">
+        <span class="text-[11px] font-mono text-[var(--accent-amber)] uppercase tracking-wider">03 / State: Locked (Running/Paused)</span>
+      </div>
+      <div class="p-8 flex-1 flex flex-col justify-center bg-[var(--surface-800)] gap-2">
+        <p class="text-xs text-[var(--text-secondary)] mb-2">Timer active. Inputs disabled. "Apply" swapped for contextual hint.</p>
+        
+        <!-- Extracted Component View -->
+        <div class="flex items-start gap-4 bg-[var(--surface-900)] p-4 rounded-[var(--radius-lg)] border border-[var(--border-hairline)] w-max max-w-full overflow-x-auto relative">
+          
+          <div class="flex flex-col gap-1.5">
+             <label class="text-[10px] font-medium text-[var(--text-muted)] uppercase pl-1">Work</label>
+             <input type="number" value="25" disabled class="input-base w-[60px] h-8 text-sm text-center font-mono" />
+          </div>
+          <span class="text-[var(--border-hairline)] pt-6">/</span>
+          <div class="flex flex-col gap-1.5">
+             <label class="text-[10px] font-medium text-[var(--text-muted)] uppercase pl-1">Break</label>
+             <input type="number" value="5" disabled class="input-base w-[60px] h-8 text-sm text-center font-mono" />
+          </div>
+          <div class="pt-6 pl-2 flex items-center h-8">
+             <span class="text-xs font-medium text-[var(--text-muted)] whitespace-nowrap px-2 italic">Reset timer to change lengths</span>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- State: Validation Error -->
+    <article class="col-span-1 lg:col-span-6 stagger-3 bg-[var(--surface-900)] border border-[var(--border-hairline)] rounded-[var(--radius-lg)] shadow-[var(--shadow-sm)] flex flex-col">
+      <div class="px-4 py-2 border-b border-[var(--border-hairline)] bg-[var(--surface-950)]/50">
+        <span class="text-[11px] font-mono text-[var(--danger)] uppercase tracking-wider">04 / State: Validation Error</span>
+      </div>
+      <div class="p-8 flex-1 flex flex-col justify-center bg-[var(--surface-800)] gap-2">
+        <p class="text-xs text-[var(--text-secondary)] mb-2">Out-of-range entry (Work > 120). Error token applied natively to borders/text.</p>
+        
+        <!-- Extracted Component View -->
+        <div class="flex items-start gap-4 bg-[var(--surface-900)] p-4 rounded-[var(--radius-lg)] border border-[var(--border-hairline)] w-max max-w-full overflow-visible">
+          
+          <div class="flex flex-col gap-1.5 relative">
+             <label class="text-[10px] font-medium text-[var(--text-secondary)] uppercase pl-1">Work</label>
+             <input type="number" value="150" aria-invalid="true" class="input-base input-error w-[60px] h-8 text-sm text-center font-mono" />
+             
+             <!-- Inline Validation Message Absolute Positioned to prevent layout jumping -->
+             <div class="absolute top-[102%] left-0 w-max pt-1">
+                <span class="text-[10px] font-medium text-[var(--danger-text)] bg-[var(--surface-950)]/80 px-2 py-0.5 rounded border border-[var(--danger)]/30 backdrop-blur shadow-sm flex items-center gap-1">
+                  <i class="ph-fill ph-warning-circle"></i> Max 120m
+                </span>
+             </div>
+          </div>
+          
+          <span class="text-[var(--text-muted)] pt-6">/</span>
+          
+          <div class="flex flex-col gap-1.5">
+             <label class="text-[10px] font-medium text-[var(--text-secondary)] uppercase pl-1">Break</label>
+             <input type="number" value="5" class="input-base w-[60px] h-8 text-sm text-center font-mono" />
+          </div>
+          
+          <div class="pt-6 pl-2">
+             <button class="btn btn-sm btn-primary" disabled>Apply</button>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- State: Applying (Pending State) -->
+    <article class="col-span-1 lg:col-span-6 stagger-3 bg-[var(--surface-900)] border border-[var(--border-hairline)] rounded-[var(--radius-lg)] shadow-[var(--shadow-sm)] flex flex-col">
+      <div class="px-4 py-2 border-b border-[var(--border-hairline)] bg-[var(--surface-950)]/50">
+        <span class="text-[11px] font-mono text-[var(--text-secondary)] uppercase tracking-wider">05 / State: Applying (In-Flight)</span>
+      </div>
+      <div class="p-8 flex-1 flex flex-col justify-center bg-[var(--surface-800)] gap-2">
+        <p class="text-xs text-[var(--text-secondary)] mb-2">Network request pending. Optimistic button replacement.</p>
+        
+        <!-- Extracted Component View -->
+        <div class="flex items-start gap-4 bg-[var(--surface-900)] p-4 rounded-[var(--radius-lg)] border border-[var(--border-hairline)] w-max max-w-full overflow-x-auto">
+          <div class="flex flex-col gap-1.5">
+             <label class="text-[10px] font-medium text-[var(--text-secondary)] uppercase pl-1">Work</label>
+             <input type="number" value="30" disabled class="input-base w-[60px] h-8 text-sm text-center font-mono" />
+          </div>
+          <span class="text-[var(--text-muted)] pt-6">/</span>
+          <div class="flex flex-col gap-1.5">
+             <label class="text-[10px] font-medium text-[var(--text-secondary)] uppercase pl-1">Break</label>
+             <input type="number" value="10" disabled class="input-base w-[60px] h-8 text-sm text-center font-mono" />
+          </div>
+          <div class="pt-6 pl-2">
+             <button class="btn btn-sm btn-primary w-[58px]" disabled aria-busy="true">
+               <i class="ph ph-spinner animate-spin text-sm"></i>
+             </button>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- State: Mobile Compact Fallback -->
+    <article class="col-span-1 lg:col-span-12 stagger-4 bg-[var(--surface-900)] border border-[var(--border-hairline)] rounded-[var(--radius-lg)] shadow-[var(--shadow-sm)] flex flex-col overflow-hidden">
+      <div class="px-4 py-2 border-b border-[var(--border-hairline)] bg-[var(--surface-950)] flex items-center justify-between">
+        <span class="text-[11px] font-mono text-[var(--text-secondary)] uppercase tracking-wider">06 / Slim Width (Viewport &lt; 1024px) & F-1 Fix</span>
+      </div>
+      <div class="p-6 md:p-8 flex flex-col items-center bg-[var(--surface-800)] gap-6 flex-1 min-h-[240px]">
+        
+        <p class="text-sm text-[var(--text-secondary)] text-center max-w-xl mb-2">
+          At tight widths, the UI stacks minimally beneath the countdown via an inline reveal row. The slim-bar context correctly renders the F-1 left-border phase indicator.
+        </p>
+
+        <!-- Simulated Mobile Width Device Frame (Contains F-1 Fix Border) -->
+        <div class="w-full max-w-[400px] glass-panel p-4 flex flex-col relative mx-auto bg-[var(--surface-900)] shadow-[var(--shadow-sm)]" style="border-left: 2px solid var(--accent-emerald);">
+           
+           <!-- Top Container Row: Countdown + Edit Toggle + Start -->
+           <div class="flex items-center justify-between z-10 w-full">
+              
+              <div class="flex items-center gap-3">
+                 <div class="font-mono text-2xl font-semibold text-[var(--text-primary)] tabular-countdown">25:00</div>
+                 <div role="status" aria-label="Timer running" class="w-1.5 h-1.5 rounded-full bg-[var(--accent-emerald)] shadow-[0_0_6px_rgba(16,185,129,0.5)]"></div>
+              </div>
+
+              <div class="flex items-center gap-1.5">
+                 <!-- Collapsed Affordance Toggle -->
+                 <button id="mobile-config-toggle" type="button" aria-expanded="false" aria-controls="mobile-config-row" class="btn btn-sm btn-ghost px-2 text-[var(--text-secondary)] bg-[var(--surface-800)] border border-[var(--border-hairline)] hover:border-[var(--surface-600)] transition-colors focus:ring-2 focus:ring-[var(--accent-emerald)]" aria-label="Toggle timer settings">
+                   <i class="ph ph-faders text-lg"></i>
+                 </button>
+                 
+                 <button class="btn btn-sm btn-secondary text-xs"><i class="ph-fill ph-play"></i> Start</button>
+              </div>
+
+           </div>
+           
+           <!-- Minimal Inline Reveal Row -->
+           <div id="mobile-config-row" class="hidden flex-col gap-3 pt-3 mt-3 border-t border-[var(--border-hairline)] w-full">
+              <div class="flex items-center justify-between gap-3">
+                 <!-- Compact inputs -->
+                 <div class="flex items-center gap-2 flex-1">
+                    <input id="mob-work-input" type="number" value="25" aria-label="Work duration minutes" class="input-base w-12 h-7 text-xs text-center font-mono p-0" />
+                    <span class="text-[var(--text-muted)] text-sm">/</span>
+                    <input id="mob-break-input" type="number" value="5" aria-label="Break duration minutes" class="input-base w-12 h-7 text-xs text-center font-mono p-0" />
+                    <span class="text-[10px] font-medium text-[var(--text-secondary)] tracking-wide uppercase pl-1">min</span>
+                 </div>
+                 <button type="button" class="btn btn-sm btn-primary h-7 px-3 text-[10px]">Apply</button>
+              </div>
+           </div>
+
+        </div>
+
+      </div>
+    </article>
+
+  </main>
+
+  <!-- Interaction Logic (Demonstrating States dynamically for design fidelity) -->
+  <script>
+    /** 
+     * Pure Vanilla JS for micro-interactions to demonstrate the state mechanics 
+     * requested in the architectural prompt, circumventing frameworks.
+     */
+    
+    let isRunning = false;
+    let baselineWork = 50;
+    let baselineBreak = 10;
+    let applyTimer = null;
+
+    // DOM Elements Hero
+    const wrkInput = document.getElementById('hero-work');
+    const brkInput = document.getElementById('hero-break');
+    const applyBtn = document.getElementById('hero-apply');
+    const hintText = document.getElementById('hero-lock-hint');
+    const startBtn = document.getElementById('hero-start');
+    const resetBtn = document.getElementById('hero-reset');
+    const clock = document.getElementById('hero-clock');
+    
+    // Check if input values are dirty AND valid to enable Apply
+    window.checkHeroDirty = function() {
+      if (isRunning) return; // Frozen if running
+      
+      const wv = parseInt(wrkInput.value, 10);
+      const bv = parseInt(brkInput.value, 10);
+      
+      // Validation rules
+      const isWValid = (wv >= 1 && wv <= 120);
+      const isBValid = (bv >= 1 && bv <= 60);
+      
+      const wrkError = document.getElementById('hero-work-error-container');
+      const brkError = document.getElementById('hero-break-error-container');
+      
+      // Validation error a11y wiring (Feedback 3)
+      if (!isWValid) {
+         wrkInput.classList.add('input-error');
+         wrkInput.setAttribute('aria-invalid', 'true');
+         wrkInput.setAttribute('aria-describedby', 'hero-work-error-id');
+         wrkError.innerHTML = `<span id="hero-work-error-id" class="text-[10px] font-medium text-[var(--danger-text)] bg-[var(--surface-950)]/90 px-2 py-0.5 rounded border border-[var(--danger)]/30 backdrop-blur shadow-[var(--shadow-sm)] flex items-center gap-1"><i class="ph-fill ph-warning-circle"></i> Max 120m</span>`;
+      } else {
+         wrkInput.classList.remove('input-error');
+         wrkInput.removeAttribute('aria-invalid');
+         wrkInput.removeAttribute('aria-describedby');
+         wrkError.innerHTML = '';
+      }
+      
+      if (!isBValid) {
+         brkInput.classList.add('input-error');
+         brkInput.setAttribute('aria-invalid', 'true');
+         brkInput.setAttribute('aria-describedby', 'hero-break-error-id');
+         brkError.innerHTML = `<span id="hero-break-error-id" class="text-[10px] font-medium text-[var(--danger-text)] bg-[var(--surface-950)]/90 px-2 py-0.5 rounded border border-[var(--danger)]/30 backdrop-blur shadow-[var(--shadow-sm)] flex items-center gap-1"><i class="ph-fill ph-warning-circle"></i> Max 60m</span>`;
+      } else {
+         brkInput.classList.remove('input-error');
+         brkInput.removeAttribute('aria-invalid');
+         brkInput.removeAttribute('aria-describedby');
+         brkError.innerHTML = '';
+      }
+      
+      // Enable Apply only if dirty & valid
+      const isDirty = (wv !== baselineWork || bv !== baselineBreak);
+      
+      if (isDirty && isWValid && isBValid) {
+         applyBtn.disabled = false;
+      } else {
+         applyBtn.disabled = true;
+      }
+    };
+
+    // Simulate Apply logic + Optimistic Sync
+    window.applyHeroSettings = function() {
+      if (applyBtn.disabled) return;
+      
+      // Set to Pending State
+      applyBtn.disabled = true;
+      applyBtn.innerHTML = '<i class="ph ph-spinner animate-spin text-lg"></i>';
+      wrkInput.disabled = true;
+      brkInput.disabled = true;
+
+      // Simulate Network Request
+      clearTimeout(applyTimer);
+      applyTimer = setTimeout(() => {
+         // Persist new baseline
+         baselineWork = parseInt(wrkInput.value, 10);
+         baselineBreak = parseInt(brkInput.value, 10);
+         
+         // Visual Update
+         clock.innerHTML = `${baselineWork.toString().padStart(2, '0')}<span class="pr-[1px] text-[var(--text-secondary)]">:</span>00`;
+         
+         // Reset button state
+         applyBtn.innerHTML = 'Apply';
+         wrkInput.disabled = false;
+         brkInput.disabled = false;
+         
+         // Double check disabled status
+         window.checkHeroDirty();
+      }, 1000);
+    };
+
+    // Simulate Running State Locking
+    window.toggleHeroTimer = function() {
+       isRunning = !isRunning;
+       
+       if (isRunning) {
+         // Switch to running state
+         startBtn.innerHTML = '<i class="ph-fill ph-pause"></i> Pause';
+         startBtn.classList.replace('btn-secondary', 'btn-ghost');
+         startBtn.classList.add('text-[var(--text-primary)]', 'bg-[var(--surface-700)]');
+         
+         // Enable Reset
+         resetBtn.classList.remove('opacity-50', 'pointer-events-none');
+         
+         // Modify Clock
+         clock.innerHTML = `${(baselineWork - 1).toString().padStart(2, '0')}<span class="pr-[1px] text-[var(--text-secondary)] animate-pulse">:</span>59`;
+         
+         // Lock Inputs & Wire accessible description (Feedback 6)
+         wrkInput.disabled = true;
+         brkInput.disabled = true;
+         applyBtn.style.opacity = '0';
+         hintText.style.opacity = '1';
+         hintText.innerText = 'Reset the timer to change lengths';
+         applyBtn.setAttribute('aria-describedby', 'hero-lock-hint');
+         
+       } else {
+         // Switch to paused state (Still locked!)
+         startBtn.innerHTML = '<i class="ph-fill ph-play"></i> Resume';
+         startBtn.classList.replace('btn-ghost', 'btn-secondary');
+         startBtn.classList.remove('text-[var(--text-primary)]', 'bg-[var(--surface-700)]');
+         clock.querySelector('span')?.classList.remove('animate-pulse');
+         
+         // Inputs remain locked until RESET is hit. Hint is visible.
+       }
+    };
+    
+    // Simulate Reset
+    window.resetHeroTimer = function() {
+       isRunning = false;
+       
+       // UI Reset
+       startBtn.innerHTML = '<i class="ph-fill ph-play"></i> Start';
+       startBtn.classList.replace('btn-ghost', 'btn-secondary');
+       startBtn.classList.remove('text-[var(--text-primary)]', 'bg-[var(--surface-700)]');
+       
+       resetBtn.classList.add('opacity-50', 'pointer-events-none');
+       
+       clock.innerHTML = `${baselineWork.toString().padStart(2, '0')}<span class="pr-[1px] text-[var(--text-secondary)]">:</span>00`;
+       
+       // Unlock inputs & drop description (Feedback 6 resolution)
+       wrkInput.disabled = false;
+       brkInput.disabled = false;
+       applyBtn.style.opacity = '1';
+       hintText.style.opacity = '0';
+       hintText.innerText = 'Reset to edit';
+       applyBtn.removeAttribute('aria-describedby');
+       
+       window.checkHeroDirty();
+    };
+
+    // Mobile/Compact Reveal Logic (Feedback 5)
+    const mobToggle = document.getElementById('mobile-config-toggle');
+    const mobRow = document.getElementById('mobile-config-row');
+
+    if (mobToggle && mobRow) {
+       mobToggle.addEventListener('click', () => {
+          const isExpanded = mobToggle.getAttribute('aria-expanded') === 'true';
+          if (isExpanded) {
+             closeMobileConfig();
+          } else {
+             openMobileConfig();
+          }
+       });
+
+       function openMobileConfig() {
+          mobToggle.setAttribute('aria-expanded', 'true');
+          mobRow.classList.remove('hidden');
+          mobRow.classList.add('flex'); // Enable display flex layout on row
+       }
+
+       function closeMobileConfig() {
+          mobToggle.setAttribute('aria-expanded', 'false');
+          mobRow.classList.add('hidden');
+          mobRow.classList.remove('flex');
+          mobToggle.focus(); // Return focus to trigger
+       }
+
+       // Escape to close logic
+       document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && mobToggle.getAttribute('aria-expanded') === 'true') {
+             closeMobileConfig();
+          }
+       });
+    }
+  </script>
+</body>
+</html>

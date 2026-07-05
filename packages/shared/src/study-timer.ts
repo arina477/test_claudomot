@@ -38,6 +38,8 @@ export const StudyTimerSchema = z.object({
   remainingMs: z.number().int().nonnegative(),
   running: z.boolean(),
   updatedBy: z.string().nullable(),
+  workDurationMs: z.number().int().positive(),
+  breakDurationMs: z.number().int().positive(),
 });
 export type StudyTimer = z.infer<typeof StudyTimerSchema>;
 
@@ -97,3 +99,19 @@ export const StudyTimerPresenceEventSchema = z.object({
   count: z.number().int().nonnegative(),
 });
 export type StudyTimerPresenceEvent = z.infer<typeof StudyTimerPresenceEventSchema>;
+
+// ---------------------------------------------------------------------------
+// StudyTimerConfigSchema — PATCH /servers/:serverId/study-timer/config request body
+// wave-50 M8 task f4b3659e
+//
+// Clients send minutes; the service converts to ms before persisting.
+// Ranges match the product spec: work 1-120 min, break 1-60 min.
+// The updated config is broadcast to the server room via STUDY_TIMER_UPDATE_EVENT
+// (no new event constant needed — the gateway reuses the existing update wire).
+// ---------------------------------------------------------------------------
+
+export const StudyTimerConfigSchema = z.object({
+  workMinutes: z.number().int().min(1).max(120),
+  breakMinutes: z.number().int().min(1).max(60),
+});
+export type StudyTimerConfig = z.infer<typeof StudyTimerConfigSchema>;

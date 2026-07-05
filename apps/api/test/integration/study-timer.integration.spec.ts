@@ -1,6 +1,7 @@
 /**
  * Integration test: wave-49 study-timer service ↔ real Postgres
  * Tasks: 1387d845 (compute-on-read + state machine) + 832b83b7 (auto-advance + idempotency)
+ * Extended: wave-50 task f4b3659e (per-server configurable durations)
  *
  * Covers:
  *   1. GET with no row → idle DTO (serverId, phase='work', runState='idle', remainingMs=0)
@@ -16,6 +17,15 @@
  *  10. doPhaseAdvance when paused: no-op (run_state guard prevents advance)
  *  11. getTimer compute-on-read: remainingMs derived from ends_at−now (not stored)
  *  12. getTimerForRoom: no member check; returns timer DTO (used by gateway for reconciliation)
+ *  13-20. configureDurations (f4b3659e):
+ *    13. config while idle → persists durations; DTO reflects them; emits update event
+ *    14. config persists + rowToDto carries workDurationMs/breakDurationMs
+ *    15. next start after config uses configured work_duration_ms (ends_at reflects custom length)
+ *    16. config while running → ConflictException 409; durations unchanged
+ *    17. config while paused → ConflictException 409; durations unchanged
+ *    18. non-member configureDurations → ForbiddenException 403
+ *    19. self-heal/compute-on-read uses configured durations (karen-2 correctness case)
+ *    20. backward-compat: default rows behave as 25/5
  *
  * CF-2 (LOAD-BEARING): pg-harness MUST be the first import.
  */
@@ -32,7 +42,7 @@ import {
 } from './pg-harness';
 
 // SUT imports AFTER harness so the lazy db proxy resolves to the test DB.
-import { ForbiddenException } from '@nestjs/common';
+import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RbacService } from '../../src/rbac/rbac.service';
 import {
@@ -467,6 +477,191 @@ describe.skipIf(SKIP)(
       expect(dto.runState).toBe('running');
       expect(dto.running).toBe(true);
       expect(dto.serverId).toBe(SERVER_ID);
+    });
+
+    // -----------------------------------------------------------------------
+    // Cases 13-20 — configureDurations (wave-50 task f4b3659e)
+    // -----------------------------------------------------------------------
+
+    // Case 13 — config while idle → persists durations; emits update
+    it('configureDurations while idle: persists durations; DTO carries them; emits update', async () => {
+      // Ensure idle row exists first
+      await sut.resetTimer(SERVER_ID, MEMBER_ID);
+      emitter.emit.mockClear();
+
+      const dto = await sut.configureDurations(SERVER_ID, MEMBER_ID, {
+        workMinutes: 30,
+        breakMinutes: 10,
+      });
+
+      expect(dto.workDurationMs).toBe(30 * 60_000);
+      expect(dto.breakDurationMs).toBe(10 * 60_000);
+      expect(dto.runState).toBe('idle');
+
+      // Verify DB row
+      const rows = await harnessQuery<{
+        work_duration_ms: number;
+        break_duration_ms: number;
+        run_state: string;
+      }>(
+        'SELECT work_duration_ms, break_duration_ms, run_state FROM server_study_timer WHERE server_id = $1',
+        [SERVER_ID],
+      );
+      expect(rows[0]?.work_duration_ms).toBe(30 * 60_000);
+      expect(rows[0]?.break_duration_ms).toBe(10 * 60_000);
+      expect(rows[0]?.run_state).toBe('idle');
+
+      // Emitter called with study-timer.updated
+      expect(emitter.emit).toHaveBeenCalledWith(
+        'study-timer.updated',
+        expect.objectContaining({ serverId: SERVER_ID }),
+      );
+      const emittedTimer = emitter.emit.mock.calls[0]?.[1]?.timer;
+      expect(emittedTimer?.workDurationMs).toBe(30 * 60_000);
+      expect(emittedTimer?.breakDurationMs).toBe(10 * 60_000);
+    });
+
+    // Case 14 — config persists + rowToDto carries durations (GET reflects new config)
+    it('configureDurations: GET after config reflects new workDurationMs/breakDurationMs', async () => {
+      await sut.resetTimer(SERVER_ID, MEMBER_ID);
+      await sut.configureDurations(SERVER_ID, MEMBER_ID, { workMinutes: 45, breakMinutes: 15 });
+      emitter.emit.mockClear();
+
+      const dto = await sut.getTimer(SERVER_ID, MEMBER_ID);
+
+      expect(dto.workDurationMs).toBe(45 * 60_000);
+      expect(dto.breakDurationMs).toBe(15 * 60_000);
+    });
+
+    // Case 15 — next start after config uses configured work duration (ends_at reflects custom length)
+    it('configureDurations: subsequent startTimer uses configured work_duration_ms', async () => {
+      await sut.resetTimer(SERVER_ID, MEMBER_ID);
+      await sut.configureDurations(SERVER_ID, MEMBER_ID, { workMinutes: 10, breakMinutes: 2 });
+      emitter.emit.mockClear();
+
+      const before = Date.now();
+      const dto = await sut.startTimer(SERVER_ID, MEMBER_ID);
+      const after = Date.now();
+
+      // ends_at should be now + 10 min (not 25 min)
+      const endsAtMs = new Date(dto.endsAt as string).getTime();
+      expect(endsAtMs).toBeGreaterThanOrEqual(before + 10 * 60_000 - 200);
+      expect(endsAtMs).toBeLessThanOrEqual(after + 10 * 60_000 + 200);
+      // Not the default 25-min
+      expect(endsAtMs).toBeLessThan(before + WORK_DURATION_MS);
+
+      expect(dto.workDurationMs).toBe(10 * 60_000);
+      expect(dto.breakDurationMs).toBe(2 * 60_000);
+    });
+
+    // Case 16 — config while running → ConflictException; durations unchanged
+    it('configureDurations while running → ConflictException; durations unchanged', async () => {
+      await sut.startTimer(SERVER_ID, MEMBER_ID);
+      const rowsBefore = await harnessQuery<{ work_duration_ms: number }>(
+        'SELECT work_duration_ms FROM server_study_timer WHERE server_id = $1',
+        [SERVER_ID],
+      );
+      const originalWorkMs = rowsBefore[0]?.work_duration_ms;
+
+      await expect(
+        sut.configureDurations(SERVER_ID, MEMBER_ID, { workMinutes: 30, breakMinutes: 10 }),
+      ).rejects.toBeInstanceOf(ConflictException);
+
+      // Durations unchanged
+      const rowsAfter = await harnessQuery<{ work_duration_ms: number }>(
+        'SELECT work_duration_ms FROM server_study_timer WHERE server_id = $1',
+        [SERVER_ID],
+      );
+      expect(rowsAfter[0]?.work_duration_ms).toBe(originalWorkMs);
+    });
+
+    // Case 17 — config while paused → ConflictException; durations unchanged
+    it('configureDurations while paused → ConflictException; durations unchanged', async () => {
+      await sut.startTimer(SERVER_ID, MEMBER_ID);
+      await sut.pauseTimer(SERVER_ID, MEMBER_ID);
+
+      const rowsBefore = await harnessQuery<{ work_duration_ms: number }>(
+        'SELECT work_duration_ms FROM server_study_timer WHERE server_id = $1',
+        [SERVER_ID],
+      );
+      const originalWorkMs = rowsBefore[0]?.work_duration_ms;
+
+      await expect(
+        sut.configureDurations(SERVER_ID, MEMBER_ID, { workMinutes: 30, breakMinutes: 10 }),
+      ).rejects.toBeInstanceOf(ConflictException);
+
+      const rowsAfter = await harnessQuery<{ work_duration_ms: number }>(
+        'SELECT work_duration_ms FROM server_study_timer WHERE server_id = $1',
+        [SERVER_ID],
+      );
+      expect(rowsAfter[0]?.work_duration_ms).toBe(originalWorkMs);
+    });
+
+    // Case 18 — non-member → ForbiddenException
+    it('non-member: configureDurations → ForbiddenException', async () => {
+      await expect(
+        sut.configureDurations(SERVER_ID, NON_MEMBER_ID, { workMinutes: 30, breakMinutes: 10 }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    // Case 19 — karen-2 correctness: self-heal/compute-on-read walk uses configured durations
+    it('karen-2: custom-duration timer self-heals with configured lengths, not 25/5 defaults', async () => {
+      // Configure 10-min work / 2-min break
+      await sut.resetTimer(SERVER_ID, MEMBER_ID);
+      await sut.configureDurations(SERVER_ID, MEMBER_ID, { workMinutes: 10, breakMinutes: 2 });
+      await sut.startTimer(SERVER_ID, MEMBER_ID);
+
+      // Manually backdating ends_at to simulate the timer running past its end
+      // (i.e. the service missed the phase transition — e.g. after a process restart).
+      // Set ends_at to 11 min ago (10-min work phase expired, 1 min into break).
+      const overduePast = new Date(Date.now() - 11 * 60_000);
+      const startedAt = new Date(Date.now() - 11 * 60_000 - 10_000); // started slightly before
+      await harnessQuery(
+        'UPDATE server_study_timer SET ends_at = $1, started_at = $2 WHERE server_id = $3',
+        [overduePast.toISOString(), startedAt.toISOString(), SERVER_ID],
+      );
+      emitter.emit.mockClear();
+
+      // Calling getTimerForRoom triggers selfHealIfOverdue
+      const dto = await sut.getTimerForRoom(SERVER_ID);
+
+      // selfHealIfOverdue uses the row's 10/2 durations.
+      // 11 min elapsed from startedAt: 10min work completed → now 1 min into 2-min break.
+      expect(dto.phase).toBe('break');
+      expect(dto.runState).toBe('running');
+      // Remaining should be ~1 min (2-min break - ~1 min elapsed)
+      expect(dto.remainingMs).toBeGreaterThan(0);
+      expect(dto.remainingMs).toBeLessThanOrEqual(2 * 60_000);
+
+      // The healed row in the DB should have break_duration_ms-based ends_at
+      const rows = await harnessQuery<{ phase: string; ends_at: string }>(
+        'SELECT phase, ends_at FROM server_study_timer WHERE server_id = $1',
+        [SERVER_ID],
+      );
+      expect(rows[0]?.phase).toBe('break');
+
+      // emitter fired for the heal broadcast
+      expect(emitter.emit).toHaveBeenCalledWith(
+        'study-timer.updated',
+        expect.objectContaining({ serverId: SERVER_ID }),
+      );
+    });
+
+    // Case 20 — backward-compat: default rows behave as 25/5
+    it('backward-compat: default row (no prior config) behaves as 25/5', async () => {
+      // Start with a fresh row (no prior configureDurations call)
+      const before = Date.now();
+      const dto = await sut.startTimer(SERVER_ID, MEMBER_ID);
+      const after = Date.now();
+
+      // ends_at should be now + 25 min
+      const endsAtMs = new Date(dto.endsAt as string).getTime();
+      expect(endsAtMs).toBeGreaterThanOrEqual(before + WORK_DURATION_MS - 200);
+      expect(endsAtMs).toBeLessThanOrEqual(after + WORK_DURATION_MS + 200);
+
+      // DTO duration fields match defaults
+      expect(dto.workDurationMs).toBe(WORK_DURATION_MS);
+      expect(dto.breakDurationMs).toBe(BREAK_DURATION_MS);
     });
   },
 );
