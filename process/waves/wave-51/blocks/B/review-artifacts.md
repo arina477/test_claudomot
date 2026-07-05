@@ -25,3 +25,16 @@
 
 ## Gate verdict log
 <head-builder at B-6>
+
+## Status — block exit
+```yaml
+build_block_status: complete
+branch: wave-51-dm-3panel
+stages_run: [B-0, B-3, B-4, B-5, B-6]
+stages_skipped: [B-1 (no contracts), B-2 (frontend-only)]
+review_verdict: APPROVE
+last_commit_sha: c0b6f07
+ready_for_ci: true
+gate_status: gate-passed
+```
+head-builder B-6 attempt-1: APPROVED (both gates + test rigor verified). /review: 1 High (mobile backdrop strand) fixed c0b6f07 → re-run 0 crit/high. Action 6 PASS.
