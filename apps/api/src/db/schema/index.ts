@@ -9,3 +9,4 @@ export * from './assignment-reminder';
 export * from './notifications';
 export * from './scheduling';
 export * from './dm';
+export * from './study-timer';
