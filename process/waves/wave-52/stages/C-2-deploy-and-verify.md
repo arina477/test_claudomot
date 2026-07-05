@@ -109,3 +109,28 @@ head_signoff:
     The inline-poll resolved within the 600s cap, so no MONITOR-task was needed.
   next_action: PROCEED_TO_T-block
 ```
+
+---
+
+## T-5 fix redeploy
+
+Fix-up C-cycle for a T-5 (layout) live finding on the already-merged+deployed wave-52: the joinable focus-room panel was stuck on its loading skeleton in prod because the client never emitted the `subscribe_server_rooms` handshake, so the backend never sent the open-rooms list. **NOT a new wave** — original wave-52 checklist stages are untouched.
+
+**Fix PR:** [#67](https://github.com/arina477/test_claudomot/pull/67) — `fix: study-room subscribe handshake (focus-room panel skeleton-stuck)`. 2 commits: backend `a70cc02` (`/study-room` gateway now answers `subscribe_server_rooms` with the open-rooms list) + frontend `7534f4c` (`FocusRoomPanel` emits `subscribe_server_rooms` on mount). NO migration, NO schema change (feature remains in-memory).
+
+**CI:** run `28755704661` — all 7 required checks PASS (lint, typecheck, test, build, e2e, boot-probe, secret-scan). api 700 + web 452 green; `biome ci .` clean.
+
+**Merge:** squash-merged to `main`. **Merge SHA `725f7b6b68872521bc83a26562691aaf405adcc9`** (`725f7b6`). Local main synced to it.
+
+**Redeploy (both services pinned to merge SHA via `serviceInstanceDeploy(commitSha=725f7b6...)`, Railway GraphQL, Project-Access-Token header):** both returned `true`; inline-polled authoritative `deployments` endpoint BUILDING → SUCCESS in ~60s. Deploy monitor: success_condition = both `SUCCESS` AND deployed-commit == merge SHA; failure_condition = any `FAILED/CRASHED/REMOVED/SKIPPED`; timeout_budget = 570s inline cap, 20s poll delay. No migration ran.
+
+| Service | Deployment id | Status | Deployed commit | staticUrl | /health |
+|---|---|---|---|---|---|
+| api | 4b525786-6dce-4671-9f38-396b84cab23e | **SUCCESS** | **725f7b6b6887...** (= merge SHA) | api-production-b93e.up.railway.app | 200 · `{"status":"ok","service":"studyhall-api","version":"0.0.1"}` |
+| web | 02574ba2-3f3f-4895-864f-5d477359df17 | **SUCCESS** | **725f7b6b6887...** (= merge SHA) | web-production-bce1a8.up.railway.app | 200 (dark-theme StudyHall shell) |
+
+**Deployed-hash match:** both services report deployed-commit == merge SHA `725f7b6` → the fix revision is the serving revision, no stale-revision race, no false-green.
+
+**Feature liveness (the /study-room headline):** Socket.IO engine handshake `GET /socket.io/?EIO=4&transport=polling` → **200** with a valid Engine.IO session. Namespace connect `40/study-room,` → POST 200; namespace ACK `44/study-room,{"message":"Unauthorized"}` (packet `44` = namespace CONNECT_ERROR from the `ws-auth` guard) → the `/study-room` namespace is registered, reachable, and auth-guarded as designed (an unregistered namespace would drop silently, not return a namespace-scoped error). Handshake path 200; namespace live on the fix revision. (Client connects via `io(\`${BASE}/study-room\`)` on the `/socket.io/` mount — a raw HTTP GET to the literal `/study-room/` path returns 404 by design and is not the handshake surface.)
+
+**The focus-room fix is LIVE:** deployed hash matches the merge SHA that carries both `subscribe_server_rooms` commits on api and web; both /health 200; /study-room namespace handshake 200. Inline-poll resolved within cap; no MONITOR-task, no rollback needed; no BLOCKED trigger fired.
