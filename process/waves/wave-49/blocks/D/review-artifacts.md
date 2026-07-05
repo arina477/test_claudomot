@@ -1,11 +1,11 @@
 # Wave 49 — D-block review artifacts
-**Block:** D (Design) · **Wave topic:** study-timer widget + ephemeral presence roster (server view) · **Block exit gate:** D-3 · **Status:** in-progress
+**Block:** D (Design) · **Wave topic:** study-timer widget + ephemeral presence roster (server view) · **Block exit gate:** D-3 · **Status:** gate-passed
 ## Stage deliverables
 | Stage | Deliverable(s) | Status | Notes |
 |---|---|---|---|
 | D-1 | stages/D-1-brief/study-timer-brief.md | done | 1 gap briefed, mask_mode PASS |
 | D-2 | .../D-2-variants/study-timer-*.md | done | aidesigner staged (iter 0); checkpoint skipped-automatic |
-| D-3 | stages/D-3-review-and-adopt/study-timer-*.md | pending | dual-review + head-designer gate + canonicalize |
+| D-3 | .../study-timer-*.md | done | APPROVE/APPROVE iter1 + head-designer APPROVED; canonicalized design/study-timer.html; journey updated |
 ## Block-specific context
 - Wave topic: shared study-timer widget in the server view (countdown + work/break phase + start/pause/reset controls + ephemeral live-presence roster "N studying").
 - design_gap_flag: true (from P-1).
