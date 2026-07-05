@@ -78,6 +78,7 @@ All notable changes to StudyHall are documented here. Format follows
 - Class scheduling: an organizer with the manage-assignments permission can schedule a session — title, optional details, start and end time, and an optional weekly repeat with an end date — then edit or remove it, all enforced server-side so only organizers can change the schedule. (#57)
 - See the class schedule: every member gets a calendar and agenda of upcoming sessions (weekly repeats fill in automatically) and can open any session for its full details, with a calm empty state when nothing is scheduled. (#57)
 - Direct messages are here: start a private 1:1 conversation with anyone you share a study server with — open your direct messages, pick a person, and start talking, with messages arriving in real time and sending reliably even when your connection drops. You can only reach people in your servers (no directory to browse), and each person's messaging preference is respected. (#60, #61)
+- Shared study timer: every server gets one synchronized Pomodoro countdown that all members see tick in lockstep — start, pause, or reset it, and it auto-advances between Work and Break on its own. A live "N studying" roster shows who's in a focus session right now. (#63)
 
 ### Changed
 
