@@ -33,7 +33,7 @@
  *   push the open-rooms list to the joining socket.
  */
 
-import { Logger } from '@nestjs/common';
+import { HttpException, Logger } from '@nestjs/common';
 import {
   type OnGatewayConnection,
   type OnGatewayDisconnect,
@@ -62,6 +62,8 @@ import {
   STUDY_ROOM_TIMER_UPDATE_EVENT,
 } from '@studyhall/shared';
 import type { Server, Socket } from 'socket.io';
+import { isInvalidTextRepresentation } from '../auth/pg-error-utils';
+import { isUuid } from '../common/uuid.util';
 import { installWsAuthMiddleware } from '../common/ws-auth';
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
 import { StudyRoomService } from './study-room.service';
@@ -193,7 +195,7 @@ export class StudyRoomGateway implements OnGatewayInit, OnGatewayConnection, OnG
 
       this.logger.debug(`Room created and creator auto-joined by ${userId} in server ${serverId}`);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to create room';
+      const message = safeErrorMessage(err, 'Failed to create room', this.logger);
       socket.emit(STUDY_ROOM_JOIN_ERROR_EVENT, { message });
     }
   }
@@ -217,7 +219,7 @@ export class StudyRoomGateway implements OnGatewayInit, OnGatewayConnection, OnG
     try {
       await this.performJoin(socket, serverId, roomId);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to join room';
+      const message = safeErrorMessage(err, 'Failed to join room', this.logger);
       socket.emit(STUDY_ROOM_JOIN_ERROR_EVENT, { message });
     }
   }
@@ -369,7 +371,7 @@ export class StudyRoomGateway implements OnGatewayInit, OnGatewayConnection, OnG
         `${socket.id} subscribed to server rooms: serverId=${serverId} (${rooms.length} open rooms)`,
       );
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to subscribe to server rooms';
+      const message = safeErrorMessage(err, 'Failed to subscribe to server rooms', this.logger);
       socket.emit(STUDY_ROOM_JOIN_ERROR_EVENT, { message });
     }
   }
@@ -396,7 +398,7 @@ export class StudyRoomGateway implements OnGatewayInit, OnGatewayConnection, OnG
       this.roomService.startRoomTimer(userId, serverId, roomId);
       // Fan-out handled via timerUpdateCallback registered in afterInit
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to start room timer';
+      const message = safeErrorMessage(err, 'Failed to start room timer', this.logger);
       socket.emit(STUDY_ROOM_JOIN_ERROR_EVENT, { message });
     }
   }
@@ -418,7 +420,7 @@ export class StudyRoomGateway implements OnGatewayInit, OnGatewayConnection, OnG
     try {
       this.roomService.pauseRoomTimer(userId, serverId, roomId);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to pause room timer';
+      const message = safeErrorMessage(err, 'Failed to pause room timer', this.logger);
       socket.emit(STUDY_ROOM_JOIN_ERROR_EVENT, { message });
     }
   }
@@ -440,7 +442,7 @@ export class StudyRoomGateway implements OnGatewayInit, OnGatewayConnection, OnG
     try {
       this.roomService.resetRoomTimer(userId, serverId, roomId);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to reset room timer';
+      const message = safeErrorMessage(err, 'Failed to reset room timer', this.logger);
       socket.emit(STUDY_ROOM_JOIN_ERROR_EVENT, { message });
     }
   }
@@ -462,7 +464,7 @@ export class StudyRoomGateway implements OnGatewayInit, OnGatewayConnection, OnG
     try {
       this.roomService.configureRoomTimer(userId, serverId, roomId, workMinutes, breakMinutes);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to configure room timer';
+      const message = safeErrorMessage(err, 'Failed to configure room timer', this.logger);
       socket.emit(STUDY_ROOM_JOIN_ERROR_EVENT, { message });
     }
   }
@@ -516,20 +518,60 @@ export class StudyRoomGateway implements OnGatewayInit, OnGatewayConnection, OnG
 }
 
 // ---------------------------------------------------------------------------
+// Error-message helper — defense-in-depth: never leak raw DB errors to clients
+// ---------------------------------------------------------------------------
+
+/**
+ * safeErrorMessage — returns a client-safe error message.
+ *
+ * Forwards the real message for any HttpException (ForbiddenException,
+ * ConflictException, BadRequestException, etc.) — these are author-controlled,
+ * client-safe NestJS exceptions whose messages are intentionally actionable.
+ * For every other error (raw Error, DrizzleQueryError, etc.) returns the provided
+ * fallback string and logs the full error server-side — preventing raw DB detail
+ * (e.g. SQLSTATE 22P02) from leaking to clients.
+ *
+ * Mirrors the discrimination used by SupertokensExceptionFilter in
+ * apps/api/src/auth/auth.exception.filter.ts: forward HttpException as-is,
+ * genericize the rest.
+ *
+ * Belt-and-suspenders: if a malformed UUID somehow escapes the parse-layer guard
+ * and reaches the DB (SQLSTATE 22P02), that is explicitly logged as a warning.
+ */
+function safeErrorMessage(err: unknown, fallback: string, logger: Logger): string {
+  if (err instanceof HttpException) {
+    return err.message;
+  }
+  // Belt-and-suspenders: log specifically if a uuid cast error reached the DB
+  if (isInvalidTextRepresentation(err)) {
+    logger.warn(
+      'malformed-uuid cast reached the DB — parse-layer guard may have been bypassed',
+      err instanceof Error ? err.stack : String(err),
+    );
+  } else {
+    logger.error(
+      `Unexpected error in study-room gateway (${fallback})`,
+      err instanceof Error ? err.stack : String(err),
+    );
+  }
+  return fallback;
+}
+
+// ---------------------------------------------------------------------------
 // Payload parsers — type-safe, avoids noExplicitAny
 // ---------------------------------------------------------------------------
 
 function parseServerPayload(payload: unknown): { serverId: string } | null {
   if (typeof payload !== 'object' || payload === null) return null;
   const p = payload as Record<string, unknown>;
-  if (typeof p.serverId !== 'string' || p.serverId.length === 0) return null;
+  if (typeof p.serverId !== 'string' || p.serverId.length === 0 || !isUuid(p.serverId)) return null;
   return { serverId: p.serverId };
 }
 
 function parseCreatePayload(payload: unknown): { serverId: string; name: string } | null {
   if (typeof payload !== 'object' || payload === null) return null;
   const p = payload as Record<string, unknown>;
-  if (typeof p.serverId !== 'string' || p.serverId.length === 0) return null;
+  if (typeof p.serverId !== 'string' || p.serverId.length === 0 || !isUuid(p.serverId)) return null;
   if (typeof p.name !== 'string' || p.name.length === 0) return null;
   return { serverId: p.serverId, name: p.name };
 }
@@ -537,8 +579,8 @@ function parseCreatePayload(payload: unknown): { serverId: string; name: string 
 function parseRoomPayload(payload: unknown): { serverId: string; roomId: string } | null {
   if (typeof payload !== 'object' || payload === null) return null;
   const p = payload as Record<string, unknown>;
-  if (typeof p.serverId !== 'string' || p.serverId.length === 0) return null;
-  if (typeof p.roomId !== 'string' || p.roomId.length === 0) return null;
+  if (typeof p.serverId !== 'string' || p.serverId.length === 0 || !isUuid(p.serverId)) return null;
+  if (typeof p.roomId !== 'string' || p.roomId.length === 0 || !isUuid(p.roomId)) return null;
   return { serverId: p.serverId, roomId: p.roomId };
 }
 
@@ -550,8 +592,8 @@ function parseConfigPayload(payload: unknown): {
 } | null {
   if (typeof payload !== 'object' || payload === null) return null;
   const p = payload as Record<string, unknown>;
-  if (typeof p.serverId !== 'string' || p.serverId.length === 0) return null;
-  if (typeof p.roomId !== 'string' || p.roomId.length === 0) return null;
+  if (typeof p.serverId !== 'string' || p.serverId.length === 0 || !isUuid(p.serverId)) return null;
+  if (typeof p.roomId !== 'string' || p.roomId.length === 0 || !isUuid(p.roomId)) return null;
   if (typeof p.workMinutes !== 'number' || !Number.isInteger(p.workMinutes) || p.workMinutes <= 0)
     return null;
   if (
