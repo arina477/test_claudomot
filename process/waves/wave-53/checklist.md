@@ -32,15 +32,15 @@ CI/CD:
 - [x] C-2 Deploy & verify (canary skipped — pre-launch <1000 DAU)
 
 TEST:
-- [ ] T-1 Static
-- [ ] T-2 Unit
-- [ ] T-3 Contract
-- [ ] T-4 Integration
-- [ ] T-5 E2E
-- [ ] T-6 Layout
-- [ ] T-7 Perf
-- [ ] T-8 Security
-- [ ] T-9 Journey
+- [x] T-1 Static
+- [x] T-2 Unit
+- [~] T-3 Contract (SKIPPED — no contract surface)
+- [x] T-4 Integration
+- [~] T-5 E2E (SKIP — active coverage at T-8)
+- [~] T-6 Layout (SKIP — non-UI)
+- [~] T-7 Perf (SKIP — not heavy)
+- [x] T-8 Security
+- [x] T-9 Journey
 
 VERIFY:
 - [ ] V-1 Independent reviews (Karen + jenny, parallel)
