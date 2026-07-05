@@ -79,6 +79,7 @@ All notable changes to StudyHall are documented here. Format follows
 - See the class schedule: every member gets a calendar and agenda of upcoming sessions (weekly repeats fill in automatically) and can open any session for its full details, with a calm empty state when nothing is scheduled. (#57)
 - Direct messages are here: start a private 1:1 conversation with anyone you share a study server with — open your direct messages, pick a person, and start talking, with messages arriving in real time and sending reliably even when your connection drops. You can only reach people in your servers (no directory to browse), and each person's messaging preference is respected. (#60, #61)
 - Shared study timer: every server gets one synchronized Pomodoro countdown that all members see tick in lockstep — start, pause, or reset it, and it auto-advances between Work and Break on its own. A live "N studying" roster shows who's in a focus session right now. (#63)
+- Set your server's own study-timer lengths: any member can change the Work and Break minutes (Work 1–120, Break 1–60), and the new lengths apply the next time the timer starts and update live on everyone's screen. Lengths can only be changed while the timer is idle — reset it first to adjust. (#64)
 
 ### Changed
 
@@ -102,3 +103,4 @@ All notable changes to StudyHall are documented here. Format follows
 - Avatar image requests now return a clean error instead of a server error on odd input: an unusual control character in a user id returns a "bad request" and asking for a picture that was never uploaded returns a "not found". A hardening fix — nothing changes for normal use. (#54)
 - On a narrower window the class-schedule session details now open as a proper full-screen overlay instead of getting squeezed, so the schedule is usable on smaller screens and tablets. (#58)
 - Opening and closing a session's details is now smoother for keyboard and screen-reader users: focus returns to where you were when you close it, and the details always reflect the latest schedule. (#58)
+- On narrower screens the compact study-timer bar now shows its phase-colored edge again — emerald while in Work, amber in Break — so the current phase reads at a glance where it was previously washed out. (#64)
