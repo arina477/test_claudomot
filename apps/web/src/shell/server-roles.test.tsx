@@ -239,6 +239,11 @@ describe('ServerRolesPage', () => {
     await waitFor(() => expect(screen.getByTestId('role-name-input')).toBeInTheDocument());
 
     fireEvent.change(screen.getByTestId('role-name-input'), { target: { value: 'Changed' } });
+    // Wait for the dirty-state flush so the Save button is enabled before clicking.
+    // fireEvent does not wrap in act(), so React 18 may not flush setDirty(true)
+    // before the next fireEvent.click — leaving the button disabled and onClick
+    // never invoked under CI's slower parallel runner.
+    await waitFor(() => expect(screen.getByTestId('save-role-btn')).not.toBeDisabled());
     fireEvent.click(screen.getByTestId('save-role-btn'));
 
     await waitFor(() => {

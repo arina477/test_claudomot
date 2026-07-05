@@ -35,7 +35,11 @@ import {
 import { ForbiddenException } from '@nestjs/common';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RbacService } from '../../src/rbac/rbac.service';
-import { BREAK_DURATION_MS, StudyTimerService, WORK_DURATION_MS } from '../../src/study-timer/study-timer.service';
+import {
+  BREAK_DURATION_MS,
+  StudyTimerService,
+  WORK_DURATION_MS,
+} from '../../src/study-timer/study-timer.service';
 
 // Skip suite when DATABASE_URL_TEST is absent
 const SKIP = !process.env.DATABASE_URL_TEST;
@@ -141,9 +145,10 @@ describe.skipIf(SKIP)(
         run_state: string;
         phase: string;
         paused_remaining_ms: number | null;
-      }>('SELECT run_state, phase, paused_remaining_ms FROM server_study_timer WHERE server_id = $1', [
-        SERVER_ID,
-      ]);
+      }>(
+        'SELECT run_state, phase, paused_remaining_ms FROM server_study_timer WHERE server_id = $1',
+        [SERVER_ID],
+      );
       expect(rows).toHaveLength(1);
       expect(rows[0]?.run_state).toBe('running');
       expect(rows[0]?.phase).toBe('work');
@@ -235,9 +240,10 @@ describe.skipIf(SKIP)(
         started_at: string | null;
         ends_at: string | null;
         paused_remaining_ms: number | null;
-      }>('SELECT run_state, started_at, ends_at, paused_remaining_ms FROM server_study_timer WHERE server_id = $1', [
-        SERVER_ID,
-      ]);
+      }>(
+        'SELECT run_state, started_at, ends_at, paused_remaining_ms FROM server_study_timer WHERE server_id = $1',
+        [SERVER_ID],
+      );
       expect(rows[0]?.run_state).toBe('idle');
       expect(rows[0]?.started_at).toBeNull();
       expect(rows[0]?.ends_at).toBeNull();
@@ -432,10 +438,10 @@ describe.skipIf(SKIP)(
       // Directly update ends_at to be 3 min from now (simulating mid-run GET)
       const threeMin = 3 * 60 * 1000;
       const newEndsAt = new Date(Date.now() + threeMin);
-      await harnessQuery(
-        `UPDATE server_study_timer SET ends_at = $1 WHERE server_id = $2`,
-        [newEndsAt.toISOString(), SERVER_ID],
-      );
+      await harnessQuery('UPDATE server_study_timer SET ends_at = $1 WHERE server_id = $2', [
+        newEndsAt.toISOString(),
+        SERVER_ID,
+      ]);
 
       const dto = await sut.getTimer(SERVER_ID, MEMBER_ID);
 
