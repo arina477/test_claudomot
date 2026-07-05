@@ -195,6 +195,7 @@ export {
   StudyTimerSchema,
   STUDY_TIMER_UPDATE_EVENT,
   STUDY_TIMER_PRESENCE_EVENT,
+  STUDY_TIMER_JOIN_ERROR_EVENT,
   StudyTimerUpdateEventSchema,
   StudyTimerPresenceEventSchema,
 } from './study-timer.js';

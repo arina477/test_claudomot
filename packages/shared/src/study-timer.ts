@@ -52,6 +52,13 @@ export const STUDY_TIMER_UPDATE_EVENT = 'study-timer:update' as const;
 /** Socket.IO event name: ephemeral live-presence roster broadcast on viewer join/leave. */
 export const STUDY_TIMER_PRESENCE_EVENT = 'study-timer:presence' as const;
 
+/**
+ * Socket.IO event name: join failure notification emitted to the joining socket
+ * only (invalid payload or non-member).  Using a namespaced event rather than
+ * the reserved Socket.IO 'error' channel lets clients subscribe explicitly.
+ */
+export const STUDY_TIMER_JOIN_ERROR_EVENT = 'study-timer:join_error' as const;
+
 // ---------------------------------------------------------------------------
 // StudyTimerUpdateEventSchema — `study-timer:update` payload
 // wave-49 M8 task cb81bf03

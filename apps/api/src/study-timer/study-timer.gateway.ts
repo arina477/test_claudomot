@@ -41,7 +41,11 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import type { StudyTimerPresenceEvent, StudyTimerUpdateEvent } from '@studyhall/shared';
-import { STUDY_TIMER_PRESENCE_EVENT, STUDY_TIMER_UPDATE_EVENT } from '@studyhall/shared';
+import {
+  STUDY_TIMER_JOIN_ERROR_EVENT,
+  STUDY_TIMER_PRESENCE_EVENT,
+  STUDY_TIMER_UPDATE_EVENT,
+} from '@studyhall/shared';
 import { and, eq } from 'drizzle-orm';
 import type { Server, Socket } from 'socket.io';
 import { installWsAuthMiddleware } from '../common/ws-auth';
@@ -166,7 +170,7 @@ export class StudyTimerGateway implements OnGatewayInit, OnGatewayConnection, On
 
     const parsed = parseServerIdPayload(payload);
     if (!parsed) {
-      socket.emit('error', { message: 'Invalid payload: serverId required' });
+      socket.emit(STUDY_TIMER_JOIN_ERROR_EVENT, { message: 'Invalid payload: serverId required' });
       return;
     }
     const { serverId } = parsed;
@@ -181,12 +185,16 @@ export class StudyTimerGateway implements OnGatewayInit, OnGatewayConnection, On
         .limit(1);
       isMember = row !== undefined;
     } catch {
-      socket.emit('error', { message: 'Internal error checking membership' });
+      socket.emit(STUDY_TIMER_JOIN_ERROR_EVENT, {
+        message: 'Internal error checking membership',
+      });
       return;
     }
 
     if (!isMember) {
-      socket.emit('error', { message: 'Forbidden: not a member of this server' });
+      socket.emit(STUDY_TIMER_JOIN_ERROR_EVENT, {
+        message: 'Forbidden: not a member of this server',
+      });
       return;
     }
 
@@ -229,7 +237,7 @@ export class StudyTimerGateway implements OnGatewayInit, OnGatewayConnection, On
 
     const parsed = parseServerIdPayload(payload);
     if (!parsed) {
-      socket.emit('error', { message: 'Invalid payload: serverId required' });
+      socket.emit(STUDY_TIMER_JOIN_ERROR_EVENT, { message: 'Invalid payload: serverId required' });
       return;
     }
     const { serverId } = parsed;
