@@ -32,3 +32,20 @@
 
 ## Gate verdict log
 <head-builder at B-6>
+
+## Status — block exit
+```yaml
+build_block_status:    complete
+branch:                wave-50-timer-durations
+stages_run:            [B-0, B-1, B-2, B-3, B-4, B-5, B-6]
+stages_skipped:        []
+review_verdict:        APPROVE
+deviations_logged:
+  - B-3: computeDisplaySeconds idle uses DTO durations (spec AC); DurationConfigForm sub-component
+  - B-2: startTimer pre-reads row for sticky-config
+  - B-6: 2 fix-up commits (971815df config-error surfacing, 3d5b53b B-5 format)
+last_commit_sha:       971815df
+ready_for_ci:          true
+gate_status:           gate-passed
+```
+head-builder B-6 attempt-1: APPROVED (both carries verified). /review: 0 crit/high after 1 fix-up round. Action 6 PASS.
