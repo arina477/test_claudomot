@@ -37,7 +37,7 @@
  *   import chain in unit-test context.
  */
 
-import { ForbiddenException } from '@nestjs/common';
+import { ConflictException, ForbiddenException } from '@nestjs/common';
 import type { Logger } from '@nestjs/common';
 import {
   STUDY_ROOM_JOIN_ERROR_EVENT,
@@ -550,7 +550,7 @@ describe('StudyRoomGateway — wave-53 UUID guard + generic error mapping', () =
   // UUID-4: unexpected error in handler → generic fallback to client + logger called
   // ---------------------------------------------------------------------------
 
-  it('UUID-4: unexpected internal error → generic fallback to client; logger.error called with detail', async () => {
+  it('UUID-4: unexpected internal error → generic fallback to client; logger.error called with stack detail (not [object Object])', async () => {
     const internalError = new Error('internal DB blowup — secret query details here');
     const svc = makeServiceMock({
       getOpenRooms: vi.fn().mockRejectedValue(internalError),
@@ -573,8 +573,36 @@ describe('StudyRoomGateway — wave-53 UUID guard + generic error mapping', () =
     // Client gets the generic fallback, NOT the raw internal message
     expect(msg).not.toContain('internal DB blowup');
     expect(msg).not.toContain('secret query details');
-    // Logger must have been called with the full error detail
+    // Logger must have been called with the full stack detail (not '[object Object]')
     expect(loggerErrorSpy).toHaveBeenCalled();
+    const loggedDetail = loggerErrorSpy.mock.calls[0]?.[1];
+    expect(typeof loggedDetail).toBe('string');
+    expect(loggedDetail).not.toBe('[object Object]');
+    // Stack trace contains the error message text (server-side detail preserved)
+    expect(loggedDetail as string).toContain('internal DB blowup');
+  });
+
+  // ---------------------------------------------------------------------------
+  // UUID-4b: non-Forbidden HttpException → message forwarded (Medium fix lock)
+  // ---------------------------------------------------------------------------
+
+  it('UUID-4b: ConflictException from service → exact message forwarded to client (not genericized)', async () => {
+    const conflictMsg = 'Reset the room timer to change durations';
+    const svc = makeServiceMock({
+      getOpenRooms: vi.fn().mockRejectedValue(new ConflictException(conflictMsg)),
+    });
+    gateway = new StudyRoomGateway(svc as never);
+    (gateway as unknown as { server: FakeServer }).server = fakeServer;
+
+    const socket = makeSocket(USER_A);
+
+    await gateway.handleSubscribeServerRooms(socket as never, { serverId: SERVER_ID });
+
+    expect(socket.emitted).toHaveLength(1);
+    expect(socket.emitted[0]?.event).toBe(STUDY_ROOM_JOIN_ERROR_EVENT);
+    const msg = (socket.emitted[0]?.payload as { message: string }).message;
+    // ConflictException is an HttpException — message must be forwarded, not genericized
+    expect(msg).toBe(conflictMsg);
   });
 
   // ---------------------------------------------------------------------------

@@ -33,7 +33,7 @@
  *   push the open-rooms list to the joining socket.
  */
 
-import { ForbiddenException, Logger } from '@nestjs/common';
+import { HttpException, Logger } from '@nestjs/common';
 import {
   type OnGatewayConnection,
   type OnGatewayDisconnect,
@@ -524,24 +524,35 @@ export class StudyRoomGateway implements OnGatewayInit, OnGatewayConnection, OnG
 /**
  * safeErrorMessage — returns a client-safe error message.
  *
- * Forwards the real message only for ForbiddenException (user-safe authz denial,
- * e.g. "You are not a member of this server"). For every other error, returns the
- * provided fallback string and logs the full error server-side.
+ * Forwards the real message for any HttpException (ForbiddenException,
+ * ConflictException, BadRequestException, etc.) — these are author-controlled,
+ * client-safe NestJS exceptions whose messages are intentionally actionable.
+ * For every other error (raw Error, DrizzleQueryError, etc.) returns the provided
+ * fallback string and logs the full error server-side — preventing raw DB detail
+ * (e.g. SQLSTATE 22P02) from leaking to clients.
+ *
+ * Mirrors the discrimination used by SupertokensExceptionFilter in
+ * apps/api/src/auth/auth.exception.filter.ts: forward HttpException as-is,
+ * genericize the rest.
  *
  * Belt-and-suspenders: if a malformed UUID somehow escapes the parse-layer guard
  * and reaches the DB (SQLSTATE 22P02), that is explicitly logged as a warning.
  */
 function safeErrorMessage(err: unknown, fallback: string, logger: Logger): string {
-  if (err instanceof ForbiddenException) {
+  if (err instanceof HttpException) {
     return err.message;
   }
   // Belt-and-suspenders: log specifically if a uuid cast error reached the DB
   if (isInvalidTextRepresentation(err)) {
-    logger.warn('malformed-uuid cast reached the DB — parse-layer guard may have been bypassed', {
-      error: err,
-    });
+    logger.warn(
+      'malformed-uuid cast reached the DB — parse-layer guard may have been bypassed',
+      err instanceof Error ? err.stack : String(err),
+    );
   } else {
-    logger.error(`Unexpected error in study-room gateway (${fallback})`, { error: err });
+    logger.error(
+      `Unexpected error in study-room gateway (${fallback})`,
+      err instanceof Error ? err.stack : String(err),
+    );
   }
   return fallback;
 }

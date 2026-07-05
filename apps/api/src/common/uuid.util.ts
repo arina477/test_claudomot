@@ -8,7 +8,11 @@ import { z } from 'zod';
  *
  * Reused by study-room gateway parse-layer guard (wave-53) and the deferred
  * app-wide malformed-uuid sweep (task c52a7a52).
+ *
+ * Schema is hoisted to module scope so it is constructed once, not per call.
  */
+const UUID_SCHEMA = z.string().uuid();
+
 export function isUuid(value: string): boolean {
-  return z.string().uuid().safeParse(value).success;
+  return UUID_SCHEMA.safeParse(value).success;
 }
