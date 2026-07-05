@@ -3,7 +3,11 @@
 **Block:** P (Product)
 **Wave topic:** M8 study-group slice 2 — study-timer custom work/break durations (configurable Pomodoro) + F-1 slim-bar phase-indicator fix
 **Block exit gate:** P-4
-**Status:** in-progress
+**Status:** gate-passed → D-block (design_gap_flag: true)
+
+## B-block carries (from P-4 Phase-2 karen — MANDATORY at B-2)
+1. `configureDurations` emits internal `STUDY_TIMER_UPDATED_EVENT` ('study-timer.updated'), NOT the wire event — gateway `@OnEvent` fans out `study-timer:update`.
+2. Thread per-row work/break durations through `phaseDurationMs`/`computeCurrentPhase`/`doPhaseAdvance`/`selfHealIfOverdue` (row-aware), not only `startTimer` — else self-heal corrupts custom-duration phase math with 25/5.
 
 ## Stage deliverables
 
@@ -13,7 +17,7 @@
 | P-1 | stages/P-1-decompose.md | done | multi-spec; floor waived (override-ship, resolve-by-rule); design_gap_flag true |
 | P-2 | stages/P-2-spec.md | done | spec in f4b3659e.description; 2 blocks; idle-only config (409); migration 0023 |
 | P-3 | stages/P-3-plan.md | done | reuse wave-49 substrate; migration 0023; node+react specialists; no new deps |
-| P-4 | stages/P-4-gemini-review.md | pending | |
+| P-4 | stages/P-4-gemini-review.md | done | head-product APPROVED; karen+jenny APPROVE, Gemini UNAVAILABLE (429). Gate PASSED. |
 
 ## Block-specific context
 
