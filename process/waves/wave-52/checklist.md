@@ -37,8 +37,8 @@ TEST:
 - [x] T-2 Unit
 - [x] T-3 Contract
 - [x] T-4 Integration (skipped)
-- [ ] T-5 E2E
-- [ ] T-6 Layout
+- [x] T-5 E2E
+- [x] T-6 Layout
 - [~] T-7 Perf (skipped — not heavy)
 - [ ] T-8 Security
 - [ ] T-9 Journey

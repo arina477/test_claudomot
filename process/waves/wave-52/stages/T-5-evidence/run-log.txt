@@ -1,0 +1,177 @@
+=== LOGIN ===
+  [A] websocket opened: wss://api-production-b93e.up.railway.app/socket.io/?EIO=4&transport=websocket&sid=eS0pRhH1UyGe0xC7AAAT
+  [A] after login url= https://web-production-bce1a8.up.railway.app/app
+  [B] websocket opened: wss://api-production-b93e.up.railway.app/socket.io/?EIO=4&transport=websocket&sid=Ic5199NdJx0efTXIAAAW
+  [B] after login url= https://web-production-bce1a8.up.railway.app/app
+
+========== ITERATION 1 — room "GrindA-123025" ==========
+[S0] A: skeleton resolves past skeleton to list/empty
+  [A] websocket opened: wss://api-production-b93e.up.railway.app/socket.io/?EIO=4&transport=websocket&sid=m4aawMSFP5rohDvcAAAZ
+  [A] selected server
+  [shot] iter1-S0-A-panel.png
+[S0] result=PASS skeleton=false list=false empty=true joined=false
+[S1] A creates room "GrindA-123025" -> auto-join
+  [shot] iter1-S1-A-joined.png
+[S1] result=PASS joined=true rosterCount=1 names=["SYou"] focusing="1 focusing now" header="GrindA-123025"
+[S2] B opens server view -> sees room -> joins
+  [B] websocket opened: wss://api-production-b93e.up.railway.app/socket.io/?EIO=4&transport=websocket&sid=au-Hbkim6Nm808jEAAAe
+  [B] selected server
+  [shot] iter1-S2-B-sees-room.png
+[S2] B sees room card: {"id":"room-card-21d9e0dd-a793-4dce-815d-1c7bbbd7521f","label":"Join GrindA-123025, 1 focusing","text":"GrindA-1230251 focusingAClick to join"}
+[S2] B card shows "1 focusing"? true
+  [shot] iter1-S2-B-joined.png
+  [shot] iter1-S2-A-roster2.png
+[S2] B roster=2 names=["Sstudyhall-e2e-fixture","SYou"]
+[S2] A roster(live)=2 names=["SYou","Sstudyhall-e2e-fixture-b"] focusing="2 focusing now"
+[S2] result=PASS
+[S3] A starts room timer -> B sees running -> A pauses -> B sees paused
+  [shot] iter1-S3-B-running.png
+[S3] B sees running: pauseBtn=true display 24:59 -> 24:57 changed=true
+  [shot] iter1-S3-B-paused.png
+[S3] B sees paused: pausedBadge=true resumeBtn=true display 24:57 -> 24:57 frozen=true
+[S3] result=PASS
+[S4] B leaves -> A roster 1 -> A leaves -> room removed
+  [shot] iter1-S4-A-roster1.png
+[S4] after B leave: A roster=1 focusing="1 focusing now"
+  [shot] iter1-S4-A-removed.png
+  [shot] iter1-S4-B-removed.png
+[S4] room gone A=true B=true
+[S4] result=PASS
+
+========== ITERATION 2 — room "GrindB-136391" ==========
+[S0] A: skeleton resolves past skeleton to list/empty
+  [A] websocket opened: wss://api-production-b93e.up.railway.app/socket.io/?EIO=4&transport=websocket&sid=sOY5qBfsqrntc84cAAAj
+  [A] selected server
+  [shot] iter2-S0-A-panel.png
+[S0] result=PASS skeleton=false list=false empty=true joined=false
+[S1] A creates room "GrindB-136391" -> auto-join
+  [shot] iter2-S1-A-joined.png
+[S1] result=PASS joined=true rosterCount=1 names=["SYou"] focusing="1 focusing now" header="GrindB-136391"
+[S2] B opens server view -> sees room -> joins
+  [B] websocket opened: wss://api-production-b93e.up.railway.app/socket.io/?EIO=4&transport=websocket&sid=2YYWlMJWFtySF--GAAAo
+  [B] selected server
+  [shot] iter2-S2-B-sees-room.png
+[S2] B sees room card: {"id":"room-card-21e2bcb9-82d2-4d4f-9a61-54b6411fb608","label":"Join GrindB-136391, 1 focusing","text":"GrindB-1363911 focusingAClick to join"}
+[S2] B card shows "1 focusing"? true
+  [shot] iter2-S2-B-joined.png
+  [shot] iter2-S2-A-roster2.png
+[S2] B roster=2 names=["Sstudyhall-e2e-fixture","SYou"]
+[S2] A roster(live)=2 names=["SYou","Sstudyhall-e2e-fixture-b"] focusing="2 focusing now"
+[S2] result=PASS
+[S3] A starts room timer -> B sees running -> A pauses -> B sees paused
+  [shot] iter2-S3-B-running.png
+[S3] B sees running: pauseBtn=true display 24:59 -> 24:57 changed=true
+  [shot] iter2-S3-B-paused.png
+[S3] B sees paused: pausedBadge=true resumeBtn=true display 24:57 -> 24:57 frozen=true
+[S3] result=PASS
+[S4] B leaves -> A roster 1 -> A leaves -> room removed
+  [shot] iter2-S4-A-roster1.png
+[S4] after B leave: A roster=1 focusing="1 focusing now"
+  [shot] iter2-S4-A-removed.png
+  [shot] iter2-S4-B-removed.png
+[S4] room gone A=true B=true
+[S4] result=PASS
+
+========== S5 LAYOUT ==========
+  [A] websocket opened: wss://api-production-b93e.up.railway.app/socket.io/?EIO=4&transport=websocket&sid=SfhKISjSPtaTp8rMAAAt
+  [A] selected server
+  [shot] S5-desktop-1360.png
+[S5] body bg=rgb(10, 10, 11) hasVoiceVideo=false panelExists=true
+  [shot] S5-compact-900.png
+  [shot] S5-compact-joined-bar.png
+[S5] compact joined bar present=true (viewport 900px)
+
+=== CONSOLE ERRORS A ===
+  A: Failed to load resource: the server responded with a status of 429 ()
+  A: Failed to load resource: the server responded with a status of 429 ()
+=== CONSOLE ERRORS B ===
+  B: Failed to load resource: the server responded with a status of 429 ()
+  B: Failed to load resource: the server responded with a status of 429 ()
+=== 5xx A ===
+=== 5xx B ===
+=== WS FRAMES A (study-room, first 30) ===
+  A: SEND 40/study-room,
+  A: RECV 40/study-room,{"sid":"po4EbAL7PqinPp9fAAAd"}
+  A: SEND 42/study-room,["subscribe_server_rooms",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c"}]
+  A: SEND 42/study-room,["subscribe_server_rooms",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c"}]
+  A: RECV 42/study-room,["study-room:rooms",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","rooms":[]}]
+  A: RECV 42/study-room,["study-room:rooms",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","rooms":[]}]
+  A: SEND 42/study-room,["create_focus_room",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","name":"GrindA-123025"}]
+  A: RECV 42/study-room,["study-room:timer_update",{"roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","timer":{"roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","phase":"work","runState":"idle","endsAt":null,"remainingMs":0,"running":false,"updatedBy":nu…
+  A: RECV 42/study-room,["study-room:rooms",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","rooms":[{"id":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","name":"GrindA-123025","count":1}]}]
+  A: RECV 42/study-room,["study-room:presence",{"roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","roster":{"roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","viewers":[{"userId":"21984eb2-8029-4c1b-9e73-bc586a0be4d2","displayName":"studyhall-e2e-fixture…
+  A: RECV 42/study-room,["study-room:rooms",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","rooms":[{"id":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","name":"GrindA-123025","count":1}]}]
+  A: RECV 42/study-room,["study-room:presence",{"roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","roster":{"roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","viewers":[{"userId":"21984eb2-8029-4c1b-9e73-bc586a0be4d2","displayName":"studyhall-e2e-fixture…
+  A: RECV 42/study-room,["study-room:rooms",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","rooms":[{"id":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","name":"GrindA-123025","count":2}]}]
+  A: SEND 42/study-room,["study_room_timer_start",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f"}]
+  A: RECV 42/study-room,["study-room:timer_update",{"roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","timer":{"roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","phase":"work","runState":"running","endsAt":"2026-07-05T22:13:48.018Z","remainingMs":1500000…
+  A: SEND 42/study-room,["study_room_timer_pause",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f"}]
+  A: RECV 42/study-room,["study-room:timer_update",{"roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","timer":{"roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","phase":"work","runState":"paused","endsAt":null,"remainingMs":1497318,"running":false,"updat…
+  A: SEND 42/study-room,["study_room_timer_reset",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f"}]
+  A: RECV 42/study-room,["study-room:timer_update",{"roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","timer":{"roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","phase":"work","runState":"idle","endsAt":null,"remainingMs":0,"running":false,"updatedBy":"2…
+  A: RECV 42/study-room,["study-room:presence",{"roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","roster":{"roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","viewers":[{"userId":"21984eb2-8029-4c1b-9e73-bc586a0be4d2","displayName":"studyhall-e2e-fixture…
+  A: RECV 42/study-room,["study-room:rooms",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","rooms":[{"id":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","name":"GrindA-123025","count":1}]}]
+  A: SEND 42/study-room,["leave_focus_room",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f"}]
+  A: RECV 42/study-room,["study-room:rooms",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","rooms":[]}]
+  A: SEND 40/study-room,
+  A: RECV 40/study-room,{"sid":"gj7qyY4hztsV_C5FAAAn"}
+  A: SEND 42/study-room,["subscribe_server_rooms",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c"}]
+  A: SEND 42/study-room,["subscribe_server_rooms",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c"}]
+  A: RECV 42/study-room,["study-room:rooms",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","rooms":[]}]
+  A: RECV 42/study-room,["study-room:rooms",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","rooms":[]}]
+  A: SEND 42/study-room,["create_focus_room",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","name":"GrindB-136391"}]
+=== WS FRAMES B (study-room, first 30) ===
+  B: SEND 40/study-room,
+  B: RECV 40/study-room,{"sid":"a4zqI3dcugBGMuGKAAAi"}
+  B: SEND 42/study-room,["subscribe_server_rooms",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c"}]
+  B: SEND 42/study-room,["subscribe_server_rooms",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c"}]
+  B: RECV 42/study-room,["study-room:rooms",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","rooms":[{"id":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","name":"GrindA-123025","count":1}]}]
+  B: RECV 42/study-room,["study-room:rooms",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","rooms":[{"id":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","name":"GrindA-123025","count":1}]}]
+  B: SEND 42/study-room,["join_focus_room",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f"}]
+  B: RECV 42/study-room,["study-room:timer_update",{"roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","timer":{"roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","phase":"work","runState":"idle","endsAt":null,"remainingMs":0,"running":false,"updatedBy":nu…
+  B: RECV 42/study-room,["study-room:rooms",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","rooms":[{"id":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","name":"GrindA-123025","count":2}]}]
+  B: RECV 42/study-room,["study-room:presence",{"roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","roster":{"roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","viewers":[{"userId":"21984eb2-8029-4c1b-9e73-bc586a0be4d2","displayName":"studyhall-e2e-fixture…
+  B: RECV 42/study-room,["study-room:rooms",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","rooms":[{"id":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","name":"GrindA-123025","count":2}]}]
+  B: RECV 42/study-room,["study-room:timer_update",{"roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","timer":{"roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","phase":"work","runState":"running","endsAt":"2026-07-05T22:13:48.018Z","remainingMs":1500000…
+  B: RECV 42/study-room,["study-room:timer_update",{"roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","timer":{"roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","phase":"work","runState":"paused","endsAt":null,"remainingMs":1497318,"running":false,"updat…
+  B: RECV 42/study-room,["study-room:timer_update",{"roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","timer":{"roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","phase":"work","runState":"idle","endsAt":null,"remainingMs":0,"running":false,"updatedBy":"2…
+  B: SEND 42/study-room,["leave_focus_room",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","roomId":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f"}]
+  B: RECV 42/study-room,["study-room:rooms",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","rooms":[{"id":"21d9e0dd-a793-4dce-815d-1c7bbbd7521f","serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","name":"GrindA-123025","count":1}]}]
+  B: RECV 42/study-room,["study-room:rooms",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","rooms":[]}]
+  B: RECV 42/study-room,["study-room:rooms",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","rooms":[{"id":"21e2bcb9-82d2-4d4f-9a61-54b6411fb608","serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","name":"GrindB-136391","count":1}]}]
+  B: SEND 40/study-room,
+  B: RECV 40/study-room,{"sid":"rigasxMDZ16w2JCsAAAs"}
+  B: SEND 42/study-room,["subscribe_server_rooms",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c"}]
+  B: SEND 42/study-room,["subscribe_server_rooms",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c"}]
+  B: RECV 42/study-room,["study-room:rooms",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","rooms":[{"id":"21e2bcb9-82d2-4d4f-9a61-54b6411fb608","serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","name":"GrindB-136391","count":1}]}]
+  B: RECV 42/study-room,["study-room:rooms",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","rooms":[{"id":"21e2bcb9-82d2-4d4f-9a61-54b6411fb608","serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","name":"GrindB-136391","count":1}]}]
+  B: SEND 42/study-room,["join_focus_room",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","roomId":"21e2bcb9-82d2-4d4f-9a61-54b6411fb608"}]
+  B: RECV 42/study-room,["study-room:timer_update",{"roomId":"21e2bcb9-82d2-4d4f-9a61-54b6411fb608","timer":{"roomId":"21e2bcb9-82d2-4d4f-9a61-54b6411fb608","phase":"work","runState":"idle","endsAt":null,"remainingMs":0,"running":false,"updatedBy":nu…
+  B: RECV 42/study-room,["study-room:rooms",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","rooms":[{"id":"21e2bcb9-82d2-4d4f-9a61-54b6411fb608","serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","name":"GrindB-136391","count":2}]}]
+  B: RECV 42/study-room,["study-room:presence",{"roomId":"21e2bcb9-82d2-4d4f-9a61-54b6411fb608","roster":{"roomId":"21e2bcb9-82d2-4d4f-9a61-54b6411fb608","viewers":[{"userId":"21984eb2-8029-4c1b-9e73-bc586a0be4d2","displayName":"studyhall-e2e-fixture…
+  B: RECV 42/study-room,["study-room:rooms",{"serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","rooms":[{"id":"21e2bcb9-82d2-4d4f-9a61-54b6411fb608","serverId":"ad62cd12-b78e-4a85-a214-042cf176b16c","name":"GrindB-136391","count":2}]}]
+  B: RECV 42/study-room,["study-room:timer_update",{"roomId":"21e2bcb9-82d2-4d4f-9a61-54b6411fb608","timer":{"roomId":"21e2bcb9-82d2-4d4f-9a61-54b6411fb608","phase":"work","runState":"running","endsAt":"2026-07-05T22:14:01.347Z","remainingMs":1500000…
+
+=== RESULTS ===
+{
+  "iter1": {
+    "S0": "PASS",
+    "S1": "PASS",
+    "S2": "PASS",
+    "S3": "PASS",
+    "S4": "PASS"
+  },
+  "iter2": {
+    "S0": "PASS",
+    "S1": "PASS",
+    "S2": "PASS",
+    "S3": "PASS",
+    "S4": "PASS"
+  },
+  "S5": {
+    "darkbg": "rgb(10, 10, 11)",
+    "noVoiceVideo": true,
+    "rosterAria": null,
+    "compactBar": true
+  }
+}
