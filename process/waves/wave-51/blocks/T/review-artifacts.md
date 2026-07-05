@@ -24,4 +24,15 @@
 `process/waves/wave-51/blocks/T/findings-aggregate.md`
 
 ## Gate verdict log
-<head-tester at T-9>
+head-tester T-9 attempt-1: **APPROVED**. DM 3-panel verified live (632/888px); backdrop fix solid; F-1 pre-existing → V-2. No rework.
+
+## Status — block exit
+```yaml
+test_block_status: complete
+stages_run: [T-1, T-2, T-5, T-6, T-9]
+stages_skipped: [T-3 (no contract), T-4 (no schema), T-7 (not heavy), T-8 (non-auth)]
+findings_total: 1
+findings_critical: 0
+ready_for_verify: true
+gate_status: gate-passed
+```

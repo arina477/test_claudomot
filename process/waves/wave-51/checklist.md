@@ -39,7 +39,7 @@ TEST:
 - [x] T-6 Layout
 - [~] T-7 Perf (skipped — not heavy) (skip if not heavy)
 - [~] T-8 Security (skipped — non-auth)
-- [ ] T-9 Journey
+- [x] T-9 Journey
 
 VERIFY:
 - [ ] V-1 Independent reviews (Karen + jenny, parallel)
