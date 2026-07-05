@@ -341,6 +341,9 @@ export class StudyTimerService implements OnModuleDestroy {
       this.logger.debug(
         `doPhaseAdvance no-op for server=${serverId} expectedEndsAt=${expectedEndsAt.toISOString()} (row changed or missing)`,
       );
+      // The setTimeout for this serverId already fired; remove the spent entry so
+      // deleted/abandoned servers don't accumulate stale handles in the Map.
+      this.timeouts.delete(serverId);
       return;
     }
 
@@ -371,6 +374,8 @@ export class StudyTimerService implements OnModuleDestroy {
       this.logger.debug(
         `doPhaseAdvance UPDATE no-op for server=${serverId} (race condition resolved correctly)`,
       );
+      // Concurrent trigger already advanced; remove our spent entry from the Map.
+      this.timeouts.delete(serverId);
       return;
     }
 
