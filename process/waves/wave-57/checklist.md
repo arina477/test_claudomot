@@ -19,16 +19,16 @@ No measured pause trigger fired at wave-56 N-3; loop CONTINUES.
 -->
 
 PRODUCT:
-- [ ] P-0 Frame (discover + reframe)
-- [ ] P-1 Decompose
-- [ ] P-2 Spec
-- [ ] P-3 Plan
-- [ ] P-4 Gate
+- [x] P-0 Frame (discover + reframe)
+- [x] P-1 Decompose
+- [x] P-2 Spec
+- [x] P-3 Plan
+- [x] P-4 Gate
 
-DESIGN (skip block if non-UI wave):
-- [ ] D-1 Brief
-- [ ] D-2 Variants (with bounded iteration)
-- [ ] D-3 Review & adopt
+DESIGN (SKIPPED — design_gap_flag false, state-fix only):
+- [~] D-1 Brief
+- [~] D-2 Variants (with bounded iteration)
+- [~] D-3 Review & adopt
 
 BUILD:
 - [ ] B-0 Branch & schema
