@@ -170,6 +170,7 @@ export function ChannelSidebar() {
     openAssignments,
     scheduleOpen,
     openSchedule,
+    refetchDetail,
   } = useServers();
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [rolesPageOpen, setRolesPageOpen] = useState(false);
@@ -348,6 +349,7 @@ export function ChannelSidebar() {
             setOverviewPageOpen(false);
             setRolesPageOpen(true);
           }}
+          onSaveSuccess={refetchDetail}
         />
       )}
 
