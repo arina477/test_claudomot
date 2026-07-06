@@ -96,6 +96,12 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
   // Key: `${messageId}:${emoji}`, value: true while the POST is in-flight.
   const inflightReactionsRef = useRef<Set<string>>(new Set());
 
+  // Map from confirmed server message id → idempotencyKey.
+  // Populated when any drain/send onSuccess callback fires; used by the
+  // message:deleted handler to tombstone B's own message even when the
+  // optimistic entry hasn't been reconciled out yet (race window).
+  const confirmedIdToKeyRef = useRef<Map<string, string>>(new Map());
+
   useEffect(() => {
     mountedRef.current = true;
     return () => {
@@ -118,6 +124,9 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
             : api.sendDmMessage(target.conversationId, body),
         (idempotencyKey, confirmedId) => {
           if (!mountedRef.current) return;
+          // Track server id → key so message:deleted can tombstone this entry
+          // if the delete arrives before the optimistic row is fully reconciled.
+          confirmedIdToKeyRef.current.set(confirmedId, idempotencyKey);
           // Reconcile: add confirmed message to real list, remove optimistic.
           setRealMessages((prev) => {
             if (prev.some((m) => m.id === confirmedId)) return prev;
@@ -238,6 +247,7 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
     if (!channelId) {
       setRealMessages([]);
       setOptimisticMessages([]);
+      confirmedIdToKeyRef.current.clear();
       setLoadingInitial(false);
       setErrorInitial(false);
       setNextCursor(null);
@@ -254,6 +264,7 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
 
     setRealMessages([]);
     setOptimisticMessages([]);
+    confirmedIdToKeyRef.current.clear();
     setErrorInitial(false);
     setNextCursor(null);
     lastSeenCursorRef.current = null;
@@ -373,12 +384,29 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
   // The backend emits the full tombstoned MessageResponse (isDeleted:true, content:null).
   // Match on payload.id — there is no messageId field on the DTO (see messagingSocket.ts).
   // Mirrors the message:updated handler: replace the row with the authoritative DTO.
+  //
+  // Also removes any matching optimistic entry: if the deleted message was sent
+  // by the local user and is still in optimisticMessages (confirmed id known via
+  // confirmedIdToKeyRef but optimistic row not yet reconciled out), drop it so
+  // B's own optimistic copy tombstones alongside the realMessages row.
   useEffect(() => {
     if (!channelId) return;
     const unsub = onMessageDeleted((payload) => {
       if (!mountedRef.current) return;
       if (payload.channelId !== channelId) return;
-      setRealMessages((prev) => prev.map((m) => (m.id === payload.id ? payload : m)));
+      setRealMessages((prev) => {
+        const idx = prev.findIndex((m) => m.id === payload.id);
+        if (idx === -1) return [...prev, payload];
+        return prev.map((m) => (m.id === payload.id ? payload : m));
+      });
+      // If this message was an optimistic send that got confirmed, remove the
+      // optimistic copy too — covers the race where message:deleted arrives
+      // before drain()/onSuccess has cleaned up optimisticMessages.
+      const optimisticKey = confirmedIdToKeyRef.current.get(payload.id);
+      if (optimisticKey !== undefined) {
+        setOptimisticMessages((prev) => prev.filter((m) => m.idempotencyKey !== optimisticKey));
+        confirmedIdToKeyRef.current.delete(payload.id);
+      }
     });
     return unsub;
   }, [channelId]);
@@ -544,6 +572,9 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
                   : api.sendDmMessage(target.conversationId, body),
               (deliveredKey, confirmedId) => {
                 if (!mountedRef.current) return;
+                // Track server id → key so message:deleted can tombstone this
+                // entry if the delete arrives before optimistic row is removed.
+                confirmedIdToKeyRef.current.set(confirmedId, deliveredKey);
                 setRealMessages((prev) => {
                   if (prev.some((m) => m.id === confirmedId)) return prev;
                   return prev;
@@ -586,6 +617,9 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
               })
               .then((confirmed) => {
                 if (!mountedRef.current) return;
+                // Track server id → key so message:deleted can tombstone this
+                // entry if the delete arrives before optimistic row is removed.
+                confirmedIdToKeyRef.current.set(confirmed.id, idempotencyKey);
                 setRealMessages((prev) => {
                   if (prev.some((m) => m.id === confirmed.id)) return prev;
                   return [...prev, confirmed];
@@ -625,6 +659,9 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
           })
           .then((confirmed) => {
             if (!mountedRef.current) return;
+            // Track server id → key so message:deleted can tombstone this
+            // entry if the delete arrives before optimistic row is removed.
+            confirmedIdToKeyRef.current.set(confirmed.id, idempotencyKey);
             setRealMessages((prev) => {
               if (prev.some((m) => m.id === confirmed.id)) return prev;
               return [...prev, confirmed];

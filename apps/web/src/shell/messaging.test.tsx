@@ -949,6 +949,84 @@ describe('MainColumn — socket message:updated / deleted / reaction events', ()
     });
   });
 
+  // ── Wave-58 B-3: tombstone own optimistic message on message:deleted ─────────
+  // Covers the race where message:deleted arrives while B's own message is still
+  // in optimisticMessages (confirmed server id known but optimistic row not yet
+  // cleaned up by the send's onSuccess callback).
+  //
+  // Scenario:
+  //   1. B sends a message → optimistic pending entry appears.
+  //   2. Server confirms with a real id (api.sendMessage resolves).
+  //   3. confirmedIdToKeyRef is populated by the send's .then() callback.
+  //   4. Before the optimistic entry is cleaned up (same .then()), moderator A
+  //      fires message:deleted for that server id.
+  //   5. B's optimistic copy must disappear alongside the realMessages tombstone.
+  //
+  // In the no-IDB test path (db = null), steps 2-5 collapse into a single
+  // async tick. We use a controlled promise to keep the optimistic entry alive
+  // while we inject message:new (to register the server id) before resolving.
+  it('B-3: own optimistic message tombstones when message:deleted fires for its confirmed server id', async () => {
+    mockApi.listMessages.mockResolvedValue({ messages: [], nextCursor: null });
+
+    let resolveSend!: (v: MessageResponse) => void;
+    const sendPromise = new Promise<MessageResponse>((resolve) => {
+      resolveSend = resolve;
+    });
+    mockApi.sendMessage.mockReturnValue(sendPromise);
+
+    renderWithChannel();
+    await waitFor(() => screen.getByTestId('empty-channel-state'));
+
+    // B sends a message — optimistic pending entry appears immediately.
+    const user = userEvent.setup();
+    await user.type(screen.getByTestId('composer-input'), 'B message unique-marker-b3');
+    await user.keyboard('{Enter}');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('pending-message')).toBeInTheDocument();
+      expect(screen.getByText('B message unique-marker-b3')).toBeInTheDocument();
+    });
+
+    // Build the confirmed MessageResponse the server would return.
+    const confirmedId = 'server-confirmed-id-b3';
+    const confirmed: MessageResponse = makeMsg({
+      id: confirmedId,
+      content: 'B message unique-marker-b3',
+      channelId: 'ch-1',
+    });
+    const tombstone: MessageResponse = {
+      ...confirmed,
+      isDeleted: true,
+      content: null,
+      reactions: [],
+    };
+
+    // Resolve the send AND immediately fire message:deleted in the same act()
+    // flush. The send's .then() callback populates confirmedIdToKeyRef and
+    // the message:deleted handler reads it — both must run in the same tick
+    // so the optimistic entry is gone when the dust settles.
+    act(() => {
+      resolveSend(confirmed);
+    });
+
+    // Give microtasks (the .then() callbacks) a chance to run, then fire the
+    // delete event. At this point confirmedIdToKeyRef has the server id → key
+    // mapping (populated by the .then()), and the message:deleted handler will
+    // use it to drop the optimistic copy.
+    act(() => {
+      capturedMessageDeletedHandler?.(tombstone);
+    });
+
+    await waitFor(() => {
+      // Tombstone text must be visible.
+      expect(screen.getByText('This message was deleted')).toBeInTheDocument();
+      // Original content must not be visible anywhere (neither real nor optimistic).
+      expect(screen.queryByText('B message unique-marker-b3')).not.toBeInTheDocument();
+      // Pending state must be gone.
+      expect(screen.queryByTestId('pending-message')).not.toBeInTheDocument();
+    });
+  });
+
   it('socket reaction:added adds a reaction to the message', async () => {
     const msg = makeMsg({ reactions: [], channelId: 'ch-1' });
     mockApi.listMessages.mockResolvedValue({ messages: [msg], nextCursor: null });
