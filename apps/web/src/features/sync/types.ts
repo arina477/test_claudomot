@@ -7,7 +7,7 @@
  * Type-only imports from @studyhall/shared — no CJS runtime values.
  */
 
-import type { MessageResponse } from '@studyhall/shared';
+import type { DmConversation, DmMessage, MessageResponse } from '@studyhall/shared';
 
 // ── Cache tables ──────────────────────────────────────────────────────────────
 
@@ -31,6 +31,27 @@ export type CachedChannel = {
   type: string;
   isPrivate: boolean;
   position: number;
+  cachedAt: string;
+};
+
+/**
+ * CachedDmConversation — a DmConversation persisted to local IDB.
+ * `cachedAt` is added client-side for TTL / staleness decisions.
+ * DTO-intersection pattern: mirrors CachedMessage (NOT the hand-picked-subset
+ * CachedChannel pattern) so all server-returned fields are preserved.
+ */
+export type CachedDmConversation = DmConversation & {
+  /** ISO timestamp of when the client stored this row. */
+  cachedAt: string;
+};
+
+/**
+ * CachedDmMessage — a DmMessage persisted to local IDB.
+ * `cachedAt` is added client-side for TTL / staleness decisions.
+ * DTO-intersection pattern: mirrors CachedMessage exactly in shape.
+ */
+export type CachedDmMessage = DmMessage & {
+  /** ISO timestamp of when the client stored this row. */
   cachedAt: string;
 };
 
