@@ -1,0 +1,16 @@
+# Wave 54 — B-6 Verdict
+
+**Reviewer:** head-builder (fresh spawn)
+**Reviewed against:** process/waves/wave-54/blocks/B/review-artifacts.md
+**Attempt:** 1  (first gate)
+**Diff judged:** git diff main...HEAD on wave-54-ws-error-regression-lock @ d382aae (6 files, +577/-2)
+
+## Verdict
+APPROVED
+
+## Rationale
+This is a verify-and-harden wave (the info-disclosure class was already closed; it adds per-WS-gateway regression-lock tests + a canonical `WS_GENERIC_ERROR` constant), and it holds on every gate I care about. I judged the diff itself, not the report. **The critical B-carry holds:** the swap touched ONLY the two in-`catch` generic literals — study-timer `'Internal error checking membership'` → `WS_GENERIC_ERROR` (gateway :189) and messaging `'Internal error checking channel access'` → `WS_GENERIC_ERROR` (gateway :133) — and LEFT the authz-denial `Forbidden:` literals verbatim: study-timer `'Forbidden: not a member of this server'` (:196) and messaging `'Forbidden: cannot view channel'` (:138). No authz denial was genericized, so the "denied-vs-why-denied" distinction the client relies on is intact. **The regression-lock tests are honest, not coverage theater:** driving into study-timer.gateway.spec.ts and messaging.gateway.spec.ts, each asserts (a) the malformed non-UUID id path emits exactly `WS_GENERIC_ERROR`, (b) an explicit leak-token blocklist is ABSENT from the message (`invalid input syntax`, `22P02`, table/column names `server_members`/`channel_members`, `uuid`, and the `userId`), (c) the request is still DENIED (no `socket.join`, service reconciliation not called), and (d) a valid-UUID non-member still receives the SPECIFIC `Forbidden:` string and is asserted `not.toBe(WS_GENERIC_ERROR)` — locking authz-denial preservation against a future refactor that over-genericizes. A FLOW/regression-guard happy-path test proves legitimate joins still succeed. The full targeted run is green: **53 tests pass across all three specs** (study-timer, messaging, presence). **The B-2 deviations are a sound scope call, not an AC5 miss:** AC5's intent (per the P-4 scope-guard) is the unknown/cast-failure generic path, and study-room already routes that through `safeErrorMessage` (HttpException forwarded, everything else → logged fallback, never raw `err.message`) while presence rejects non-UUID at `TypingStartSchema.safeParse` pre-DB and its catch emits a hardcoded `'Internal error checking channel access'` literal — both already leak-safe and neither ad-hoc. Applying the canonical constant to exactly the two ad-hoc-literal gateways (timer/messaging) satisfies "canonical string across WS rejection catches" without churning two already-safe, differently-structured paths; presence is nonetheless given an explicit Zod-rejection regression assertion per AC3 so the class is TESTED there too. **No scope creep:** the diff is 6 files only — new `common/ws-errors.ts`, three 1-line gateway swaps, three spec files. No isUuid guards added to timer/messaging (correctly dropped at P-0), no WS-exception filter, zero REST changes, and wave-53 study-room `safeErrorMessage`/`isUuid` is entirely absent from the changed-file set (untouched).
+
+## Footer
+- verdict_complete: true
+- rework_attempt_cap_remaining: 3
