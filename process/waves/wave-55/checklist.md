@@ -19,13 +19,13 @@ DESIGN (SKIPPED — design_gap_flag false):
 - [~] D-3 Review & adopt
 
 BUILD:
-- [ ] B-0 Branch & schema
-- [ ] B-1 Contracts
-- [ ] B-2 Backend
-- [ ] B-3 Frontend
-- [ ] B-4 Wiring
-- [ ] B-5 Verify
-- [ ] B-6 Review
+- [x] B-0 Branch & schema
+- [~] B-1 Contracts (SKIP)
+- [x] B-2 Backend
+- [~] B-3 Frontend (SKIP)
+- [x] B-4 Wiring
+- [x] B-5 Verify
+- [x] B-6 Review
 
 CI/CD:
 - [ ] C-1 PR, CI & merge
