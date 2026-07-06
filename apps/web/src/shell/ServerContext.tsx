@@ -41,6 +41,8 @@ export type ServerContextValue = {
   /** Detail for the currently selected server (categories + channels). */
   selectedDetail: ServerDetail | null;
   detailStatus: DetailStatus;
+  /** Re-fetch the selected server's detail (e.g. after a PATCH /servers/:id). */
+  refetchDetail: () => void;
   /** Currently active channel id (selected in the sidebar). */
   selectedChannelId: string | null;
   /** Name of the currently active channel. */
@@ -68,6 +70,7 @@ export const ServerContext = createContext<ServerContextValue>({
   closeCreateModal: () => {},
   selectedDetail: null,
   detailStatus: 'idle',
+  refetchDetail: () => {},
   selectedChannelId: null,
   selectedChannelName: null,
   selectChannel: () => {},
@@ -96,6 +99,8 @@ export function ServerProvider({ children }: Props) {
   const [selectedChannelName, setSelectedChannelName] = useState<string | null>(null);
   const [assignmentsOpen, setAssignmentsOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  // Increment to force a re-fetch of the selected server detail without switching servers.
+  const [detailFetchKey, setDetailFetchKey] = useState(0);
 
   // Prevent state updates after unmount
   const mounted = useRef(true);
@@ -158,7 +163,8 @@ export function ServerProvider({ children }: Props) {
     fetchServers();
   }, [fetchServers]);
 
-  // Fetch server detail whenever the selected server changes
+  // Fetch server detail whenever the selected server changes or detailFetchKey increments.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: detailFetchKey is an intentional imperative re-fetch trigger; biome sees it as a non-reactive value but it IS used to force a re-run
   useEffect(() => {
     if (!selectedId) {
       setSelectedDetail(null);
@@ -197,7 +203,7 @@ export function ServerProvider({ children }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [selectedId]);
+  }, [selectedId, detailFetchKey]);
 
   const selectServer = useCallback((id: string) => {
     setSelectedId(id);
@@ -263,6 +269,10 @@ export function ServerProvider({ children }: Props) {
   const openCreateModal = useCallback(() => setCreateModalOpen(true), []);
   const closeCreateModal = useCallback(() => setCreateModalOpen(false), []);
 
+  const refetchDetail = useCallback(() => {
+    setDetailFetchKey((k) => k + 1);
+  }, []);
+
   return (
     <ServerContext.Provider
       value={{
@@ -277,6 +287,7 @@ export function ServerProvider({ children }: Props) {
         closeCreateModal,
         selectedDetail,
         detailStatus,
+        refetchDetail,
         selectedChannelId,
         selectedChannelName,
         selectChannel,

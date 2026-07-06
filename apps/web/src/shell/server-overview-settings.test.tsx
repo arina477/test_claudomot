@@ -3,13 +3,16 @@
  *
  * Covers:
  *   - Owner sees publish toggle; non-owner does NOT
+ *   - Non-owner sees description/topic read-only (disabled) and NO Save button (Fix 1)
  *   - Toggling publish marks dirty; Save calls api.updateServer with is_public
  *   - Toggling off (unpublish) also calls api.updateServer correctly
  *   - description edit → PATCH called with that field
  *   - topic edit → PATCH called with that field
  *   - Save success reflects state (dirty cleared, toast shown)
+ *   - After save: panel reflects saved state on reopen; onSaveSuccess callback fired (Fix 2)
  *   - Error surfaces non-destructively (inline banner, fields unchanged)
- *   - 403 error surfaces with permission-denied message
+ *   - 403 error keyed off HttpError.status, not message string (Fix 4)
+ *   - Toggle-only save sends ONLY is_public in the patch (Fix 5 partial patch)
  *   - Discard resets fields
  *   - Pre-populate: existing server values shown on open (is_public=true, description, topic)
  *   - Pre-populate + save: editing one field preserves the pre-populated others in the PATCH
@@ -17,17 +20,22 @@
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { HttpError } from '../auth/api';
 import type { ServerOverviewSettingsProps } from './ServerOverviewSettings';
 import { ServerOverviewSettings } from './ServerOverviewSettings';
 
 // ── API mock ──────────────────────────────────────────────────────────────────
 
-vi.mock('../auth/api', () => ({
-  api: {
-    getMe: vi.fn(),
-    updateServer: vi.fn(),
-  },
-}));
+vi.mock('../auth/api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../auth/api')>();
+  return {
+    ...actual,
+    api: {
+      getMe: vi.fn(),
+      updateServer: vi.fn(),
+    },
+  };
+});
 
 import { api } from '../auth/api';
 type MockApi = {
@@ -97,6 +105,37 @@ describe('ServerOverviewSettings', () => {
     expect(screen.queryByRole('switch')).not.toBeInTheDocument();
   });
 
+  // Fix 1: non-owner sees fields disabled and no Save button
+  it('non-owner sees description and topic fields as disabled (read-only)', async () => {
+    mockApi.getMe.mockResolvedValue({
+      userId: MEMBER_ID,
+      email: 'member@test.com',
+      emailVerified: true,
+    });
+    renderPage({
+      initialDescription: 'A server for CS students.',
+      initialTopic: 'CS',
+    });
+    await waitFor(() => {
+      expect(screen.getByText('Member')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('description-input')).toBeDisabled();
+    expect(screen.getByTestId('topic-input')).toBeDisabled();
+  });
+
+  it('non-owner does NOT see the Save button', async () => {
+    mockApi.getMe.mockResolvedValue({
+      userId: MEMBER_ID,
+      email: 'member@test.com',
+      emailVerified: true,
+    });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText('Member')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('save-btn')).not.toBeInTheDocument();
+  });
+
   // ── Publish toggle ────────────────────────────────────────────────────────
 
   it('toggling publish on calls api.updateServer with is_public true', async () => {
@@ -124,15 +163,16 @@ describe('ServerOverviewSettings', () => {
   });
 
   it('toggling publish off calls api.updateServer with is_public false', async () => {
-    renderPage();
+    // Start with is_public=true so toggling off is an actual change.
+    renderPage({ initialIsPublic: true });
     await waitFor(() => {
       expect(screen.getByTestId('publish-section')).toBeInTheDocument();
     });
 
     const toggle = screen.getByRole('switch', { name: /list in public directory/i });
+    expect(toggle).toHaveAttribute('aria-checked', 'true');
 
-    // Toggle ON then OFF
-    fireEvent.click(toggle);
+    // Toggle OFF
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute('aria-checked', 'false');
 
@@ -143,6 +183,23 @@ describe('ServerOverviewSettings', () => {
         SERVER_ID,
         expect.objectContaining({ is_public: false }),
       );
+    });
+  });
+
+  // Fix 5: toggle-only save sends ONLY is_public (no description/topic)
+  it('toggle-only save sends ONLY is_public in the patch (partial patch)', async () => {
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByTestId('publish-section')).toBeInTheDocument();
+    });
+
+    const toggle = screen.getByRole('switch', { name: /list in public directory/i });
+    fireEvent.click(toggle);
+
+    fireEvent.click(screen.getByTestId('save-btn'));
+
+    await waitFor(() => {
+      expect(mockApi.updateServer).toHaveBeenCalledWith(SERVER_ID, { is_public: true });
     });
   });
 
@@ -171,26 +228,14 @@ describe('ServerOverviewSettings', () => {
   });
 
   it('empty description sends null in the patch', async () => {
-    renderPage();
+    // Start with a non-empty description so clearing it IS a change from the baseline.
+    renderPage({ initialDescription: 'Some existing description.' });
     await waitFor(() => {
-      expect(screen.getByTestId('description-input')).toBeInTheDocument();
+      expect(screen.getByTestId('description-input')).toHaveValue('Some existing description.');
     });
 
-    // topic is empty too, but we change it to trigger dirty
-    fireEvent.change(screen.getByTestId('topic-input'), { target: { value: 'CS' } });
-    fireEvent.change(screen.getByTestId('topic-input'), { target: { value: '' } });
-
-    // description remains empty — but we need dirty to be set
-    fireEvent.change(screen.getByTestId('description-input'), { target: { value: 'x' } });
+    // Clear the description — this is a real change (baseline was non-empty, now empty).
     fireEvent.change(screen.getByTestId('description-input'), { target: { value: '' } });
-
-    // Toggle to mark dirty (simplest path)
-    const toggle = screen.queryByRole('switch');
-    if (toggle) fireEvent.click(toggle);
-    else {
-      // non-owner branch: set topic to dirty
-      fireEvent.change(screen.getByTestId('topic-input'), { target: { value: 'Physics' } });
-    }
 
     fireEvent.click(screen.getByTestId('save-btn'));
 
@@ -249,6 +294,58 @@ describe('ServerOverviewSettings', () => {
     });
   });
 
+  // Fix 2: after save, onSaveSuccess is called so the parent can refresh selectedDetail
+  it('calls onSaveSuccess after a successful save', async () => {
+    const onSaveSuccess = vi.fn();
+    renderPage({ onSaveSuccess });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('description-input')).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByTestId('description-input'), {
+      target: { value: 'Updated description.' },
+    });
+
+    fireEvent.click(screen.getByTestId('save-btn'));
+
+    await waitFor(() => {
+      expect(onSaveSuccess).toHaveBeenCalledOnce();
+    });
+  });
+
+  // Fix 2: after save the baseline is updated so Discard restores to the saved values
+  it('after save, Discard restores to the saved (not original mount) values', async () => {
+    renderPage({ initialDescription: 'Original.' });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('description-input')).toHaveValue('Original.');
+    });
+
+    // Edit and save
+    fireEvent.change(screen.getByTestId('description-input'), {
+      target: { value: 'Saved description.' },
+    });
+    fireEvent.click(screen.getByTestId('save-btn'));
+
+    await waitFor(() => {
+      expect(mockApi.updateServer).toHaveBeenCalled();
+    });
+    // After save, dirty is cleared
+    await waitFor(() => {
+      expect(screen.queryByTestId('discard-btn')).not.toBeInTheDocument();
+    });
+
+    // Now make a further edit and then Discard — should restore to 'Saved description.'
+    fireEvent.change(screen.getByTestId('description-input'), {
+      target: { value: 'Another edit.' },
+    });
+    expect(screen.getByTestId('discard-btn')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('discard-btn'));
+
+    expect(screen.getByTestId('description-input')).toHaveValue('Saved description.');
+  });
+
   // ── Error handling ────────────────────────────────────────────────────────
 
   it('surfaces non-destructive error on API failure', async () => {
@@ -272,7 +369,27 @@ describe('ServerOverviewSettings', () => {
     expect(screen.getByTestId('description-input')).toHaveValue('test description');
   });
 
-  it('surfaces permission-denied message on 403', async () => {
+  // Fix 4: 403 keyed off HttpError.status, not message string
+  it('surfaces permission-denied message on HttpError with status 403', async () => {
+    mockApi.updateServer.mockRejectedValueOnce(new HttpError(403, '403 Forbidden: not owner'));
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByTestId('description-input')).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByTestId('description-input'), {
+      target: { value: 'something' },
+    });
+
+    fireEvent.click(screen.getByTestId('save-btn'));
+
+    await waitFor(() => {
+      const err = screen.getByTestId('overview-save-error');
+      expect(err).toHaveTextContent(/owner/i);
+    });
+  });
+
+  it('surfaces permission-denied message on plain Error with 403 in message (fallback)', async () => {
     mockApi.updateServer.mockRejectedValueOnce(new Error('403 Forbidden'));
     renderPage();
     await waitFor(() => {
@@ -356,14 +473,10 @@ describe('ServerOverviewSettings', () => {
     fireEvent.click(screen.getByTestId('save-btn'));
 
     await waitFor(() => {
-      expect(mockApi.updateServer).toHaveBeenCalledWith(
-        SERVER_ID,
-        expect.objectContaining({
-          is_public: true, // preserved from pre-populate
-          description: 'Updated description.',
-          topic: 'Physics', // preserved from pre-populate
-        }),
-      );
+      // Fix 5: only description changed — is_public and topic are NOT in the patch
+      expect(mockApi.updateServer).toHaveBeenCalledWith(SERVER_ID, {
+        description: 'Updated description.',
+      });
     });
   });
 });

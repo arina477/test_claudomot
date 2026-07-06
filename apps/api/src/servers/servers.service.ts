@@ -636,16 +636,7 @@ export class ServersService {
       .from(servers)
       .leftJoin(server_members, eq(server_members.server_id, servers.id))
       .where(whereClause)
-      .groupBy(
-        servers.id,
-        servers.name,
-        servers.description,
-        servers.topic,
-        servers.is_public,
-        servers.owner_id,
-        servers.invite_code,
-        servers.created_at,
-      )
+      .groupBy(servers.id)
       // ORDER BY: memberCount DESC (relevance), name ASC (secondary tie-break),
       // id ASC (stable UUID tie-break — makes offset pagination deterministic).
       .orderBy(desc(memberCountExpr), asc(servers.name), asc(servers.id))

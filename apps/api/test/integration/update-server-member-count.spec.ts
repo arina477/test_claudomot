@@ -253,6 +253,43 @@ describe.skipIf(SKIP)(
       expect(positions[0]).toBeLessThan(positions[1] as number);
       expect(positions[1]).toBeLessThan(positions[2] as number);
     });
+
+    // -----------------------------------------------------------------------
+    // PRIVATE-EXCLUSION (load-bearing directory-privacy invariant)
+    //
+    // Proves that a server with is_public=false is NEVER returned by
+    // discoverServers, even when it has members.  A broken WHERE-public filter
+    // under the LEFT JOIN / GROUP BY would leak private servers into the public
+    // directory — this test catches that regression at the real-DB layer.
+    // -----------------------------------------------------------------------
+    it('PRIVATE-EXCLUSION: a private server (is_public=false) with members NEVER appears in discoverServers', async () => {
+      // Seed a private server alongside the three public ones that already exist
+      // from beforeEach.  Give it two members so a broken filter would rank it
+      // at the top (memberCount DESC ordering) — making a false-positive obvious.
+      const PRIVATE_SERVER_ID = 'f0000000-0000-0000-0000-000000000099';
+      await insertFixtureServer(PRIVATE_SERVER_ID, OWNER_ID, 'Private Server Should Be Hidden');
+      // Confirm is_public is false (insertFixtureServer uses the column default
+      // which is false, but we set it explicitly to make the intent clear).
+      await harnessQuery('UPDATE servers SET is_public = false WHERE id = $1', [PRIVATE_SERVER_ID]);
+      // Add two members so a leaking server would float to the top.
+      await insertFixtureMembership(PRIVATE_SERVER_ID, MEMBER_1_ID);
+      await insertFixtureMembership(PRIVATE_SERVER_ID, MEMBER_2_ID);
+
+      const { servers: results } = await sut.discoverServers({ limit: 50, offset: 0 });
+
+      // The private server's id must be completely absent from the result set.
+      const returnedIds = results.map((s) => s.id);
+      expect(returnedIds).not.toContain(PRIVATE_SERVER_ID);
+
+      // Belt-and-suspenders: none of the returned rows carry the private id.
+      const leak = results.find((s) => s.id === PRIVATE_SERVER_ID);
+      expect(leak).toBeUndefined();
+
+      // The three public servers from beforeEach must still be present and correct.
+      expect(returnedIds).toContain(SERVER_A_ID);
+      expect(returnedIds).toContain(SERVER_B_ID);
+      expect(returnedIds).toContain(SERVER_C_ID);
+    });
   },
 );
 

@@ -13,11 +13,12 @@
  *   - Errors surface non-destructively (inline error banner, no state loss).
  *
  * Owner gate: isOwner = currentUserId === ownerId, mirroring ServerRolesPage:675.
- * Non-owners cannot see or use the publish toggle.
+ * Non-owners see description/topic READ-ONLY (fields disabled, no Save/Discard).
+ * The publish toggle is hidden from non-owners entirely.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { api } from '../auth/api';
+import { HttpError, api } from '../auth/api';
 import { GearIcon, ShieldCheckIcon, SpinnerIcon, WarningCircleIcon, XIcon } from './icons';
 
 // ---------------------------------------------------------------------------
@@ -36,9 +37,17 @@ export type ServerOverviewSettingsProps = {
   initialIsPublic?: boolean;
   initialDescription?: string | null;
   initialTopic?: string | null;
+  /**
+   * Called after a successful save so the parent can refresh selectedDetail.
+   * If omitted the component still saves, but the context won't refresh.
+   */
+  onSaveSuccess?: () => void;
 };
 
 type SaveStatus = 'idle' | 'saving' | 'error';
+
+/** Distinguishes "still resolving getMe" from "resolved non-owner". */
+type OwnerStatus = 'loading' | 'owner' | 'non-owner' | 'error';
 
 type Toast = { id: string; message: string; kind: 'success' | 'error' };
 
@@ -116,17 +125,31 @@ export function ServerOverviewSettings({
   initialIsPublic = false,
   initialDescription = null,
   initialTopic = null,
+  onSaveSuccess,
 }: ServerOverviewSettingsProps) {
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  // Fix 3: distinguish loading from resolved-non-owner; surface error rather
+  // than silently hiding the owner surface on a getMe blip.
+  const [ownerStatus, setOwnerStatus] = useState<OwnerStatus>('loading');
 
   useEffect(() => {
+    let cancelled = false;
+    setOwnerStatus('loading');
     api
       .getMe()
-      .then((me) => setCurrentUserId(me.userId))
-      .catch(() => null);
-  }, []);
+      .then((me) => {
+        if (cancelled) return;
+        setOwnerStatus(me.userId === ownerId ? 'owner' : 'non-owner');
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setOwnerStatus('error');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ownerId]);
 
-  const isOwner = currentUserId !== null && currentUserId === ownerId;
+  const isOwner = ownerStatus === 'owner';
 
   // ── Save / error state ───────────────────────────────────────────────────
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
@@ -140,6 +163,14 @@ export function ServerOverviewSettings({
   const [description, setDescription] = useState(initialDescription ?? '');
   const [topic, setTopic] = useState(initialTopic ?? '');
 
+  // Fix 2: Track the saved baseline separately from the prop so Discard and
+  // "did this field change?" comparisons always compare against what was last
+  // persisted — not what was passed in at mount time (which goes stale after
+  // the first successful save without a context refresh).
+  const [baselineIsPublic, setBaselineIsPublic] = useState(initialIsPublic);
+  const [baselineDescription, setBaselineDescription] = useState(initialDescription ?? '');
+  const [baselineTopic, setBaselineTopic] = useState(initialTopic ?? '');
+
   // Reset field state whenever the target server changes (e.g. user switches
   // servers while the panel is open, or the panel remounts for a new server).
   // Intentionally scoped to serverId only — initialIsPublic/Description/Topic
@@ -150,6 +181,9 @@ export function ServerOverviewSettings({
     setIsPublic(initialIsPublic);
     setDescription(initialDescription ?? '');
     setTopic(initialTopic ?? '');
+    setBaselineIsPublic(initialIsPublic);
+    setBaselineDescription(initialDescription ?? '');
+    setBaselineTopic(initialTopic ?? '');
     setDirty(false);
     setSaveStatus('idle');
     setSaveError(null);
@@ -195,26 +229,59 @@ export function ServerOverviewSettings({
     setSaveStatus('saving');
     setSaveError(null);
 
+    // Fix 5: partial patch — only include fields that actually changed from the
+    // saved baseline. This avoids touching unrelated columns and prevents
+    // whitespace-trimming unedited fields.
     const patch: import('@studyhall/shared').UpdateServer = {};
-    if (isOwner) {
+    if (isOwner && isPublic !== baselineIsPublic) {
       patch.is_public = isPublic;
     }
-    // Always include description/topic in patch (owner-derived fields)
-    patch.description = description.trim() || null;
-    patch.topic = topic.trim() || null;
+    const trimmedDescription = description.trim() || null;
+    const trimmedTopic = topic.trim() || null;
+    if (trimmedDescription !== (baselineDescription.trim() || null)) {
+      patch.description = trimmedDescription;
+    }
+    if (trimmedTopic !== (baselineTopic.trim() || null)) {
+      patch.topic = trimmedTopic;
+    }
+
+    // If nothing actually changed (e.g. owner toggled publish twice back to original),
+    // treat as a no-op save.
+    if (Object.keys(patch).length === 0) {
+      setDirty(false);
+      setSaveStatus('idle');
+      return;
+    }
 
     try {
       await api.updateServer(serverId, patch);
+
+      // Fix 2: update the saved baseline to match what we just sent so:
+      //   (a) Discard from here would restore to the just-saved values, and
+      //   (b) the next partial-diff compares against the current persisted state.
+      if (patch.is_public !== undefined) setBaselineIsPublic(patch.is_public);
+      if (patch.description !== undefined) setBaselineDescription(description.trim());
+      if (patch.topic !== undefined) setBaselineTopic(topic.trim());
+
       setDirty(false);
       setSaveStatus('idle');
       addToast('Server overview saved.', 'success');
+
+      // Fix 2: refresh the server detail in context so selectedDetail reflects
+      // the new is_public/description/topic on re-open (no stale revert).
+      onSaveSuccess?.();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Save failed';
-      if (msg.includes('403')) {
+      // Fix 4: key off HttpError.status first; fall back to message string parse.
+      const is403 =
+        err instanceof HttpError
+          ? err.status === 403
+          : err instanceof Error && err.message.includes('403');
+      if (is403) {
         setSaveStatus('error');
         setSaveError('Only the server owner can update overview settings.');
         addToast('Permission denied.', 'error');
       } else {
+        const msg = err instanceof Error ? err.message : 'Save failed';
         setSaveStatus('error');
         setSaveError(msg);
         addToast(msg, 'error');
@@ -223,9 +290,10 @@ export function ServerOverviewSettings({
   }
 
   function handleDiscard() {
-    setIsPublic(initialIsPublic);
-    setDescription(initialDescription ?? '');
-    setTopic(initialTopic ?? '');
+    // Fix 2: discard to the saved baseline (not the mount-time initial*).
+    setIsPublic(baselineIsPublic);
+    setDescription(baselineDescription);
+    setTopic(baselineTopic);
     setDirty(false);
     setSaveStatus('idle');
     setSaveError(null);
@@ -233,7 +301,9 @@ export function ServerOverviewSettings({
 
   const descriptionOverLimit = description.length > 500;
   const topicOverLimit = topic.length > 100;
-  const canSave = dirty && !descriptionOverLimit && !topicOverLimit && saveStatus !== 'saving';
+  // Fix 1: non-owners cannot save; the Save button is hidden entirely for them.
+  const canSave =
+    isOwner && dirty && !descriptionOverLimit && !topicOverLimit && saveStatus !== 'saving';
 
   return (
     <>
@@ -355,12 +425,13 @@ export function ServerOverviewSettings({
               style={{ background: '#27272a', borderColor: 'rgba(255,255,255,0.05)' }}
               aria-hidden="true"
             >
+              {/* Fix 3: render a neutral indicator while loading so the owner doesn't flash "ME" */}
               <span className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.60)' }}>
-                {isOwner ? 'OW' : 'ME'}
+                {ownerStatus === 'loading' ? '…' : isOwner ? 'OW' : 'ME'}
               </span>
             </div>
             <span className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.92)' }}>
-              {isOwner ? 'Owner' : 'Member'}
+              {ownerStatus === 'loading' ? '' : isOwner ? 'Owner' : 'Member'}
             </span>
           </div>
         </aside>
@@ -395,6 +466,27 @@ export function ServerOverviewSettings({
           {/* Scrollable body */}
           <div className="flex-1 overflow-y-auto p-4 lg:p-8">
             <div className="mx-auto flex w-full max-w-[720px] flex-col gap-6 pb-16">
+              {/* Fix 3: getMe error banner — owner gating failed, don't silently lock out */}
+              {ownerStatus === 'error' && (
+                <div
+                  className="flex items-start gap-3 rounded-lg border px-4 py-3 text-sm"
+                  style={{
+                    background: 'rgba(239,68,68,0.08)',
+                    borderColor: 'rgba(239,68,68,0.25)',
+                    color: 'rgba(255,255,255,0.80)',
+                  }}
+                  role="alert"
+                  data-testid="getme-error"
+                >
+                  <WarningCircleIcon
+                    size={16}
+                    style={{ color: '#ef4444', flexShrink: 0, marginTop: 2 }}
+                    aria-hidden="true"
+                  />
+                  Could not verify your identity. Please reload to retry.
+                </div>
+              )}
+
               {/* Inline error banner */}
               {saveStatus === 'error' && saveError && (
                 <div
@@ -416,7 +508,7 @@ export function ServerOverviewSettings({
                 </div>
               )}
 
-              {/* Directory Visibility card — owner-only */}
+              {/* Directory Visibility card — owner-only (Fix 1: still owner-only) */}
               {isOwner && (
                 <section
                   className="rounded-xl border p-6"
@@ -471,7 +563,9 @@ export function ServerOverviewSettings({
                 </section>
               )}
 
-              {/* Description + Topic card */}
+              {/* Description + Topic card
+                  Fix 1: fields are disabled for non-owners; the entire editing surface
+                  (including Save/Discard) is gated on isOwner. */}
               <section
                 className="rounded-xl border p-6"
                 style={{
@@ -504,15 +598,20 @@ export function ServerOverviewSettings({
                     placeholder="Describe your server for the public directory…"
                     rows={4}
                     maxLength={510}
+                    // Fix 1: disabled for non-owners so the field is read-only
+                    disabled={!isOwner}
                     className="w-full resize-none rounded-lg border px-3 py-2.5 text-sm outline-none transition-colors focus:border-emerald-500/60 focus:ring-1"
                     style={{
                       background: '#1c1c1f',
                       borderColor: descriptionOverLimit ? '#ef4444' : 'rgba(255,255,255,0.08)',
                       color: 'rgba(255,255,255,0.92)',
+                      cursor: !isOwner ? 'default' : undefined,
+                      opacity: !isOwner && ownerStatus !== 'loading' ? 0.6 : undefined,
                       ['--tw-ring-color' as string]: 'rgba(16,185,129,0.3)',
                     }}
                     data-testid="description-input"
                     aria-describedby="description-counter"
+                    aria-readonly={!isOwner}
                   />
                   <p
                     id="description-counter"
@@ -542,15 +641,20 @@ export function ServerOverviewSettings({
                     onChange={(e) => handleTopicChange(e.target.value)}
                     placeholder="e.g. Physics, Study Group, CS 101…"
                     maxLength={110}
+                    // Fix 1: disabled for non-owners so the field is read-only
+                    disabled={!isOwner}
                     className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none transition-colors focus:border-emerald-500/60 focus:ring-1"
                     style={{
                       background: '#1c1c1f',
                       borderColor: topicOverLimit ? '#ef4444' : 'rgba(255,255,255,0.08)',
                       color: 'rgba(255,255,255,0.92)',
+                      cursor: !isOwner ? 'default' : undefined,
+                      opacity: !isOwner && ownerStatus !== 'loading' ? 0.6 : undefined,
                       ['--tw-ring-color' as string]: 'rgba(16,185,129,0.3)',
                     }}
                     data-testid="topic-input"
                     aria-describedby="topic-counter"
+                    aria-readonly={!isOwner}
                   />
                   <p
                     id="topic-counter"
@@ -565,39 +669,42 @@ export function ServerOverviewSettings({
                 </div>
               </section>
 
-              {/* Save / Discard actions */}
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => void handleSave()}
-                  disabled={!canSave}
-                  aria-disabled={!canSave}
-                  className="flex h-9 items-center gap-2 rounded-md px-4 text-sm font-semibold transition-colors"
-                  style={{
-                    background: canSave ? '#10b981' : '#27272a',
-                    color: canSave ? '#0a0a0b' : 'rgba(255,255,255,0.30)',
-                    cursor: canSave ? 'pointer' : 'not-allowed',
-                  }}
-                  data-testid="save-btn"
-                >
-                  {saveStatus === 'saving' && (
-                    <SpinnerIcon size={14} className="animate-spin" aria-hidden="true" />
-                  )}
-                  Save Changes
-                </button>
-
-                {dirty && (
+              {/* Fix 1: Save / Discard actions — OWNER-ONLY.
+                  Non-owners do not see these buttons at all. */}
+              {isOwner && (
+                <div className="flex items-center gap-3">
                   <button
                     type="button"
-                    onClick={handleDiscard}
-                    className="flex h-9 items-center rounded-md px-4 text-sm font-medium transition-colors hover:bg-white/5"
-                    style={{ color: 'rgba(255,255,255,0.50)' }}
-                    data-testid="discard-btn"
+                    onClick={() => void handleSave()}
+                    disabled={!canSave}
+                    aria-disabled={!canSave}
+                    className="flex h-9 items-center gap-2 rounded-md px-4 text-sm font-semibold transition-colors"
+                    style={{
+                      background: canSave ? '#10b981' : '#27272a',
+                      color: canSave ? '#0a0a0b' : 'rgba(255,255,255,0.30)',
+                      cursor: canSave ? 'pointer' : 'not-allowed',
+                    }}
+                    data-testid="save-btn"
                   >
-                    Discard
+                    {saveStatus === 'saving' && (
+                      <SpinnerIcon size={14} className="animate-spin" aria-hidden="true" />
+                    )}
+                    Save Changes
                   </button>
-                )}
-              </div>
+
+                  {dirty && (
+                    <button
+                      type="button"
+                      onClick={handleDiscard}
+                      className="flex h-9 items-center rounded-md px-4 text-sm font-medium transition-colors hover:bg-white/5"
+                      style={{ color: 'rgba(255,255,255,0.50)' }}
+                      data-testid="discard-btn"
+                    >
+                      Discard
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </main>

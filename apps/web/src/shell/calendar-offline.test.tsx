@@ -167,6 +167,7 @@ function makeServerCtx(override: Partial<ServerContextValue> = {}): ServerContex
     scheduleOpen: true,
     openSchedule: vi.fn(),
     closeSchedule: vi.fn(),
+    refetchDetail: vi.fn(),
     ...override,
   };
 }
