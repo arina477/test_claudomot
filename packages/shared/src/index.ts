@@ -23,6 +23,7 @@ export {
   DiscoverServersQuerySchema,
   DiscoverServerSchema,
   DiscoverServersResponseSchema,
+  UpdateServerSchema,
 } from './servers.js';
 export type {
   CreateServerInput,
@@ -36,6 +37,7 @@ export type {
   DiscoverServersQuery,
   DiscoverServer,
   DiscoverServersResponse,
+  UpdateServer,
 } from './servers.js';
 
 export {
