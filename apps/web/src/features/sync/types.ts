@@ -94,6 +94,33 @@ export type CachedScheduledSession = ScheduledSession & {
   windowKey: string;
 };
 
+// ── Attachment media blob cache ───────────────────────────────────────────────
+
+/**
+ * CachedAttachmentBlob — a binary attachment payload persisted to local IDB.
+ *
+ * The Blob is stored directly; Dexie/IndexedDB supports structured-clone of
+ * Blob values natively. `sizeBytes` is stored alongside so the per-item cap
+ * check in putCachedAttachmentBlob can be enforced at read-time as well.
+ *
+ * Only blobs at or below MAX_CACHED_BLOB_BYTES (10 MiB) are ever written.
+ * The put helper enforces this: oversized records are silently dropped.
+ */
+export type CachedAttachmentBlob = {
+  /** Attachment id — primary key, matches the server attachment descriptor. */
+  id: string;
+  /** Raw binary payload. */
+  blob: Blob;
+  /** MIME type string (e.g. "image/png"). */
+  contentType: string;
+  /** Original filename as returned by the server. */
+  filename: string;
+  /** Size of the blob in bytes. Stored for cap enforcement + diagnostics. */
+  sizeBytes: number;
+  /** ISO timestamp of when the client stored this row. */
+  cachedAt: string;
+};
+
 // ── Outbox table ──────────────────────────────────────────────────────────────
 
 // ── Outbox routing key (wave-46 M8) ──────────────────────────────────────────

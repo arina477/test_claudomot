@@ -23,6 +23,7 @@
 import Dexie, { type EntityTable } from 'dexie';
 import type {
   CachedAssignment,
+  CachedAttachmentBlob,
   CachedChannel,
   CachedDmConversation,
   CachedDmMessage,
@@ -39,6 +40,7 @@ export class StudyHallDB extends Dexie {
   dmMessages!: EntityTable<CachedDmMessage, 'id'>;
   cachedAssignments!: EntityTable<CachedAssignment, 'id'>;
   cachedScheduledSessions!: EntityTable<CachedScheduledSession, 'id'>;
+  cachedAttachmentBlobs!: EntityTable<CachedAttachmentBlob, 'id'>;
 
   constructor(
     idbFactory?: IDBFactory,
@@ -132,6 +134,32 @@ export class StudyHallDB extends Dexie {
       dmMessages: 'id, conversationId, [conversationId+createdAt], createdAt',
       cachedAssignments: 'id, serverId',
       cachedScheduledSessions: 'id, serverId, windowKey',
+    });
+
+    /**
+     * v4 schema — wave-64 attachment media blob cache addition.
+     *
+     * CRITICAL: ALL SEVEN v1+v2+v3 tables are re-stated VERBATIM below.
+     * (Dexie cumulative-declarative — omitting ANY table in a later version
+     * deletes it and ALL its data on upgrade. Zero tolerance for omissions.)
+     *
+     * cachedAttachmentBlobs:
+     *   id       — primary key (attachment id from the server descriptor)
+     *   cachedAt — ISO timestamp for cache-age queries / eviction ordering
+     *
+     * Blob values are stored directly; IndexedDB structured-clone supports them.
+     * Only blobs at or below MAX_CACHED_BLOB_BYTES (10 MiB) are ever written
+     * (enforced by putCachedAttachmentBlob in cache.ts).
+     */
+    this.version(4).stores({
+      messages: 'id, channelId, [channelId+createdAt], createdAt',
+      channels: 'id, serverId',
+      outbox: '++id, channelId, idempotencyKey, state, [state+createdAt]',
+      dmConversations: 'id, createdAt',
+      dmMessages: 'id, conversationId, [conversationId+createdAt], createdAt',
+      cachedAssignments: 'id, serverId',
+      cachedScheduledSessions: 'id, serverId, windowKey',
+      cachedAttachmentBlobs: 'id, cachedAt',
     });
   }
 }

@@ -47,6 +47,7 @@ import {
 } from './icons';
 import { extractMentionSlug } from './mentionSlug'; // CJS-avoidance: local mirror of @studyhall/shared extractMentionSlug
 import { getPresenceStatus, hasPresence, subscribePresence } from './presenceSocket';
+import { useCachedAttachmentImage } from './useCachedAttachmentImage';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -413,7 +414,6 @@ type AttachmentRenderProps = {
 };
 
 function AttachmentRender({ attachment }: AttachmentRenderProps) {
-  const [broken, setBroken] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
 
@@ -422,7 +422,20 @@ function AttachmentRender({ attachment }: AttachmentRenderProps) {
 
   const isImage = isImageType(attachment.contentType);
 
-  if (isImage && !broken) {
+  // Offline-aware image src: online uses presigned URL; offline uses cached object-URL.
+  // Hook is always called (rules of hooks) but only used when isImage is true.
+  const cachedImageState = useCachedAttachmentImage(attachment);
+
+  if (isImage) {
+    // 'unavailable' = offline and no cached blob → fall through to broken-image chip.
+    if (cachedImageState.kind === 'unavailable') {
+      return (
+        <FileChip filename={attachment.filename} sizeBytes={attachment.sizeBytes} isBroken={true} />
+      );
+    }
+
+    const imageSrc = cachedImageState.src;
+
     return (
       <>
         <button
@@ -437,11 +450,10 @@ function AttachmentRender({ attachment }: AttachmentRenderProps) {
           }}
         >
           <img
-            src={attachment.url}
+            src={imageSrc}
             alt={attachment.filename}
             className="w-auto max-w-full object-cover"
             style={{ maxHeight: 320, display: 'block' }}
-            onError={() => setBroken(true)}
           />
           {/* Hover overlay with expand cue */}
           <div
@@ -464,7 +476,7 @@ function AttachmentRender({ attachment }: AttachmentRenderProps) {
         {/* Lightbox portal — rendered outside the message row */}
         {lightboxOpen && (
           <ImageLightbox
-            src={attachment.url}
+            src={imageSrc}
             alt={attachment.filename}
             onClose={handleCloseLightbox}
             triggerRef={triggerRef as React.RefObject<HTMLButtonElement | null>}
@@ -474,13 +486,12 @@ function AttachmentRender({ attachment }: AttachmentRenderProps) {
     );
   }
 
-  // Broken image or non-image: file chip
+  // Non-image: file chip
   return (
     <FileChip
       filename={attachment.filename}
       sizeBytes={attachment.sizeBytes}
       url={attachment.url}
-      isBroken={isImage && broken}
     />
   );
 }
