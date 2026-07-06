@@ -14,7 +14,7 @@ Current wave = 55. Next = **56**. No pause condition holds: N-2 emitted a valid 
 Written before the Action 4 archive so it archives with the wave.
 
 ### Action 4 — Archive the entire current wave
-`git mv process/waves/wave-55/ process/waves/_archive/wave-55/` + `git commit`. Archive commit SHA: **`8fc07b7`** (see final state emission below; updated post-commit).
+`git mv process/waves/wave-55/ process/waves/_archive/wave-55/` + `git commit`. Archive commit SHA: **`d2659dd`** (see final state emission below; updated post-commit).
 
 ### Action 5a — Close the wave row (DB, after archive)
 `UPDATE waves SET status='ok' WHERE id=(SELECT id FROM waves WHERE status='running' ORDER BY wave_number DESC LIMIT 1) RETURNING wave_number` → returned **55**. Exactly one running wave closed. `ended_at` auto-set by the `set_wave_ended_at()` trigger.
@@ -29,7 +29,7 @@ n_stage_verdict: COMPLETE
 verdict_evidence:
   - "next wave: 56"
   - "next wave checklist: process/waves/wave-56/checklist.md"
-  - "archive commit: 8fc07b7"
+  - "archive commit: d2659dd"
   - "wave-close RETURNING wave_number: 55"
 prev_wave: 55
 next_wave: 56
