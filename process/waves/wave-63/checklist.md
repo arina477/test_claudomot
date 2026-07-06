@@ -31,12 +31,12 @@ TEST:
 - [ ] T-8 Security
 - [ ] T-9 Journey
 VERIFY:
-- [ ] V-1 Independent reviews (Karen + jenny, parallel)
-- [ ] V-2 Triage
-- [ ] V-3 Fast-fix loop (or close)
+- [x] V-1 Independent reviews (Karen + jenny, parallel)
+- [x] V-2 Triage
+- [x] V-3 Fast-fix loop (or close)
 LEARN:
-- [ ] L-1 Docs
-- [ ] L-2 Distill
+- [x] L-1 Docs
+- [x] L-2 Distill
 NEXT:
 - [ ] N-1 Survey & triggers
 - [ ] N-2 Seed

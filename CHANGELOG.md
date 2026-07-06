@@ -82,6 +82,7 @@ All notable changes to StudyHall are documented here. Format follows
 - Set your server's own study-timer lengths: any member can change the Work and Break minutes (Work 1–120, Break 1–60), and the new lengths apply the next time the timer starts and update live on everyone's screen. Lengths can only be changed while the timer is idle — reset it first to adjust. (#64)
 - Study together in focus rooms: create or join a focus room to body-double with others, see who's studying alongside you in a live roster, and share one synchronized room timer that keeps everyone's Work and Break in step. (#66)
 - Read your direct messages offline: your conversation list and message history now stay readable even when you're offline or on a flaky connection, instead of going blank, and they sync back up when you reconnect. (#77)
+- View your assignments and class schedule offline: your assignment list and class calendar now stay readable even when you're offline or on a flaky connection, instead of going blank, and they refresh once you reconnect. (#78)
 
 ### Changed
 
