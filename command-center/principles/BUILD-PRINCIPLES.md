@@ -99,3 +99,6 @@ Promoted at L-2 Distill from `process/waves/wave-<N>/blocks/L/observations.md` b
 
 11. In a Dexie .version(N+1).stores() call, re-state every prior table verbatim; an omitted table is dropped on upgrade.
    Why: Dexie treats a table absent from a later version as a drop, irreversibly deleting its data.
+
+12. Test a component's success callback through its real parent caller, not the component rendered in isolation.
+   Why: An isolated test injecting the prop passes while the caller never wires it, no-oping live.
