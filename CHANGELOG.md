@@ -99,6 +99,7 @@ All notable changes to StudyHall are documented here. Format follows
 - The "who can message me" privacy setting is now fully covered by durable database-backed tests: when a member limits messages to people in their shared study servers, someone in a shared server can still reach them while someone with no shared server is reliably blocked, so this protection can't silently regress. (no visible change) (#70)
 - The list of people you can start a direct message with is now safely capped, so an unusually large shared server can never make that lookup return an unbounded result. (no visible change) (#71)
 - Aligned a few direct-message surface shades to the design system, so the server rail, the start-a-message picker, and the disabled send button now match the app's standard dark palette. (#75)
+- Opening a study server you've never used offline now shows a calm "not available offline yet — reconnect to load it" note in the channel sidebar instead of an error-worded "Couldn't load channels" message; a genuine failure while online still reads as an error. (#81)
 
 ### Fixed
 
