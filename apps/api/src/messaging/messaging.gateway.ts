@@ -32,6 +32,7 @@ import type {
 import { DM_MESSAGE_EVENT } from '@studyhall/shared';
 import type { Server, Socket } from 'socket.io';
 import { installWsAuthMiddleware } from '../common/ws-auth';
+import { WS_GENERIC_ERROR } from '../common/ws-errors';
 // biome-ignore lint/style/useImportType: value import required — emitDecoratorMetadata needs the runtime symbol for NestJS DI
 import { RbacService } from '../rbac/rbac.service';
 
@@ -130,7 +131,7 @@ export class MessagingGateway implements OnGatewayInit, OnGatewayConnection {
     try {
       allowed = await this.rbacService.canViewChannelById(userId, channelId);
     } catch {
-      socket.emit('error', { message: 'Internal error checking channel access' });
+      socket.emit('error', { message: WS_GENERIC_ERROR });
       return;
     }
 
