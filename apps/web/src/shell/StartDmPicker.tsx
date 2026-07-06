@@ -173,7 +173,7 @@ export function StartDmPicker({ onConfirm, onClose, triggerRef }: Props) {
         data-testid="start-dm-picker"
         className="relative flex flex-col w-full max-w-[480px] rounded-lg overflow-hidden"
         style={{
-          backgroundColor: '#1c1c1f',
+          backgroundColor: 'var(--color-surface-900)',
           border: '1px solid rgba(255,255,255,0.06)',
           boxShadow: '0 8px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)',
           maxHeight: '80dvh',
@@ -429,7 +429,9 @@ export function StartDmPicker({ onConfirm, onClose, triggerRef }: Props) {
             data-testid="dm-picker-confirm"
             className="px-4 py-2 rounded-md text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70"
             style={{
-              backgroundColor: canConfirm ? '#10b981' : '#27272a',
+              backgroundColor: canConfirm
+                ? 'var(--color-accent-emerald)'
+                : 'color-mix(in srgb, var(--color-accent-emerald) 40%, transparent)',
               color: canConfirm ? '#0a0a0b' : 'rgba(255,255,255,0.30)',
               cursor: canConfirm ? 'pointer' : 'not-allowed',
               boxShadow: canConfirm ? '0 0 0 2px rgba(16,185,129,0.4)' : 'none',
