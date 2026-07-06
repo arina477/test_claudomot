@@ -62,7 +62,7 @@ export type UseTypingResult = {
   typingLabel: string;
 };
 
-function buildTypingLabel(typers: TypingActive['typers']): string {
+export function buildTypingLabel(typers: TypingActive['typers']): string {
   type Typer = (typeof typers)[number];
   if (typers.length === 0) return '';
   if (typers.length === 1) {
