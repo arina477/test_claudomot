@@ -28,6 +28,16 @@ vi.mock('../auth/api', () => ({
   },
 }));
 
+// ── useConnectionState mock ───────────────────────────────────────────────────
+// Default to 'offline' (jsdom has no socket). Individual tests override via
+// vi.mocked(useConnectionState).mockReturnValue(...) for deterministic coverage.
+
+vi.mock('./useConnectionState', () => ({
+  useConnectionState: vi.fn(() => 'offline' as const),
+}));
+
+import { useConnectionState } from './useConnectionState';
+
 import { api } from '../auth/api';
 const mockApi = api as unknown as {
   createServer: ReturnType<typeof vi.fn>;
@@ -222,6 +232,11 @@ describe('CreateServerModal', () => {
 // ── ChannelSidebar ────────────────────────────────────────────────────────────
 
 describe('ChannelSidebar', () => {
+  beforeEach(() => {
+    // Reset to offline default before each test so per-test overrides don't leak.
+    vi.mocked(useConnectionState).mockReturnValue('offline');
+  });
+
   function renderSidebar(ctxOverride: Partial<ServerContextValue> = {}) {
     return render(
       <ProfileContext.Provider value={nullProfile}>
@@ -285,8 +300,24 @@ describe('ChannelSidebar', () => {
     expect(screen.queryByText(/couldn't load/i)).not.toBeInTheDocument();
   });
 
-  it('shows an error message when detail fetch fails', () => {
+  it('shows neutral offline copy when offline and detail fetch returns error', () => {
+    vi.mocked(useConnectionState).mockReturnValue('offline');
+    renderSidebar({ selectedId: 's1', detailStatus: 'error' });
+    expect(screen.getByText(/this server isn't available offline yet/i)).toBeInTheDocument();
+    expect(screen.queryByText(/couldn't load channels/i)).not.toBeInTheDocument();
+  });
+
+  it('shows neutral offline copy when reconnecting and detail fetch returns error', () => {
+    vi.mocked(useConnectionState).mockReturnValue('reconnecting');
+    renderSidebar({ selectedId: 's1', detailStatus: 'error' });
+    expect(screen.getByText(/this server isn't available offline yet/i)).toBeInTheDocument();
+    expect(screen.queryByText(/couldn't load channels/i)).not.toBeInTheDocument();
+  });
+
+  it('shows error copy when online and detail fetch returns error', () => {
+    vi.mocked(useConnectionState).mockReturnValue('online');
     renderSidebar({ selectedId: 's1', detailStatus: 'error' });
     expect(screen.getByText(/couldn't load channels/i)).toBeInTheDocument();
+    expect(screen.queryByText(/this server isn't available offline yet/i)).not.toBeInTheDocument();
   });
 });
