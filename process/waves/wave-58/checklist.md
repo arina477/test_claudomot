@@ -45,29 +45,29 @@ BUILD:
 - [x] B-6 Review
 
 CI/CD:
-- [ ] C-1 PR, CI & merge
-- [ ] C-2 Deploy & verify
-- [ ] C-3 Canary
+- [x] C-1 PR, CI & merge
+- [x] C-2 Deploy & verify
+- [~] C-3 Canary (SKIP — real users < 1000; canary threshold not met)
 
 TEST:
-- [ ] T-1 Static
-- [ ] T-2 Unit
-- [ ] T-3 Contract
-- [ ] T-4 Integration
-- [ ] T-5 E2E
-- [ ] T-6 Perf
-- [ ] T-7 Security (a11y/inputs)
-- [ ] T-8 Security (auth/secrets)
-- [ ] T-9 Journey
+- [x] T-1 Static
+- [x] T-2 Unit
+- [x] T-3 Contract
+- [x] T-4 Integration
+- [x] T-5 E2E
+- [~] T-6 Perf (SKIP — not heavy)
+- [~] T-7 Security a11y/inputs (SKIP — no input/layout surface change)
+- [~] T-8 Security auth/secrets (SKIP — RBAC unchanged; secret-scan false-positive cleared)
+- [x] T-9 Journey
 
 VERIFY:
-- [ ] V-1 Independent reviews (Karen + jenny, parallel)
-- [ ] V-2 Triage
-- [ ] V-3 Fast-fix loop (or close)
+- [x] V-1 Independent reviews (Karen + jenny, parallel)
+- [x] V-2 Triage
+- [x] V-3 Fast-fix loop (or close)
 
 LEARN:
-- [ ] L-1 Docs
-- [ ] L-2 Distill
+- [x] L-1 Docs
+- [x] L-2 Distill
 
 NEXT:
 - [ ] N-1 Survey & triggers
