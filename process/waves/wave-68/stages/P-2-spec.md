@@ -1,0 +1,4 @@
+# P-2 Spec (pointer) — wave-68
+Source of truth: seed tasks row 2bd37c4c description (YAML head + --- + prose). single-spec. design_gap_flag: false.
+Components (8 ACs): (1) PATCH /servers/:id owner-only (403 non-owner / 404 missing) partial is_public/description/topic update; (2) non-owner-reject hard security AC (row unmodified); (3) opt-in + unpublish (retract from directory, toggle both ways); (4) shared UpdateServer Zod DTO; (5) server-settings UI publish toggle + description/topic (owner-only, reuse Overview shell + DS form primitives, api.updateServer); (6) owner-only publish control; (7) success/error UX; (8) memberCount fix (real count, LEFT JOIN+GROUP BY) + (9) LIVE-DB test (pg-harness, real count assertion — the guard the mocked test lacked).
+CARRIES: owner-authz SERVICE-side (security); memberCount live-DB test (hard AC); reuse server-settings Overview (not Roles tab). Moderation deferred (before public launch, not this wave).
