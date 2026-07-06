@@ -866,6 +866,37 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
+  // ── Server discovery endpoints (wave-67 M12) ─────────────────────────────
+
+  /**
+   * GET /servers/discover?q=&limit=&offset= → DiscoverServersResponse.
+   * Public server directory; auth-required (AuthGuard).
+   * Throws: 401 unauthed.
+   */
+  getDiscoverServers: (params?: {
+    q?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<import('@studyhall/shared').DiscoverServersResponse> => {
+    const qs = new URLSearchParams();
+    if (params?.q) qs.set('q', params.q);
+    if (params?.limit != null) qs.set('limit', String(params.limit));
+    if (params?.offset != null) qs.set('offset', String(params.offset));
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return request<import('@studyhall/shared').DiscoverServersResponse>(
+      `/servers/discover${suffix}`,
+    );
+  },
+
+  /**
+   * POST /servers/:id/join-public → JoinResult ({ serverId }).
+   * Joins a public server (is_public-gated — rejects private with 404/403).
+   * Idempotent: re-joining returns the same serverId.
+   * Throws: 401 unauthed, 403/404 private or not found.
+   */
+  joinPublicServer: (serverId: string): Promise<JoinResult> =>
+    request<JoinResult>(`/servers/${serverId}/join-public`, { method: 'POST', body: '{}' }),
+
   exportAccountData: async (): Promise<void> => {
     const res = await fetch(`${BASE}/profile/data/export`, { credentials: 'include' });
     if (!res.ok) {

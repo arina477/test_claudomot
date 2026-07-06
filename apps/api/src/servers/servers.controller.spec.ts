@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import type {
+  DiscoverServersResponse,
   InvitePreview,
   InviteResponse,
   JoinResult,
@@ -59,6 +60,8 @@ function makeController() {
     joinViaInvite: vi.fn<() => Promise<JoinResult>>(),
     revokeInvite: vi.fn<() => Promise<void>>(),
     rotateInviteCode: vi.fn<() => Promise<{ invite_code: string }>>(),
+    discoverServers: vi.fn<() => Promise<DiscoverServersResponse>>(),
+    joinPublicServer: vi.fn<() => Promise<JoinResult>>(),
   };
   // biome-ignore lint/suspicious/noExplicitAny: test mock — full type not needed
   const controller = new ServersController(serversService as any);
@@ -441,6 +444,122 @@ describe('InvitesController.revokeInvite', () => {
     );
 
     await expect(invitesController.revokeInvite(makeReq('owner-1'), 'perm-code')).rejects.toThrow(
+      NotFoundException,
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /servers/discover (wave-67)
+// ---------------------------------------------------------------------------
+
+describe('ServersController.discoverServers', () => {
+  let controller: ServersController;
+  let serversService: ReturnType<typeof makeController>['serversService'];
+
+  beforeEach(() => {
+    ({ controller, serversService } = makeController());
+  });
+
+  const mockDiscoverResponse: DiscoverServersResponse = {
+    servers: [
+      { id: 'srv-1', name: 'Alpha', description: 'desc', topic: 'math', memberCount: 5 },
+      { id: 'srv-2', name: 'Beta', description: null, topic: null, memberCount: 2 },
+    ],
+  };
+
+  it('returns DiscoverServersResponse with default query params', async () => {
+    serversService.discoverServers.mockResolvedValue(mockDiscoverResponse);
+
+    // NestJS binds @Query() as a plain object — pass minimal query
+    const result = await controller.discoverServers({});
+
+    expect(result).toEqual(mockDiscoverResponse);
+    expect(serversService.discoverServers).toHaveBeenCalledWith({ limit: 20, offset: 0 });
+  });
+
+  it('passes q, limit, and offset to service when provided', async () => {
+    serversService.discoverServers.mockResolvedValue({ servers: [] });
+
+    await controller.discoverServers({ q: 'calc', limit: '10', offset: '5' });
+
+    expect(serversService.discoverServers).toHaveBeenCalledWith({
+      q: 'calc',
+      limit: 10,
+      offset: 5,
+    });
+  });
+
+  it('coerces limit string to number via Zod', async () => {
+    serversService.discoverServers.mockResolvedValue({ servers: [] });
+
+    await controller.discoverServers({ limit: '15' });
+
+    expect(serversService.discoverServers).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 15 }),
+    );
+  });
+
+  it('throws BadRequestException (400) for limit > 50', async () => {
+    await expect(controller.discoverServers({ limit: '100' })).rejects.toThrow(BadRequestException);
+  });
+
+  it('throws BadRequestException (400) for negative offset', async () => {
+    await expect(controller.discoverServers({ offset: '-1' })).rejects.toThrow(BadRequestException);
+  });
+
+  it('returns empty servers array', async () => {
+    serversService.discoverServers.mockResolvedValue({ servers: [] });
+
+    const result = await controller.discoverServers({});
+
+    expect(result.servers).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /servers/:id/join-public (wave-67)
+// ---------------------------------------------------------------------------
+
+describe('ServersController.joinPublicServer', () => {
+  let controller: ServersController;
+  let serversService: ReturnType<typeof makeController>['serversService'];
+
+  beforeEach(() => {
+    ({ controller, serversService } = makeController());
+  });
+
+  it('returns {serverId} on successful join', async () => {
+    serversService.joinPublicServer.mockResolvedValue({ serverId: 'server-1' });
+
+    const result = await controller.joinPublicServer(makeReq('user-abc'), 'server-1');
+
+    expect(result).toEqual({ serverId: 'server-1' });
+    expect(serversService.joinPublicServer).toHaveBeenCalledWith('server-1', 'user-abc');
+  });
+
+  it('returns {serverId} for existing member re-join (idempotent 200)', async () => {
+    serversService.joinPublicServer.mockResolvedValue({ serverId: 'server-1' });
+
+    const result = await controller.joinPublicServer(makeReq('user-abc'), 'server-1');
+
+    expect(result).toEqual({ serverId: 'server-1' });
+  });
+
+  it('propagates ForbiddenException (403) when server is not public', async () => {
+    serversService.joinPublicServer.mockRejectedValue(
+      new ForbiddenException('Server is not open for public joining'),
+    );
+
+    await expect(controller.joinPublicServer(makeReq(), 'private-server')).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  it('propagates NotFoundException (404) when server does not exist', async () => {
+    serversService.joinPublicServer.mockRejectedValue(new NotFoundException('Server not found'));
+
+    await expect(controller.joinPublicServer(makeReq(), 'ghost-server')).rejects.toThrow(
       NotFoundException,
     );
   });

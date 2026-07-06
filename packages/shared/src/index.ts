@@ -20,6 +20,9 @@ export {
   CategoryWithChannelsSchema,
   ServerDetailSchema,
   ServerMemberSchema,
+  DiscoverServersQuerySchema,
+  DiscoverServerSchema,
+  DiscoverServersResponseSchema,
 } from './servers.js';
 export type {
   CreateServerInput,
@@ -30,6 +33,9 @@ export type {
   CategoryWithChannels,
   ServerDetail,
   ServerMember,
+  DiscoverServersQuery,
+  DiscoverServer,
+  DiscoverServersResponse,
 } from './servers.js';
 
 export {

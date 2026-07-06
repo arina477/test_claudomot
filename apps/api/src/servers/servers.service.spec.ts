@@ -1368,3 +1368,209 @@ describe('ServersService.listServerMembers — displayName empty-fallback guard 
     expect(result[0]?.displayName).toBe('Carol Jones');
   });
 });
+
+// ---------------------------------------------------------------------------
+// ServersService — discoverServers (wave-67)
+// ---------------------------------------------------------------------------
+
+/**
+ * makeDiscoverChain builds a select-chain mock that resolves with `rows`.
+ * The discover query uses leftJoin + where + orderBy + limit + offset — all
+ * fluent methods must be present on the chain for the call to complete.
+ */
+function makeDiscoverChain(rows: unknown[]) {
+  const chain: Record<string, unknown> = {
+    // biome-ignore lint/suspicious/noThenProperty: intentional thenable mock
+    then: (res: (v: unknown) => unknown, rej?: (e: unknown) => unknown) =>
+      Promise.resolve(rows).then(res, rej),
+  };
+  // The correlated-subquery approach uses a single db.select() chain without leftJoin.
+  for (const m of ['from', 'where', 'orderBy', 'limit', 'offset']) {
+    chain[m] = vi.fn().mockReturnValue(chain);
+  }
+  return chain;
+}
+
+describe('ServersService.discoverServers', () => {
+  let service: ServersService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    service = new ServersService(makeRbacServiceMock());
+  });
+
+  it('returns only rows from the query (public filtering delegated to DB layer)', async () => {
+    mockSelect.mockReturnValue(
+      makeDiscoverChain([
+        { id: 'srv-1', name: 'Alpha', description: 'desc', topic: 'math', memberCount: 5 },
+        { id: 'srv-2', name: 'Beta', description: null, topic: null, memberCount: 2 },
+      ]),
+    );
+
+    const result = await service.discoverServers({ limit: 20, offset: 0 });
+
+    expect(result.servers).toHaveLength(2);
+    expect(result.servers[0]).toEqual({
+      id: 'srv-1',
+      name: 'Alpha',
+      description: 'desc',
+      topic: 'math',
+      memberCount: 5,
+    });
+    expect(result.servers[1]).toEqual({
+      id: 'srv-2',
+      name: 'Beta',
+      description: null,
+      topic: null,
+      memberCount: 2,
+    });
+  });
+
+  it('returns empty servers array when no public servers match', async () => {
+    mockSelect.mockReturnValue(makeDiscoverChain([]));
+
+    const result = await service.discoverServers({ limit: 20, offset: 0 });
+
+    expect(result.servers).toEqual([]);
+  });
+
+  it('caps limit at 50 regardless of caller input (defensive cap)', async () => {
+    let capturedLimit: unknown;
+    const chain = makeDiscoverChain([]);
+    const origLimit = chain.limit as ReturnType<typeof vi.fn>;
+    chain.limit = vi.fn((n: unknown) => {
+      capturedLimit = n;
+      return origLimit(n);
+    });
+    mockSelect.mockReturnValue(chain);
+
+    await service.discoverServers({ limit: 999, offset: 0 });
+
+    expect(capturedLimit).toBe(50);
+  });
+
+  it('passes offset through to the query', async () => {
+    let capturedOffset: unknown;
+    const chain = makeDiscoverChain([]);
+    const origOffset = chain.offset as ReturnType<typeof vi.fn>;
+    chain.offset = vi.fn((n: unknown) => {
+      capturedOffset = n;
+      return origOffset(n);
+    });
+    mockSelect.mockReturnValue(chain);
+
+    await service.discoverServers({ limit: 10, offset: 25 });
+
+    expect(capturedOffset).toBe(25);
+  });
+
+  it('returns servers with zero members (correlated subquery handles no-membership case)', async () => {
+    // The correlated scalar subquery returns 0 when there are no server_members rows.
+    // No leftJoin is needed — zero count comes from COUNT(*) on an empty match.
+    mockSelect.mockReturnValue(
+      makeDiscoverChain([
+        { id: 'srv-empty', name: 'Empty', description: null, topic: null, memberCount: 0 },
+      ]),
+    );
+
+    const result = await service.discoverServers({ limit: 20, offset: 0 });
+
+    expect(result.servers[0]?.memberCount).toBe(0);
+  });
+
+  it('passes q-filtered rows through as-is (filtering happens in DB layer)', async () => {
+    mockSelect.mockReturnValue(
+      makeDiscoverChain([
+        { id: 'srv-math', name: 'Math Study', description: 'algebra', topic: null, memberCount: 3 },
+      ]),
+    );
+
+    const result = await service.discoverServers({ q: 'math', limit: 20, offset: 0 });
+
+    expect(result.servers).toHaveLength(1);
+    expect(result.servers[0]?.id).toBe('srv-math');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ServersService — joinPublicServer (wave-67)
+// ---------------------------------------------------------------------------
+
+describe('ServersService.joinPublicServer', () => {
+  let service: ServersService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    service = new ServersService(makeRbacServiceMock());
+  });
+
+  /**
+   * Build a transaction mock for joinPublicServer.
+   * selectRows: what the server SELECT returns inside the txn.
+   * Includes an insert stub with onConflictDoNothing().
+   */
+  function buildPublicJoinTxMock(selectRows: unknown[]) {
+    return {
+      select: vi.fn(() => makeSelectChain(selectRows)),
+      insert: vi.fn(() => {
+        const chain: Record<string, unknown> = {};
+        chain.values = vi.fn(() => {
+          return { onConflictDoNothing: vi.fn().mockResolvedValue([]) };
+        });
+        return chain;
+      }),
+    };
+  }
+
+  it('returns {serverId} when joining a public server', async () => {
+    const publicServer = { ...mockServer, is_public: true };
+    const txMock = buildPublicJoinTxMock([publicServer]);
+    mockTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(txMock));
+
+    const result = await service.joinPublicServer('server-1', 'user-new');
+
+    expect(result).toEqual({ serverId: 'server-1' });
+  });
+
+  it('is idempotent — re-join of an existing member returns {serverId} (onConflictDoNothing)', async () => {
+    const publicServer = { ...mockServer, is_public: true };
+    const txMock = buildPublicJoinTxMock([publicServer]);
+    mockTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(txMock));
+
+    const first = await service.joinPublicServer('server-1', 'user-1');
+    const second = await service.joinPublicServer('server-1', 'user-1');
+
+    expect(first).toEqual({ serverId: 'server-1' });
+    expect(second).toEqual({ serverId: 'server-1' });
+  });
+
+  it('SECURITY: throws ForbiddenException (403) when server is NOT public', async () => {
+    const privateServer = { ...mockServer, is_public: false };
+    const txMock = buildPublicJoinTxMock([privateServer]);
+    mockTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(txMock));
+
+    await expect(service.joinPublicServer('server-1', 'user-new')).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  it('SECURITY: private server join is rejected — no membership insert attempted', async () => {
+    const privateServer = { ...mockServer, is_public: false };
+    const txMock = buildPublicJoinTxMock([privateServer]);
+    mockTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(txMock));
+
+    await expect(service.joinPublicServer('server-1', 'user-new')).rejects.toThrow(
+      ForbiddenException,
+    );
+    expect(txMock.insert).not.toHaveBeenCalled();
+  });
+
+  it('throws NotFoundException (404) when server does not exist', async () => {
+    const txMock = buildPublicJoinTxMock([]);
+    mockTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(txMock));
+
+    await expect(service.joinPublicServer('ghost-server', 'user-1')).rejects.toThrow(
+      NotFoundException,
+    );
+  });
+});

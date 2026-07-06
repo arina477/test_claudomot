@@ -11,6 +11,7 @@
 
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { AppShell } from './AppShell';
 import { ConnectionStateIndicator } from './ConnectionStateIndicator';
@@ -95,9 +96,11 @@ const defaultCtx: ServerContextValue = {
 
 function renderShell(ctxOverride: Partial<ServerContextValue> = {}) {
   return render(
-    <ServerContext.Provider value={{ ...defaultCtx, ...ctxOverride }}>
-      <AppShell />
-    </ServerContext.Provider>,
+    <MemoryRouter>
+      <ServerContext.Provider value={{ ...defaultCtx, ...ctxOverride }}>
+        <AppShell />
+      </ServerContext.Provider>
+    </MemoryRouter>,
   );
 }
 

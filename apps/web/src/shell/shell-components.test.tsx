@@ -8,6 +8,7 @@
 
 import type { ServerDetail } from '@studyhall/shared';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ChannelSidebar } from './ChannelSidebar';
 import { CreateServerModal } from './CreateServerModal';
@@ -91,9 +92,11 @@ describe('ServerRail', () => {
       status: 'loaded',
     });
     render(
-      <ServerContext.Provider value={ctx}>
-        <ServerRail />
-      </ServerContext.Provider>,
+      <MemoryRouter>
+        <ServerContext.Provider value={ctx}>
+          <ServerRail />
+        </ServerContext.Provider>
+      </MemoryRouter>,
     );
     // initials: "CS 201" → "CS", "Literature" → "LI"
     expect(screen.getByRole('button', { name: /CS 201/i })).toBeInTheDocument();
@@ -103,9 +106,11 @@ describe('ServerRail', () => {
   it('renders no server buttons when the list is empty', () => {
     const ctx = makeServerCtx({ servers: [], status: 'loaded' });
     render(
-      <ServerContext.Provider value={ctx}>
-        <ServerRail />
-      </ServerContext.Provider>,
+      <MemoryRouter>
+        <ServerContext.Provider value={ctx}>
+          <ServerRail />
+        </ServerContext.Provider>
+      </MemoryRouter>,
     );
     // Only Home and "Add a server" — no dynamically generated server buttons
     const buttons = screen.getAllByRole('button');
@@ -121,9 +126,11 @@ describe('ServerRail', () => {
       selectedId: 'x',
     });
     render(
-      <ServerContext.Provider value={ctx}>
-        <ServerRail />
-      </ServerContext.Provider>,
+      <MemoryRouter>
+        <ServerContext.Provider value={ctx}>
+          <ServerRail />
+        </ServerContext.Provider>
+      </MemoryRouter>,
     );
     expect(screen.getByRole('button', { name: /Study Group/i })).toHaveAttribute(
       'aria-current',
@@ -135,9 +142,11 @@ describe('ServerRail', () => {
     const openCreateModal = vi.fn();
     const ctx = makeServerCtx({ openCreateModal });
     render(
-      <ServerContext.Provider value={ctx}>
-        <ServerRail />
-      </ServerContext.Provider>,
+      <MemoryRouter>
+        <ServerContext.Provider value={ctx}>
+          <ServerRail />
+        </ServerContext.Provider>
+      </MemoryRouter>,
     );
     fireEvent.click(screen.getByRole('button', { name: /add a server/i }));
     expect(openCreateModal).toHaveBeenCalledOnce();
@@ -146,9 +155,11 @@ describe('ServerRail', () => {
   it('shows a loading indicator while status is loading', () => {
     const ctx = makeServerCtx({ servers: [], status: 'loading' });
     render(
-      <ServerContext.Provider value={ctx}>
-        <ServerRail />
-      </ServerContext.Provider>,
+      <MemoryRouter>
+        <ServerContext.Provider value={ctx}>
+          <ServerRail />
+        </ServerContext.Provider>
+      </MemoryRouter>,
     );
     expect(screen.getByLabelText(/loading servers/i)).toBeInTheDocument();
   });

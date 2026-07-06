@@ -6,6 +6,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type {
+  DiscoverServer,
+  DiscoverServersQuery,
+  DiscoverServersResponse,
   InvitePreview,
   InviteResponse,
   JoinResult,
@@ -14,7 +17,7 @@ import type {
   ServerResponse,
   ServerSummary,
 } from '@studyhall/shared';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import { db } from '../db/index';
 import {
   categories,
@@ -502,6 +505,135 @@ export class ServersService {
    *
    * An existing member re-joining returns 200 {serverId} without incrementing uses.
    */
+  // -------------------------------------------------------------------------
+  // Server discovery — GET /servers/discover (wave-67)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Return paginated list of public servers (is_public = true).
+   *
+   * memberCount is derived via a correlated scalar subquery on server_members —
+   * no stored counter column.  The expression is bound once and referenced in
+   * both the SELECT projection and ORDER BY so the query planner receives
+   * identical SQL text in both positions and can CSE it to a single
+   * computation per candidate row.
+   *
+   * Ordering: memberCount DESC, name ASC, id ASC.
+   *   - memberCount DESC surfaces the most-active servers first.
+   *   - name ASC is the secondary stable tie-break within equal counts.
+   *   - id ASC (UUID primary key) is the final deterministic tie-break, making
+   *     offset pagination skip/duplicate-free within a single page-load session.
+   *   - Known limitation: if a server's memberCount changes between "Load more"
+   *     requests (join/leave event), its primary sort key shifts and it may
+   *     appear at a different position on the next page.  This cross-page drift
+   *     is an accepted minor limitation at the current scale; cursor-keyset
+   *     pagination would eliminate it entirely and is deferred.
+   *
+   * Optional text search (q): case-insensitive ILIKE against name, description,
+   * and topic.  Any field match qualifies the row (OR semantics).
+   *
+   * limit is defensively capped at 50 even if a larger value slips past Zod.
+   */
+  async discoverServers({
+    q,
+    limit,
+    offset,
+  }: DiscoverServersQuery): Promise<DiscoverServersResponse> {
+    const safeLimitCap = 50;
+    const safeLimit = Math.min(limit, safeLimitCap);
+
+    // memberCount is computed ONCE via a correlated scalar subquery that is
+    // bound to a single sql expression object.  The same reference is passed to
+    // both the SELECT projection and the ORDER BY clause so Drizzle emits
+    // identical SQL text in both positions — allowing Postgres to recognise the
+    // expressions as equivalent and evaluate the subquery a single time per row.
+    const memberCountExpr = sql<number>`(
+      SELECT count(*)::int
+      FROM server_members sm
+      WHERE sm.server_id = ${servers.id}
+    )`;
+
+    // Base WHERE: public only
+    const publicFilter = eq(servers.is_public, true);
+
+    // Optional ILIKE filter across name / description / topic
+    const searchFilter = q
+      ? or(
+          ilike(servers.name, `%${q}%`),
+          ilike(servers.description, `%${q}%`),
+          ilike(servers.topic, `%${q}%`),
+        )
+      : undefined;
+
+    const whereClause = searchFilter ? and(publicFilter, searchFilter) : publicFilter;
+
+    const rows = await db
+      .select({
+        id: servers.id,
+        name: servers.name,
+        description: servers.description,
+        topic: servers.topic,
+        memberCount: memberCountExpr,
+      })
+      .from(servers)
+      .where(whereClause)
+      // ORDER BY: memberCount DESC (relevance), name ASC (secondary tie-break),
+      // id ASC (stable UUID tie-break — makes offset pagination deterministic).
+      .orderBy(desc(memberCountExpr), asc(servers.name), asc(servers.id))
+      .limit(safeLimit)
+      .offset(offset);
+
+    const result: DiscoverServer[] = rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      description: row.description ?? null,
+      topic: row.topic ?? null,
+      memberCount: row.memberCount,
+    }));
+
+    return { servers: result };
+  }
+
+  // -------------------------------------------------------------------------
+  // Public-server join — POST /servers/:id/join-public (wave-67)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Join a public server without an invite code.
+   *
+   * SECURITY (load-bearing): the server row is read inside a transaction and
+   * is_public is checked BEFORE the INSERT.  If the server does not exist OR
+   * is not public, we reject with 404/403.  Private servers are never joinable
+   * via this path — it is not a backdoor into invite-only servers.
+   *
+   * The INSERT core is identical to joinViaInvite (idempotent
+   * onConflictDoNothing); re-joining a public server an existing member already
+   * belongs to returns success without duplicating the membership row.
+   */
+  async joinPublicServer(serverId: string, userId: string): Promise<JoinResult> {
+    return await db.transaction(async (tx) => {
+      // Load server inside txn — authoritative is_public check
+      const [server] = await tx.select().from(servers).where(eq(servers.id, serverId)).limit(1);
+
+      if (!server) {
+        throw new NotFoundException('Server not found');
+      }
+
+      // SECURITY: private servers are NOT joinable via this path.
+      if (!server.is_public) {
+        throw new ForbiddenException('Server is not open for public joining');
+      }
+
+      // Idempotent INSERT: existing member re-join returns success.
+      await tx
+        .insert(server_members)
+        .values({ server_id: serverId, user_id: userId })
+        .onConflictDoNothing();
+
+      return { serverId };
+    });
+  }
+
   async joinViaInvite(code: string, userId: string): Promise<JoinResult> {
     return await db.transaction(async (tx) => {
       // Resolve code inside transaction — ad-hoc first, then permanent

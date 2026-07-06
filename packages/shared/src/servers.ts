@@ -69,3 +69,29 @@ export const ServerMemberSchema = z.object({
   mutedUntil: z.string().nullable(),
 });
 export type ServerMember = z.infer<typeof ServerMemberSchema>;
+
+// ---------------------------------------------------------------------------
+// Server discovery (wave-67)
+// DiscoverServer — one entry in the public discover listing.
+// ---------------------------------------------------------------------------
+
+export const DiscoverServersQuerySchema = z.object({
+  q: z.string().optional(),
+  limit: z.coerce.number().int().positive().max(50).default(20),
+  offset: z.coerce.number().int().nonnegative().default(0),
+});
+export type DiscoverServersQuery = z.infer<typeof DiscoverServersQuerySchema>;
+
+export const DiscoverServerSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  topic: z.string().nullable(),
+  memberCount: z.number().int().nonnegative(),
+});
+export type DiscoverServer = z.infer<typeof DiscoverServerSchema>;
+
+export const DiscoverServersResponseSchema = z.object({
+  servers: z.array(DiscoverServerSchema),
+});
+export type DiscoverServersResponse = z.infer<typeof DiscoverServersResponseSchema>;

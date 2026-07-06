@@ -13,8 +13,9 @@
  */
 
 import { useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useServers } from './ServerContext';
-import { BooksIcon, ChatTeardropIcon, PlusIcon, SpinnerIcon } from './icons';
+import { BooksIcon, ChatTeardropIcon, CompassIcon, PlusIcon, SpinnerIcon } from './icons';
 
 /** Derive 2-character initials from a server name. */
 function serverInitials(name: string): string {
@@ -99,8 +100,11 @@ type Props = {
 
 export function ServerRail({ addServerBtnRef, dmActive = false, onDmHome, onExitDmHome }: Props) {
   const { servers, status, selectedId, selectServer, openCreateModal } = useServers();
+  const navigate = useNavigate();
+  const location = useLocation();
   const internalRef = useRef<HTMLButtonElement>(null);
   const btnRef = addServerBtnRef ?? internalRef;
+  const discoverActive = location.pathname === '/discover';
 
   return (
     <nav
@@ -247,6 +251,57 @@ export function ServerRail({ addServerBtnRef, dmActive = false, onDmHome, onExit
 
       {/* Spacer */}
       <div className="flex-1" aria-hidden="true" />
+
+      {/* Discover Public Servers button */}
+      <div className="relative flex w-full justify-center group">
+        {discoverActive && (
+          <span
+            aria-hidden="true"
+            className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-full"
+            style={{ backgroundColor: '#10b981' }}
+          />
+        )}
+        <button
+          type="button"
+          aria-label="Discover Public Servers"
+          aria-current={discoverActive ? 'page' : undefined}
+          data-testid="discover-rail-button"
+          onClick={() => navigate('/discover')}
+          className="w-11 h-11 flex items-center justify-center rounded-xl cursor-pointer focus-visible:outline-none focus-visible:ring-2 transition-colors"
+          style={{
+            backgroundColor: discoverActive ? '#10b981' : '#1c1c1f',
+            color: discoverActive ? '#0a0a0b' : '#10b981',
+            boxShadow: discoverActive
+              ? '0 0 15px rgba(16,185,129,0.3)'
+              : '0 1px 2px rgba(0,0,0,0.4)',
+          }}
+          onMouseEnter={(e) => {
+            if (!discoverActive) {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#10b981';
+              (e.currentTarget as HTMLButtonElement).style.color = '#0a0a0b';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!discoverActive) {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#1c1c1f';
+              (e.currentTarget as HTMLButtonElement).style.color = '#10b981';
+            }
+          }}
+        >
+          <CompassIcon size={20} />
+        </button>
+        <div
+          role="tooltip"
+          className="pointer-events-none absolute left-16 top-1/2 -translate-y-1/2 z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium"
+          style={{
+            backgroundColor: '#0a0a0b',
+            border: '1px solid #27272a',
+            color: 'rgba(255,255,255,0.92)',
+          }}
+        >
+          Discover Public Servers
+        </div>
+      </div>
 
       {/* Create / Add server button */}
       <div className="relative flex w-full justify-center group">
