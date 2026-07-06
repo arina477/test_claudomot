@@ -83,5 +83,5 @@ promotions_applied: [{file: "BUILD-PRINCIPLES.md", line: 11, rule: "In a Dexie .
 note: >
   Second confirmed instance (wave-62 v1->v2 DMs 1st; wave-63 v2->v3 academic 2nd) clears the 2-wave
   recurrence + promote-real bars. Karen verified the code-claim against db.ts + academic-cache.test.ts.
-  Commit SHA recorded post-commit.
+  Commit: cd3926b (promotion) + b8a07a8 (L-1 closeout).
 ```

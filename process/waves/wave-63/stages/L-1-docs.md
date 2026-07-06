@@ -65,7 +65,7 @@ verdict_evidence:
   - "milestones row: NO UPDATE (M12 stays in_progress — mechanical hold, scope not shipped)"
   - "command-center/artifacts/user-journey-map.md: last_updated_wave63 annotation added"
   - "command-center/product/product-decisions.md: wave-63 L-1 milestone-delta record appended"
-  - "commit: SEE_COMMIT_SHA_BELOW (docs: L-1 wave-63 closeout)"
+  - "commit: b8a07a8 (docs: L-1 wave-63 closeout)"
 changelog_entry_added: true
 roadmap_milestones_progressed: [{milestone: "M12 (36378340)", before: "in_progress", after: "in_progress"}]
 roadmap_skip_reason: ""
@@ -73,5 +73,5 @@ readme_sections_touched: []
 note: >
   M12 done=6/open=0 but LARGE multi-bundle milestone; scope (study-group data + media + conflict-resolution UI)
   not shipped → stays in_progress. CARRY-FORWARD: N-1 fires milestone-decomposition; bundle #3 = OFFLINE
-  STUDY-GROUP DATA. Commit SHA recorded post-commit.
+  STUDY-GROUP DATA. Commit SHA: cd3926b (promotion) + b8a07a8 (docs).
 ```
