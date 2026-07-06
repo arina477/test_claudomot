@@ -22,6 +22,14 @@
 #   simultaneously (a) in commit ab6ce69…, (b) in file project.yaml, and
 #   (c) the exact literal UUID 21984eb2-8029-4c1b-9e73-bc586a0be4d2. No other
 #   commit, file, or value can match. No rule is disabled or weakened.
+#
+# Second false positive (wave-58):
+#   The value f47ac10b-58cc-4372-a567-0e02b2c3d479 is RFC 4122's canonical
+#   EXAMPLE UUID — a documentation constant, not a credential. It was used as a
+#   test fixture for MessageResponse.idempotencyKey in packages/shared and trips
+#   generic-api-key by entropy/shape only (the field name contains "key"). The
+#   working tree now uses a low-entropy literal, but the historical PR commit
+#   still contains it, so it is allowlisted below by exact-value regex.
 
 [extend]
 useDefault = true
@@ -44,5 +52,8 @@ useDefault = true
 description = "False positives: SuperTokens user_id UUID (not a credential) + wave transcripts in process/** (model-authored prose, structurally secret-free per project policy)."
 commits = ["ab6ce69a7d8b2ff9a2ab5628a7254545e8d1bdc8"]
 paths = ['''project\.yaml''', '''process/.*''']
-regexes = ['''21984eb2-8029-4c1b-9e73-bc586a0be4d2''']
+regexes = [
+  '''21984eb2-8029-4c1b-9e73-bc586a0be4d2''',
+  '''f47ac10b-58cc-4372-a567-0e02b2c3d479''',
+]
 regexTarget = "match"
