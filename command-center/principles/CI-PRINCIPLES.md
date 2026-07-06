@@ -153,3 +153,5 @@ pr_conventions:
    Why: A carried parallel-state flake grows the chance it masks a real regression over time.
 9. After applying a migration, assert each expected table physically exists; never trust the migration ledger row alone.
    Why: A ledger row with no DDL makes migrate skip it silently, and the app 500s on missing tables.
+10. Push main to origin immediately after N-3 closes, before creating the next wave branch.
+   Why: An unpushed main lets process commits ride into the next wave's squash.
