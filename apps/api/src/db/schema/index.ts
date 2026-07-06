@@ -10,3 +10,4 @@ export * from './notifications';
 export * from './scheduling';
 export * from './dm';
 export * from './study-timer';
+export * from './reports';
