@@ -31,28 +31,28 @@ BUILD:
 - [ ] B-6 Review
 
 CI/CD:
-- [ ] C-1 PR, CI & merge
-- [ ] C-2 Deploy & verify (canary armed when real users > 1000)
+- [x] C-1 PR, CI & merge
+- [x] C-2 Deploy & verify (canary armed when real users > 1000)
 
 TEST:
-- [ ] T-1 Static
-- [ ] T-2 Unit
-- [ ] T-3 Contract
-- [ ] T-4 Integration
-- [ ] T-5 E2E
-- [ ] T-6 Layout
-- [ ] T-7 Perf
-- [ ] T-8 Security
-- [ ] T-9 Journey
+- [x] T-1 Static
+- [x] T-2 Unit
+- [~] T-3 Contract (SKIP)
+- [~] T-4 Integration (SKIP)
+- [~] T-5 E2E (SKIP: no behavior change)
+- [x] T-6 Layout (code+bundle-verified)
+- [~] T-7 Perf (SKIP)
+- [~] T-8 Security (SKIP)
+- [x] T-9 Journey
 
 VERIFY:
-- [ ] V-1 Independent reviews (Karen + jenny, parallel)
-- [ ] V-2 Triage
-- [ ] V-3 Fast-fix loop (or close)
+- [x] V-1 Independent reviews (Karen + jenny, parallel)
+- [x] V-2 Triage
+- [x] V-3 Fast-fix loop (or close)
 
 LEARN:
-- [ ] L-1 Docs
-- [ ] L-2 Distill
+- [x] L-1 Docs
+- [x] L-2 Distill
 
 NEXT:
 - [ ] N-1 Survey & triggers
