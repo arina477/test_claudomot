@@ -1,0 +1,6 @@
+# P-2 Spec (pointer) — wave-67
+Source of truth: seed `tasks` row 609c9bdd description (YAML head, 3 self-contained spec blocks + --- + prose). wave_type: multi-spec. design_gap_flag: true.
+- **Spec A (609c9bdd):** servers += is_public(default false)/description/topic + Drizzle-gen migration; GET /servers/discover (AuthGuard, is_public=true only, {id,name,description,topic,memberCount-derived-from-server_members}, limit+offset+ILIKE search); GET /servers untouched; shared DiscoverServer Zod DTO.
+- **Spec B (37b78777):** new /discover React Router v7 route + ServerDiscoverPage; api.getDiscoverServers client fn; searchable card list (name/description/topic/memberCount); HONEST empty-state (cold-start) + loading + error; dark theme; browse-only.
+- **Spec C (e363dac2):** joinPublicServer service (reuse joinViaInvite idempotent core, gated on is_public, reject non-public 404/403); POST /servers/:id/join-public (AuthGuard, JoinResult); client Join button → api.joinPublicServer → ServerContext.refetch()+auto-select; already-member reflected.
+Carries: opt-in visibility (no backfill), server-side is_public join gate (security), honest empty-state (cold-start). D-block needed for /discover page.

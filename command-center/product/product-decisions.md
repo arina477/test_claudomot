@@ -732,3 +732,9 @@ These are staged for the next P-0 walk (may re-home to M7 launch-polish or a suc
 - **Deferred to later M11 bundles (noted in prose):** moderation/safety on public join (bans/blocklists/capacity), ranking/recommendation, category browsing, trending — all build ON this substrate; NOT scoped here.
 - caller: N-1-next-bundle (automatic mode)
 - decomposed by: milestone-decomposer sub-agent
+
+## [2026-07-06] wave-67 P-1 floor-merge — PRECEDENT-APPLICATION override-ship (M11 server-discovery first bundle)
+- Override-ship the sub-floor multi-spec wave-67 (3 tasks: public-server schema + GET /servers/discover API [609c9bdd] + Discovery/Browse UI [37b78777] + one-click public join [e363dac2]; ~1,550 net LOC, below the multi-spec >2,500 LOC / >=6 specs floor). floor_merge_attempt=0.
+- Why override / no expansion: coherent MINIMAL first-bundle of the freshly-promoted M11 under the per-wave decomposition model (later M11 bundles ship separately). mvp-thinner OK (every AC traces M11's explicit metric; no peel) + ceo HOLD-SCOPE (not expandable — ranking/trending/moderation sort an empty shelf at 0 users). Only floor-fill candidates are deliberately-deferred future-bundle scope → padding = anti-goal. PRODUCT rule 5 + wave-21/23-27 lineage; wave-24 do-not-re-litigate → precedent-application, no BOARD.
+- design_gap_flag=true (new /discover page → D-block). Opt-in visibility (is_public default false) verified at P-0. Strategic notes carried: moderation bundle required before public LAUNCH; directory needs GTM seeding.
+- By: wave-67 P-0/P-1 reviewer trio + orchestrator (automatic mode).
