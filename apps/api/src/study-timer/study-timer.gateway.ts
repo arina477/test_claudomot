@@ -49,6 +49,7 @@ import {
 import { and, eq } from 'drizzle-orm';
 import type { Server, Socket } from 'socket.io';
 import { installWsAuthMiddleware } from '../common/ws-auth';
+import { WS_GENERIC_ERROR } from '../common/ws-errors';
 import { db } from '../db/index';
 import { server_members, users } from '../db/schema/index';
 import { STUDY_TIMER_UPDATED_EVENT } from './study-timer.service';
@@ -186,7 +187,7 @@ export class StudyTimerGateway implements OnGatewayInit, OnGatewayConnection, On
       isMember = row !== undefined;
     } catch {
       socket.emit(STUDY_TIMER_JOIN_ERROR_EVENT, {
-        message: 'Internal error checking membership',
+        message: WS_GENERIC_ERROR,
       });
       return;
     }

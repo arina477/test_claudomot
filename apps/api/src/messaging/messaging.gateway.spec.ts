@@ -568,6 +568,103 @@ describe('MessagingGateway — mention.created fan-out (wave-15)', () => {
 });
 
 // ---------------------------------------------------------------------------
+// wave-54 B-2 — info-disclosure regression lock (task c52a7a52)
+// ---------------------------------------------------------------------------
+
+import { WS_GENERIC_ERROR } from '../common/ws-errors';
+
+describe('MessagingGateway — join_channel: info-disclosure regression lock (wave-54)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('LOCK-MSG-1: malformed non-UUID channelId causes DB error in canViewChannelById → client sees WS_GENERIC_ERROR, SQL internals absent, join denied', async () => {
+    // A malformed channelId passes JoinChannelPayload type but canViewChannelById
+    // would throw a 22P02-like error if it reached the DB.  We simulate that here.
+    const pg22P02 = Object.assign(new Error('invalid input syntax for type uuid: "bad-channel"'), {
+      code: '22P02',
+      detail: 'channel_members table',
+      table: 'channel_members',
+    });
+    const rbac = {
+      canViewChannelById: vi.fn().mockRejectedValue(pg22P02),
+    } as unknown as RbacService;
+
+    const gateway = new MessagingGateway(rbac);
+    const socket = makeSocket();
+    socket.data.userId = 'user-abc';
+
+    await gateway.handleJoinChannel(socket as unknown as import('socket.io').Socket, {
+      channelId: 'not-a-uuid',
+    });
+
+    // Must emit exactly one error event
+    expect(socket.emit).toHaveBeenCalledTimes(1);
+    const call = (socket.emit as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(call?.[0]).toBe('error');
+    const msg = (call?.[1] as { message: string }).message;
+
+    // Client sees the canonical generic constant
+    expect(msg).toBe(WS_GENERIC_ERROR);
+
+    // Must not contain any SQL-internal tokens
+    const sqlLeakTokens = [
+      'invalid input syntax',
+      'channel_members',
+      'uuid',
+      '22P02',
+      'user-abc', // userId must not leak
+    ];
+    for (const token of sqlLeakTokens) {
+      expect(msg).not.toContain(token);
+    }
+
+    // Request denied: join must not have been called
+    expect(socket.join).not.toHaveBeenCalled();
+  });
+
+  it('LOCK-MSG-2: valid-UUID non-authorized channelId → still gets Forbidden authz string, NOT genericized (authz-denial preservation)', async () => {
+    const rbac = makeRbacService(false); // canViewChannelById returns false
+
+    const gateway = new MessagingGateway(rbac);
+    const socket = makeSocket();
+    socket.data.userId = 'user-abc';
+
+    await gateway.handleJoinChannel(socket as unknown as import('socket.io').Socket, {
+      channelId: 'a1b2c3d4-0000-0000-0000-000000000099',
+    });
+
+    expect(socket.emit).toHaveBeenCalledTimes(1);
+    const call = (socket.emit as ReturnType<typeof vi.fn>).mock.calls[0];
+    const msg = (call?.[1] as { message: string }).message;
+
+    // Must be the specific authz-denial string — NOT the generic constant
+    expect(msg).toBe('Forbidden: cannot view channel');
+    expect(msg).not.toBe(WS_GENERIC_ERROR);
+
+    // Join must not have been called
+    expect(socket.join).not.toHaveBeenCalled();
+  });
+
+  it('LOCK-MSG-3: legitimate authorized channelId → join succeeds, no error emitted (regression guard)', async () => {
+    const rbac = makeRbacService(true);
+
+    const gateway = new MessagingGateway(rbac);
+    const socket = makeSocket();
+    socket.data.userId = 'user-abc';
+
+    await gateway.handleJoinChannel(socket as unknown as import('socket.io').Socket, {
+      channelId: 'a1b2c3d4-0000-0000-0000-000000000001',
+    });
+
+    // No error emitted
+    expect(socket.emit).not.toHaveBeenCalled();
+    // Join was called for the channel room
+    expect(socket.join).toHaveBeenCalledWith('channel:a1b2c3d4-0000-0000-0000-000000000001');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // wave-46 M8 — dm.message fan-out (M1 fix — B-6 review)
 // ---------------------------------------------------------------------------
 

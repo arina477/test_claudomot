@@ -648,6 +648,89 @@ describe('PresenceGateway — emitTypingActive per-recipient fan-out (F-4 regres
 });
 
 // ---------------------------------------------------------------------------
+// wave-54 B-2 — info-disclosure regression lock for presence (task c52a7a52)
+//
+// Presence's handleJoinChannel is already guarded by TypingStartSchema (Zod
+// z.string().uuid()) which rejects non-UUID channelIds BEFORE the DB call.
+// These tests lock that Zod rejection path: non-UUID → immediate error without
+// RBAC call, leak-tokens absent from the error message.
+// ---------------------------------------------------------------------------
+
+import { WS_GENERIC_ERROR as WS_GENERIC } from '../common/ws-errors';
+
+describe('PresenceGateway — handleJoinChannel: non-UUID leak-lock (wave-54)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('LOCK-PRES-1: non-UUID channelId → rejected by Zod before any RBAC/DB call; error message contains no SQL tokens, join denied', async () => {
+    const rbac = makeRbacService(true);
+    const gateway = new PresenceGateway(makePresenceService(), rbac);
+    const socket = makeSocket();
+    socket.data.userId = USER_ID;
+
+    await gateway.handleJoinChannel(socket as unknown as import('socket.io').Socket, {
+      channelId: 'not-a-uuid-at-all',
+    });
+
+    // RBAC must NOT have been called (Zod guard fires before reaching the try block)
+    expect(rbac.canViewChannelById).not.toHaveBeenCalled();
+
+    // Socket must NOT have joined any room
+    expect(socket.join).not.toHaveBeenCalled();
+
+    // Must have emitted an error event
+    expect(socket.emit).toHaveBeenCalledTimes(1);
+    const call = (socket.emit as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(call?.[0]).toBe('error');
+    const msg = (call?.[1] as { message: string }).message;
+
+    // Zod-rejection message must not contain SQL internals
+    const sqlLeakTokens = ['invalid input syntax', '22P02', 'uuid_cast', USER_ID];
+    for (const token of sqlLeakTokens) {
+      expect(msg).not.toContain(token);
+    }
+    // Must also not be empty
+    expect(msg).toBeTruthy();
+  });
+
+  it('LOCK-PRES-2: valid-UUID non-authorized → Forbidden authz string, NOT generic constant (authz-denial preserved)', async () => {
+    const rbac = makeRbacService(false);
+    const gateway = new PresenceGateway(makePresenceService(), rbac);
+    const socket = makeSocket();
+    socket.data.userId = USER_ID;
+
+    // CHANNEL_ID is already a valid UUID (defined at top of file)
+    await gateway.handleJoinChannel(socket as unknown as import('socket.io').Socket, {
+      channelId: CHANNEL_ID,
+    });
+
+    expect(socket.join).not.toHaveBeenCalled();
+    expect(socket.emit).toHaveBeenCalledTimes(1);
+    const call = (socket.emit as ReturnType<typeof vi.fn>).mock.calls[0];
+    const msg = (call?.[1] as { message: string }).message;
+
+    // Authz-denial must be specific, not the generic WS_GENERIC_ERROR constant
+    expect(msg).toBe('Forbidden: cannot view channel');
+    expect(msg).not.toBe(WS_GENERIC);
+  });
+
+  it('LOCK-PRES-3: valid-UUID authorized → join succeeds, no error emitted (regression guard)', async () => {
+    const rbac = makeRbacService(true);
+    const gateway = new PresenceGateway(makePresenceService(), rbac);
+    const socket = makeSocket();
+    socket.data.userId = USER_ID;
+
+    await gateway.handleJoinChannel(socket as unknown as import('socket.io').Socket, {
+      channelId: CHANNEL_ID,
+    });
+
+    expect(socket.emit).not.toHaveBeenCalled();
+    expect(socket.join).toHaveBeenCalledWith(`presence:channel:${CHANNEL_ID}`);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Tests: handleConnection — displayName empty-fallback guard (wave-29)
 //
 // Exercises the || fix on line 125 of presence.gateway.ts:
