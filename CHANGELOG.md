@@ -112,6 +112,7 @@ All notable changes to StudyHall are documented here. Format follows
 - Direct messages now use the full three-panel layout: an empty leftover channel column that used to cram the conversation is gone, so the message thread gets the full width it should. (#65)
 - Returning to a study server from your direct-messages view now takes a single click: picking a server, or tapping Home, exits the DM view right away instead of needing a second click. (#72)
 - When an organizer or teaching assistant deletes someone else's message, it now disappears in real time for everyone viewing the channel — including the message's own author, who previously kept seeing their deleted message until a refresh. (#73)
+- Opening your direct messages no longer trips a "too many requests" error during normal use, and if a request is briefly rate-limited it now recovers on its own instead of leaving a gap until you refresh. (#76)
 
 ### Security
 

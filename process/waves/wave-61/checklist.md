@@ -40,24 +40,24 @@ CI/CD:
 - [ ] C-2 Deploy & verify (canary armed when real users > 1000)
 
 TEST:
-- [ ] T-1 Static
-- [ ] T-2 Unit
-- [ ] T-3 Contract
-- [ ] T-4 Integration
-- [ ] T-5 E2E
-- [ ] T-6 Layout
-- [ ] T-7 Perf
-- [ ] T-8 Security
-- [ ] T-9 Journey
+- [x] T-1 Static (CI SUCCESS)
+- [x] T-2 Unit (web 477/477 + api 152/152)
+- [~] T-3 Contract (SKIP: no shape change)
+- [~] T-4 Integration (SKIP: no schema/boundary change)
+- [~] T-5 E2E (SKIP: no journey change)
+- [~] T-6 Layout (SKIP: no layout change)
+- [~] T-7 Perf (SKIP: not heavy)
+- [x] T-8 Security (LIVE probe PASS — override live, global still 10/60s, buckets isolated)
+- [x] T-9 Journey (head-tester APPROVED; regen skipped; gate-passed)
 
 VERIFY:
-- [ ] V-1 Independent reviews (Karen + jenny, parallel)
-- [ ] V-2 Triage
-- [ ] V-3 Fast-fix loop (or close)
+- [x] V-1 Independent reviews (Karen + jenny, parallel)
+- [x] V-2 Triage
+- [x] V-3 Fast-fix loop (or close) — head-verifier APPROVED; Phase 2 skipped (empty queue)
 
 LEARN:
-- [ ] L-1 Docs
-- [ ] L-2 Distill
+- [x] L-1 Docs (CHANGELOG #76 Fixed; M8 stays in_progress 42/43; README skip; STOCKOUT→N-1 flag)
+- [x] L-2 Distill (874bd233 done; 5 obs; PROMOTE-ZERO — P-0 REFRAME confirmed-by-application of PRODUCT rules #1/#2)
 
 NEXT:
 - [ ] N-1 Survey & triggers
