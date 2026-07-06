@@ -15,6 +15,7 @@ import Dexie from 'dexie';
 import type { StudyHallDB } from './db';
 import type {
   CachedAssignment,
+  CachedAttachmentBlob,
   CachedChannel,
   CachedDmConversation,
   CachedDmMessage,
@@ -245,4 +246,45 @@ export async function putCachedScheduledSessions(
     windowKey,
   }));
   await store.cachedScheduledSessions.bulkPut(rows);
+}
+
+// ── Attachment media blob cache ───────────────────────────────────────────────
+
+/**
+ * Per-item blob size cap — 10 MiB.
+ * Mirrors the MessageComposer.tsx:51 upload-side precedent. Single hardcoded
+ * constant; no config knob. Oversized blobs are silently skipped on put so
+ * IDB never grows unbounded from large binary assets.
+ */
+export const MAX_CACHED_BLOB_BYTES = 10 * 1024 * 1024;
+
+/**
+ * Read a cached attachment blob by attachment id.
+ * Returns undefined on a cold cache (no throw).
+ */
+export async function getCachedAttachmentBlob(
+  store: StudyHallDB,
+  id: string,
+): Promise<CachedAttachmentBlob | undefined> {
+  return store.cachedAttachmentBlobs.get(id);
+}
+
+/**
+ * Write-through: store a CachedAttachmentBlob record.
+ *
+ * Stamps `cachedAt = now` at write time (the caller's cachedAt is overwritten).
+ * Silently skips storage (no-op, no throw) when `record.sizeBytes` exceeds
+ * MAX_CACHED_BLOB_BYTES (10 MiB) — oversized blobs are never persisted so IDB
+ * growth stays bounded regardless of what callers pass in.
+ */
+export async function putCachedAttachmentBlob(
+  store: StudyHallDB,
+  record: Omit<CachedAttachmentBlob, 'cachedAt'>,
+): Promise<void> {
+  if (record.sizeBytes > MAX_CACHED_BLOB_BYTES) return;
+  const row: CachedAttachmentBlob = {
+    ...record,
+    cachedAt: new Date().toISOString(),
+  };
+  await store.cachedAttachmentBlobs.put(row);
 }
