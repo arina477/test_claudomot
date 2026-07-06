@@ -164,8 +164,32 @@ export function useDm(currentUserId: string | null, currentUserDisplay: string):
       }
       setNextCursor(res.nextCursor);
       setHasOlderMessages(res.nextCursor !== null);
+      // Write-through: persist fetched messages to offline cache.
+      if (db && res.messages.length > 0) {
+        const cachedAt = new Date().toISOString();
+        void putCachedDmMessages(
+          db,
+          res.messages.map((m) => ({ ...m, cachedAt })),
+        );
+      }
     } catch {
-      if (!cursor) setMessagesError(true);
+      if (!cursor) {
+        // Offline fallback — serve the last-known thread history from cache.
+        if (db) {
+          try {
+            const cached = await getCachedDmMessages(db, conversationId);
+            const cachedMsgs: DisplayDmMessage[] = cached.map((m) => ({
+              kind: 'real' as const,
+              ...m,
+            }));
+            setMessages(cachedMsgs);
+          } catch {
+            setMessagesError(true);
+          }
+        } else {
+          setMessagesError(true);
+        }
+      }
     } finally {
       if (!cursor) setMessagesLoading(false);
     }
@@ -230,6 +254,11 @@ export function useDm(currentUserId: string | null, currentUserDisplay: string):
         setMessages((prev) => {
           // Dedup real-id: ignore if a confirmed row with this id is already present.
           if (prev.some((m) => m.kind === 'real' && m.id === message.id)) return prev;
+          // Socket write-through: keep the offline cache fresh on live messages
+          // (parity with useMessages.ts:381-383 channel write-through).
+          if (db) {
+            void putCachedDmMessage(db, { ...message, cachedAt: new Date().toISOString() });
+          }
           // Reconcile own-sender echo: if the echo is from the current user and a
           // pending optimistic row with matching content exists, promote it in-place
           // instead of appending a duplicate. The echo DTO carries no idempotencyKey,

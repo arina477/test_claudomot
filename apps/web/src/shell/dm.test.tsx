@@ -884,3 +884,190 @@ describe('useDm — offline DM conversation list cache (wave-62 task c40f9b39)',
     expect(capturedError).toBe(false);
   });
 });
+
+// ── Suite 7: useDm — offline DM thread history (task 6418ef3e) ───────────────
+//
+// Online path: successful fetch writes messages through to cache.
+// Offline path: fetch failure falls back to getCachedDmMessages so DmThread
+//   renders cached ordered history instead of blank.
+// Cached+pending coexistence: cached real messages and outbox optimistic
+//   messages appear together without duplication.
+
+describe('useDm — offline DM thread history cache (wave-62 task 6418ef3e)', () => {
+  const cachedMsgs = [
+    makeDmMessage({
+      id: 'cached-msg-1',
+      conversationId: 'conv-thread',
+      createdAt: '2026-07-01T10:00:00.000Z',
+    }),
+    makeDmMessage({
+      id: 'cached-msg-2',
+      conversationId: 'conv-thread',
+      createdAt: '2026-07-01T10:01:00.000Z',
+    }),
+  ];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedDmMessageHandler = null;
+    mockEnqueue.mockResolvedValue({ id: 1, idempotencyKey: 'ikey-thread' });
+    mockDrain.mockResolvedValue(undefined);
+    mockApi.listDmConversations.mockResolvedValue({
+      conversations: [makeConversation({ id: 'conv-thread' })],
+    });
+    mockGetCachedDmMessages.mockResolvedValue(cachedMsgs);
+    mockPutCachedDmMessages.mockResolvedValue(undefined);
+  });
+
+  it('online: successful fetch writes messages through to cache', async () => {
+    const serverMsgs = [
+      makeDmMessage({ id: 'server-msg-1', conversationId: 'conv-thread' }),
+      makeDmMessage({ id: 'server-msg-2', conversationId: 'conv-thread' }),
+    ];
+    mockApi.listDmMessages.mockResolvedValue({ messages: serverMsgs, nextCursor: null });
+
+    function TestHarness() {
+      const { selectConversation } = useDm('alice', 'Alice');
+      const [mounted, setMounted] = React.useState(false);
+      React.useEffect(() => {
+        if (!mounted) {
+          setMounted(true);
+          selectConversation('conv-thread');
+        }
+      }, [mounted, selectConversation]);
+      return <div data-testid="thread-write-harness" />;
+    }
+
+    render(<TestHarness />);
+    await waitFor(() => screen.getByTestId('thread-write-harness'));
+
+    await waitFor(() => {
+      expect(mockPutCachedDmMessages).toHaveBeenCalled();
+    });
+
+    const [, writtenMsgs] = mockPutCachedDmMessages.mock.calls[0] as [
+      unknown,
+      Array<{ id: string; cachedAt: string }>,
+    ];
+    expect(writtenMsgs.some((m) => m.id === 'server-msg-1')).toBe(true);
+    expect(writtenMsgs.some((m) => m.id === 'server-msg-2')).toBe(true);
+    expect(writtenMsgs[0]?.cachedAt).toBeTruthy();
+  });
+
+  it('offline: fetch failure falls back to cached thread history (no blank screen)', async () => {
+    mockApi.listDmMessages.mockRejectedValue(new Error('Network Error'));
+
+    let capturedMessages: Array<{ kind: string; id?: string }> = [];
+    let capturedError = false;
+
+    function TestHarness() {
+      const { messages, messagesError, selectConversation } = useDm('alice', 'Alice');
+      const [mounted, setMounted] = React.useState(false);
+      React.useEffect(() => {
+        if (!mounted) {
+          setMounted(true);
+          selectConversation('conv-thread');
+        }
+      }, [mounted, selectConversation]);
+      capturedMessages = messages as typeof capturedMessages;
+      capturedError = messagesError;
+      return <div data-testid="thread-fallback-harness" />;
+    }
+
+    render(<TestHarness />);
+    await waitFor(() => screen.getByTestId('thread-fallback-harness'));
+
+    await waitFor(() => {
+      expect(mockGetCachedDmMessages).toHaveBeenCalledWith(expect.anything(), 'conv-thread');
+    });
+
+    // Thread should be populated from cache — not blank.
+    await waitFor(() => {
+      const realMsgs = capturedMessages.filter((m) => m.kind === 'real');
+      expect(realMsgs.length).toBeGreaterThan(0);
+    });
+
+    const realMsgs = capturedMessages.filter((m) => m.kind === 'real');
+    expect(realMsgs.some((m) => m.id === 'cached-msg-1')).toBe(true);
+    expect(realMsgs.some((m) => m.id === 'cached-msg-2')).toBe(true);
+
+    // No error flag because we served from cache successfully.
+    expect(capturedError).toBe(false);
+  });
+
+  it('cached messages and outbox pending messages coexist without duplication', async () => {
+    // Fetch fails (offline) — cached messages are loaded.
+    mockApi.listDmMessages.mockRejectedValue(new Error('Network Error'));
+
+    // Simulate a pending outbox item already present from cold-start hydration.
+    const pendingOutboxItem = {
+      id: 1,
+      idempotencyKey: 'ikey-pending-coexist',
+      channelId: '',
+      target: { kind: 'dm' as const, conversationId: 'conv-thread' },
+      content: 'offline composed message',
+      state: 'pending' as const,
+      createdAt: new Date().toISOString(),
+      attempts: 0,
+    };
+
+    // loadPending returns the offline-composed message.
+    const { loadPending: mockLoadPending } = await import('../features/sync/outbox');
+    (mockLoadPending as ReturnType<typeof vi.fn>).mockResolvedValueOnce([pendingOutboxItem]);
+
+    let capturedMessages: Array<{ kind: string; id?: string; idempotencyKey?: string }> = [];
+
+    function TestHarness() {
+      const { messages, selectConversation } = useDm('alice', 'Alice');
+      const [mounted, setMounted] = React.useState(false);
+      React.useEffect(() => {
+        if (!mounted) {
+          setMounted(true);
+          selectConversation('conv-thread');
+        }
+      }, [mounted, selectConversation]);
+      capturedMessages = messages as typeof capturedMessages;
+      return <div data-testid="coexist-harness" />;
+    }
+
+    render(<TestHarness />);
+    await waitFor(() => screen.getByTestId('coexist-harness'));
+
+    // Wait for both the offline cache fallback and the outbox hydration to settle.
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      // At least one real message from cache.
+      const realMsgs = capturedMessages.filter((m) => m.kind === 'real');
+      expect(realMsgs.length).toBeGreaterThan(0);
+    });
+
+    const realMsgs = capturedMessages.filter((m) => m.kind === 'real');
+    const optimisticMsgs = capturedMessages.filter((m) => m.kind === 'optimistic');
+
+    // Cached real messages present.
+    expect(realMsgs.some((m) => m.id === 'cached-msg-1')).toBe(true);
+    expect(realMsgs.some((m) => m.id === 'cached-msg-2')).toBe(true);
+
+    // No duplication: each cached id appears at most once.
+    const idCounts = realMsgs.reduce<Record<string, number>>((acc, m) => {
+      const key = m.id ?? 'unknown';
+      acc[key] = (acc[key] ?? 0) + 1;
+      return acc;
+    }, {});
+    for (const count of Object.values(idCounts)) {
+      expect(count).toBe(1);
+    }
+
+    // The pending outbox item does not duplicate a real cached row
+    // (it has a distinct idempotencyKey — not present in the real msg ids).
+    const pendingKeys = optimisticMsgs.map((m) => m.idempotencyKey);
+    const realIds = realMsgs.map((m) => m.id);
+    for (const key of pendingKeys) {
+      expect(realIds).not.toContain(key);
+    }
+  });
+});
