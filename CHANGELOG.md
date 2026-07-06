@@ -86,6 +86,7 @@ All notable changes to StudyHall are documented here. Format follows
 - See message image attachments offline: images you've already viewed stay visible when you're offline or on a flaky connection, instead of turning into a broken image, and refresh once you reconnect. (#79)
 - Open the workspace offline on a cold start: your server list and each server's channels now load from a local cache even on a fresh launch with no connection, so previously-viewed servers, channels, and messages stay reachable instead of a blank screen — and refresh once you reconnect. (#80)
 - Discover public study communities: browse a searchable directory of study servers that owners have opted to make public, then join one in a single click, so joining a community no longer requires an invite link. Private servers stay invite-only and never appear in the directory. (#82)
+- Publish your study server to the public directory: from server settings, an owner can now switch their server between private and public and add a short description and topic, so the community shows up in discovery with a clear summary — and can be pulled back to private at any time. (#83)
 
 ### Changed
 
@@ -119,6 +120,7 @@ All notable changes to StudyHall are documented here. Format follows
 - Returning to a study server from your direct-messages view now takes a single click: picking a server, or tapping Home, exits the DM view right away instead of needing a second click. (#72)
 - When an organizer or teaching assistant deletes someone else's message, it now disappears in real time for everyone viewing the channel — including the message's own author, who previously kept seeing their deleted message until a refresh. (#73)
 - Opening your direct messages no longer trips a "too many requests" error during normal use, and if a request is briefly rate-limited it now recovers on its own instead of leaving a gap until you refresh. (#76)
+- Discovery cards now show each community's real member count instead of always reading zero, so you can tell how active a study server is before joining. (#83)
 
 ### Security
 

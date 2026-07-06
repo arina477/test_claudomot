@@ -4,6 +4,16 @@
 
 ---
 
+## [2026-07-06] wave-68 L-1 — M11 (Growth: server discovery) CLOSED (done); moderation + ranking carried to a FUTURE milestone
+- **Decision:** Transition M11 (`8d88e691`) `in_progress → done`. Wave-68 shipped M11's write-half (owner-gated publish toggle `PATCH /servers/:id` sets `is_public` + description/topic, new server-settings Overview UI, and fixed the discover `memberCount:0` bug). After done-marking the wave's claimed task (`2bd37c4c`), M11 is `done_count=4 / open_count=0` — every child terminal.
+- **Why done, not held:** M11's founder-scoped success metric ("a student can DISCOVER and JOIN public study communities — browse/search a public directory, see what each community is about, join with one click") is now FULLY reachable (read-half wave-67 + write-half wave-68). Proven by T-9 live full loop (publish→/discover showing real "2 members"→unpublish), T-8 non-owner PATCH→403 attack-proof, V-1 Karen+jenny 0 findings, V-3 APPROVED, PR #83 deployed SUCCESS. Metric met + open_count=0 = milestone shipped. Success metric NOT hand-edited.
+- **Why moderation/ranking are NOT retro-scoped into M11:** moderation (report/block/takedown of public servers) and ranking/categories/trending were explicitly fenced OUT of M11's metric at bundle-authoring (product-decisions [2026-07-06] M11 first-bundle entry) and are a standing cross-wave carry ("moderation required before public LAUNCH"). Retro-expanding a metric-complete milestone to absorb them would be double-cutting/over-scoping against founder precedent.
+- **BOARD (automatic mode, slug `L-1-roadmap-delta-wave-68`):** 7/7 APPROVE, 0 REJECT, 0 ABSTAIN, 0 HARD-STOP (clean, well above the 4+/7 default bar). founder-proxy confirmed this is the delegated-mechanical-close class (analogous to the same-session M12 Option-A close), NOT a founder-reserved ambiguity like wave-59 M12.
+- **BOARD carry / launch-gate (all 7 seats' unanimous dissent-note):** moderation (report/block/takedown of public servers) MUST be authored as a real queued `status='todo'` milestone/bundle — NOT left as prose-only — and MUST gate any ACTUAL public launch of the discoverable directory. Closing M11 does NOT trigger a public launch (publishing is owner opt-in; product stays self-use-MVP). realist adds: closure certifies the feature is reachable/functional, NOT that discovery drives Discord-switching (untested; only self-seeded "2 members" test data).
+- **Status:** Active.
+
+---
+
 ## [2026-07-05] wave-50 P-1 — sub-floor feature-completion wave: floor waived (override-ship), resolve-by-rule
 - **Decision:** wave-50 (M8 study-group slice 2 = per-server custom Pomodoro durations f4b3659e + F-1 slim-bar fix ffd98a36) is ~450 net LOC / 2 specs, **below the multi-spec floor (>2,500 LOC OR ≥6 specs)**. Floor **waived; ship as-scoped** (recursion-guard override-ship path).
 - **Why no expansion:** all 3 P-0 reviewers unanimously scope-fenced against it — problem-framer (scope ONE work/break pair), ceo-reviewer/HOLD-SCOPE (adjacent scope = joinable study-sessions + whiteboard, both big standalone slices, each its own wave), mvp-thinner OK + `floor_constraint_active` (expanding a prior-THIN deferral = double-cutting). The floor's purpose (block wasteful tiny waves) doesn't apply: this completes a founder-committed deferred feature + fixes a shipped LIVE regression, reusing existing substrate.

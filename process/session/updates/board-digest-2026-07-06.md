@@ -33,7 +33,12 @@ Neither of these is blocking us. While you weigh them, we're continuing to ship 
 
 ## Clean decisions
 
-_None today beyond the routed-back item above._
+### `L-1-roadmap-delta-wave-68` — Mark the "find and join public study communities" milestone finished
+
+- **Board vote: 7 of 7 said "yes, it's done."** No dissents, no objections.
+- **What we shipped this round:** server owners can now flip their server to public from settings (with a short description and topic), so it shows up in the directory — and the discovery cards now show each community's real member count instead of always reading zero. That completes the whole "browse a directory → see what a community is about → join in one click" experience we set as the goal for this milestone.
+- **What we deliberately did NOT fold in:** safety tools (report / block / take-down of public servers) and directory ranking/categories. These were never part of this milestone's goal — they're their own future piece of work. Every board member agreed on one condition: **before we ever do a real public launch of the directory, the safety tools must be built first, tracked as their own milestone — not left as a note.** Nothing about finishing this milestone opens the directory to the public; publishing stays owner-opt-in and low-volume.
+- **Cost of this decision: none** — it's a bookkeeping "this goal is met" flip, fully reversible, and changes nothing on screen.
 
 ---
 
