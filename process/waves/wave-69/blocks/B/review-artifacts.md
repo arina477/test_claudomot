@@ -9,11 +9,11 @@
 
 | Stage | Deliverable file | Status | Notes |
 |---|---|---|---|
-| B-0 | process/waves/wave-69/stages/B-0-branch-and-schema.md | in-progress | reports table + migration (schema runs) |
-| B-1 | process/waves/wave-69/stages/B-1-contracts.md | pending | ReportSchema/CreateReportSchema/ResolveReportSchema |
-| B-2 | process/waves/wave-69/stages/B-2-backend.md | pending | ReportsModule: POST /reports + GET/resolve action loop |
-| B-3 | process/waves/wave-69/stages/B-3-frontend.md | pending | report dialog + owner inbox (after D-3 ✓) |
-| B-4 | process/waves/wave-69/stages/B-4-wiring.md | pending | |
+| B-0 | process/waves/wave-69/stages/B-0-branch-and-schema.md | done | reports table + migration 0025_strong_gladiator (text cols, no pgEnum — adjudicated); branch pushed |
+| B-1 | process/waves/wave-69/stages/B-1-contracts.md | done | ReportSchema/CreateReportSchema/ResolveReportSchema (committed 0ee470e) |
+| B-2 | process/waves/wave-69/stages/B-2-backend.md | done | ReportsModule + action loop (4 authz paths); committed e7af205 |
+| B-3 | process/waves/wave-69/stages/B-3-frontend.md | done | report dialog + owner inbox + 3 affordances; 8312264 |
+| B-4 | process/waves/wave-69/stages/B-4-wiring.md | done | repo typecheck 4/4; routes registered; no env |
 | B-5 | process/waves/wave-69/stages/B-5-verify.md | pending | |
 | B-6 | process/waves/wave-69/stages/B-6-review.md | pending | |
 
