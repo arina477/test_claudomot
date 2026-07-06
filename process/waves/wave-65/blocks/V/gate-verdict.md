@@ -1,0 +1,15 @@
+# Wave 65 — V-3 Verdict
+
+**Reviewer:** head-verifier (fresh spawn, V-3 Phase 1 gate)
+**Reviewed against:** process/waves/wave-65/blocks/V/review-artifacts.md (+ V-1-karen / V-1-jenny / V-1-summary / V-2-triage) + spec task db3ade72 + P-3 plan + T-9 gate-verdict (APPROVED, live cold-offline probe)
+**Attempt:** 1
+
+## Verdict
+APPROVED
+
+## Rationale
+Both V-1 reviewers APPROVE on independent, live-deploy evidence — not acceptance-by-assertion — and the V-2 triage correctly resolved to 0 blocking. **Karen APPROVE** verified all 7 load-bearing claims against merge `1ec98ef` with exact line citations (Dexie v5 restate at db.ts:183-193 with an independent byte-compare of the 8 v4 store lines proving rule-11 no-silent-drop; atomic both-table put+prune at cache.ts:330-345; ServerContext write-through/read-through/`cancelled`-guard/appendServer-reconcile at ServerContext.tsx:133-256; useMessages.ts untouched via git; api unchanged), and re-ran the suite herself (24/24) rather than trusting a green claim — a probed, not rubber-stamped, clean verdict. **jenny APPROVE** verified all 8 ACs against DEPLOYED prod behavior (558 cached servers, correct `{id,detail,cachedAt}` shape, cold-offline end-to-end hydration rail→sidebar→channel→messages, graceful never-visited empty-state, reconcile-on-reconnect timestamp overwrite, online happy path undegraded) with 0 spec-drift. I independently scrutinized the two downgraded findings rather than accept the paraphrase: **(G1 → NOISE, confirmed)** the "channel tree cached in cachedServerDetails.detail.categories vs the dormant flat `channels` table" is not spec-drift — the P-3 plan EXPLICITLY chose the DTO-blob approach with a documented trade-off ("DTO-blob WINS... the dormant `channels` table is left in place but NOT newly wired... documented so head-builder doesn't flag the untouched dormant table as a miss"), and spec AC2/AC4 mandate persisting/hydrating the channel *tree*, never the flat table specifically; the reframe prose merely over-specified the mechanism, so the shipped code MATCHES the plan. **(G2 → NON-BLOCKING, confirmed)** the cold-detail "Couldn't load channels." wording vs a neutral empty-state is copy polish, not an AC7 violation — AC7's binding text is "no crash / no spinner-forever," which jenny verified live (body intact, rail usable, no infinite spinner); the copy is tracked as follow-up task 6018bdee (verified in DB: `status=todo`, `wave_id=NULL` so it is N-2-seedable, `milestone_id=M12`), so nothing is dropped-by-suppression. Karen's stale-prose note (B-6 "appendServer accepted-debt" is actually CLOSED at ServerContext.tsx:256) is shipped-favorable and correctly noise. Empty fast-fix queue is justified: 0 blocking, both reviewers APPROVE, and the two residual findings are genuinely cosmetic and ledgered. Every applicable stage-exit check ticks; acceptance criteria are demonstrably met on prod, not merely green.
+
+## Footer
+- verdict_complete: true
+- rework_attempt_cap_remaining: 3

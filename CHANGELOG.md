@@ -84,6 +84,7 @@ All notable changes to StudyHall are documented here. Format follows
 - Read your direct messages offline: your conversation list and message history now stay readable even when you're offline or on a flaky connection, instead of going blank, and they sync back up when you reconnect. (#77)
 - View your assignments and class schedule offline: your assignment list and class calendar now stay readable even when you're offline or on a flaky connection, instead of going blank, and they refresh once you reconnect. (#78)
 - See message image attachments offline: images you've already viewed stay visible when you're offline or on a flaky connection, instead of turning into a broken image, and refresh once you reconnect. (#79)
+- Open the workspace offline on a cold start: your server list and each server's channels now load from a local cache even on a fresh launch with no connection, so previously-viewed servers, channels, and messages stay reachable instead of a blank screen — and refresh once you reconnect. (#80)
 
 ### Changed
 
