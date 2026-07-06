@@ -77,6 +77,12 @@ function decodeCursor(cursor: string): { createdAtStr: string; id: string } | nu
 }
 
 // ---------------------------------------------------------------------------
+// DM candidates cap — defensive upper bound on getDmCandidates Drizzle query.
+// Exported so tests can reference the constant without hard-coding it.
+// ---------------------------------------------------------------------------
+export const DM_CANDIDATES_LIMIT = 500;
+
+// ---------------------------------------------------------------------------
 // Row → DTO helpers
 // ---------------------------------------------------------------------------
 
@@ -676,7 +682,10 @@ export class DmService {
   // Caller in no servers / no co-members → 200 [].
   // -------------------------------------------------------------------------
 
-  async getDmCandidates(callerId: string): Promise<DmCandidate[]> {
+  async getDmCandidates(
+    callerId: string,
+    limit: number = DM_CANDIDATES_LIMIT,
+  ): Promise<DmCandidate[]> {
     // Step 1: get caller's server IDs (mirrors presence.getServerIdsForUser)
     const callerServerRows = await db
       .select({ server_id: server_members.server_id })
@@ -708,7 +717,8 @@ export class DmService {
           ne(users.who_can_dm, 'nobody'),
         ),
       )
-      .orderBy(users.id, asc(users.display_name));
+      .orderBy(users.id, asc(users.display_name))
+      .limit(limit);
 
     // Final stable sort by displayName (DISTINCT ON orders by the key first)
     const candidates: DmCandidate[] = rows
