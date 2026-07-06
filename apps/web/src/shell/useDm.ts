@@ -18,6 +18,13 @@
 import type { DmConversation, DmMessage } from '@studyhall/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../auth/api';
+import {
+  getCachedDmConversations,
+  getCachedDmMessages,
+  putCachedDmConversations,
+  putCachedDmMessage,
+  putCachedDmMessages,
+} from '../features/sync/cache';
 import { db } from '../features/sync/db';
 import { drain, enqueue, loadPending, retryOutboxItem } from '../features/sync/outbox';
 import type { OutboxTarget } from '../features/sync/types';
@@ -106,8 +113,26 @@ export function useDm(currentUserId: string | null, currentUserDisplay: string):
     try {
       const res = await api.listDmConversations();
       setConversations(res.conversations);
+      // Write-through: persist to offline cache so the list is available when offline.
+      if (db) {
+        const cachedAt = new Date().toISOString();
+        void putCachedDmConversations(
+          db,
+          res.conversations.map((c) => ({ ...c, cachedAt })),
+        );
+      }
     } catch {
-      setConversationsError(true);
+      // Offline fallback — serve the last-known conversation list from cache.
+      if (db) {
+        try {
+          const cached = await getCachedDmConversations(db);
+          setConversations(cached);
+        } catch {
+          setConversationsError(true);
+        }
+      } else {
+        setConversationsError(true);
+      }
     } finally {
       setConversationsLoading(false);
     }
@@ -139,8 +164,32 @@ export function useDm(currentUserId: string | null, currentUserDisplay: string):
       }
       setNextCursor(res.nextCursor);
       setHasOlderMessages(res.nextCursor !== null);
+      // Write-through: persist fetched messages to offline cache.
+      if (db && res.messages.length > 0) {
+        const cachedAt = new Date().toISOString();
+        void putCachedDmMessages(
+          db,
+          res.messages.map((m) => ({ ...m, cachedAt })),
+        );
+      }
     } catch {
-      if (!cursor) setMessagesError(true);
+      if (!cursor) {
+        // Offline fallback — serve the last-known thread history from cache.
+        if (db) {
+          try {
+            const cached = await getCachedDmMessages(db, conversationId);
+            const cachedMsgs: DisplayDmMessage[] = cached.map((m) => ({
+              kind: 'real' as const,
+              ...m,
+            }));
+            setMessages(cachedMsgs);
+          } catch {
+            setMessagesError(true);
+          }
+        } else {
+          setMessagesError(true);
+        }
+      }
     } finally {
       if (!cursor) setMessagesLoading(false);
     }
@@ -205,6 +254,11 @@ export function useDm(currentUserId: string | null, currentUserDisplay: string):
         setMessages((prev) => {
           // Dedup real-id: ignore if a confirmed row with this id is already present.
           if (prev.some((m) => m.kind === 'real' && m.id === message.id)) return prev;
+          // Socket write-through: keep the offline cache fresh on live messages
+          // (parity with useMessages.ts:381-383 channel write-through).
+          if (db) {
+            void putCachedDmMessage(db, { ...message, cachedAt: new Date().toISOString() });
+          }
           // Reconcile own-sender echo: if the echo is from the current user and a
           // pending optimistic row with matching content exists, promote it in-place
           // instead of appending a duplicate. The echo DTO carries no idempotencyKey,
