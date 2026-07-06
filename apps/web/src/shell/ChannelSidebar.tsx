@@ -340,6 +340,9 @@ export function ChannelSidebar() {
           serverId={selectedId}
           serverName={selectedDetail.server.name}
           ownerId={selectedDetail.server.ownerId}
+          initialIsPublic={selectedDetail.server.is_public}
+          initialDescription={selectedDetail.server.description}
+          initialTopic={selectedDetail.server.topic}
           onClose={() => setOverviewPageOpen(false)}
           onGoToRoles={() => {
             setOverviewPageOpen(false);

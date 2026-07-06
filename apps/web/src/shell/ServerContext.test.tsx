@@ -80,7 +80,7 @@ const serverSummaries: ServerSummary[] = [
 ];
 
 const serverDetail: ServerDetail = {
-  server: { id: 'srv-1', name: 'Physics 101', ownerId: 'owner-1', inviteCode: null },
+  server: { id: 'srv-1', name: 'Physics 101', ownerId: 'owner-1', inviteCode: null, is_public: false, description: null, topic: null },
   categories: [
     {
       id: 'cat-1',
@@ -385,7 +385,7 @@ describe('ServerProvider — stale-response cancellation (FIX 1, LOAD-BEARING)',
 
     // srv-2 detail: resolves immediately.
     const srv2Detail: ServerDetail = {
-      server: { id: 'srv-2', name: 'CS 202', ownerId: 'owner-2', inviteCode: null },
+      server: { id: 'srv-2', name: 'CS 202', ownerId: 'owner-2', inviteCode: null, is_public: false, description: null, topic: null },
       categories: [],
     };
 

@@ -32,6 +32,10 @@ export type ServerOverviewSettingsProps = {
   onClose: () => void;
   /** Optional: navigate to the Roles tab. */
   onGoToRoles?: () => void;
+  /** Current server values — used to pre-populate fields so an open does not clobber real state. */
+  initialIsPublic?: boolean;
+  initialDescription?: string | null;
+  initialTopic?: string | null;
 };
 
 type SaveStatus = 'idle' | 'saving' | 'error';
@@ -109,6 +113,9 @@ export function ServerOverviewSettings({
   ownerId,
   onClose,
   onGoToRoles,
+  initialIsPublic = false,
+  initialDescription = null,
+  initialTopic = null,
 }: ServerOverviewSettingsProps) {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
@@ -121,15 +128,32 @@ export function ServerOverviewSettings({
 
   const isOwner = currentUserId !== null && currentUserId === ownerId;
 
-  // ── Field state ──────────────────────────────────────────────────────────
-  const [isPublic, setIsPublic] = useState(false);
-  const [description, setDescription] = useState('');
-  const [topic, setTopic] = useState('');
-
   // ── Save / error state ───────────────────────────────────────────────────
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [saveError, setSaveError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+
+  // ── Field state — pre-populated from current server values ───────────────
+  // null description/topic → empty string in the field (display as blank),
+  // but Discard restores to the original initial value so a null stays null on save.
+  const [isPublic, setIsPublic] = useState(initialIsPublic);
+  const [description, setDescription] = useState(initialDescription ?? '');
+  const [topic, setTopic] = useState(initialTopic ?? '');
+
+  // Reset field state whenever the target server changes (e.g. user switches
+  // servers while the panel is open, or the panel remounts for a new server).
+  // Intentionally scoped to serverId only — initialIsPublic/Description/Topic
+  // are the values at mount time for that server; re-running on every prop
+  // change would clobber in-progress edits on a background detail refresh.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset on server identity, not value drift
+  useEffect(() => {
+    setIsPublic(initialIsPublic);
+    setDescription(initialDescription ?? '');
+    setTopic(initialTopic ?? '');
+    setDirty(false);
+    setSaveStatus('idle');
+    setSaveError(null);
+  }, [serverId]);
 
   const { toasts, addToast } = useToasts();
 
@@ -199,9 +223,9 @@ export function ServerOverviewSettings({
   }
 
   function handleDiscard() {
-    setIsPublic(false);
-    setDescription('');
-    setTopic('');
+    setIsPublic(initialIsPublic);
+    setDescription(initialDescription ?? '');
+    setTopic(initialTopic ?? '');
     setDirty(false);
     setSaveStatus('idle');
     setSaveError(null);

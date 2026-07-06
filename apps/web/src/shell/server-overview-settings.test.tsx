@@ -11,6 +11,8 @@
  *   - Error surfaces non-destructively (inline banner, fields unchanged)
  *   - 403 error surfaces with permission-denied message
  *   - Discard resets fields
+ *   - Pre-populate: existing server values shown on open (is_public=true, description, topic)
+ *   - Pre-populate + save: editing one field preserves the pre-populated others in the PATCH
  */
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
@@ -310,5 +312,58 @@ describe('ServerOverviewSettings', () => {
     expect(screen.getByTestId('description-input')).toHaveValue('');
     expect(screen.getByTestId('topic-input')).toHaveValue('');
     expect(screen.queryByTestId('discard-btn')).not.toBeInTheDocument();
+  });
+
+  // ── Pre-populate ──────────────────────────────────────────────────────────
+
+  it('pre-populates toggle ON and field values when server is already published', async () => {
+    renderPage({
+      initialIsPublic: true,
+      initialDescription: 'Advanced data structures.',
+      initialTopic: 'CS 410',
+    });
+
+    // Wait for owner identity to resolve so the publish section appears
+    await waitFor(() => {
+      expect(screen.getByTestId('publish-section')).toBeInTheDocument();
+    });
+
+    // Toggle should reflect the real is_public=true
+    const toggle = screen.getByRole('switch', { name: /list in public directory/i });
+    expect(toggle).toHaveAttribute('aria-checked', 'true');
+
+    // Description and topic should show the real server values
+    expect(screen.getByTestId('description-input')).toHaveValue('Advanced data structures.');
+    expect(screen.getByTestId('topic-input')).toHaveValue('CS 410');
+  });
+
+  it('editing only description preserves pre-populated is_public and topic in the PATCH', async () => {
+    renderPage({
+      initialIsPublic: true,
+      initialDescription: 'Original description.',
+      initialTopic: 'Physics',
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('description-input')).toBeInTheDocument();
+    });
+
+    // Edit only the description — leave toggle and topic untouched
+    fireEvent.change(screen.getByTestId('description-input'), {
+      target: { value: 'Updated description.' },
+    });
+
+    fireEvent.click(screen.getByTestId('save-btn'));
+
+    await waitFor(() => {
+      expect(mockApi.updateServer).toHaveBeenCalledWith(
+        SERVER_ID,
+        expect.objectContaining({
+          is_public: true, // preserved from pre-populate
+          description: 'Updated description.',
+          topic: 'Physics', // preserved from pre-populate
+        }),
+      );
+    });
   });
 });

@@ -49,6 +49,9 @@ function makeServerDetail(serverId: string): ServerDetail {
       name: 'Test Server',
       ownerId: 'user-1',
       inviteCode: null,
+      is_public: false,
+      description: null,
+      topic: null,
     },
     categories: [
       {

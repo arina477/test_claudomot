@@ -154,7 +154,7 @@ function makeServerCtx(override: Partial<ServerContextValue> = {}): ServerContex
     openCreateModal: vi.fn(),
     closeCreateModal: vi.fn(),
     selectedDetail: {
-      server: { id: 'srv-1', name: 'CS 202', ownerId: 'owner-1', inviteCode: null },
+      server: { id: 'srv-1', name: 'CS 202', ownerId: 'owner-1', inviteCode: null, is_public: false, description: null, topic: null },
       categories: [],
     },
     detailStatus: 'loaded',
