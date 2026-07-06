@@ -104,6 +104,29 @@ vi.mock('../features/sync/outbox', () => ({
   retryOutboxItem: vi.fn(),
 }));
 
+// ── Cache mock — useDm now calls cache helpers for offline read/write-through ──
+
+const mockGetCachedDmConversations = vi.fn();
+const mockPutCachedDmConversations = vi.fn().mockResolvedValue(undefined);
+const mockGetCachedDmMessages = vi.fn();
+const mockPutCachedDmMessages = vi.fn().mockResolvedValue(undefined);
+const mockPutCachedDmMessage = vi.fn().mockResolvedValue(undefined);
+
+vi.mock('../features/sync/cache', () => ({
+  getCachedDmConversations: (...args: unknown[]) => mockGetCachedDmConversations(...args),
+  putCachedDmConversations: (...args: unknown[]) => mockPutCachedDmConversations(...args),
+  getCachedDmMessages: (...args: unknown[]) => mockGetCachedDmMessages(...args),
+  putCachedDmMessages: (...args: unknown[]) => mockPutCachedDmMessages(...args),
+  putCachedDmMessage: (...args: unknown[]) => mockPutCachedDmMessage(...args),
+  // channel cache stubs (not used by useDm but referenced by other modules)
+  getCachedMessages: vi.fn().mockResolvedValue([]),
+  putCachedMessages: vi.fn().mockResolvedValue(undefined),
+  putCachedMessage: vi.fn().mockResolvedValue(undefined),
+  getCachedChannel: vi.fn().mockResolvedValue(undefined),
+  putCachedChannel: vi.fn().mockResolvedValue(undefined),
+  putCachedDmConversation: vi.fn().mockResolvedValue(undefined),
+}));
+
 // ── DB mock — useDm accesses db for outbox ────────────────────────────────────
 
 vi.mock('../features/sync/db', () => ({
@@ -116,6 +139,20 @@ vi.mock('../features/sync/db', () => ({
           delete: vi.fn(),
         })),
       })),
+    },
+    dmConversations: {
+      toArray: vi.fn().mockResolvedValue([]),
+      bulkPut: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
+    },
+    dmMessages: {
+      where: vi.fn(() => ({
+        between: vi.fn(() => ({
+          toArray: vi.fn().mockResolvedValue([]),
+        })),
+      })),
+      bulkPut: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue(undefined),
     },
   },
 }));
@@ -758,5 +795,92 @@ describe('useDm — optimistic author is sender display name (F7 cure)', () => {
     const optimistic = capturedMessages.find((m) => m.kind === 'optimistic');
     expect(optimistic?.authorDisplay).toBe(DISPLAY_NAME);
     expect(optimistic?.authorDisplay).not.toBe('Unknown user');
+  });
+});
+
+// ── Suite 6: useDm — offline DM conversation list (task c40f9b39) ─────────────
+//
+// Online path: successful fetch writes through to cache.
+// Offline path: fetch failure falls back to getCachedDmConversations so
+//   DmConversationList shows the last-known list instead of blank.
+
+describe('useDm — offline DM conversation list cache (wave-62 task c40f9b39)', () => {
+  const cachedConvs = [
+    makeConversation({ id: 'cached-conv-1' }),
+    makeConversation({ id: 'cached-conv-2' }),
+  ];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedDmMessageHandler = null;
+    mockEnqueue.mockResolvedValue({ id: 1, idempotencyKey: 'ikey-c40' });
+    mockDrain.mockResolvedValue(undefined);
+    mockGetCachedDmConversations.mockResolvedValue(cachedConvs);
+    mockPutCachedDmConversations.mockResolvedValue(undefined);
+    mockApi.listDmMessages.mockResolvedValue({ messages: [], nextCursor: null });
+  });
+
+  it('online: successful fetch writes conversations through to cache', async () => {
+    const serverConvs = [makeConversation({ id: 'server-conv-1' })];
+    mockApi.listDmConversations.mockResolvedValue({ conversations: serverConvs });
+
+    let capturedConversations: DmConversation[] = [];
+
+    function TestHarness() {
+      const { conversations } = useDm('alice', 'Alice');
+      capturedConversations = conversations;
+      return <div data-testid="cache-write-harness" />;
+    }
+
+    render(<TestHarness />);
+    await waitFor(() => screen.getByTestId('cache-write-harness'));
+
+    await waitFor(() => {
+      expect(mockPutCachedDmConversations).toHaveBeenCalled();
+    });
+
+    // The conversations written to cache should include the server-returned ids.
+    const [, writtenConvs] = mockPutCachedDmConversations.mock.calls[0] as [
+      unknown,
+      Array<{ id: string; cachedAt: string }>,
+    ];
+    expect(writtenConvs.some((c) => c.id === 'server-conv-1')).toBe(true);
+    // Each written item has a cachedAt timestamp.
+    expect(writtenConvs[0]?.cachedAt).toBeTruthy();
+
+    // The state should reflect the server response.
+    expect(capturedConversations.some((c) => c.id === 'server-conv-1')).toBe(true);
+  });
+
+  it('offline: fetch failure falls back to cached conversations (no blank screen)', async () => {
+    // Simulate network failure / offline.
+    mockApi.listDmConversations.mockRejectedValue(new Error('Network Error'));
+
+    let capturedConversations: DmConversation[] = [];
+    let capturedError = false;
+
+    function TestHarness() {
+      const { conversations, conversationsError } = useDm('alice', 'Alice');
+      capturedConversations = conversations;
+      capturedError = conversationsError;
+      return <div data-testid="cache-fallback-harness" />;
+    }
+
+    render(<TestHarness />);
+    await waitFor(() => screen.getByTestId('cache-fallback-harness'));
+
+    await waitFor(() => {
+      expect(mockGetCachedDmConversations).toHaveBeenCalled();
+    });
+
+    // State should be populated from the cache — NOT blank.
+    await waitFor(() => {
+      expect(capturedConversations.length).toBeGreaterThan(0);
+    });
+    expect(capturedConversations.some((c) => c.id === 'cached-conv-1')).toBe(true);
+    expect(capturedConversations.some((c) => c.id === 'cached-conv-2')).toBe(true);
+
+    // No error flag because we served from cache successfully.
+    expect(capturedError).toBe(false);
   });
 });

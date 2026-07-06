@@ -18,6 +18,13 @@
 import type { DmConversation, DmMessage } from '@studyhall/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../auth/api';
+import {
+  getCachedDmConversations,
+  getCachedDmMessages,
+  putCachedDmConversations,
+  putCachedDmMessage,
+  putCachedDmMessages,
+} from '../features/sync/cache';
 import { db } from '../features/sync/db';
 import { drain, enqueue, loadPending, retryOutboxItem } from '../features/sync/outbox';
 import type { OutboxTarget } from '../features/sync/types';
@@ -106,8 +113,26 @@ export function useDm(currentUserId: string | null, currentUserDisplay: string):
     try {
       const res = await api.listDmConversations();
       setConversations(res.conversations);
+      // Write-through: persist to offline cache so the list is available when offline.
+      if (db) {
+        const cachedAt = new Date().toISOString();
+        void putCachedDmConversations(
+          db,
+          res.conversations.map((c) => ({ ...c, cachedAt })),
+        );
+      }
     } catch {
-      setConversationsError(true);
+      // Offline fallback — serve the last-known conversation list from cache.
+      if (db) {
+        try {
+          const cached = await getCachedDmConversations(db);
+          setConversations(cached);
+        } catch {
+          setConversationsError(true);
+        }
+      } else {
+        setConversationsError(true);
+      }
     } finally {
       setConversationsLoading(false);
     }
