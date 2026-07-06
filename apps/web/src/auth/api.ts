@@ -53,7 +53,43 @@ import type {
   ValidatedAttachment,
 } from '@studyhall/shared';
 
+import { retryOn429 } from './retryOn429';
+
 const BASE = import.meta.env.VITE_API_ORIGIN ?? '';
+
+/**
+ * Error subclass carrying the HTTP status code and an optional Retry-After
+ * value (seconds) so callers can branch on specific status codes without
+ * parsing the message string.
+ */
+export class HttpError extends Error {
+  constructor(
+    public readonly status: number,
+    message: string,
+    /** Parsed Retry-After value in milliseconds, when the server sent the header. */
+    public readonly retryAfterMs?: number,
+  ) {
+    super(message);
+    this.name = 'HttpError';
+  }
+}
+
+/** Parse a Retry-After header value to milliseconds.
+ * Accepts either an integer (delta-seconds) or an HTTP-date string.
+ * Returns undefined when the header is absent or unparseable.
+ */
+function parseRetryAfterMs(header: string | null): number | undefined {
+  if (!header) return undefined;
+  const deltaSec = Number(header.trim());
+  if (Number.isFinite(deltaSec) && deltaSec >= 0) return Math.round(deltaSec * 1000);
+  // Try HTTP-date
+  const date = new Date(header);
+  if (!Number.isNaN(date.getTime())) {
+    const ms = date.getTime() - Date.now();
+    return ms > 0 ? ms : 0;
+  }
+  return undefined;
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
@@ -64,7 +100,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     const body = await res.text().catch(() => '');
-    throw new Error(`${res.status} ${res.statusText}: ${body}`);
+    const retryAfterMs =
+      res.status === 429 ? parseRetryAfterMs(res.headers.get('Retry-After')) : undefined;
+    throw new HttpError(res.status, `${res.status} ${res.statusText}: ${body}`, retryAfterMs);
   }
 
   return res.json() as Promise<T>;
@@ -80,7 +118,9 @@ async function requestNoContent(path: string, init?: RequestInit): Promise<void>
 
   if (!res.ok) {
     const body = await res.text().catch(() => '');
-    throw new Error(`${res.status} ${res.statusText}: ${body}`);
+    const retryAfterMs =
+      res.status === 429 ? parseRetryAfterMs(res.headers.get('Retry-After')) : undefined;
+    throw new HttpError(res.status, `${res.status} ${res.statusText}: ${body}`, retryAfterMs);
   }
 }
 
@@ -714,9 +754,12 @@ export const api = {
    * Returns conversations where the caller is a participant, ordered by
    * last-message recency.
    * Throws: 401 unauthed.
+   * 429-resilient: bounded exponential-backoff retry via retryOn429 (reads only).
    */
   listDmConversations: () =>
-    request<import('@studyhall/shared').DmConversationListResponse>('/dm/conversations'),
+    retryOn429(() =>
+      request<import('@studyhall/shared').DmConversationListResponse>('/dm/conversations'),
+    ),
 
   /**
    * POST /dm/conversations/:id/messages {content, idempotencyKey} → DmMessage.
@@ -733,11 +776,14 @@ export const api = {
    * GET /dm/conversations/:id/messages?cursor= → DmMessageListResponse.
    * Cursor-paginated; caller must be a participant.
    * Throws: 403/404 non-participant, 401 unauthed.
+   * 429-resilient: bounded exponential-backoff retry via retryOn429 (reads only).
    */
   listDmMessages: (conversationId: string, cursor?: string) => {
     const qs = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
-    return request<import('@studyhall/shared').DmMessageListResponse>(
-      `/dm/conversations/${conversationId}/messages${qs}`,
+    return retryOn429(() =>
+      request<import('@studyhall/shared').DmMessageListResponse>(
+        `/dm/conversations/${conversationId}/messages${qs}`,
+      ),
     );
   },
 
@@ -747,8 +793,9 @@ export const api = {
    * caller belongs to, excluding self and users with who_can_dm='nobody'.
    * Ordered stably by displayName. Caller in no servers → 200 [].
    * Throws: 401 unauthed.
+   * 429-resilient: bounded exponential-backoff retry via retryOn429 (reads only).
    */
-  getDmCandidates: () => request<DmCandidate[]>('/dm/candidates'),
+  getDmCandidates: () => retryOn429(() => request<DmCandidate[]>('/dm/candidates')),
 
   // ── Study timer endpoints (wave-49 M8) ─────────────────────────────────────
 
