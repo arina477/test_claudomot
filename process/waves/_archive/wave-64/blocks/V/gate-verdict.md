@@ -1,0 +1,20 @@
+# Wave 64 — V-3 Verdict
+
+**Reviewer:** head-verifier (fresh spawn)
+**Reviewed against:** process/waves/wave-64/blocks/V/review-artifacts.md
+**Attempt:** 1  (1 = first gate)
+
+## Verdict
+APPROVED
+
+## Rationale
+
+Both V-1 reviewers returned evidence-backed APPROVE and the V-2 triage correctly identified 0 blocking findings against the wave-64 spec contract; the empty fast-fix queue is justified. I independently re-derived the load-bearing question — does the shipped code satisfy spec-B's acceptance criteria, given jenny observed offline-serve is only reachable on warm-disconnect, not cold-open — by reading the AUTHORITATIVE spec source (DB `tasks.description` of seed a1b9b06b + task 83aa28e4, not just the pointer). Ruling on g1: **correctly non-blocking, NOT spec-drift.** Spec-B's ACs are written around the attachment-render surface and presuppose the message is on-screen — AC-1 "when a message IMAGE attachment is *rendered* while ONLINE… write-throughs the Blob"; AC-2 "when OFFLINE… renders the image from a local object URL INSTEAD of a broken remote `<img>`"; the task's own Why: "a student re-reading a channel offline should still see images/files they *already loaded*." No AC binds the message-LIST hydration read path. Jenny confirmed the offline-serve code fires correctly for any mounted attachment that loses/lacks connectivity — precisely the surface the ACs bind to (corroborated by T-9's live 19/19 falsification-contrast re-run). g1 (cold-open offline-nav can't surface the message because the message list itself doesn't hydrate offline) is a real, separate M12-continuity gap on the message-list read path — a surface neither of this bundle's two tasks claimed — not a defect in the wave-64 attachment code and not an unmet AC. Triage's disposition (g1 → non-blocking, routed to M12 follow-up task db3ade72; g2 lightbox-src-reuse → NOISE, better-in-practice single write-through; Karen's fresh-IDB test advisory → NOISE, load-bearing v3→v4 close/reopen row-survival test covers rule-11 intent) is sound classification, not severity flattening or a downgrade of a load-bearing claim.
+
+Reviewer evidence is demonstrable-criteria, NOT acceptance-by-assertion: Karen checked all 7 load-bearing claims at cited file:line against merge 1744de8 + live deploy (v4 8-table .stores() byte-identical restate of the 7 prior v3 tables → rule-11 no-silent-drop; type/helpers/10MiB-cap real; hook revokes on src-change :61 + unmount :120; image-only wire-in; tests assert ROW survival + real create/revoke call-args, not existence theater; 0 apps/api files in diff). Jenny live-probed deployed prod: read back an actual cached Blob (70B image/png, every spec field present), cache-on-view write-through fired (presigned X-Amz-Expires=3600), offline getCachedAttachmentBlob→createObjectURL decoded in an `<img>`, never-viewed→graceful placeholder with 0 JS exceptions, and **measured 0 net leaked object URLs** across an offline lightbox open/close cycle. 0 spec drift. Descoped assignment-media leg (10e7543f) correctly absent per documented P-0 descope. This is legitimate high-value offline-moat feature work with honest, non-theater evidence — both reviewers' APPROVEs are sound.
+
+**One corrective applied at gate (routing hygiene, not a code/spec defect, does not block exit):** the g1 follow-up task db3ade72 that V-2 parked under M12 was created with `wave_id = de490532` — which is wave-64 itself (the currently-running wave), not NULL. A milestone follow-up seeded for a FUTURE wave must have `wave_id IS NULL` or N-2 treats it as already-belonging-to-wave-64 and never surfaces it as a claimable seed — it strands permanently. I applied a bounded one-column corrective (`UPDATE tasks SET wave_id = NULL WHERE id = db3ade72`), verified `status=todo`, `milestone_id=M12`, `wave_id=NULL` — so the M12 offline-message-list-hydration continuity work g1 identifies is now actually seedable. This corrects a data-hygiene error in the parking record, not wave-64's shipped code, which demonstrably meets both specs' ACs.
+
+## Footer
+- verdict_complete: true
+- rework_attempt_cap_remaining: 3
