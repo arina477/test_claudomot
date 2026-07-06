@@ -16,6 +16,7 @@ import type {
   AttachmentPresignResponse,
   AvatarPresignResponse,
   CreateAssignmentInput,
+  CreateReport,
   CreateScheduledSessionInput,
   CreateServerInput,
   DmCandidate,
@@ -34,6 +35,8 @@ import type {
   ProfileResponse,
   ReactionToggleInput,
   ReactionToggleResponse,
+  Report,
+  ResolveReportAction,
   ReturnSubmissionInput,
   ScheduledSession,
   ScheduledSessionListResponse,
@@ -912,6 +915,42 @@ export const api = {
    */
   joinPublicServer: (serverId: string): Promise<JoinResult> =>
     request<JoinResult>(`/servers/${serverId}/join-public`, { method: 'POST', body: '{}' }),
+
+  // ── Report endpoints (wave-69 M14) ──────────────────────────────────────────
+
+  /**
+   * POST /reports {target_type, target_server_id?, target_user_id?, target_message_id?, reason}
+   * → 201 Report.
+   * Auth-required. Throws: 401 unauthed, 400 bad input.
+   */
+  createReport: (body: CreateReport): Promise<Report> =>
+    request<Report>('/reports', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  /**
+   * GET /servers/:serverId/reports?status=open → Report[].
+   * Requires moderate_members. Throws: 401 unauthed, 403 non-mod.
+   */
+  getServerReports: (serverId: string, status?: string): Promise<Report[]> => {
+    const qs = status ? `?status=${encodeURIComponent(status)}` : '';
+    return request<Report[]>(`/servers/${serverId}/reports${qs}`);
+  },
+
+  /**
+   * POST /servers/:serverId/reports/:reportId/resolve {action} → Report.
+   * Requires moderate_members. Throws: 401 unauthed, 403 non-mod, 404 not found.
+   */
+  resolveReport: (
+    serverId: string,
+    reportId: string,
+    action: ResolveReportAction,
+  ): Promise<Report> =>
+    request<Report>(`/servers/${serverId}/reports/${reportId}/resolve`, {
+      method: 'POST',
+      body: JSON.stringify({ action }),
+    }),
 
   exportAccountData: async (): Promise<void> => {
     const res = await fetch(`${BASE}/profile/data/export`, { credentials: 'include' });

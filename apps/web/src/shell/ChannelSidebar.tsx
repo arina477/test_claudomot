@@ -12,9 +12,11 @@
  * Bottom user panel always visible.
  */
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { api } from '../auth/api';
 import { InviteShareModal } from './InviteShareModal';
 import { useProfile } from './ProfileContext';
+import { ReportInbox } from './ReportInbox';
 import { useServers } from './ServerContext';
 import { ServerOverviewSettings } from './ServerOverviewSettings';
 import { ServerRolesPage } from './ServerRolesPage';
@@ -23,6 +25,7 @@ import {
   CalendarIcon,
   CaretDownIcon,
   ClipboardTextIcon,
+  FlagIcon,
   GearIcon,
   HashIcon,
   MicrophoneIcon,
@@ -175,9 +178,21 @@ export function ChannelSidebar() {
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [rolesPageOpen, setRolesPageOpen] = useState(false);
   const [overviewPageOpen, setOverviewPageOpen] = useState(false);
+  const [reportInboxOpen, setReportInboxOpen] = useState(false);
+  const [canModerateMembers, setCanModerateMembers] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const inviteBtnRef = useRef<HTMLButtonElement>(null);
   const settingsBtnRef = useRef<HTMLButtonElement>(null);
+
+  // Fetch permissions when server changes — gate the report inbox button
+  useEffect(() => {
+    setCanModerateMembers(false);
+    if (!selectedId) return;
+    api
+      .getMyPermissions(selectedId)
+      .then((perms) => setCanModerateMembers(perms.owner || perms.moderate_members))
+      .catch(() => {});
+  }, [selectedId]);
 
   const connectionState = useConnectionState();
 
@@ -317,6 +332,36 @@ export function ChannelSidebar() {
               <ShieldCheckIcon size={15} />
             </button>
           )}
+          {/* Reports inbox button — only for moderators/owners */}
+          {selectedId && canModerateMembers && (
+            <button
+              type="button"
+              aria-label="Reports inbox"
+              data-testid="report-inbox-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                setReportInboxOpen(true);
+              }}
+              className="flex h-7 w-7 items-center justify-center rounded transition-colors duration-150 focus-visible:outline-none"
+              style={{ color: 'rgba(255,255,255,0.40)', backgroundColor: 'transparent' }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#27272a';
+                (e.currentTarget as HTMLButtonElement).style.color = '#f87171';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+                (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.40)';
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.boxShadow = '0 0 0 2px rgba(16,185,129,0.4)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              <FlagIcon size={15} />
+            </button>
+          )}
           {serverName && (
             <span style={{ color: 'rgba(255,255,255,0.40)' }}>
               <CaretDownIcon size={14} />
@@ -362,6 +407,57 @@ export function ChannelSidebar() {
           channels={selectedDetail.categories.flatMap((cat) => cat.channels)}
           onClose={() => setRolesPageOpen(false)}
         />
+      )}
+
+      {/* Reports inbox — full-screen overlay; moderator/owner gated */}
+      {reportInboxOpen && selectedId && canModerateMembers && (
+        <div
+          data-testid="report-inbox-overlay"
+          className="fixed inset-0 z-40 flex flex-col"
+          style={{ backgroundColor: '#1c1c1f' }}
+        >
+          {/* Close bar */}
+          <div
+            className="h-14 shrink-0 flex items-center justify-between px-6"
+            style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', backgroundColor: '#121214' }}
+          >
+            <span className="text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.92)' }}>
+              {selectedDetail?.server.name ?? 'Server'} — Reports
+            </span>
+            <button
+              type="button"
+              aria-label="Close reports inbox"
+              onClick={() => setReportInboxOpen(false)}
+              className="flex h-7 w-7 items-center justify-center rounded-md transition-colors focus-visible:outline-none"
+              style={{ color: 'rgba(255,255,255,0.40)', backgroundColor: 'transparent' }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#27272a';
+                (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.92)';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+                (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.40)';
+              }}
+            >
+              {/* X icon inline */}
+              <svg
+                width={16}
+                height={16}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+          <ReportInbox serverId={selectedId} canModerateMembers={canModerateMembers} />
+        </div>
       )}
 
       {/* Scrollable channel list */}

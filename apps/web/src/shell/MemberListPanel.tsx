@@ -37,9 +37,11 @@ import type { ServerMember } from '@studyhall/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../auth/api';
 import { PresenceDot } from './PresenceDot';
+import { ReportDialog } from './ReportDialog';
 import {
   ArrowLeftIcon,
   DotsThreeIcon,
+  FlagIcon,
   SpeakerHighIcon2,
   SpeakerXFillIcon,
   SpinnerIcon,
@@ -414,9 +416,17 @@ type MemberItemProps = {
   canModerate: boolean;
   serverId: string;
   onMutedChange: (userId: string, mutedUntil: string | null) => void;
+  onReport: (userId: string, displayName: string) => void;
 };
 
-function MemberItem({ member, online, canModerate, serverId, onMutedChange }: MemberItemProps) {
+function MemberItem({
+  member,
+  online,
+  canModerate,
+  serverId,
+  onMutedChange,
+  onReport,
+}: MemberItemProps) {
   const initials = getInitials(member.displayName);
   const memberIsMuted = isMuted(member.mutedUntil);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -494,7 +504,7 @@ function MemberItem({ member, online, canModerate, serverId, onMutedChange }: Me
         {member.displayName}
       </span>
 
-      {/* Right slot: muted indicator + kebab — pr-2 matches DS §3 8px gutter (roster-row right edge) */}
+      {/* Right slot: muted indicator + report flag + kebab */}
       <div className="flex items-center gap-1 shrink-0 pl-1 pr-2">
         {/* Amber muted indicator — visible to ALL when timed out (wave-41 design) */}
         {memberIsMuted && (
@@ -502,6 +512,26 @@ function MemberItem({ member, online, canModerate, serverId, onMutedChange }: Me
             <MutedIndicator />
           </span>
         )}
+
+        {/* Report member flag — visible on row hover/focus to all members */}
+        <button
+          type="button"
+          aria-label={`Report ${member.displayName}`}
+          data-testid={`report-member-btn-${member.userId}`}
+          onClick={() => onReport(member.userId, member.displayName)}
+          className="flex h-6 w-6 items-center justify-center rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+          style={{ color: 'rgba(255,255,255,0.40)' }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(239,68,68,0.10)';
+            (e.currentTarget as HTMLButtonElement).style.color = '#f87171';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = '';
+            (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.40)';
+          }}
+        >
+          <FlagIcon size={12} />
+        </button>
 
         {/* Moderation kebab — only for viewers with moderate_members */}
         {canModerate && (
@@ -612,6 +642,14 @@ export function MemberListPanel({ serverId, canModerateMembers: canModerateFromP
     canModerateFromProp !== undefined ? canModerateFromProp : canModerateLocal;
 
   const { getStatus, tick } = usePresence();
+
+  // Report dialog state
+  const [reportTarget, setReportTarget] = useState<{ userId: string; displayName: string } | null>(
+    null,
+  );
+  const handleReportMember = useCallback((userId: string, displayName: string) => {
+    setReportTarget({ userId, displayName });
+  }, []);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -751,6 +789,7 @@ export function MemberListPanel({ serverId, canModerateMembers: canModerateFromP
                         canModerate={canModerateMembers}
                         serverId={serverId ?? ''}
                         onMutedChange={handleMutedChange}
+                        onReport={handleReportMember}
                       />
                     ))}
                   </ul>
@@ -780,6 +819,7 @@ export function MemberListPanel({ serverId, canModerateMembers: canModerateFromP
                         canModerate={canModerateMembers}
                         serverId={serverId ?? ''}
                         onMutedChange={handleMutedChange}
+                        onReport={handleReportMember}
                       />
                     ))}
                   </ul>
@@ -791,6 +831,17 @@ export function MemberListPanel({ serverId, canModerateMembers: canModerateFromP
             </div>
           ))}
       </div>
+
+      {/* Report member dialog */}
+      {reportTarget && (
+        <ReportDialog
+          targetType="member"
+          targetId={reportTarget.userId}
+          {...(serverId ? { serverId } : {})}
+          displayLabel={reportTarget.displayName}
+          onClose={() => setReportTarget(null)}
+        />
+      )}
     </aside>
   );
 }
