@@ -47,12 +47,24 @@ state_transitions_applied_this_wave: []
 note: "GENUINE STOCKOUT → founder-checkpoint. M8 stays in_progress (999a14d1 retained deferral, NOT closed). No next-wave opened — exactly one disposition = measured pause. Founder decision awaiting: M9 (Monetization/pricing, founder-reserved) vs M12 (Offline-first moat, highest-value autonomous direction, needs founder blessing + rough success metric) vs 'keep polishing'. Foregrounded at process/session/updates/checkpoint-2026-07-06-m8-tail-vs-m12-offline-first.md."
 ```
 
-## head-next N-3 signoff
+## head-next N-3 signoff (block-exit — final)
 
+```yaml
 head_signoff:
   verdict: APPROVED
   stage: N-3
-  reviewers: { head-next: APPROVED }
+  reviewers: {}
   failed_checks: []
-  rationale: "See head-next verdict block (appended after archive + close)."
+  rationale: >
+    All seven N-3 stage-exit checks pass against verified canonical state. Live Postgres shows
+    zero running waves and wave-61 closed status='ok' (exactly one waves UPDATE, no zombie). The
+    wave directory was single-move archived to _archive/wave-61 (git-clean; untracked stage/block
+    artifacts folded in), no wave-scoped state orphaned. Exactly one handoff disposition: a
+    measured pause grounded in the daily-checkpoint stockout (next-claimable null for autonomous
+    work; M8 drainable-exhausted; M9/M12 founder-reserved; 13 unassigned rows not N-2-seedable),
+    recorded trigger f + board-escalation measurement. No next P-0 opened. M8 not prematurely
+    closed (stays in_progress, deferred 999a14d1 retained). BLOCKED terminal, no ScheduleWakeup.
   next_action: ESCALATE_TO_founder
+```
+
+N-1 APPROVED / N-2 APPROVED / N-3 APPROVED. head-next terminated at N-3 exit (spawn-pattern). Archive commits 1e01d1c + 2340c90; waves row 32cd63cc closed status='ok'; loop PAUSED (measured stockout).
