@@ -17,7 +17,7 @@ import type {
   ServerResponse,
   ServerSummary,
 } from '@studyhall/shared';
-import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import { db } from '../db/index';
 import {
   categories,
@@ -512,12 +512,22 @@ export class ServersService {
   /**
    * Return paginated list of public servers (is_public = true).
    *
-   * memberCount is derived via a LEFT JOIN subquery on server_members — no
-   * stored counter column.
+   * memberCount is derived via a correlated scalar subquery on server_members —
+   * no stored counter column.  The expression is bound once and referenced in
+   * both the SELECT projection and ORDER BY so the query planner receives
+   * identical SQL text in both positions and can CSE it to a single
+   * computation per candidate row.
    *
-   * Ordering: memberCount DESC, then name ASC for a stable tie-break.
-   * This surfaces the most-active servers first while keeping the order
-   * deterministic across pages.
+   * Ordering: memberCount DESC, name ASC, id ASC.
+   *   - memberCount DESC surfaces the most-active servers first.
+   *   - name ASC is the secondary stable tie-break within equal counts.
+   *   - id ASC (UUID primary key) is the final deterministic tie-break, making
+   *     offset pagination skip/duplicate-free within a single page-load session.
+   *   - Known limitation: if a server's memberCount changes between "Load more"
+   *     requests (join/leave event), its primary sort key shifts and it may
+   *     appear at a different position on the next page.  This cross-page drift
+   *     is an accepted minor limitation at the current scale; cursor-keyset
+   *     pagination would eliminate it entirely and is deferred.
    *
    * Optional text search (q): case-insensitive ILIKE against name, description,
    * and topic.  Any field match qualifies the row (OR semantics).
@@ -532,9 +542,11 @@ export class ServersService {
     const safeLimitCap = 50;
     const safeLimit = Math.min(limit, safeLimitCap);
 
-    // memberCount is derived via a correlated scalar subquery — no stored counter column.
-    // Using a correlated subquery (rather than a named subquery + LEFT JOIN) keeps the
-    // mock chain simple (single db.select() call with standard fluent methods).
+    // memberCount is computed ONCE via a correlated scalar subquery that is
+    // bound to a single sql expression object.  The same reference is passed to
+    // both the SELECT projection and the ORDER BY clause so Drizzle emits
+    // identical SQL text in both positions — allowing Postgres to recognise the
+    // expressions as equivalent and evaluate the subquery a single time per row.
     const memberCountExpr = sql<number>`(
       SELECT count(*)::int
       FROM server_members sm
@@ -565,7 +577,9 @@ export class ServersService {
       })
       .from(servers)
       .where(whereClause)
-      .orderBy(desc(memberCountExpr), servers.name)
+      // ORDER BY: memberCount DESC (relevance), name ASC (secondary tie-break),
+      // id ASC (stable UUID tie-break — makes offset pagination deterministic).
+      .orderBy(desc(memberCountExpr), asc(servers.name), asc(servers.id))
       .limit(safeLimit)
       .offset(offset);
 

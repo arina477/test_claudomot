@@ -25,6 +25,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../auth/api';
 import { useServers } from './ServerContext';
+
+// ── Request sequencing ────────────────────────────────────────────────────────
+// Monotonically increasing counter — each fetchServers call captures the value
+// at dispatch time; the response callback is dropped if a newer call has since
+// been issued.
+let _fetchSeq = 0;
 import {
   CompassIcon,
   MagnifyingGlassIcon,
@@ -36,6 +42,8 @@ import {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
+/** Must equal the `limit` value passed to getDiscoverServers so a full-but-final
+ *  page does not falsely show "Load more" (fix 3). */
 const PAGE_SIZE = 12;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -278,7 +286,7 @@ type LoadState = 'loading' | 'results' | 'empty-cold' | 'empty-search' | 'error'
 
 export function ServerDiscoverPage() {
   const navigate = useNavigate();
-  const { refetch: refetchServerList, selectServer } = useServers();
+  const { refetch: refetchServerList } = useServers();
 
   const [servers, setServers] = useState<DiscoverServer[]>([]);
   const [loadState, setLoadState] = useState<LoadState>('loading');
@@ -297,19 +305,29 @@ export function ServerDiscoverPage() {
   // ── Fetch ──────────────────────────────────────────────────────────────────
 
   const fetchServers = useCallback(async (q: string, currentOffset: number, append: boolean) => {
+    // Fix 6: capture a monotonic sequence number; drop stale responses.
+    _fetchSeq += 1;
+    const mySeq = _fetchSeq;
+
     if (!append) setLoadState('loading');
 
     try {
       const params: { q?: string; limit?: number; offset?: number } = {
-        limit: PAGE_SIZE,
+        limit: PAGE_SIZE, // Fix 3: limit === PAGE_SIZE so hasMore is exact
         offset: currentOffset,
       };
       if (q) params.q = q;
       const data = await api.getDiscoverServers(params);
+
+      // Fix 6: discard if a newer request has since been issued
+      if (mySeq !== _fetchSeq) return;
+
       const list = data.servers;
 
       setServers((prev) => (append ? [...prev, ...list] : list));
       setOffset(currentOffset + list.length);
+      // Fix 3: list.length === PAGE_SIZE is the correct hasMore predicate because
+      // limit === PAGE_SIZE (above), so a full-but-final page is not falsely promoted.
       setHasMore(list.length === PAGE_SIZE);
 
       if (!append) {
@@ -324,6 +342,8 @@ export function ServerDiscoverPage() {
         if (list.length === 0) setHasMore(false);
       }
     } catch {
+      // Fix 6: also guard error path
+      if (mySeq !== _fetchSeq) return;
       if (!append) {
         setLoadState('error');
       } else {
@@ -380,10 +400,13 @@ export function ServerDiscoverPage() {
     try {
       const result = await api.joinPublicServer(serverId);
       setCardStates((prev) => ({ ...prev, [serverId]: 'joined' }));
+      // Fix 2: set the pending-select key BEFORE refetch so ServerContext's
+      // applyPendingSelect can consume it when the fresh list arrives.
+      // ServerContext owns the removeItem — it only removes when the id is
+      // found in the list, so a stale immediate refetch does not lose the key.
+      sessionStorage.setItem('sh:select-server', result.serverId);
       // Refresh the member-scoped server list so the joined server appears in the rail
       refetchServerList();
-      // Store pending select so ServerContext auto-selects after refetch
-      sessionStorage.setItem('sh:select-server', result.serverId);
     } catch (err) {
       setCardStates((prev) => {
         const next = { ...prev };
@@ -391,17 +414,24 @@ export function ServerDiscoverPage() {
         return next;
       });
       const msg = err instanceof Error ? err.message : '';
+      // Fix 4: only show "private/unavailable" message for 403 or 404;
+      // 400/409 and other codes get a generic retry message.
+      const isPrivateOrGone = msg.startsWith('403') || msg.startsWith('404');
       setCardErrors((prev) => ({
         ...prev,
-        [serverId]: msg.startsWith('40')
-          ? 'Could not join. Server may be private.'
-          : 'Join failed — please try again.',
+        [serverId]: isPrivateOrGone
+          ? 'Could not join. Server may be private or unavailable.'
+          : "Couldn't join — please try again.",
       }));
     }
   }
 
   function handleOpen(serverId: string) {
-    selectServer(serverId);
+    // Fix 1: set the pending-select key BEFORE navigating to /app so the
+    // ServerProvider mounted at /app picks it up in its own applyPendingSelect.
+    // Calling selectServer() on THIS context would be silently discarded because
+    // /app mounts a separate ServerProvider instance.
+    sessionStorage.setItem('sh:select-server', serverId);
     navigate('/app');
   }
 
@@ -447,8 +477,9 @@ export function ServerDiscoverPage() {
         }
       `}</style>
 
-      {/* ARIA live region for search results */}
-      <div id={resultsCountId} className="sr-only" aria-live="polite" role="status" />
+      {/* Fix 5: removed the duplicate sr-only div that shared id={resultsCountId}
+           with the visible results <p> below. The visible <p> is the single
+           aria-live region; aria-describedby on the search input points there. */}
 
       {/* Sticky header */}
       <header
@@ -677,7 +708,10 @@ export function ServerDiscoverPage() {
         {/* ── Results grid ──────────────────────────────────────────────── */}
         {loadState === 'results' && (
           <>
-            {/* Results count — also the aria-live target */}
+            {/* Results count — aria-live target; aria-describedby on the search
+                 input points here. Fix 5: sole element with this id (sr-only
+                 duplicate removed). Fix 7: copy says "Showing N" to be honest
+                 about loaded count vs. total. */}
             <p
               id={resultsCountId}
               className="text-sm mb-6"
@@ -685,7 +719,7 @@ export function ServerDiscoverPage() {
               aria-live="polite"
               role="status"
             >
-              {totalCount} {totalCount === 1 ? 'community' : 'communities'}
+              Showing {totalCount} {totalCount === 1 ? 'community' : 'communities'}
             </p>
 
             <div

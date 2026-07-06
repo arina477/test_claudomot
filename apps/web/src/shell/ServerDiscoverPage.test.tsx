@@ -4,11 +4,15 @@
  * Coverage:
  *   - Renders skeleton on initial load
  *   - Renders cards from mocked getDiscoverServers
- *   - Shows results count line
+ *   - Shows results count line ("Showing N")
  *   - Debounced search updates the query param passed to getDiscoverServers
  *   - Honest cold-start empty state (asserts non-error copy)
  *   - No-search-match empty state
  *   - Join click → api.joinPublicServer called → ServerContext.refetch invoked + joined state shown
+ *   - Join sets sh:select-server in sessionStorage (pending auto-select survives stale refetch)
+ *   - handleOpen sets sh:select-server before navigating to /app (fix 1)
+ *   - Error classification: 403 → private msg; 404 → private msg; 400 → generic; 409 → generic
+ *   - No duplicate id="discover-results-count" in DOM
  *   - Error state shows retry button
  *   - Retry button re-fetches
  *
@@ -133,12 +137,12 @@ describe('ServerDiscoverPage', () => {
     });
   });
 
-  it('shows results count line', async () => {
+  it('shows results count line with "Showing N" wording', async () => {
     mockApi.getDiscoverServers.mockResolvedValueOnce({ servers: MOCK_SERVERS });
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getByText('2 communities')).toBeInTheDocument();
+      expect(screen.getByText('Showing 2 communities')).toBeInTheDocument();
     });
   });
 
@@ -243,6 +247,121 @@ describe('ServerDiscoverPage', () => {
       expect(refetch).toHaveBeenCalledTimes(1);
       expect(screen.getByRole('button', { name: /open cs101 study group/i })).toBeInTheDocument();
     });
+  });
+
+  it('join sets sh:select-server in sessionStorage so pending auto-select survives stale refetch', async () => {
+    mockApi.getDiscoverServers.mockResolvedValueOnce({ servers: MOCK_SERVERS });
+    mockApi.joinPublicServer.mockResolvedValueOnce({ serverId: 'srv_1' });
+
+    // Simulate stale refetch — returned list does NOT yet include the joined server
+    const refetch = vi.fn();
+
+    renderPage({ refetch });
+    await waitFor(() => screen.getByText('CS101 Study Group'));
+
+    // Clear any existing key first
+    sessionStorage.removeItem('sh:select-server');
+
+    const joinBtn = screen.getByRole('button', { name: /join cs101 study group/i });
+    await userEvent.click(joinBtn);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /open cs101 study group/i })).toBeInTheDocument();
+    });
+
+    // Key must be set so a later (non-stale) refetch in ServerContext can still consume it
+    expect(sessionStorage.getItem('sh:select-server')).toBe('srv_1');
+  });
+
+  it('handleOpen sets sh:select-server in sessionStorage before navigating to /app', async () => {
+    mockApi.getDiscoverServers.mockResolvedValueOnce({ servers: MOCK_SERVERS });
+    mockApi.joinPublicServer.mockResolvedValueOnce({ serverId: 'srv_1' });
+
+    renderPage();
+    await waitFor(() => screen.getByText('CS101 Study Group'));
+
+    // Join first to get the card into 'joined' state
+    const joinBtn = screen.getByRole('button', { name: /join cs101 study group/i });
+    await userEvent.click(joinBtn);
+    await waitFor(() => screen.getByRole('button', { name: /open cs101 study group/i }));
+
+    // Clear the key set by join to isolate handleOpen's behaviour
+    sessionStorage.removeItem('sh:select-server');
+
+    const openBtn = screen.getByRole('button', { name: /open cs101 study group/i });
+    await userEvent.click(openBtn);
+
+    // sessionStorage key must be written before navigate
+    expect(sessionStorage.getItem('sh:select-server')).toBe('srv_1');
+    expect(mockNavigate).toHaveBeenCalledWith('/app');
+  });
+
+  it('join error: 403 → private/unavailable message', async () => {
+    mockApi.getDiscoverServers.mockResolvedValueOnce({ servers: MOCK_SERVERS });
+    mockApi.joinPublicServer.mockRejectedValueOnce(new Error('403 Forbidden'));
+
+    renderPage();
+    await waitFor(() => screen.getByText('CS101 Study Group'));
+
+    await userEvent.click(screen.getByRole('button', { name: /join cs101 study group/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/server may be private or unavailable/i)).toBeInTheDocument();
+    });
+  });
+
+  it('join error: 404 → private/unavailable message', async () => {
+    mockApi.getDiscoverServers.mockResolvedValueOnce({ servers: MOCK_SERVERS });
+    mockApi.joinPublicServer.mockRejectedValueOnce(new Error('404 Not Found'));
+
+    renderPage();
+    await waitFor(() => screen.getByText('CS101 Study Group'));
+
+    await userEvent.click(screen.getByRole('button', { name: /join cs101 study group/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/server may be private or unavailable/i)).toBeInTheDocument();
+    });
+  });
+
+  it('join error: 400 → generic retry message (not private)', async () => {
+    mockApi.getDiscoverServers.mockResolvedValueOnce({ servers: MOCK_SERVERS });
+    mockApi.joinPublicServer.mockRejectedValueOnce(new Error('400 Bad Request'));
+
+    renderPage();
+    await waitFor(() => screen.getByText('CS101 Study Group'));
+
+    await userEvent.click(screen.getByRole('button', { name: /join cs101 study group/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/couldn't join — please try again/i)).toBeInTheDocument();
+      expect(screen.queryByText(/private or unavailable/i)).toBeNull();
+    });
+  });
+
+  it('join error: 409 → generic retry message (not private)', async () => {
+    mockApi.getDiscoverServers.mockResolvedValueOnce({ servers: MOCK_SERVERS });
+    mockApi.joinPublicServer.mockRejectedValueOnce(new Error('409 Conflict'));
+
+    renderPage();
+    await waitFor(() => screen.getByText('CS101 Study Group'));
+
+    await userEvent.click(screen.getByRole('button', { name: /join cs101 study group/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/couldn't join — please try again/i)).toBeInTheDocument();
+      expect(screen.queryByText(/private or unavailable/i)).toBeNull();
+    });
+  });
+
+  it('has no duplicate id="discover-results-count" in DOM', async () => {
+    mockApi.getDiscoverServers.mockResolvedValueOnce({ servers: MOCK_SERVERS });
+    renderPage();
+
+    await waitFor(() => screen.getByText('Showing 2 communities'));
+
+    const els = document.querySelectorAll('#discover-results-count');
+    expect(els.length).toBe(1);
   });
 
   it('shows error state and retry button', async () => {
