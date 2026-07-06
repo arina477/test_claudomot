@@ -91,6 +91,7 @@ All notable changes to StudyHall are documented here. Format follows
 - Faster presence tracking: indexed the co-member lookup and consolidated the message-list online-status subscription into a single list-level subscription (no visible change). (#40)
 - The browser end-to-end tests now run on the project's bundled browser regardless of how they're launched, removing a per-run manual workaround; typing-label internals were tidied to clear lint warnings with byte-identical output (no visible change). (#59)
 - The privacy protections shipped last release — hiding a Hidden student from every member list, keeping data export scoped to your own account, and stripping personal info from error reports — are now covered by durable automated tests that run against a real database on every change, so the enforcement can't silently regress. (no visible change) (#50)
+- Real-time study rooms, messaging, and presence now share one plain error reply for bad input and are covered by durable tests that confirm they never leak internal details while still refusing unauthorized requests, so the protection can't silently regress. (no visible change) (#69)
 
 ### Fixed
 
