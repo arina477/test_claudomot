@@ -11,15 +11,28 @@ import {
 } from 'drizzle-orm/pg-core';
 import { users } from './users';
 
-export const servers = pgTable('servers', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  name: text('name').notNull(),
-  owner_id: text('owner_id')
-    .notNull()
-    .references(() => users.id),
-  invite_code: text('invite_code').unique(),
-  created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-});
+// ---------------------------------------------------------------------------
+// server-discovery columns (wave-67)
+// is_public: opt-in flag; existing rows default false — no backfill needed.
+// description / topic: nullable free-text for the discover listing.
+// Index on is_public supports the discover endpoint's WHERE is_public=true filter.
+// ---------------------------------------------------------------------------
+export const servers = pgTable(
+  'servers',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    owner_id: text('owner_id')
+      .notNull()
+      .references(() => users.id),
+    invite_code: text('invite_code').unique(),
+    created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    is_public: boolean('is_public').default(false).notNull(),
+    description: text('description'),
+    topic: text('topic'),
+  },
+  (table) => [index('servers_is_public_idx').on(table.is_public)],
+);
 
 // ---------------------------------------------------------------------------
 // RBAC: roles table (wave-10)

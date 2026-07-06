@@ -169,6 +169,13 @@
       "when": 1783268077606,
       "tag": "0023_lush_iron_fist",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1783358536880,
+      "tag": "0024_cold_baron_zemo",
+      "breakpoints": true
     }
   ]
 }
