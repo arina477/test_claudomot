@@ -109,6 +109,7 @@ All notable changes to StudyHall are documented here. Format follows
 - Opening and closing a session's details is now smoother for keyboard and screen-reader users: focus returns to where you were when you close it, and the details always reflect the latest schedule. (#58)
 - On narrower screens the compact study-timer bar now shows its phase-colored edge again — emerald while in Work, amber in Break — so the current phase reads at a glance where it was previously washed out. (#64)
 - Direct messages now use the full three-panel layout: an empty leftover channel column that used to cram the conversation is gone, so the message thread gets the full width it should. (#65)
+- Returning to a study server from your direct-messages view now takes a single click: picking a server, or tapping Home, exits the DM view right away instead of needing a second click. (#72)
 
 ### Security
 
