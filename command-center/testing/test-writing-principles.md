@@ -280,6 +280,12 @@ Why: a mock that hands back already-excluded rows tests only the mapper, so dele
 ### 27. Drive a feature's entry-point flow through the real UI affordance, never via a direct API call that skips the screen the user must click.
 Why: an API-shortcut E2E marks a feature green while its actual entry point is an unreachable dead-end in the UI.
 
+### 28. For an authorization-reject test, assert the target row is UNMODIFIED after the 403, not only that the status code is 403.
+Why: a handler can return 403 yet still apply the write; only reading back the row (real DB) proves the rejection was side-effect-free.
+
+### 29. After a save that reconciles from a server refetch, assert persistence survives a full close+reopen of the surface, not just an in-place re-render.
+Why: an in-place optimistic value can look correct while the reopened surface reverts to stale state — the close+reopen is the only test that catches a broken post-save reconcile.
+
 ---
 
 ## 14. Production E2E testing — principles
