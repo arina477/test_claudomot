@@ -28,12 +28,13 @@
  */
 
 import type { MessageResponse, ValidatedAttachment } from '@studyhall/shared';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { api } from '../auth/api';
 import { getCachedMessages, putCachedMessage, putCachedMessages } from '../features/sync/cache';
 import { db } from '../features/sync/db';
 import { drain, enqueue, loadPending, retryOutboxItem } from '../features/sync/outbox';
 import type { DisplayMessage, OptimisticMessage, StagedAttachmentPreview } from './MessageList';
+import { ProfileContext } from './ProfileContext';
 import {
   applyReactionEvent,
   getMessagingSocket,
@@ -78,6 +79,13 @@ type UseMessagesResult = {
 };
 
 export function useMessagesWithRetry(channelId: string | null): UseMessagesResult {
+  // Current viewer's opaque user id — used by message:new echo reconciliation
+  // (fix 1) to identify own-authored messages and remove matching optimistic rows
+  // without depending on the drain() onDelivered callback.
+  const { profile } = useContext(ProfileContext);
+  const currentUserIdRef = useRef<string | null>(null);
+  currentUserIdRef.current = profile?.userId ?? null;
+
   const [realMessages, setRealMessages] = useState<MessageResponse[]>([]);
   const [optimisticMessages, setOptimisticMessages] = useState<OptimisticMessage[]>([]);
   const [loadingInitial, setLoadingInitial] = useState(false);
@@ -350,6 +358,22 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
   }, [channelId, reloadKey]);
 
   // ── Socket listener — real-time message:new ────────────────────────────────
+  // Fix 1 (PRIMARY, race-free): when a message:new echo arrives for a message
+  // authored by the current user, reconcile away any matching optimistic row.
+  // This is the authoritative reconciliation path — it does NOT depend on the
+  // drain() onDelivered callback (which can be silently dropped due to the
+  // re-entrancy guard when a mount-time drain is already in-flight).
+  //
+  // Match heuristic: msg.authorId === currentUserId && msg.content matches an
+  // optimistic row's content. Content uniqueness is sufficient in practice:
+  // the server echoes back the exact content the user just typed, and the
+  // window between "user sends" and "message:new arrives" is ~100–300 ms.
+  // A false-positive (same user, same content, two fast identical sends) would
+  // at worst collapse two pending rows prematurely; the second send's message:new
+  // then finds no optimistic row and adds as real — still correct.
+  //
+  // Also seeds confirmedIdToKeyRef so message:deleted can resolve the id→key
+  // mapping even if drain()'s onDelivered never fires.
   useEffect(() => {
     if (!channelId) return;
     const unsub = onMessageNew((msg: MessageResponse) => {
@@ -365,6 +389,25 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
         }
         return [...prev, msg];
       });
+
+      // Fix 1: reconcile own optimistic row using this authoritative echo.
+      const myId = currentUserIdRef.current;
+      if (myId && msg.authorId === myId) {
+        setOptimisticMessages((prev) => {
+          // Find the FIRST pending/unconfirmed optimistic row whose content matches.
+          // Skip 'failed' rows — those are explicitly retried by the user.
+          const matchIdx = prev.findIndex((o) => o.state !== 'failed' && o.content === msg.content);
+          if (matchIdx === -1) return prev;
+          const matched = prev[matchIdx];
+          if (matched) {
+            // Seed confirmedIdToKeyRef so message:deleted can find the key
+            // even if drain()'s onDelivered never fired (re-entrancy race).
+            confirmedIdToKeyRef.current.set(msg.id, matched.idempotencyKey);
+          }
+          // Drop the matched optimistic row — real row is now in realMessages.
+          return prev.filter((_, i) => i !== matchIdx);
+        });
+      }
     });
     return unsub;
   }, [channelId]);
@@ -853,9 +896,27 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
     [channelId, realMessages],
   );
 
+  // Fix 2 (DEFENSE-IN-DEPTH): drop optimistic rows that have already been
+  // reconciled into realMessages. An optimistic row is considered reconciled
+  // when confirmedIdToKeyRef maps a real message's id back to that row's
+  // idempotencyKey — meaning drain()'s onDelivered DID fire and seeded the
+  // map, but setOptimisticMessages filter hasn't run yet (e.g. React batch
+  // timing), OR when fix-1's message:new handler seeded the map but the
+  // setOptimisticMessages updater hasn't committed yet.
+  //
+  // Build the set of idempotencyKeys that have a confirmed real counterpart.
+  const reconciledKeys = new Set<string>();
+  for (const real of realMessages) {
+    const key = confirmedIdToKeyRef.current.get(real.id);
+    if (key !== undefined) reconciledKeys.add(key);
+  }
+
   const messages: DisplayMessage[] = [
     ...realMessages.map((m): DisplayMessage => ({ kind: 'real', ...m })),
-    ...optimisticMessages.map((m): DisplayMessage => ({ kind: 'optimistic', ...m })),
+    // Filter out optimistic rows whose real counterpart is already in realMessages.
+    ...optimisticMessages
+      .filter((o) => !reconciledKeys.has(o.idempotencyKey))
+      .map((m): DisplayMessage => ({ kind: 'optimistic', ...m })),
   ];
 
   const reloadMessages = useCallback(() => {

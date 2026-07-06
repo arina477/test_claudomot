@@ -96,27 +96,6 @@ test("moderator (A) can delete any message; non-moderator (B) cannot delete A's 
   const pageA = await contextA.newPage();
   const pageB = await contextB.newPage();
 
-  // DIAG wave-58 — TEMPORARY instrumentation. Answers the decisive question:
-  // does B's browser actually RECEIVE the message:deleted WS frame? Registered
-  // BEFORE any navigation so no early frames are missed. Remove after diagnosis.
-  pageB.on('websocket', (ws) => {
-    ws.on('framereceived', (frame) => {
-      const payload = frame.payload;
-      // DIAG wave-58: Socket.IO frames are text; log first 300 chars.
-      console.log('[B-WS-RX]', typeof payload === 'string' ? payload.slice(0, 300) : '<binary>');
-    });
-  });
-  pageB.on('console', (msg) => {
-    console.log('[B-console]', msg.text());
-  });
-  pageA.on('response', (res) => {
-    const req = res.request();
-    if (res.url().includes('/messages/') && req.method() === 'DELETE') {
-      console.log('[A-DELETE]', res.status(), res.url());
-    }
-  });
-  // END DIAG wave-58
-
   // ── Step 1: Both contexts authenticate ────────────────────────────────────
   await signIn(pageA, emailA, passwordA);
   await signIn(pageB, emailB, passwordB);
@@ -188,13 +167,6 @@ test("moderator (A) can delete any message; non-moderator (B) cannot delete A's 
   // message:deleted event fans out to 'channel:<channelId>' — the same room B
   // joined and proved active. Playwright expect() auto-retries within the
   // bounded window; a broken fan-out path causes this assertion to FAIL.
-
-  // DIAG wave-58 — dump B's rendered DOM immediately before the failing
-  // assertion so we can see whether bMessageMarker sits in a live message row
-  // vs a tombstone. console.log surfaces to CI stdout via the github reporter.
-  // Runs BEFORE the assertion so the diagnostic always flushes even on failure.
-  console.log('[B-DOM]', await pageB.evaluate(() => document.body.innerText.slice(0, 2000)));
-  // END DIAG wave-58
 
   await expect(pageB.getByText(bMessageMarker)).toBeHidden({ timeout: 12_000 });
 

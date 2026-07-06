@@ -117,12 +117,35 @@ export async function loadPending(store: StudyHallDB): Promise<OutboxItem[]> {
  * Module-level re-entrancy guard for drain().
  *
  * Only ONE drain may execute at a time. Concurrent callers (e.g. socket
- * 'connect' and window 'online' firing together on reconnect) get the
- * in-flight promise back — they do NOT start a second overlapping drain
- * that would snapshot the same pending set and risk double-POSTs or
- * broken ordering.
+ * 'connect' and window 'online' firing together on reconnect) previously
+ * received the in-flight promise back, silently dropping their callbacks.
+ *
+ * Fix 3 (wave-58): instead of dropping a concurrent caller's callbacks,
+ * we queue a follow-up drain with those callbacks so they fire after the
+ * current drain completes. This closes the re-entrancy hole where the
+ * composer-triggered drain()'s onDelivered (which removes the optimistic
+ * row and seeds confirmedIdToKeyRef) was silently dropped when a
+ * mount-time drain was already in-flight.
+ *
+ * Invariant: at most ONE drain executes network I/O at a time (no double-
+ * POSTs, in-order guaranteed). The follow-up drain re-snapshots the
+ * pending set AFTER the in-flight drain completes, so items already
+ * deleted by the first drain are not re-sent.
  */
 let _drainInFlight: Promise<void> | null = null;
+
+/** Pending follow-up drains queued while a drain was in-flight. */
+type DrainCall = {
+  store: StudyHallDB;
+  send: SendFn;
+  onDelivered: (idempotencyKey: string, confirmedId: string) => void;
+  onFailed: (idempotencyKey: string) => void;
+  /** Resolves the promise returned to the concurrent caller after the follow-up drain completes. */
+  resolveFollowUp: () => void;
+  /** Rejects the promise returned to the concurrent caller if the follow-up drain throws. */
+  rejectFollowUp: (e: unknown) => void;
+};
+const _drainQueue: DrainCall[] = [];
 
 /**
  * Drain all pending outbox items: POST each SEQUENTIALLY (oldest-first),
@@ -141,8 +164,10 @@ let _drainInFlight: Promise<void> | null = null;
  * state='failed', which blocks later items until the user calls
  * retryOutboxItem() or discards it).
  *
- * Re-entrant callers receive the in-flight promise; at most one drain
- * executes at any time.
+ * Concurrent callers no longer lose their callbacks: they are queued and
+ * run in a follow-up drain after the current one finishes. This preserves
+ * in-order delivery while ensuring every caller's onDelivered/onFailed
+ * callbacks fire for the items delivered in their context.
  *
  * M2: items with the same createdAt are broken by id (auto-increment
  * integer) so the drain order is fully deterministic.
@@ -153,13 +178,41 @@ export function drain(
   onDelivered: (idempotencyKey: string, confirmedId: string) => void,
   onFailed: (idempotencyKey: string) => void,
 ): Promise<void> {
-  // Re-entrancy guard: if a drain is already running, return the in-flight promise.
+  // Re-entrancy guard: if a drain is already running, queue the caller's
+  // callbacks for a follow-up drain instead of silently dropping them.
+  //
+  // The returned promise resolves/rejects after the follow-up drain for this
+  // caller completes (not just after the in-flight drain). This ensures callers
+  // that await drain() see their onDelivered callbacks fire before the promise
+  // settles.
   if (_drainInFlight !== null) {
-    return _drainInFlight;
+    // Wrap in a promise whose resolve/reject is stored alongside the callbacks
+    // so the .finally() flush can settle it after the follow-up drain runs.
+    let resolveFollowUp!: () => void;
+    let rejectFollowUp!: (e: unknown) => void;
+    const followUp = new Promise<void>((res, rej) => {
+      resolveFollowUp = res;
+      rejectFollowUp = rej;
+    });
+    _drainQueue.push({ store, send, onDelivered, onFailed, resolveFollowUp, rejectFollowUp });
+    return followUp;
   }
 
-  _drainInFlight = _drainImpl(store, send, onDelivered, onFailed).finally(() => {
+  _drainInFlight = _drainImpl(store, send, onDelivered, onFailed).finally(async () => {
     _drainInFlight = null;
+    // Flush any callers that queued while this drain was in-flight.
+    // Each entry runs its own _drainImpl (re-snapshots the pending set)
+    // so it delivers any items enqueued after the first drain's snapshot.
+    const queued = _drainQueue.splice(0);
+    for (const entry of queued) {
+      // Sequential — preserves in-order guarantee across follow-ups.
+      try {
+        await _drainImpl(entry.store, entry.send, entry.onDelivered, entry.onFailed);
+        entry.resolveFollowUp();
+      } catch (e) {
+        entry.rejectFollowUp(e);
+      }
+    }
   });
 
   return _drainInFlight;

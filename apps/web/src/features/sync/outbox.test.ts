@@ -785,6 +785,103 @@ describe('outbox drain — exactly-once + in-order (gating proof)', () => {
     expect(await db.outbox.toArray()).toHaveLength(0);
   });
 
+  // ── Test W58-fix-3: re-entrancy — concurrent caller's callbacks are NOT dropped ─
+  //
+  // Wave-58 fix-3 regression proof: before the fix, a drain() call that arrived
+  // while another drain was in-flight would have its onDelivered/onFailed
+  // callbacks silently dropped. The concurrent caller got the in-flight promise
+  // but its callbacks were never registered in _drainImpl.
+  //
+  // Scenario: mount-time drain is in-flight with its OWN callbacks (drain-1).
+  // A second drain arrives concurrently with DIFFERENT callbacks (drain-2).
+  // Both share the same IDB; drain-1 processes all pre-enqueued items.
+  // A new item is added between the two drain calls.
+  // After drain-1 finishes, the follow-up drain for drain-2 runs and:
+  //   - delivers the new item to drain-2's onDelivered (not drain-1's).
+  //   - resolves drain-2's returned promise.
+  // Before fix-3, drain-2's onDelivered was never called and drain2Delivered
+  // would be empty.
+  //
+  // We use a controlled deferred send on the FIRST call to hold drain-1 in-flight
+  // long enough for drain-2 to be queued, then resolve it.
+
+  it('W58-fix-3: concurrent drain caller callbacks fire via follow-up drain (not silently dropped)', async () => {
+    const tsA = '2026-06-30T10:00:00.000Z';
+
+    // Enqueue batch-A (drain-1 will pick these up).
+    const keyA1 = 'w58-fix3-a1';
+    await db.outbox.add({
+      channelId: 'ch-fix3',
+      idempotencyKey: keyA1,
+      content: 'batch-A item 1',
+      state: 'pending',
+      createdAt: tsA,
+      attempts: 0,
+    });
+
+    // drain-1 uses a deferred send — stays in-flight until we resolve it.
+    const drain1Delivered: string[] = [];
+    let resolveDeferred!: (v: { id: string }) => void;
+    const deferredSendFn: SendFn = () => {
+      return new Promise<{ id: string }>((resolve) => {
+        resolveDeferred = resolve;
+      });
+    };
+
+    const drain1Promise = drain(
+      db,
+      deferredSendFn,
+      (k) => drain1Delivered.push(k),
+      () => {},
+    );
+    // drain-1 is now in-flight (deferred send is pending).
+
+    // Enqueue batch-B (drain-2's follow-up will pick these up).
+    const tsB = '2026-06-30T10:05:00.000Z';
+    const keyB1 = 'w58-fix3-b1';
+    await db.outbox.add({
+      channelId: 'ch-fix3',
+      idempotencyKey: keyB1,
+      content: 'batch-B item 1',
+      state: 'pending',
+      createdAt: tsB,
+      attempts: 0,
+    });
+
+    // drain-2 arrives while drain-1 is still in-flight. Before fix-3, its
+    // callbacks (drain2Delivered) would be silently dropped.
+    const drain2Delivered: string[] = [];
+    const { sendFn: normalSendFn } = makeSendFn({});
+
+    const drain2Promise = drain(
+      db,
+      normalSendFn,
+      (k) => drain2Delivered.push(k),
+      () => {},
+    );
+
+    // Now let drain-1 finish by resolving the deferred send.
+    const confirmedIdA1 = crypto.randomUUID();
+    resolveDeferred({ id: confirmedIdA1 });
+
+    // Wait for both drains to fully settle.
+    await Promise.all([drain1Promise, drain2Promise]);
+
+    // drain-1 delivered keyA1 (its snapshot included only batch-A).
+    expect(drain1Delivered).toContain(keyA1);
+    // drain-1 did NOT see keyB1 (enqueued after drain-1's snapshot).
+    expect(drain1Delivered).not.toContain(keyB1);
+
+    // drain-2 delivered keyB1 via the follow-up drain.
+    // THIS IS THE FIX: before wave-58 this array would be empty.
+    expect(drain2Delivered).toContain(keyB1);
+    // drain-2's follow-up did not re-deliver keyA1 (already gone from outbox).
+    expect(drain2Delivered).not.toContain(keyA1);
+
+    // Outbox fully empty.
+    expect(await db.outbox.toArray()).toHaveLength(0);
+  });
+
   // ── Test 13: Legacy IDB row (no target field) falls back to channel routing ──
   //
   // Pre-wave-46 rows in IDB have no `target` field. The drain must fall back to
