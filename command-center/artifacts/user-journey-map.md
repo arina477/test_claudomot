@@ -372,3 +372,11 @@ Web/api live (T-9-verified on deploy 0c71585: api /health 200; web /, /login, /s
 **Distinct from:** the online/voice PRESENCE module — the timer roster ("studying now" via ph-timer badge) is scoped to the live timer, not general online status.
 **Deferred (later study-group slices):** custom durations, study sessions (joinable rooms), collaborative whiteboard, timer history/stats, educator-only control gate.
 **Note:** journey entry finalized/verified at wave-49 T-9.
+
+## /discover — Public server directory (wave-67, M11) [PENDING BUILD]
+- **Route:** `/discover` (authed). Entry: Discover affordance on ServerRail (near create-server "+").
+- **Screen:** ServerDiscoverPage — searchable card grid of PUBLIC servers (name, description, topic, member count) + one-click Join.
+- **API:** `GET /servers/discover?q&limit&offset` (AuthGuard, is_public=true only); `POST /servers/:id/join-public` (AuthGuard, is_public-gated).
+- **States:** loading skeletons / results / honest cold-start empty / no-search-match / retryable error / joining / joined.
+- **Flow:** logged-in student → Discover → browse/search public communities → Join (reuses membership core) → server appears in rail + auto-select.
+- Note: design canonical at design/server-discover.html. Full journey regen at wave-67 T-9.
