@@ -93,9 +93,11 @@ type Props = {
   dmActive?: boolean;
   /** Called when the DM home icon is clicked. */
   onDmHome?: () => void;
+  /** Called to exit the DM home surface unconditionally (server-select or Home click). */
+  onExitDmHome?: () => void;
 };
 
-export function ServerRail({ addServerBtnRef, dmActive = false, onDmHome }: Props) {
+export function ServerRail({ addServerBtnRef, dmActive = false, onDmHome, onExitDmHome }: Props) {
   const { servers, status, selectedId, selectServer, openCreateModal } = useServers();
   const internalRef = useRef<HTMLButtonElement>(null);
   const btnRef = addServerBtnRef ?? internalRef;
@@ -120,6 +122,7 @@ export function ServerRail({ addServerBtnRef, dmActive = false, onDmHome }: Prop
         <button
           type="button"
           aria-label="Home"
+          onClick={onExitDmHome}
           className="w-11 h-11 flex items-center justify-center rounded-xl cursor-pointer focus-visible:outline-none focus-visible:ring-2"
           style={{
             backgroundColor: '#1c1c1f',
@@ -234,7 +237,10 @@ export function ServerRail({ addServerBtnRef, dmActive = false, onDmHome }: Prop
               label={s.name}
               active={s.id === selectedId}
               initials={serverInitials(s.name)}
-              onClick={() => selectServer(s.id)}
+              onClick={() => {
+                selectServer(s.id);
+                onExitDmHome?.();
+              }}
             />
           ))}
       </ul>

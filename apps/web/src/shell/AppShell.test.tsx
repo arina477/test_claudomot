@@ -35,6 +35,11 @@ vi.mock('../auth/api', () => ({
     listDmMessages: vi.fn().mockReturnValue(new Promise(() => {})),
     sendDmMessage: vi.fn(),
     createDmConversation: vi.fn().mockReturnValue(new Promise(() => {})),
+    // permissions endpoint called by MemberListPanel / MainColumn when selectedId is set
+    getMyPermissions: vi.fn().mockReturnValue(new Promise(() => {})),
+    // endpoints called by components that mount when selectedId is non-null
+    getStudyTimer: vi.fn().mockReturnValue(new Promise(() => {})),
+    getServerMembers: vi.fn().mockReturnValue(new Promise(() => {})),
   },
 }));
 
@@ -233,6 +238,92 @@ describe('AppShell — DM surface ChannelSidebar gating', () => {
 
     // Drawer must also be gone (existing behaviour — gated on !dmHomeActive).
     expect(document.querySelector('[aria-label="Channel sidebar drawer"]')).not.toBeInTheDocument();
+  });
+});
+
+// ── Server-select clears DM home surface (wave-57 B-3 fix) ──────────────────
+//
+// Acceptance criteria:
+//   1. From DM surface, clicking a server icon exits DmHome on the FIRST click.
+//   2. From DM surface, clicking the Home button exits DmHome on the FIRST click.
+//   3. Regression: clicking the DM-rail button still enters DmHome (entry intact).
+//   4. Edge: re-selecting the already-selected server while in DM surface still exits.
+
+describe('AppShell — server-select + Home clear DM surface (wave-57)', () => {
+  it('server icon click exits DmHome on first click', async () => {
+    const user = userEvent.setup();
+    const selectServerMock = vi.fn();
+    renderShell({
+      servers: [{ id: 'srv-1', name: 'Physics', ownerId: 'u1' }],
+      status: 'loaded',
+      selectedId: 'srv-1',
+      selectServer: selectServerMock,
+    });
+
+    // Enter DM surface.
+    await user.click(screen.getByTestId('dm-home-rail-button'));
+    // Confirm DM surface is active — ChannelSidebar should be gone.
+    expect(screen.queryAllByRole('complementary', { name: /channel sidebar/i })).toHaveLength(0);
+
+    // Click the server icon — first click must exit DM surface.
+    await user.click(screen.getByRole('button', { name: /physics/i }));
+
+    // MainColumn (server view) must be back — ChannelSidebar rendered again.
+    const sidebarsAfter = screen.queryAllByRole('complementary', { name: /channel sidebar/i });
+    expect(sidebarsAfter.length).toBeGreaterThanOrEqual(1);
+    // selectServer must have been called.
+    expect(selectServerMock).toHaveBeenCalledWith('srv-1');
+  });
+
+  it('Home button click exits DmHome on first click', async () => {
+    const user = userEvent.setup();
+    renderShell();
+
+    // Enter DM surface.
+    await user.click(screen.getByTestId('dm-home-rail-button'));
+    expect(screen.queryAllByRole('complementary', { name: /channel sidebar/i })).toHaveLength(0);
+
+    // Click Home — first click must exit DM surface.
+    await user.click(screen.getByRole('button', { name: /^home$/i }));
+
+    // Server view restored — ChannelSidebar present again.
+    const sidebarsAfter = screen.queryAllByRole('complementary', { name: /channel sidebar/i });
+    expect(sidebarsAfter.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('DM-rail button still enters DmHome (regression: entry unbroken)', async () => {
+    const user = userEvent.setup();
+    renderShell();
+
+    // Click DM-rail button — DM surface must activate.
+    await user.click(screen.getByTestId('dm-home-rail-button'));
+    const sidebars = screen.queryAllByRole('complementary', { name: /channel sidebar/i });
+    expect(sidebars).toHaveLength(0);
+    // main is still in DOM (DmThread renders <main>).
+    expect(screen.queryByRole('main')).toBeInTheDocument();
+  });
+
+  it('re-selecting already-selected server while in DM surface still exits', async () => {
+    const user = userEvent.setup();
+    const selectServerMock = vi.fn();
+    renderShell({
+      servers: [{ id: 'srv-1', name: 'Chemistry', ownerId: 'u1' }],
+      status: 'loaded',
+      selectedId: 'srv-1',
+      selectServer: selectServerMock,
+    });
+
+    // Enter DM surface.
+    await user.click(screen.getByTestId('dm-home-rail-button'));
+    expect(screen.queryAllByRole('complementary', { name: /channel sidebar/i })).toHaveLength(0);
+
+    // Click the same server that is already selected.
+    await user.click(screen.getByRole('button', { name: /chemistry/i }));
+
+    // Must still exit DM surface unconditionally.
+    const sidebarsAfter = screen.queryAllByRole('complementary', { name: /channel sidebar/i });
+    expect(sidebarsAfter.length).toBeGreaterThanOrEqual(1);
+    expect(selectServerMock).toHaveBeenCalledWith('srv-1');
   });
 });
 

@@ -56,6 +56,7 @@ export function AppShell({ connectionState = 'online' }: Props) {
           setDmHomeActive((v) => !v);
           setSidebarOpen(false);
         }}
+        onExitDmHome={() => setDmHomeActive(false)}
       />
 
       {/* ── Pane 2: Channel Sidebar ── */}
