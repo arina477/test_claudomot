@@ -293,6 +293,7 @@ vi.mock('./presenceSocket', () => ({
 }));
 
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { AppHome } from '../pages/AppHome';
 
 describe('AppHome — live connection state wiring', () => {
@@ -310,7 +311,11 @@ describe('AppHome — live connection state wiring', () => {
     setSocketReconnecting();
     setWindowOnline();
 
-    render(<AppHome />);
+    render(
+      <MemoryRouter>
+        <AppHome />
+      </MemoryRouter>,
+    );
 
     act(() => {
       vi.advanceTimersByTime(DEBOUNCE_MS);
@@ -325,7 +330,11 @@ describe('AppHome — live connection state wiring', () => {
     setSocketOffline();
     setWindowOffline();
 
-    render(<AppHome />);
+    render(
+      <MemoryRouter>
+        <AppHome />
+      </MemoryRouter>,
+    );
 
     act(() => {
       vi.advanceTimersByTime(DEBOUNCE_MS);

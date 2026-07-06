@@ -36,6 +36,7 @@ import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { SettingsPrivacyPage } from './pages/SettingsPrivacyPage';
 import { SignupPage } from './pages/SignupPage';
 import { TermsPage } from './pages/TermsPage';
+import { ServerDiscoverPage } from './shell/ServerDiscoverPage';
 
 export function AppRouter() {
   return (
@@ -79,6 +80,14 @@ export function AppRouter() {
           element={
             <AuthGuard>
               <AppHome />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/discover"
+          element={
+            <AuthGuard>
+              <ServerDiscoverPage />
             </AuthGuard>
           }
         />
