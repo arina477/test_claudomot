@@ -99,7 +99,8 @@ describe('StudyHallDB — cachedAssignments cache (round-trip)', () => {
     await putCachedAssignments(db, 'srv-1', [a]);
     const result = await getCachedAssignments(db, 'srv-1');
     expect(result[0]?.cachedAt).toBeDefined();
-    const stamped = new Date(result[0]?.cachedAt).getTime();
+    const item0 = result[0] as CachedAssignment;
+    const stamped = new Date(item0.cachedAt).getTime();
     expect(stamped).toBeGreaterThanOrEqual(before);
   });
 
@@ -171,7 +172,8 @@ describe('StudyHallDB — cachedScheduledSessions cache (round-trip)', () => {
     const result = await getCachedScheduledSessions(db, 'srv-1', FROM, TO);
     expect(result[0]?.cachedAt).toBeDefined();
     expect(result[0]?.windowKey).toBe(`srv-1|${FROM}|${TO}`);
-    const stamped = new Date(result[0]?.cachedAt).getTime();
+    const item0 = result[0] as CachedScheduledSession;
+    const stamped = new Date(item0.cachedAt).getTime();
     expect(stamped).toBeGreaterThanOrEqual(before);
   });
 
