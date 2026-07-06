@@ -46,6 +46,6 @@ LEARN:
 - [x] L-2 Distill (3 tasks done; 4 obs; PROMOTE ZERO — 2 holds + 1 reinforce)
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers (M11 in_progress held; seed_candidates=1; no ritual; APPROVED)
+- [x] N-2 Seed (2bd37c4c single-task bundle; validation PASS; APPROVED)
+- [x] N-3 Handoff (wave-68 opened; wave-67 archived + row closed; loop_state ready; APPROVED)
