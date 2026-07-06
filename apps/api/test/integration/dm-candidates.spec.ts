@@ -59,6 +59,16 @@ const USER_Y_EVERYONE = 'dm-cand-y-everyone';
 // Non-co-member (disjoint server) — must be excluded
 const USER_Z_DISJOINT = 'dm-cand-z-disjoint';
 
+// --- case (c) fixtures: who_can_dm='server-members' ---
+// Shared server for case (c): caller + server-members-co-member are both in it
+const SERVER_C_SHARED = '00000000-0000-0000-0002-000000000003';
+// Disjoint server for case (c): only the disjoint server-members user is in it
+const SERVER_C_DISJOINT = '00000000-0000-0000-0002-000000000004';
+// Co-member with who_can_dm='server-members' in SERVER_C_SHARED — must be included
+const USER_P_SERVERMEMBERS_COMEMBER = 'dm-cand-p-sm-comember';
+// Non-co-member with who_can_dm='server-members' in SERVER_C_DISJOINT — must be excluded
+const USER_Q_SERVERMEMBERS_DISJOINT = 'dm-cand-q-sm-disjoint';
+
 describe.skipIf(SKIP)(
   'DmService.getDmCandidates — real-Postgres privacy-fence negative controls',
   () => {
@@ -148,6 +158,71 @@ describe.skipIf(SKIP)(
 
       // Caller has no co-members in any shared server → empty list
       expect(candidates).toHaveLength(0);
+    });
+
+    // -----------------------------------------------------------------------
+    // (c) who_can_dm='server-members' truth-table
+    //
+    // Wave-55 B-2 — task 344eabde.
+    //
+    // Topology (positive leg):
+    //   SERVER_C_SHARED: CALLER + USER_P_SERVERMEMBERS_COMEMBER
+    //   USER_P has who_can_dm='server-members'
+    //   → getDmCandidates(CALLER) MUST include USER_P (shared server satisfies
+    //     the 'server-members' tier; only 'nobody' is excluded by the WHERE
+    //     predicate, so 'server-members' behaves identically to 'everyone' for
+    //     callers who share a server).
+    //
+    // Topology (negative / load-bearing leg):
+    //   SERVER_C_DISJOINT: USER_Q_SERVERMEMBERS_DISJOINT only
+    //   USER_Q has who_can_dm='server-members'
+    //   → getDmCandidates(CALLER) MUST NOT include USER_Q (no shared server).
+    //   This proves the inArray(callerServerIds) fence applies to the
+    //   'server-members' tier specifically: if a future refactor widened the
+    //   shared-server predicate to skip the tier check, this case would catch it.
+    // -----------------------------------------------------------------------
+    it('(c) who_can_dm=server-members: co-member in shared server is included, disjoint user is excluded', async () => {
+      // --- positive leg: caller shares SERVER_C_SHARED with USER_P ---
+      await insertFixtureUser(CALLER, 'dm-cand-caller@test.local');
+      await insertFixtureUser(
+        USER_P_SERVERMEMBERS_COMEMBER,
+        'dm-cand-p-sm@test.local',
+        undefined,
+        'server-members',
+      );
+      await insertFixtureUser(
+        USER_Q_SERVERMEMBERS_DISJOINT,
+        'dm-cand-q-sm@test.local',
+        undefined,
+        'server-members',
+      );
+
+      // SERVER_C_SHARED is owned by CALLER (FK: servers.owner_id)
+      await insertFixtureServer(SERVER_C_SHARED, CALLER, 'Server C Shared');
+      // SERVER_C_DISJOINT is owned by USER_Q so FK is satisfied
+      await insertFixtureServer(
+        SERVER_C_DISJOINT,
+        USER_Q_SERVERMEMBERS_DISJOINT,
+        'Server C Disjoint',
+      );
+
+      // Memberships: CALLER + USER_P share SERVER_C_SHARED; USER_Q is only in SERVER_C_DISJOINT
+      await insertFixtureMembership(SERVER_C_SHARED, CALLER);
+      await insertFixtureMembership(SERVER_C_SHARED, USER_P_SERVERMEMBERS_COMEMBER);
+      await insertFixtureMembership(SERVER_C_DISJOINT, USER_Q_SERVERMEMBERS_DISJOINT);
+
+      const candidates = await sut.getDmCandidates(CALLER);
+      const ids = candidates.map((c) => c.userId);
+
+      // Positive: co-member with who_can_dm='server-members' in a shared server IS returned
+      expect(ids).toContain(USER_P_SERVERMEMBERS_COMEMBER);
+
+      // Negative (load-bearing lock): user with who_can_dm='server-members' in a
+      // disjoint server (no shared server with CALLER) is NOT returned
+      expect(ids).not.toContain(USER_Q_SERVERMEMBERS_DISJOINT);
+
+      // Self-exclusion remains intact
+      expect(ids).not.toContain(CALLER);
     });
   },
 );
