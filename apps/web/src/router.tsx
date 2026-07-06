@@ -10,6 +10,7 @@
  *   /reset-password  ResetPasswordPage (public — consumes ?token=)
  *   /verify-email    EmailVerifyPage (public — works with or without session)
  *   /app             AppHome    (auth-required)
+ *   /discover        DiscoverShell (auth-required — ServerProvider + RailShell + ServerDiscoverPage)
  *   /settings/profile ProfilePage (auth-required)
  *   /settings/privacy SettingsPrivacyPage (auth-required)
  *   /privacy        PrivacyPage (public)
@@ -25,6 +26,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthGuard } from './auth/AuthGuard';
 import { GuestGuard } from './auth/GuestGuard';
 import { AppHome } from './pages/AppHome';
+import { DiscoverShell } from './pages/DiscoverShell';
 import { EmailVerifyPage } from './pages/EmailVerifyPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { InviteJoinPage } from './pages/InviteJoinPage';
@@ -36,7 +38,6 @@ import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { SettingsPrivacyPage } from './pages/SettingsPrivacyPage';
 import { SignupPage } from './pages/SignupPage';
 import { TermsPage } from './pages/TermsPage';
-import { ServerDiscoverPage } from './shell/ServerDiscoverPage';
 
 export function AppRouter() {
   return (
@@ -87,7 +88,7 @@ export function AppRouter() {
           path="/discover"
           element={
             <AuthGuard>
-              <ServerDiscoverPage />
+              <DiscoverShell />
             </AuthGuard>
           }
         />

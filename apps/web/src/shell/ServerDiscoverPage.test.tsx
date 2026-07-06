@@ -11,12 +11,16 @@
  *   - Join click → api.joinPublicServer called → ServerContext.refetch invoked + joined state shown
  *   - Error state shows retry button
  *   - Retry button re-fetches
+ *
+ * Layout regression (B-6 wave-67):
+ *   - ServerRail renders on /discover with Discover button aria-current="page"
  */
 
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { RailShell } from './RailShell';
 import { ServerContext } from './ServerContext';
 import type { ServerContextValue } from './ServerContext';
 import { ServerDiscoverPage } from './ServerDiscoverPage';
@@ -264,5 +268,55 @@ describe('ServerDiscoverPage', () => {
     await waitFor(() => {
       expect(screen.getByText('CS101 Study Group')).toBeInTheDocument();
     });
+  });
+});
+
+// ── Layout regression — B-6 wave-67 ─────────────────────────────────────────
+//
+// Asserts that ServerRail is present on the /discover route and that the
+// Discover button carries aria-current="page".  Before the fix, /discover
+// mounted ServerDiscoverPage bare (no ServerRail), making the rail absent and
+// the discoverActive glow logic dead code.
+//
+// Rendering approach: MemoryRouter initialEntries=['/discover'] with
+// ServerContext.Provider so ServerRail's useServers() and useLocation() work
+// without needing the real ServerProvider fetch machinery.
+
+describe('RailShell layout on /discover — regression (B-6 wave-67)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // getDiscoverServers must return a pending promise so ServerDiscoverPage
+    // stays in loading state — we are only asserting layout structure here.
+    mockApi.getDiscoverServers.mockReturnValue(new Promise(() => {}));
+  });
+
+  it('renders the server rail on /discover', () => {
+    render(
+      <MemoryRouter initialEntries={['/discover']}>
+        <ServerContext.Provider value={makeCtx()}>
+          <RailShell>
+            <ServerDiscoverPage />
+          </RailShell>
+        </ServerContext.Provider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('server-rail')).toBeInTheDocument();
+  });
+
+  it('Discover rail button has aria-current="page" on /discover', () => {
+    render(
+      <MemoryRouter initialEntries={['/discover']}>
+        <ServerContext.Provider value={makeCtx()}>
+          <RailShell>
+            <ServerDiscoverPage />
+          </RailShell>
+        </ServerContext.Provider>
+      </MemoryRouter>,
+    );
+
+    const discoverBtn = screen.getByTestId('discover-rail-button');
+    expect(discoverBtn).toBeInTheDocument();
+    expect(discoverBtn).toHaveAttribute('aria-current', 'page');
   });
 });
