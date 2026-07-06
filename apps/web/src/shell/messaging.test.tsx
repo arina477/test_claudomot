@@ -22,8 +22,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // Mock socket singleton — captures handlers so tests can trigger them
 let capturedMessageNewHandler: ((msg: MessageResponse) => void) | null = null;
 let capturedMessageUpdatedHandler: ((msg: MessageResponse) => void) | null = null;
-let capturedMessageDeletedHandler: ((p: { messageId: string; channelId: string }) => void) | null =
-  null;
+let capturedMessageDeletedHandler: ((p: MessageResponse) => void) | null = null;
 let capturedReactionAddedHandler:
   | ((p: {
       messageId: string;
@@ -74,7 +73,7 @@ vi.mock('./messagingSocket', () => ({
       capturedMessageUpdatedHandler = null;
     };
   }),
-  onMessageDeleted: vi.fn((handler: (p: { messageId: string; channelId: string }) => void) => {
+  onMessageDeleted: vi.fn((handler: (p: MessageResponse) => void) => {
     capturedMessageDeletedHandler = handler;
     return () => {
       capturedMessageDeletedHandler = null;
@@ -932,8 +931,16 @@ describe('MainColumn — socket message:updated / deleted / reaction events', ()
 
     await waitFor(() => screen.getByText('Will be deleted'));
 
+    // The backend emits the full tombstoned MessageResponse DTO — id field, not messageId.
+    // This is the real wire contract; payload.messageId would be undefined and never match.
+    const tombstone: MessageResponse = {
+      ...msg,
+      isDeleted: true,
+      content: null,
+      reactions: [],
+    };
     act(() => {
-      capturedMessageDeletedHandler?.({ messageId: msg.id, channelId: 'ch-1' });
+      capturedMessageDeletedHandler?.(tombstone);
     });
 
     await waitFor(() => {

@@ -13,7 +13,7 @@
  *
  * Wave-13 events (message lifecycle):
  *   message:updated  — { MessageResponse }  — edit or any field change
- *   message:deleted  — { messageId, channelId } — soft-delete, render tombstone
+ *   message:deleted  — { MessageResponse }  — soft-delete (isDeleted:true, content:null), render tombstone
  *   reaction:added   — { messageId, channelId, emoji, count, reactedByMe }
  *   reaction:removed — { messageId, channelId, emoji, count, reactedByMe }
  *
@@ -53,10 +53,12 @@ import { type Socket, io } from 'socket.io-client';
 // Wave-13 socket payload types
 // ---------------------------------------------------------------------------
 
-export type MessageDeletedPayload = {
-  messageId: string;
-  channelId: string;
-};
+/**
+ * The backend emits the full MessageResponse DTO on message:deleted
+ * (with isDeleted:true and content:null). There is no ad-hoc messageId field —
+ * use payload.id to match the message, consistent with message:updated.
+ */
+export type MessageDeletedPayload = MessageResponse;
 
 export type ReactionEventPayload = {
   messageId: string;
@@ -133,6 +135,8 @@ export function onMessageUpdated(handler: (msg: MessageResponse) => void): () =>
 
 /**
  * Subscribe to message:deleted events.
+ * The payload is the full tombstoned MessageResponse (isDeleted:true, content:null).
+ * Match on payload.id — NOT a messageId field (no such field exists on the DTO).
  * Returns unsubscribe fn.
  */
 export function onMessageDeleted(handler: (payload: MessageDeletedPayload) => void): () => void {

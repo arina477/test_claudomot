@@ -370,16 +370,15 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
   }, [channelId]);
 
   // ── Socket listener — message:deleted ─────────────────────────────────────
+  // The backend emits the full tombstoned MessageResponse (isDeleted:true, content:null).
+  // Match on payload.id — there is no messageId field on the DTO (see messagingSocket.ts).
+  // Mirrors the message:updated handler: replace the row with the authoritative DTO.
   useEffect(() => {
     if (!channelId) return;
     const unsub = onMessageDeleted((payload) => {
       if (!mountedRef.current) return;
       if (payload.channelId !== channelId) return;
-      setRealMessages((prev) =>
-        prev.map((m) =>
-          m.id === payload.messageId ? { ...m, isDeleted: true, content: null, reactions: [] } : m,
-        ),
-      );
+      setRealMessages((prev) => prev.map((m) => (m.id === payload.id ? payload : m)));
     });
     return unsub;
   }, [channelId]);
