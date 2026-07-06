@@ -114,6 +114,8 @@ function rowToDto(
     thread_parent_id?: string | null;
     reply_count?: number;
     last_reply_at?: Date | null;
+    // wave-58: echoed back for optimistic reconciliation; null on historical/server rows
+    idempotency_key?: string | null;
   },
   reactions: ReactionRow[],
   viewerUserId: string,
@@ -169,6 +171,9 @@ function rowToDto(
     lastReplyAt: row.last_reply_at ? row.last_reply_at.toISOString() : null,
     // wave-19 M3 — attachments (empty array on soft-deleted or unattached messages)
     attachments: attachmentRefs,
+    // wave-58 — client-generated idempotency key echoed for optimistic reconciliation.
+    // Defaults to null for rows that don't carry the column (partial select call-sites).
+    idempotencyKey: row.idempotency_key ?? null,
   };
 }
 

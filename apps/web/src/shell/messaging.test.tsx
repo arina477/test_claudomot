@@ -205,6 +205,7 @@ function makeMsg(overrides: Partial<MessageResponse> = {}): MessageResponse {
     isDeleted: false,
     reactions: [],
     mentions: [],
+    idempotencyKey: null,
     ...overrides,
   };
 }
@@ -1075,28 +1076,27 @@ describe('MainColumn — socket message:updated / deleted / reaction events', ()
     });
   });
 
-  // ── Wave-58 fix-1: message:new echo reconciles own optimistic row ──────────
+  // ── Wave-58 fix-1 (DETERMINISTIC): message:new echo reconciles own optimistic row ─
   //
-  // Coverage: the mocked-sendMessage fallback path is NOT used here. Instead
-  // we hold sendMessage pending and let message:new arrive first — simulating
-  // the real path where the socket echo reaches useMessages before
-  // drain()'s onDelivered callback fires. Asserts:
-  //   (a) optimistic row is removed when message:new arrives for an own message.
-  //   (b) subsequent message:deleted tombstones the real row and does NOT
-  //       leave a lingering optimistic copy (the wave-58 root regression).
-  //
-  // Note on path coverage: this test exercises the no-IDB fallback path
-  // (db=null in jsdom), not the real IDB outbox→drain path. Faithfully
-  // driving IDB in jsdom requires fake-indexeddb + wiring the full outbox
-  // integration — that is covered by outbox.test.ts (drain re-entrancy fix-3)
-  // and by the render-merge dedupe test below (fix-2). The fix-1 message:new
-  // handler runs on ALL paths (IDB and no-IDB) and is fully exercised here.
-  it('W58-fix-1: message:new echo for own message removes the optimistic row (race-free reconcile)', async () => {
+  // Coverage: the no-IDB fallback path (db=null in jsdom).
+  // The hook calls api.sendMessage with { content, idempotencyKey }. We capture
+  // the idempotencyKey from the call args so we can echo it back in the
+  // message:new payload — exercising the deterministic key-match path (not the
+  // old content heuristic). Asserts:
+  //   (a) optimistic row removed when message:new arrives with matching idempotencyKey.
+  //   (b) subsequent message:deleted tombstones the real row (no lingering optimistic copy).
+  it('W58-fix-1: message:new echo with matching idempotencyKey removes optimistic row (deterministic reconcile)', async () => {
     mockApi.listMessages.mockResolvedValue({ messages: [], nextCursor: null });
 
     // Hold sendMessage pending so the optimistic row stays alive until we fire
     // message:new manually — simulating the race window.
-    mockApi.sendMessage.mockReturnValue(new Promise(() => {}));
+    let capturedSendBody: { content: string; idempotencyKey?: string } | null = null;
+    mockApi.sendMessage.mockImplementation(
+      (_channelId: string, body: { content: string; idempotencyKey?: string }) => {
+        capturedSendBody = body;
+        return new Promise(() => {}); // never resolves — keeps optimistic row alive
+      },
+    );
 
     const MY_USER_ID = 'viewer-uuid-w58';
     const ctx = makeCtx({ selectedChannelId: 'ch-1', selectedChannelName: 'questions' });
@@ -1128,13 +1128,20 @@ describe('MainColumn — socket message:updated / deleted / reaction events', ()
       expect(screen.getByText('W58 own message content')).toBeInTheDocument();
     });
 
-    // Server confirms — message:new echo arrives (authorId matches current user).
+    // The hook must have called api.sendMessage with an idempotencyKey.
+    // biome-ignore lint/suspicious/noExplicitAny: test type cast after assertion
+    const capturedBody1 = capturedSendBody as any as { content: string; idempotencyKey?: string };
+    expect(capturedBody1.idempotencyKey).toBeDefined();
+    const sentKey = capturedBody1.idempotencyKey as string;
+
+    // Server confirms — message:new echo arrives with the SAME idempotencyKey.
     const confirmedId = 'server-id-w58-fix1';
     const confirmedMsg: MessageResponse = makeMsg({
       id: confirmedId,
       authorId: MY_USER_ID,
       content: 'W58 own message content',
       channelId: 'ch-1',
+      idempotencyKey: sentKey, // round-tripped key — deterministic match
     });
 
     act(() => {
@@ -1169,23 +1176,45 @@ describe('MainColumn — socket message:updated / deleted / reaction events', ()
     });
   });
 
+  // ── Wave-58: message:new WITHOUT idempotencyKey does not crash ────────────
+  // Server-originated messages or old server payloads (null/absent key) must
+  // still be appended correctly without attempting reconciliation.
+  it('W58: message:new with null idempotencyKey appends as real row without crashing', async () => {
+    mockApi.listMessages.mockResolvedValue({ messages: [], nextCursor: null });
+    renderWithChannel();
+    await waitFor(() => screen.getByTestId('empty-channel-state'));
+
+    const incoming = makeMsg({
+      content: 'Server-originated no key',
+      channelId: 'ch-1',
+      idempotencyKey: null,
+    });
+    act(() => {
+      capturedMessageNewHandler?.(incoming);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Server-originated no key')).toBeInTheDocument();
+    });
+  });
+
   // ── Wave-58 fix-2: render-merge dedupe hides optimistic row when real row exists ─
   //
   // Coverage: validates the defense-in-depth dedupe in the messages[] merge.
-  // Uses MessageList directly (no hook) — simulates the state where a real
-  // row AND a stale optimistic row with the same confirmedIdToKeyRef entry
-  // would both be in the list. Asserts the optimistic copy does not render.
-  //
-  // Note: this tests the dedupe at the DisplayMessage[] merge level, not the
-  // hook state. The hook's confirmedIdToKeyRef map is internal; here we verify
-  // the downstream render behaviour: if both a real row and an optimistic row
-  // with the same content are passed, the optimistic copy renders — BUT with
-  // fix-2 in place, the hook filters it before passing to MessageList. We
-  // test the filter effect via the hook path (renderWithChannel + message:new).
-  it('W58-fix-2: optimistic row hidden when a real row with same confirmed id already exists (render-merge dedupe)', async () => {
+  // Uses the hook path (renderWithChannel + message:new with matching key).
+  // After fix-1 reconciles via key match, the dedupe also filters any stale
+  // optimistic copy whose key is in confirmedIdToKeyRef — asserts single render.
+  it('W58-fix-2: optimistic row hidden when a real row with same idempotencyKey already exists (render-merge dedupe)', async () => {
     mockApi.listMessages.mockResolvedValue({ messages: [], nextCursor: null });
+
     // Hold sendMessage pending so optimistic row is never cleaned by send callback.
-    mockApi.sendMessage.mockReturnValue(new Promise(() => {}));
+    let capturedSendBody2: { content: string; idempotencyKey?: string } | null = null;
+    mockApi.sendMessage.mockImplementation(
+      (_channelId: string, body: { content: string; idempotencyKey?: string }) => {
+        capturedSendBody2 = body;
+        return new Promise(() => {});
+      },
+    );
 
     const MY_USER_ID = 'viewer-uuid-w58-fix2';
     const ctx = makeCtx({ selectedChannelId: 'ch-1', selectedChannelName: 'questions' });
@@ -1215,13 +1244,19 @@ describe('MainColumn — socket message:updated / deleted / reaction events', ()
       expect(screen.getByTestId('pending-message')).toBeInTheDocument();
     });
 
-    // Fire message:new — fix-1 removes the optimistic row and seeds confirmedIdToKeyRef.
+    // biome-ignore lint/suspicious/noExplicitAny: test type cast after assertion
+    const capturedBody2 = capturedSendBody2 as any as { content: string; idempotencyKey?: string };
+    expect(capturedBody2.idempotencyKey).toBeDefined();
+    const sentKey2 = capturedBody2.idempotencyKey as string;
+
+    // Fire message:new with matching key — fix-1 removes optimistic row and seeds confirmedIdToKeyRef.
     const confirmedId = 'server-id-w58-fix2';
     const confirmedMsg: MessageResponse = makeMsg({
       id: confirmedId,
       authorId: MY_USER_ID,
       content: 'Dedupe test content fix2',
       channelId: 'ch-1',
+      idempotencyKey: sentKey2,
     });
 
     act(() => {

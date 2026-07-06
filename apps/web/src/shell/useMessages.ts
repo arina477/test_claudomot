@@ -358,22 +358,16 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
   }, [channelId, reloadKey]);
 
   // ── Socket listener — real-time message:new ────────────────────────────────
-  // Fix 1 (PRIMARY, race-free): when a message:new echo arrives for a message
-  // authored by the current user, reconcile away any matching optimistic row.
-  // This is the authoritative reconciliation path — it does NOT depend on the
-  // drain() onDelivered callback (which can be silently dropped due to the
-  // re-entrancy guard when a mount-time drain is already in-flight).
+  // Fix 1 (PRIMARY, deterministic): when a message:new echo arrives carrying an
+  // idempotencyKey that matches an optimistic row, remove that optimistic row and
+  // seed confirmedIdToKeyRef. This is race-free and identity-based — no content
+  // heuristic. Works independent of the drain() onDelivered callback.
   //
-  // Match heuristic: msg.authorId === currentUserId && msg.content matches an
-  // optimistic row's content. Content uniqueness is sufficient in practice:
-  // the server echoes back the exact content the user just typed, and the
-  // window between "user sends" and "message:new arrives" is ~100–300 ms.
-  // A false-positive (same user, same content, two fast identical sends) would
-  // at worst collapse two pending rows prematurely; the second send's message:new
-  // then finds no optimistic row and adds as real — still correct.
-  //
-  // Also seeds confirmedIdToKeyRef so message:deleted can resolve the id→key
-  // mapping even if drain()'s onDelivered never fires.
+  // The idempotencyKey is round-tripped from the outbox's stable UUID through the
+  // POST body → messages.idempotency_key column → MessageResponse.idempotencyKey
+  // (wave-58 fix). When the key is present, the match is exact. When absent (old
+  // server or server-originated message with null key), we skip reconciliation
+  // for that message — drain()'s onDelivered path is the fallback.
   useEffect(() => {
     if (!channelId) return;
     const unsub = onMessageNew((msg: MessageResponse) => {
@@ -390,20 +384,17 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
         return [...prev, msg];
       });
 
-      // Fix 1: reconcile own optimistic row using this authoritative echo.
-      const myId = currentUserIdRef.current;
-      if (myId && msg.authorId === myId) {
+      // Fix 1: deterministic reconcile via idempotencyKey round-trip (wave-58).
+      // When the real message carries a key, find the matching optimistic row by
+      // key (not by content). Skip 'failed' rows — those are explicitly retried.
+      if (msg.idempotencyKey) {
+        const key = msg.idempotencyKey;
         setOptimisticMessages((prev) => {
-          // Find the FIRST pending/unconfirmed optimistic row whose content matches.
-          // Skip 'failed' rows — those are explicitly retried by the user.
-          const matchIdx = prev.findIndex((o) => o.state !== 'failed' && o.content === msg.content);
+          const matchIdx = prev.findIndex((o) => o.state !== 'failed' && o.idempotencyKey === key);
           if (matchIdx === -1) return prev;
-          const matched = prev[matchIdx];
-          if (matched) {
-            // Seed confirmedIdToKeyRef so message:deleted can find the key
-            // even if drain()'s onDelivered never fired (re-entrancy race).
-            confirmedIdToKeyRef.current.set(msg.id, matched.idempotencyKey);
-          }
+          // Seed confirmedIdToKeyRef so message:deleted can find the key
+          // even if drain()'s onDelivered never fired (re-entrancy race).
+          confirmedIdToKeyRef.current.set(msg.id, key);
           // Drop the matched optimistic row — real row is now in realMessages.
           return prev.filter((_, i) => i !== matchIdx);
         });
