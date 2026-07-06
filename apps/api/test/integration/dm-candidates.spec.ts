@@ -23,6 +23,7 @@
 // CF-2 side-effect import: sets process.env.DATABASE_URL = DATABASE_URL_TEST
 // at module-eval time so the lazy db singleton resolves to the test DB.
 import './pg-harness';
+import { DM_CANDIDATES_LIMIT } from '../../src/dm/dm.service';
 import {
   insertFixtureMembership,
   insertFixtureServer,
@@ -58,6 +59,14 @@ const USER_X_NOBODY = 'dm-cand-x-nobody';
 const USER_Y_EVERYONE = 'dm-cand-y-everyone';
 // Non-co-member (disjoint server) — must be excluded
 const USER_Z_DISJOINT = 'dm-cand-z-disjoint';
+
+// --- case (d) fixtures: defensive LIMIT cap (wave-56 B-2, task c5051444) ---
+// Fresh non-colliding IDs — no overlap with cases a/b/c above.
+const SERVER_D_SHARED = '00000000-0000-0000-0002-000000000005';
+const CALLER_D = 'dm-cand-d-caller';
+const USER_D1 = 'dm-cand-d-member-1';
+const USER_D2 = 'dm-cand-d-member-2';
+const USER_D3 = 'dm-cand-d-member-3';
 
 // --- case (c) fixtures: who_can_dm='server-members' ---
 // Shared server for case (c): caller + server-members-co-member are both in it
@@ -223,6 +232,51 @@ describe.skipIf(SKIP)(
 
       // Self-exclusion remains intact
       expect(ids).not.toContain(CALLER);
+    });
+
+    // -----------------------------------------------------------------------
+    // (d) Defensive LIMIT cap — wave-56 B-2, task c5051444
+    //
+    // Topology:
+    //   SERVER_D_SHARED: CALLER_D + USER_D1 + USER_D2 + USER_D3
+    //   All three co-members have who_can_dm='everyone' (all eligible).
+    //
+    // Non-vacuous bound proof: inject cap=2 (< 3 eligible co-members).
+    //   getDmCandidates(CALLER_D, 2)  → length ≤ 2 (LIMIT bites; proves > cap → ≤ cap)
+    //   getDmCandidates(CALLER_D)     → length == 3 (default cap 500 >> 3; MVP-scale unchanged)
+    //
+    // Why non-vacuous: with 3 candidates and cap=2, the DB MUST truncate before
+    // the in-memory sort sees the rows. If .limit() were absent the first
+    // assertion would fail (length == 3 > 2). No 500-fixture insert needed.
+    // -----------------------------------------------------------------------
+    it('(d) injected cap of 2 truncates 3 eligible co-members; default cap leaves all 3 intact', async () => {
+      await insertFixtureUser(CALLER_D, 'dm-cand-d-caller@test.local');
+      await insertFixtureUser(USER_D1, 'dm-cand-d-1@test.local');
+      await insertFixtureUser(USER_D2, 'dm-cand-d-2@test.local');
+      await insertFixtureUser(USER_D3, 'dm-cand-d-3@test.local');
+
+      await insertFixtureServer(SERVER_D_SHARED, CALLER_D, 'Server D Shared');
+
+      await insertFixtureMembership(SERVER_D_SHARED, CALLER_D);
+      await insertFixtureMembership(SERVER_D_SHARED, USER_D1);
+      await insertFixtureMembership(SERVER_D_SHARED, USER_D2);
+      await insertFixtureMembership(SERVER_D_SHARED, USER_D3);
+
+      // Injected cap of 2 — LIMIT must fire and truncate the 3 eligible rows.
+      const capped = await sut.getDmCandidates(CALLER_D, 2);
+      expect(capped.length).toBeLessThanOrEqual(2);
+      // Must return at least 1 (the query is not broken — just capped).
+      expect(capped.length).toBeGreaterThan(0);
+
+      // Default cap (DM_CANDIDATES_LIMIT = 500) — all 3 co-members come through
+      // unchanged; proves production-scale behaviour is unaffected at MVP volumes.
+      const uncapped = await sut.getDmCandidates(CALLER_D);
+      expect(uncapped).toHaveLength(3);
+      // Sanity: self-exclusion still intact under default cap
+      expect(uncapped.map((c) => c.userId)).not.toContain(CALLER_D);
+
+      // Reference the exported constant so it participates in the type-check.
+      expect(DM_CANDIDATES_LIMIT).toBe(500);
     });
   },
 );
