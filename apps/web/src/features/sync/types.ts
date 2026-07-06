@@ -7,7 +7,13 @@
  * Type-only imports from @studyhall/shared — no CJS runtime values.
  */
 
-import type { DmConversation, DmMessage, MessageResponse } from '@studyhall/shared';
+import type {
+  Assignment,
+  DmConversation,
+  DmMessage,
+  MessageResponse,
+  ScheduledSession,
+} from '@studyhall/shared';
 
 // ── Cache tables ──────────────────────────────────────────────────────────────
 
@@ -53,6 +59,39 @@ export type CachedDmConversation = DmConversation & {
 export type CachedDmMessage = DmMessage & {
   /** ISO timestamp of when the client stored this row. */
   cachedAt: string;
+};
+
+// ── Academic cache tables ─────────────────────────────────────────────────────
+
+/**
+ * CachedAssignment — an Assignment persisted to local IDB.
+ * `cachedAt` is added client-side for TTL / staleness decisions.
+ * DTO-intersection pattern: mirrors CachedDmConversation/CachedDmMessage in shape.
+ */
+export type CachedAssignment = Assignment & {
+  /** ISO timestamp of when the client stored this row. */
+  cachedAt: string;
+};
+
+/**
+ * CachedScheduledSession — a ScheduledSession persisted to local IDB.
+ * `cachedAt` is added client-side for TTL / staleness decisions.
+ * DTO-intersection pattern: mirrors CachedAssignment in shape.
+ *
+ * Sessions are fetched as server-expanded weekly occurrences for a [from,to]
+ * window. The cache is window-keyed via `cachedScheduledSessions` rows that
+ * each carry a composite `windowKey` (`${serverId}|${from}|${to}`) so that
+ * a query for a different window never returns stale data.
+ */
+export type CachedScheduledSession = ScheduledSession & {
+  /** ISO timestamp of when the client stored this row. */
+  cachedAt: string;
+  /**
+   * Window key: `${serverId}|${from}|${to}` — composite string used as the
+   * Dexie index to scope retrievals to the exact fetch window. The cache.ts
+   * helpers use this for put/get; callers must never query cross-window.
+   */
+  windowKey: string;
 };
 
 // ── Outbox table ──────────────────────────────────────────────────────────────

@@ -29,6 +29,8 @@ import type { ScheduledSession } from '@studyhall/shared';
 import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
 import { api } from '../auth/api';
 import { ErrorState } from '../components/states/ErrorState';
+import { getCachedScheduledSessions, putCachedScheduledSessions } from '../features/sync/cache';
+import { db } from '../features/sync/db';
 import { useServers } from './ServerContext';
 import { SessionDetail } from './SessionDetail';
 import { SessionForm } from './SessionForm';
@@ -491,10 +493,35 @@ export function ClassCalendar({ onClose }: Props) {
         );
         setSessions(sorted);
         setLoadStatus('loaded');
+        // Write-through: persist to offline cache using the exact from/to window strings.
+        if (db) {
+          void putCachedScheduledSessions(db, serverId, from, to, list);
+        }
       })
       .catch(() => {
         if (!mounted.current) return;
-        setLoadStatus('error');
+        // Offline fallback — serve the last-known window from cache using the exact same from/to.
+        if (db) {
+          getCachedScheduledSessions(db, serverId, from, to)
+            .then((cached) => {
+              if (!mounted.current) return;
+              if (cached.length > 0) {
+                const sorted = [...cached].sort(
+                  (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
+                );
+                setSessions(sorted);
+                setLoadStatus('loaded');
+              } else {
+                setLoadStatus('loaded');
+              }
+            })
+            .catch(() => {
+              if (!mounted.current) return;
+              setLoadStatus('error');
+            });
+        } else {
+          setLoadStatus('error');
+        }
       });
   }, [serverId]);
 

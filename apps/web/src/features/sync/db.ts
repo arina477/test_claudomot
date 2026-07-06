@@ -22,10 +22,12 @@
 
 import Dexie, { type EntityTable } from 'dexie';
 import type {
+  CachedAssignment,
   CachedChannel,
   CachedDmConversation,
   CachedDmMessage,
   CachedMessage,
+  CachedScheduledSession,
   OutboxItem,
 } from './types';
 
@@ -35,6 +37,8 @@ export class StudyHallDB extends Dexie {
   outbox!: EntityTable<OutboxItem, 'id'>;
   dmConversations!: EntityTable<CachedDmConversation, 'id'>;
   dmMessages!: EntityTable<CachedDmMessage, 'id'>;
+  cachedAssignments!: EntityTable<CachedAssignment, 'id'>;
+  cachedScheduledSessions!: EntityTable<CachedScheduledSession, 'id'>;
 
   constructor(
     idbFactory?: IDBFactory,
@@ -98,6 +102,36 @@ export class StudyHallDB extends Dexie {
       outbox: '++id, channelId, idempotencyKey, state, [state+createdAt]',
       dmConversations: 'id, createdAt',
       dmMessages: 'id, conversationId, [conversationId+createdAt], createdAt',
+    });
+
+    /**
+     * v3 schema — wave-63 academic offline cache addition.
+     *
+     * CRITICAL: ALL FIVE v1+v2 tables are re-stated VERBATIM below.
+     * (Dexie cumulative-declarative — omitting ANY table in a later version
+     * deletes it and ALL its data on upgrade. Zero tolerance for omissions.)
+     *
+     * cachedAssignments:
+     *   id       — primary key (string UUID from server)
+     *   serverId — filter by server (mirrors channels: 'id, serverId' pattern)
+     *
+     * cachedScheduledSessions:
+     *   id        — primary key (string UUID of the expanded occurrence)
+     *   serverId  — filter by server
+     *   windowKey — composite string `${serverId}|${from}|${to}` for window-
+     *               scoped retrieval; the get/put helpers use this index to
+     *               serve only the exact previously-fetched [from,to] window.
+     *               A query for a different (from,to) window returns [] cold
+     *               rather than serving a mismatched expansion.
+     */
+    this.version(3).stores({
+      messages: 'id, channelId, [channelId+createdAt], createdAt',
+      channels: 'id, serverId',
+      outbox: '++id, channelId, idempotencyKey, state, [state+createdAt]',
+      dmConversations: 'id, createdAt',
+      dmMessages: 'id, conversationId, [conversationId+createdAt], createdAt',
+      cachedAssignments: 'id, serverId',
+      cachedScheduledSessions: 'id, serverId, windowKey',
     });
   }
 }
