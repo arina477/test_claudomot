@@ -1,0 +1,16 @@
+# Wave 63 — B-6 Verdict
+
+**Reviewer:** head-builder (fresh spawn)
+**Reviewed against:** process/waves/wave-63/blocks/B/review-artifacts.md
+**Attempt:** 1  (first gate)
+
+## Verdict
+APPROVED
+
+## Rationale
+
+The build faithfully implements all three spec blocks (Dexie v3 substrate, AssignmentsPanel offline read, ClassCalendar offline read) and the highest-risk artifact — the v2→v3 Dexie migration — is verifiably safe. **The v3 5-table byte-compare PASSED.** `apps/web/src/features/sync/db.ts` `.version(3).stores()` (lines 128-134) re-states all five prior tables byte-for-byte against the P-4 binding reference strings: `messages: 'id, channelId, [channelId+createdAt], createdAt'`, `channels: 'id, serverId'`, `outbox: '++id, channelId, idempotencyKey, state, [state+createdAt]'`, `dmConversations: 'id, createdAt'`, `dmMessages: 'id, conversationId, [conversationId+createdAt], createdAt'` — zero omission or alteration — then appends only the two new tables (`cachedAssignments: 'id, serverId'`, `cachedScheduledSessions: 'id, serverId, windowKey'`). The `.version(1)` (75-79) and `.version(2)` (99-105) blocks are both still present. The named exit criterion is genuinely covered: `academic-cache.test.ts` seeds real ROWS into all five pre-v3 tables via db1, closes, re-opens the same persisted IDBFactory as db2, and asserts row-content survival (`channel?.name`, `message?.content`, outbox `state`+`content`, `dmConv?.isGroup`, `dmMsg?.content`) — not mere table existence — plus a coexist test proving v3 writes don't corrupt v1/v2 rows. Sessions caching is correctly window-keyed: `sessionWindowKey` serializes `${serverId}|${from}|${to}` and BOTH put (cache.ts:240) and get (cache.ts:219) call it, so a window mismatch returns [] by construction; three window-isolation tests confirm (same-window hit, cross-window miss, cross-server miss). `Cached*` types are clean DTO-intersections (`Assignment & { cachedAt }`, `ScheduledSession & { cachedAt, windowKey }`), matching the shipped CachedDmMessage pattern. Both wire-ins (AssignmentsPanel.loadAssignments, ClassCalendar.loadSessions) write-through in `.then()` on success and read cache in the `.catch()` fetch-failure branch — a fetch-catch trigger, NOT a `navigator.onLine` pre-gate (grep confirms zero `navigator.onLine` in touched files); cold cache falls to `setLoadStatus('loaded')` graceful-empty, not error; ClassCalendar computes `from`/`to` once and reuses the identical strings for both put and get. The B-5-caught TS2769 fix (commit 8e9f30f) is clean — `as CachedScheduledSession`/`as CachedAssignment` typed cast after `toBeDefined()`, no `!` / `any` / `@ts-ignore` (grep confirms) — a healthy B-5-caught-and-routed defect, not a rework trigger. Independently re-run toolchain: web `tsc --noEmit` exit 0, full web vitest **520/520 (33 files)**, biome ci clean. Change is ADD-only (no deletions to existing tables/helpers/components beyond additive lines). Commit hygiene passes: one commit per task_id (58b6b22=seed c5689dc5 → sync files only; 5d7d652=35c57942 → AssignmentsPanel only; a08f37c=42e0a265 → ClassCalendar only), 8e9f30f is a follow-up fix to the seed's test file (acceptable), every claimed task_id has a commit, no commit spans multiple spec blocks.
+
+## Footer
+- verdict_complete: true
+- rework_attempt_cap_remaining: 3

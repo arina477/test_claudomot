@@ -96,3 +96,6 @@ Promoted at L-2 Distill from `process/waves/wave-<N>/blocks/L/observations.md` b
 
 10. B-5 verify runs the exact CI commands, full lint and full test suite, not a subset, before B-6 review.
    Why: A subset missing the CI-identical lint or tests lets failures reach C-1 as post-merge fixes.
+
+11. In a Dexie .version(N+1).stores() call, re-state every prior table verbatim; an omitted table is dropped on upgrade.
+   Why: Dexie treats a table absent from a later version as a drop, irreversibly deleting its data.
