@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en" class="antialiased dark">
+<head>
+    <!--
+    aesthetic_dna: calm, academic, low-noise dark mode.
+    ui_paradigm: Multi-surface Split (App Framework + Inbox + Context Rail) with Action Modal.
+    palette: Zinc (Near-Black Surfaces) + Emerald (Academic Focus) + Danger (Red) + Amber.
+    -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyHall — Moderation Report Surfaces</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        :root {
+            /* Surfaces */
+            --surface-950: #0a0a0b;
+            --surface-900: #121214;
+            --surface-800: #1c1c1f;
+            --surface-700: #27272a;
+            --surface-600: #3f3f46;
+            --surface-500: #52525b;
+            
+            /* Borders */
+            --border-hairline: rgba(255, 255, 255, 0.06);
+            --border-hover: rgba(255, 255, 255, 0.10);
+            
+            /* Text */
+            --text-primary: rgba(255, 255, 255, 0.92);
+            --text-secondary: rgba(255, 255, 255, 0.60);
+            --text-muted: rgba(255, 255, 255, 0.40);
+            
+            /* Accents */
+            --accent-emerald: #10b981;
+            --accent-amber: #f59e0b;
+            --danger: #ef4444; /* Core danger hue */
+            --danger-btn: #b91c1c; /* AA compliant fill for white text */
+            --danger-tint: rgba(239, 68, 68, 0.1);
+            --danger-text: #f87171;
+            
+            /* Radii */
+            --radius-sm: 2px;
+            --radius-md: 6px;
+            --radius-lg: 10px;
+            --radius-xl: 12px;
+            --radius-full: 9999px;
+            
+            /* Elevation & FX */
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+            --shadow-pop: 0 8px 32px rgba(0, 0, 0, 0.6);
+            --glow-focus: 0 0 0 2px rgba(16, 185, 129, 0.4);
+            --glow-danger: 0 0 0 2px rgba(239, 68, 68, 0.4);
+            --glow-subtle: 0 0 15px rgba(255, 255, 255, 0.03);
+            
+            --transition-base: 150ms ease;
+        }
+
+        body {
+            background-color: var(--surface-950);
+            color: var(--text-primary);
+            font-family: 'Geist', -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Fluid Typography overrides */
+        .text-body-sm { font-size: 14px; line-height: 1.5; }
+        .text-body-base { font-size: 16px; line-height: 1.5; }
+        .text-heading-lg { font-size: 18px; line-height: 1.25; letter-spacing: -0.01em; }
+        .text-heading-xl { font-size: 20px; line-height: 1.25; letter-spacing: -0.01em; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--surface-600); border-radius: var(--radius-full); }
+        ::-webkit-scrollbar-thumb:hover { background: var(--surface-500); }
+
+        /* Keyframes */
+        @keyframes modalEnter {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeOutUp {
+            from { opacity: 1; transform: translateY(0); height: var(--row-height); padding-top: 1.5rem; padding-bottom: 1.5rem; margin-bottom: 0; }
+            to { opacity: 0; transform: translateY(-10px); height: 0; padding-top: 0; padding-bottom: 0; margin-bottom: 0; border-color: transparent; border-width: 0; }
+        }
+        @keyframes scrimEnter {
+            from { opacity: 0; backdrop-filter: blur(0px); }
+            to { opacity: 1; backdrop-filter: blur(4px); }
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        .animate-modal-enter { animation: modalEnter 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .animate-scrim-enter { animation: scrimEnter 300ms ease forwards; }
+        .row-dismiss { overflow: hidden; animation: fadeOutUp 400ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .animate-spin-custom { animation: spin 1s linear infinite; }
+        
+        .skeleton-shimmer {
+            background: linear-gradient(90deg, var(--surface-800) 25%, var(--surface-700) 50%, var(--surface-800) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite linear;
+        }
+
+        /* Specific Component Rules */
+        .btn-base {
+            display: inline-flex; align-items: center; justify-content: center;
+            border-radius: var(--radius-md); font-weight: 600; transition: all var(--transition-base);
+            gap: 6px; user-select: none; flex-shrink: 0;
+        }
+        .btn-base:focus-visible { outline: none; box-shadow: var(--glow-focus); }
+        .btn-base:active { transform: scale(0.98); }
+        
+        .btn-primary {
+            background-color: var(--accent-emerald);
+            color: var(--surface-950); /* Dark text on emerald passes AA (~6.8:1) */
+        }
+        .btn-primary:hover { background-color: #34d399; box-shadow: var(--shadow-sm); }
+        
+        .btn-danger {
+            background-color: var(--danger-btn); /* Darker red #b91c1c matches AA 4.5:1 requirement */
+            color: #ffffff;
+        }
+        .btn-danger:hover { background-color: #991b1b; box-shadow: var(--shadow-sm); }
+        
+        .btn-ghost {
+            background-color: transparent;
+            color: var(--text-secondary);
+        }
+        .btn-ghost:hover { background-color: var(--surface-700); color: var(--text-primary); }
+
+        .btn-action-icon {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 32px; height: 32px; border-radius: var(--radius-md);
+            color: var(--text-muted); background: transparent; transition: all var(--transition-base);
+        }
+        .btn-action-icon:hover { background-color: var(--surface-700); color: var(--danger-text); }
+
+        .input-base {
+            background-color: var(--surface-900);
+            box-shadow: inset 0 0 0 1px var(--border-hairline);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            transition: all var(--transition-base);
+        }
+        .input-base:focus { outline: none; box-shadow: inset 0 0 0 1px var(--accent-emerald), var(--glow-focus); }
+        .input-error { box-shadow: inset 0 0 0 1px var(--danger), var(--glow-danger) !important; }
+
+        .report-row {
+            transition: background-color var(--transition-base), box-shadow var(--transition-base);
+            box-shadow: inset 0 -1px 0 0 var(--border-hairline);
+        }
+        .report-row:hover {
+            background-color: var(--surface-800);
+            box-shadow: inset 0 -1px 0 0 var(--border-hover), var(--glow-subtle);
+        }
+
+        .modal-close {
+            outline: none;
+        }
+        .modal-close:focus-visible {
+            box-shadow: var(--glow-focus);
+        }
+
+        /* Overrides specific to responsive layout states */
+        .scrim {
+            display: none;
+            opacity: 0;
+            transition: opacity 200ms ease;
+        }
+        .scrim.active {
+            display: block;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-[100dvh] overflow-hidden text-body-base">
+
+    <!-- DEMO HEADER -->
+    <div class="h-10 bg-[var(--surface-950)] text-xs text-[var(--text-secondary)] flex items-center px-4 justify-between border-b border-[var(--border-hairline)] z-20 shrink-0">
+        <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-[var(--accent-emerald)] inline-block"></span>
+            M14 StudyHall Design Engine
+        </div>
+        <div class="flex gap-4">
+            <button onclick="resetApp()" class="hover:text-[var(--text-primary)] transition-colors flex items-center gap-1">
+                <i class="ph ph-arrow-counter-clockwise"></i> Reset View
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN APP SHELL -->
+    <main class="flex-1 flex overflow-hidden w-full relative">
+        
+        <!-- MACRO-ARCHITECTURE: SIDEBAR -->
+        <aside class="hidden lg:flex flex-col w-[260px] xl:w-[280px] bg-[var(--surface-900)] border-r border-[var(--border-hairline)] shrink-0 z-10">
+            <div class="p-4 border-b border-[var(--border-hairline)]">
+                <h1 class="text-heading-xl font-semibold mb-1 truncate">CS401: Data Structures</h1>
+                <p class="text-xs text-[var(--text-secondary)]">Server Settings</p>
+            </div>
+            
+            <nav class="flex-1 overflow-y-auto p-3 space-y-1">
+                <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-[var(--radius-md)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-700)] transition-colors text-body-sm">
+                    <i class="ph ph-info text-lg"></i> Overview
+                </a>
+                <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-[var(--radius-md)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-700)] transition-colors text-body-sm">
+                    <i class="ph ph-users text-lg"></i> Members & Roles
+                </a>
+                
+                <div class="pt-4 pb-1">
+                    <p class="px-3 text-[11px] uppercase tracking-wider text-[var(--text-secondary)] font-semibold flex items-center gap-2">
+                        Moderation 
+                        <i class="ph ph-lock-key text-[var(--text-muted)]" title="Requires moderate_members permission"></i>
+                    </p>
+                </div>
+                
+                <!-- Active Nav Item -->
+                <a href="#" class="flex items-center justify-between px-3 py-2 rounded-[var(--radius-md)] bg-[var(--surface-700)] text-[var(--text-primary)] font-medium text-body-sm" aria-current="page">
+                    <div class="flex items-center gap-3">
+                        <i class="ph-fill ph-flag bg-clip-text text-[var(--text-primary)] text-lg"></i>
+                        Reports Inbox
+                    </div>
+                    <!-- Fixing Nav Badge Contrast Issue -->
+                    <span id="nav-badge" class="bg-[var(--danger-btn)] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-[var(--radius-full)] leading-none">3</span>
+                </a>
+                
+                <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-[var(--radius-md)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-700)] transition-colors text-body-sm">
+                    <i class="ph ph-list-dashes text-lg"></i> Audit Log
+                </a>
+            </nav>
+        </aside>
+
+        <!-- MACRO-ARCHITECTURE: INBOX CANVAS -->
+        <section class="flex-1 bg-[var(--surface-800)] flex flex-col relative overflow-hidden h-full">
+            <!-- Header -->
+            <header class="h-[72px] shrink-0 border-b border-[var(--border-hairline)] px-6 lg:px-8 flex items-center justify-between z-10 bg-[var(--surface-800)]">
+                <div>
+                    <h2 class="text-heading-xl font-semibold flex items-center gap-2">
+                        Active Reports
+                    </h2>
+                </div>
+            </header>
+
+            <!-- Scrollable Content -->
+            <div class="flex-1 overflow-y-auto px-4 lg:px-8 py-6 relative" id="report-inbox">
+                
+                <!-- INBOX LOADING SKELETONS -->
+                <div id="loading-skeletons" class="max-w-4xl mx-auto flex flex-col gap-6 pt-2">
+                    <!-- Skeleton Row 1 -->
+                    <div class="py-6 px-4 -mx-4 rounded-[var(--radius-lg)] flex gap-4 sm:gap-6 border-b border-[var(--border-hairline)]">
+                        <div class="w-10 h-10 rounded-[var(--radius-full)] skeleton-shimmer hidden sm:block shrink-0"></div>
+                        <div class="flex-1 space-y-4">
+                            <div class="w-48 h-4 rounded-[var(--radius-sm)] skeleton-shimmer"></div>
+                            <div class="w-full max-w-sm h-12 rounded-[var(--radius-md)] skeleton-shimmer"></div>
+                            <div class="w-3/4 h-8 rounded-[var(--radius-md)] skeleton-shimmer opacity-60"></div>
+                        </div>
+                    </div>
+                    <!-- Skeleton Row 2 -->
+                    <div class="py-6 px-4 -mx-4 rounded-[var(--radius-lg)] flex gap-4 sm:gap-6 border-b border-[var(--border-hairline)]">
+                        <div class="w-10 h-10 rounded-[var(--radius-full)] skeleton-shimmer hidden sm:block shrink-0"></div>
+                        <div class="flex-1 space-y-4">
+                            <div class="w-40 h-4 rounded-[var(--radius-sm)] skeleton-shimmer"></div>
+                            <div class="w-full max-w-xs h-10 rounded-[var(--radius-full)] skeleton-shimmer"></div>
+                            <div class="w-2/3 h-8 rounded-[var(--radius-md)] skeleton-shimmer opacity-60"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ACTUAL INBOX LIST (Hidden initially) -->
+                <div class="max-w-4xl mx-auto flex flex-col pt-2 hidden opacity-0 transition-opacity duration-500" id="report-list">
+                    
+                    <!-- ITEM 1: Message Report -->
+                    <article class="report-row py-6 px-4 -mx-4 rounded-[var(--radius-lg)]" data-id="r1">
+                        <div class="flex flex-col sm:flex-row gap-4 sm:gap-6">
+                            <!-- Avatar col -->
+                            <div class="pt-1 hidden sm:block shrink-0">
+                                <div class="w-10 h-10 rounded-[var(--radius-full)] bg-[var(--surface-600)] flex items-center justify-center text-[var(--text-primary)] font-medium text-sm relative">
+                                    SC
+                                    <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-[var(--surface-900)] rounded-full flex items-center justify-center">
+                                        <div class="w-2.5 h-2.5 bg-[var(--accent-emerald)] rounded-full"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Content col -->
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-baseline gap-2 mb-1 flex-wrap">
+                                    <h3 class="font-medium text-[var(--text-primary)]">Sarah Chen</h3>
+                                    <span class="text-[var(--text-secondary)] text-xs">reported a message</span>
+                                    <span class="text-[var(--text-secondary)] text-[11px] sm:ml-auto">2 hours ago</span>
+                                </div>
+                                
+                                <div class="bg-[var(--surface-900)] rounded-[var(--radius-md)] p-3 border border-[var(--border-hairline)] mb-3 inline-block max-w-full relative shadow-[var(--shadow-sm)]">
+                                    <p class="text-sm text-[var(--text-secondary)] truncate">
+                                        "Can someone just DM me the midterm answers? Will Venmo $50."
+                                    </p>
+                                    <div class="absolute -left-[1px] top-1/2 -translate-y-1/2 w-[3px] h-3/4 bg-[var(--danger)] rounded-r-[var(--radius-sm)]"></div>
+                                </div>
+
+                                <div class="space-y-1 mb-4">
+                                    <p class="text-[11px] uppercase tracking-wider text-[var(--text-secondary)] font-semibold">Reason provided</p>
+                                    <p class="text-body-sm text-[var(--text-primary)] pl-2 border-l-2 border-[var(--surface-600)]">
+                                        Academic dishonesty. Person has been asking for test answers in multiple channels all morning.
+                                    </p>
+                                </div>
+
+                                <!-- Actions -->
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <!-- Fixing Danger Contrast Issue via btn-danger override base css -->
+                                    <button onclick="handleAction(this, 'delete', 'r1')" class="btn-base btn-danger h-[34px] px-3 text-sm">
+                                        <i class="ph ph-trash"></i> Delete Message
+                                    </button>
+                                    <button onclick="handleAction(this, 'dismiss', 'r1')" class="btn-base btn-ghost h-[34px] px-3 text-sm">
+                                        Dismiss
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- ITEM 2: Member Report -->
+                    <article class="report-row py-6 px-4 -mx-4 rounded-[var(--radius-lg)]" data-id="r2">
+                        <div class="flex flex-col sm:flex-row gap-4 sm:gap-6">
+                            <div class="pt-1 hidden sm:block shrink-0">
+                                <img src="https://images.unsplash.com/photo-1549471156-52c73d94b3da?auto=format&fit=crop&w=80&q=80" alt="Avatar" class="w-10 h-10 rounded-[var(--radius-full)] object-cover opacity-80 mix-blend-luminosity">
+                            </div>
+                            
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-baseline gap-2 mb-1 flex-wrap">
+                                    <h3 class="font-medium text-[var(--text-primary)]">David T.</h3>
+                                    <span class="text-[var(--text-secondary)] text-xs">reported a member</span>
+                                    <span class="text-[var(--text-secondary)] text-[11px] sm:ml-auto">5 hours ago</span>
+                                </div>
+                                
+                                <div class="flex items-center gap-2 bg-[var(--surface-900)] rounded-full px-3 py-1.5 border border-[var(--border-hairline)] mb-3 inline-flex w-max shadow-[var(--shadow-sm)]">
+                                    <i class="ph-fill ph-user text-[var(--text-secondary)]"></i>
+                                    <span class="text-sm font-mono text-[var(--text-primary)]">xX_CryptoGod_Xx</span>
+                                </div>
+
+                                <div class="space-y-1 mb-4">
+                                    <p class="text-[11px] uppercase tracking-wider text-[var(--text-secondary)] font-semibold">Reason provided</p>
+                                    <p class="text-body-sm text-[var(--text-primary)] pl-2 border-l-2 border-[var(--surface-600)]">
+                                        Joined the study hall voice call and started screaming crypto scams. Highly disruptive.
+                                    </p>
+                                </div>
+
+                                <!-- Actions -->
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <!-- Danger button -->
+                                    <button onclick="handleAction(this, 'timeout', 'r2')" class="btn-base btn-danger h-[34px] px-3 text-sm">
+                                        <i class="ph ph-clock"></i> Timeout 24h
+                                    </button>
+                                    <button onclick="handleAction(this, 'dismiss', 'r2')" class="btn-base btn-ghost h-[34px] px-3 text-sm">
+                                        Dismiss
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- ITEM 3: Server/Resource Report -->
+                    <article class="report-row py-6 px-4 -mx-4 rounded-[var(--radius-lg)]" data-id="r3">
+                        <div class="flex flex-col sm:flex-row gap-4 sm:gap-6">
+                            <div class="pt-1 hidden sm:block shrink-0">
+                                <div class="w-10 h-10 rounded-[var(--radius-full)] bg-[var(--surface-700)] flex items-center justify-center text-[var(--text-secondary)] relative border border-[var(--border-hairline)] shadow-[var(--shadow-sm)]">
+                                    <i class="ph ph-user-circle text-xl"></i>
+                                </div>
+                            </div>
+                            
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-baseline gap-2 mb-1 flex-wrap">
+                                    <h3 class="font-medium text-[var(--text-primary)]">Anonymous Student</h3>
+                                    <span class="text-[var(--text-secondary)] text-xs">reported a resource</span>
+                                    <span class="text-[var(--text-secondary)] text-[11px] sm:ml-auto">Yesterday</span>
+                                </div>
+                                
+                                <div class="bg-[var(--surface-800)] border border-[var(--border-hairline)] rounded-[var(--radius-md)] p-2 flex items-center gap-3 mb-3 w-max max-w-full shadow-[var(--shadow-sm)]">
+                                    <div class="w-8 h-8 rounded-[var(--radius-sm)] bg-[#10b981] bg-opacity-20 flex items-center justify-center border border-[rgba(16,185,129,0.3)]">
+                                        <i class="ph ph-file-pdf text-[var(--accent-emerald)]"></i>
+                                    </div>
+                                    <span class="text-sm font-medium text-[var(--text-primary)] truncate pr-2">Midterm_Answers_2023.pdf</span>
+                                </div>
+
+                                <div class="space-y-1 mb-4">
+                                    <p class="text-[11px] uppercase tracking-wider text-[var(--text-secondary)] font-semibold">Reason provided</p>
+                                    <p class="text-body-sm text-[var(--text-primary)] font-mono text-[13px] italic bg-[var(--surface-900)] p-2 rounded-[var(--radius-md)]">
+                                        No reason provided.
+                                    </p>
+                                </div>
+
+                                <!-- Actions -->
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <!-- Danger button -->
+                                    <button onclick="handleAction(this, 'delete', 'r3')" class="btn-base btn-danger h-[34px] px-3 text-sm">
+                                        <i class="ph ph-trash"></i> Delete File
+                                    </button>
+                                    <button onclick="handleAction(this, 'dismiss', 'r3')" class="btn-base btn-ghost h-[34px] px-3 text-sm">
+                                        Dismiss
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+
+                </div>
+                
+                <!-- EMPTY STATE (Hidden by default) -->
+                <div id="empty-state" class="hidden flex-col items-center justify-center h-full min-h-[400px] text-center px-4">
+                    <div class="w-16 h-16 rounded-full bg-[var(--surface-900)] border border-[var(--border-hairline)] flex items-center justify-center mb-4 shadow-[var(--shadow-pop)] relative">
+                        <i class="ph ph-check-circle text-3xl text-[var(--accent-emerald)]"></i>
+                        <div class="absolute inset-0 bg-[var(--accent-emerald)] blur-[30px] opacity-10 rounded-full"></div>
+                    </div>
+                    <h3 class="text-heading-lg font-semibold text-[var(--text-primary)] mb-2">All clear</h3>
+                    <p class="text-[var(--text-secondary)] text-sm max-w-[280px]">No open reports in CS401. Your community is running smoothly.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- MACRO-ARCHITECTURE: CONTEXT/AFFORDANCES RAIL -->
+        <!-- Demonstrates the consistent Flag entry point across 3 target surfaces -->
+        <aside class="hidden md:flex flex-col w-[320px] bg-[var(--surface-900)] border-l border-[var(--border-hairline)] shrink-0 z-10">
+            <header class="h-[72px] shrink-0 border-b border-[var(--border-hairline)] px-6 flex items-center">
+                <h3 class="text-sm font-semibold text-[var(--text-primary)] uppercase tracking-wider">Report Affordances View</h3>
+            </header>
+            
+            <div class="p-6 overflow-y-auto flex-1 space-y-8">
+                
+                <!-- A: Discovery Server Card -->
+                <div class="space-y-2">
+                    <p class="text-[11px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider flex items-center justify-between">
+                        1. Server Card
+                    </p>
+                    <div class="bg-[var(--surface-800)] border border-[var(--border-hairline)] rounded-[var(--radius-lg)] p-4 shadow-[var(--shadow-sm)] group relative hover:border-[var(--border-hover)] transition-colors">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-[var(--radius-lg)] bg-[var(--accent-amber)] flex items-center justify-center text-[var(--surface-950)] font-bold">PHY</div>
+                                <div>
+                                    <h4 class="text-sm font-medium text-[var(--text-primary)]">Physics Study Hall</h4>
+                                    <p class="text-xs text-[var(--text-secondary)]">240 members</p>
+                                </div>
+                            </div>
+                            <!-- Core Affordance Control -->
+                            <button onclick="openModal('Server', 'Physics Study Hall')" class="btn-action-icon opacity-0 group-hover:opacity-100 focus-visible:opacity-100" aria-label="Report Server" title="Report Server">
+                                <i class="ph ph-flag"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- B: Member List Context -->
+                <div class="space-y-2">
+                    <p class="text-[11px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
+                        2. Member Layout
+                    </p>
+                    <div class="flex items-center justify-between p-2 rounded-[var(--radius-md)] group hover:bg-[var(--surface-800)] transition-colors -mx-2">
+                        <div class="flex items-center gap-3">
+                            <img src="https://images.unsplash.com/photo-1549471156-52c73d94b3da?auto=format&fit=crop&w=40&q=80" alt="Avatar" class="w-8 h-8 rounded-[var(--radius-full)] object-cover opacity-80 mix-blend-luminosity">
+                            <span class="text-sm font-medium text-[var(--text-primary)]">xX_CryptoGod_Xx</span>
+                        </div>
+                        <!-- Core Affordance Control -->
+                        <button onclick="openModal('Member', 'xX_CryptoGod_Xx')" class="btn-action-icon opacity-0 group-hover:opacity-100 focus-visible:opacity-100" aria-label="Report Member" title="Report Member">
+                            <i class="ph ph-flag"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- C: Message Hover Action -->
+                <div class="space-y-2">
+                    <p class="text-[11px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
+                        3. Message Hover Actions
+                    </p>
+                    <div class="relative group p-3 -mx-3 hover:bg-[var(--surface-800)] rounded-[var(--radius-md)] transition-colors">
+                        <div class="flex items-baseline gap-2 mb-1">
+                            <h4 class="text-sm font-medium text-[var(--text-primary)]">Sarah Chen</h4>
+                            <span class="text-[11px] text-[var(--text-secondary)]">Today at 10:42 AM</span>
+                        </div>
+                        <p class="text-sm text-[var(--text-secondary)]">Hey, anyone want to share notes from chapter 7?</p>
+                        
+                        <!-- Floating Action Bar -->
+                        <div class="absolute -top-3 right-2 bg-[var(--surface-900)] border border-[var(--border-hairline)] shadow-[var(--shadow-sm)] rounded-[var(--radius-md)] flex items-center p-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                            <button class="w-8 h-8 flex items-center justify-center rounded-sm text-[var(--text-secondary)] hover:bg-[var(--surface-700)] hover:text-[var(--text-primary)]" title="React"><i class="ph ph-smiley"></i></button>
+                            <button class="w-8 h-8 flex items-center justify-center rounded-sm text-[var(--text-secondary)] hover:bg-[var(--surface-700)] hover:text-[var(--text-primary)]" title="Reply"><i class="ph ph-arrow-u-up-left"></i></button>
+                            <div class="w-px h-4 bg-[var(--surface-700)] mx-0.5"></div>
+                            <!-- Core Affordance Control -->
+                            <button onclick="openModal('Message', 'Sarah\'s message')" class="w-8 h-8 flex items-center justify-center rounded-sm text-[var(--text-secondary)] hover:bg-[var(--surface-700)] hover:text-[var(--danger-text)]" title="Report Message" aria-label="Report Message">
+                                <i class="ph ph-flag"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </aside>
+
+    </main>
+
+    <!-- CORE SURFACE: REPORT DIALOG (Modal / Form) -->
+    <!-- Fixing Mobile layout: Full width sheet anchored to bottom on small viewports via sm: utility classes -->
+    <!-- Applying explicit Focus-Trap layer mechanics -->
+    <div id="report-modal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 pointer-events-none" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        
+        <!-- Scrim -->
+        <div id="modal-scrim" class="absolute inset-0 bg-black/60 scrim pointer-events-auto cursor-pointer" onclick="closeModal()" aria-hidden="true"></div>
+        
+        <!-- Modal Panel -->
+        <div id="modal-panel" class="relative w-full sm:max-w-[480px] bg-[var(--surface-900)] rounded-t-[var(--radius-lg)] sm:rounded-b-[var(--radius-lg)] rounded-b-none shadow-[var(--shadow-pop)] sm:border border-[var(--border-hairline)] border-b-0 flex flex-col overflow-hidden opacity-0 transform translate-y-8 transition-all duration-300 pointer-events-auto max-h-[90vh] sm:max-h-[85vh]">
+            
+            <!-- Structural Top Border Accent -->
+            <div class="h-[2px] w-full bg-gradient-to-r from-[var(--surface-700)] via-[var(--border-hover)] to-[var(--surface-700)] opacity-50 shrink-0"></div>
+
+            <!-- Header -->
+            <div class="px-6 py-5 flex items-start justify-between border-b border-[var(--border-hairline)] shrink-0">
+                <div>
+                    <h2 id="modal-title" class="text-heading-xl font-semibold flex items-center gap-2">
+                        <i class="ph-fill ph-flag bg-clip-text text-[var(--danger-text)] bg-[var(--danger-tint)] rounded-full p-1 opacity-90 text-[18px]"></i>
+                        <span id="modal-type-label">Report Issue</span>
+                    </h2>
+                    <p class="text-sm text-[var(--text-secondary)] mt-1">
+                        Report <span id="modal-target-label" class="font-medium text-[var(--text-primary)] text-ellipsis overflow-hidden max-w-[200px] inline-block align-bottom">Target</span> to the moderators.
+                    </p>
+                </div>
+                <button onclick="closeModal()" class="w-8 h-8 flex items-center justify-center rounded-[var(--radius-md)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-700)] transition-colors modal-close -mr-2 -mt-1 shrink-0" aria-label="Close dialog">
+                    <i class="ph ph-x text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Body (Scrollable if needed) -->
+            <div class="p-6 flex-1 overflow-y-auto overscroll-contain">
+                <form id="report-form" onsubmit="event.preventDefault(); submitReport();">
+                    
+                    <div class="flex flex-col gap-2 relative">
+                        <label for="report-reason" class="text-sm font-medium text-[var(--text-primary)] flex justify-between">
+                            Reason for report
+                            <span id="char-count" class="text-xs text-[var(--text-muted)] font-mono">0 / 300</span>
+                        </label>
+                        <div class="relative">
+                            <textarea id="report-reason" 
+                                class="input-base w-full h-32 p-3 text-sm resize-none" 
+                                placeholder="What's going on? Provide details to help moderators investigate."
+                                maxlength="300"
+                                required
+                                oninput="updateCharCount(this)"
+                                onkeydown="clearInlineError()"></textarea>
+                            
+                            <!-- Inline Error Container -->
+                            <div id="form-error" class="hidden absolute -bottom-8 left-0 text-xs font-medium text-[var(--danger-text)] flex items-center gap-1 bg-[var(--danger-tint)] px-2 py-1 rounded-[var(--radius-sm)] border border-[rgba(239,68,68,0.2)]">
+                                <i class="ph-fill ph-warning-circle"></i> Reason is required
+                            </div>
+                        </div>
+                        <p class="text-xs text-[var(--text-secondary)] mt-2">
+                            This report will be sent to server moderators, not platform administration. Do not share personal information. Add the word <strong>"error"</strong> in reason to simulate network failure.
+                        </p>
+                    </div>
+
+            </div>
+
+            <!-- Footer (Adhering to mobile standard safe area) -->
+            <div class="px-6 py-4 pb-safe sm:pb-4 bg-[var(--surface-950)]/50 border-t border-[var(--border-hairline)] flex items-center justify-end gap-3 flex-row-reverse sm:flex-row shrink-0">
+                <button type="button" onclick="closeModal()" class="btn-base btn-ghost h-[38px] px-4 text-sm w-full sm:w-auto">
+                    Cancel
+                </button>
+                <button type="submit" id="submit-btn" class="btn-base btn-primary h-[38px] px-6 text-sm w-full sm:w-auto overflow-hidden relative">
+                    <span id="submit-text">Submit Report</span>
+                    <i id="submit-spinner" class="ph ph-spinner animate-spin-custom absolute hidden text-[18px]"></i>
+                </button>
+            </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TOAST TARGET -->
+    <div id="toast-container" class="fixed bottom-6 right-0 left-0 sm:left-auto sm:right-6 z-[60] flex flex-col gap-2 pointer-events-none px-4 sm:px-0"></div>
+
+    <!-- Vanilla JS Logic Layer -->
+    <script>
+        // Inbox Initialization & Boot sequence
+        window.addEventListener('DOMContentLoaded', () => {
+            // Simulate initial network fetch for inbox (Requirement 3: Skeleton Rows)
+            setTimeout(() => {
+                document.getElementById('loading-skeletons').style.display = 'none';
+                const list = document.getElementById('report-list');
+                list.classList.remove('hidden');
+                // Trigger reflow for fade in
+                void list.offsetWidth; 
+                list.style.opacity = '1';
+            }, 1500);
+        });
+
+        // Modal Variables
+        const modal = document.getElementById('report-modal');
+        const scrim = document.getElementById('modal-scrim');
+        const modalPanel = document.getElementById('modal-panel');
+        const typeLabel = document.getElementById('modal-type-label');
+        const targetLabel = document.getElementById('modal-target-label');
+        const reasonInput = document.getElementById('report-reason');
+        const countDisplay = document.getElementById('char-count');
+        const errorDisplay = document.getElementById('form-error');
+        const submitBtn = document.getElementById('submit-btn');
+        const submitText = document.getElementById('submit-text');
+        const submitSpinner = document.getElementById('submit-spinner');
+        
+        let reportCount = 3;
+
+        // Focus Trap Mechanics (Requirement 2)
+        const focusableElementsString = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+        function trapFocus(e) {
+            if (modal.style.display === 'none') return;
+            if (e.key === 'Escape') closeModal();
+            if (e.key !== 'Tab') return;
+
+            const focusableElements = modalPanel.querySelectorAll(focusableElementsString);
+            const firstElement = focusableElements[0];
+            const lastElement = focusableElements[focusableElements.length - 1];
+
+            if (e.shiftKey) { // Shift + Tab
+                if (document.activeElement === firstElement) {
+                    lastElement.focus();
+                    e.preventDefault();
+                }
+            } else { // Tab
+                if (document.activeElement === lastElement) {
+                    firstElement.focus();
+                    e.preventDefault();
+                }
+            }
+        }
+
+        document.addEventListener('keydown', trapFocus);
+
+
+        function openModal(type = 'Target', name = 'Item') {
+            typeLabel.innerText = `Report ${type}`;
+            targetLabel.innerText = name;
+            
+            modal.style.display = 'flex';
+            
+            // Allow CSS to mount before applying active classes for transition
+            requestAnimationFrame(() => {
+                scrim.classList.add('active');
+                
+                // If mobile (sheet architecture trigger)
+                if (window.innerWidth < 640) {
+                    modalPanel.style.transform = 'translateY(0)';
+                } else {
+                    modalPanel.style.transform = 'translateY(0) scale(1)';
+                }
+                modalPanel.style.opacity = '1';
+                reasonInput.focus();
+            });
+        }
+
+        function closeModal() {
+            scrim.classList.remove('active');
+            
+            if (window.innerWidth < 640) {
+                modalPanel.style.transform = 'translateY(100%)';
+            } else {
+                modalPanel.style.transform = 'translateY(20px) scale(0.96)';
+            }
+            modalPanel.style.opacity = '0';
+            
+            setTimeout(() => {
+                modal.style.display = 'none';
+                
+                // Reset form completely
+                reasonInput.value = '';
+                countDisplay.innerText = '0 / 300';
+                countDisplay.style.color = 'var(--text-muted)';
+                clearInlineError();
+                
+                // Reset button state just in case it was interrupted
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+                submitText.style.opacity = '1';
+                submitSpinner.classList.add('hidden');
+            }, 300); // match transition timing
+        }
+
+        function updateCharCount(el) {
+            const length = el.value.length;
+            countDisplay.innerText = `${length} / 300`;
+            if (length >= 290) {
+                countDisplay.style.color = 'var(--accent-amber)';
+            } else {
+                countDisplay.style.color = 'var(--text-muted)';
+            }
+        }
+
+        function clearInlineError() {
+            reasonInput.classList.remove('input-error');
+            errorDisplay.classList.add('hidden');
+        }
+
+        function submitReport() {
+            const reason = reasonInput.value.trim();
+            
+            if (reason.length === 0) {
+                reasonInput.classList.add('input-error');
+                errorDisplay.classList.remove('hidden');
+                return;
+            }
+
+            // Lock UI for submission
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.8';
+            submitText.style.opacity = '0';
+            submitSpinner.classList.remove('hidden');
+
+            // Simulate Network Operations & Error Branching
+            setTimeout(() => {
+                // To clearly demonstrate the UX error, we fail if text includes 'error'
+                if (reason.toLowerCase().includes('error')) {
+                    showToast("Network error: Failed to submit report. Please try again.", "error");
+                    
+                    // Reset UI but visually KEEP Modal open & data intact
+                    submitBtn.disabled = false;
+                    submitBtn.style.opacity = '1';
+                    submitText.style.opacity = '1';
+                    submitSpinner.classList.add('hidden');
+                    reasonInput.focus();
+                } else {
+                    // Success State
+                    showToast("Report submitted successfully.", "success");
+                    closeModal();
+                }
+            }, 1000);
+        }
+
+        // Inbox List Item Interaction Methods
+        function handleAction(btn, actionType, rowId) {
+            const row = document.querySelector(`[data-id="${rowId}"]`);
+            if (!row) return;
+
+            // Apply loading inline structure
+            const originalHTML = btn.innerHTML;
+            const originalWidth = btn.offsetWidth;
+            btn.style.width = `${originalWidth}px`; 
+            btn.innerHTML = `<i class="ph ph-spinner animate-spin-custom"></i>`;
+            btn.disabled = true;
+
+            setTimeout(() => {
+                // INBOX ACTION ERROR BRANCH DEMONSTRATION
+                // Fail the first action to demonstrate the error state, then succeed on subsequent attempts.
+                if (!window._inboxErrorShown) {
+                    window._inboxErrorShown = true;
+                    btn.innerHTML = originalHTML;
+                    btn.style.width = ''; // reset width so it can be clicked again naturally
+                    btn.disabled = false;
+                    showToast(`Network error: Failed to process action. Please try again.`, "error");
+                    return; // Leave row in place, halt execution
+                }
+
+                // Semantic toast message based on destructive type
+                const actMsg = actionType === 'delete' ? 'Content deleted' : 
+                               actionType === 'timeout' ? 'Member timed out' : 'Report dismissed';
+                
+                btn.innerHTML = originalHTML;
+                
+                // Orchestrate Removal via native height collapsing
+                row.style.setProperty('--row-height', `${row.offsetHeight}px`);
+                row.classList.add('row-dismiss');
+                
+                setTimeout(() => {
+                    row.remove();
+                    reportCount--;
+                    updateInboxState();
+                    showToast(`${actMsg} successfully.`, "success");
+                }, 400); 
+
+            }, 600);
+        }
+
+        function updateInboxState() {
+            const badge = document.getElementById('nav-badge');
+            if (reportCount > 0) {
+                badge.innerText = reportCount;
+            } else {
+                badge.style.display = 'none';
+                document.getElementById('report-list').style.display = 'none';
+                const empty = document.getElementById('empty-state');
+                empty.classList.remove('hidden');
+                empty.style.display = 'flex';
+                empty.classList.add('animate-modal-enter');
+            }
+        }
+
+        // Toast Orchestrator
+        function showToast(message, type = "success") {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+            toast.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
+            
+            const icon = type === 'success' ? 'ph-check-circle text-[var(--accent-emerald)]' : 
+                         type === 'error' ? 'ph-warning-circle text-[var(--danger)]' : 
+                         'ph-info text-[var(--accent-amber)]';
+                         
+            const borderGlow = type === 'error' ? 'border-[var(--danger)] shadow-[0_0_15px_rgba(239,68,68,0.15)]' : 'border-[var(--border-hairline)] shadow-[var(--shadow-pop)]';
+            
+            toast.className = `bg-[var(--surface-700)] text-[var(--text-primary)] text-sm px-4 py-3 rounded-[var(--radius-md)] ${borderGlow} flex items-center gap-3 transform translate-y-8 opacity-0 transition-all duration-300 pointer-events-auto`;
+            toast.innerHTML = `<i class="ph-fill ${icon} text-[18px]"></i> <span class="font-medium">${message}</span>`;
+            
+            container.appendChild(toast);
+            
+            requestAnimationFrame(() => {
+                toast.style.transform = 'translateY(0)';
+                toast.style.opacity = '1';
+            });
+            
+            setTimeout(() => {
+                toast.style.transform = 'translateY(8px)';
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500); // slightly longer read time
+        }
+
+        // Environment Reset for reviewer utility
+        function resetApp() {
+            location.reload();
+        }
+
+    </script>
+</body>
+</html>

@@ -32,7 +32,8 @@ Referenced from: `claudomat-brain/blocks/design/stages/D-3-review-and-adopt.md` 
 |-------|-----|---------|
 | `--accent-emerald` | `#10b981` | **Primary accent** — academic/focus; active channel, primary buttons, online presence, success |
 | `--accent-amber` | `#f59e0b` | **Secondary accent** — assignments / due-soon, reconnecting state, warnings |
-| `--danger` | `#ef4444` | Destructive (ban, delete), error, offline state — **fill/border use only** |
+| `--danger` | `#ef4444` | Destructive (ban, delete), error, offline state — **fill/border/non-text-decoration use only** (white text on it ≈3.8–4:1, WCAG AA FAIL — never as a fill under white button/badge text) |
+| `--danger-btn` | `#b91c1c` | Danger **button** fill + semantic count badges carrying white text. White-on-`#b91c1c` ≈6.5:1 (WCAG AA PASS); hover darkens to `#991b1b` ≈8.3:1. Use wherever a red fill sits under white text — `--danger` (`#ef4444`) is too light for that. (wave-69 D-3) |
 | `--danger-text` | `#f87171` | On-dark-tint danger text (`--danger-on-tint`). Use when danger text sits on a danger/10 tint — `#ef4444` computes 3.93:1 there (WCAG AA FAIL); `#f87171` computes 6.30:1 (PASS). Overdue chip, error text on tinted backgrounds. |
 | `--info` | `#10b981` | (reuse emerald — keep palette tight) |
 
@@ -94,7 +95,7 @@ Each primitive lists tokens consumed, states, a11y, and usage. Every MVP module 
 
 ### Standard primitives
 
-**Button** — variants: `primary` (emerald fill, **surface-950 dark text** — white-on-emerald `#10b981` computes ~1.76:1 and FAILS the ≥4.5:1 A11y rule below; `--surface-950` text ≈6.8:1 PASS; corrected wave-67 D-3), `secondary` (surface-700 fill, hairline border), `ghost` (transparent → surface-700 hover), `destructive` (danger fill). Sizes: sm(28px)/md(34px)/lg(40px). Tokens: accent-emerald, surface-700, radius-md, glow-focus. States: default / hover (lighten 8%) / active (darken) / focus (glow-focus ring) / disabled (40% opacity, no pointer) / loading (spinner, label hidden, aria-busy). A11y: real `<button>`, focus-visible ring, ≥4.5:1 text contrast, 44px hit target on touch. Use for actions; never for navigation (use links).
+**Button** — variants: `primary` (emerald fill, **surface-950 dark text** — white-on-emerald `#10b981` computes ~1.76:1 and FAILS the ≥4.5:1 A11y rule below; `--surface-950` text ≈6.8:1 PASS; corrected wave-67 D-3), `secondary` (surface-700 fill, hairline border), `ghost` (transparent → surface-700 hover), `destructive` (**`--danger-btn` `#b91c1c` fill with white text ≈6.5:1 PASS; hover `#991b1b`** — NOT `--danger` `#ef4444`, whose white-text ≈3.8:1 FAILS the ≥4.5:1 rule below; corrected wave-69 D-3). Sizes: sm(28px)/md(34px)/lg(40px). Tokens: accent-emerald, surface-700, radius-md, glow-focus. States: default / hover (lighten 8%) / active (darken) / focus (glow-focus ring) / disabled (40% opacity, no pointer) / loading (spinner, label hidden, aria-busy). A11y: real `<button>`, focus-visible ring, ≥4.5:1 text contrast, 44px hit target on touch. Use for actions; never for navigation (use links).
 
 **Input / Textarea / Select** — surface-900 fill, hairline border → emerald border + glow on focus. 14px text, 8px×12px padding, radius-md. States: default / focus / filled / error (danger border + helper text + aria-invalid) / disabled. A11y: `<label>` always (visible or aria-label), error text via `aria-describedby`. Textarea: auto-grow composer variant. Select: native or accessible listbox.
 
