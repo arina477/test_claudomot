@@ -30,6 +30,7 @@ import {
   SpinnerIcon,
   UserAddIcon,
 } from './icons';
+import { useConnectionState } from './useConnectionState';
 import { useMentionBadge } from './useMentionBadge';
 
 /** Derive 2-character initials from a display name or username. */
@@ -174,6 +175,8 @@ export function ChannelSidebar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const inviteBtnRef = useRef<HTMLButtonElement>(null);
   const settingsBtnRef = useRef<HTMLButtonElement>(null);
+
+  const connectionState = useConnectionState();
 
   // Unread mention badge counts — driven by realtime socket + bootstrap fetch
   const { getCount, markChannelRead } = useMentionBadge(
@@ -335,7 +338,9 @@ export function ChannelSidebar() {
         {selectedId && detailStatus === 'error' && (
           <div className="px-2 py-6 text-center">
             <p className="text-[13px]" style={{ color: 'rgba(255,255,255,0.40)' }}>
-              Couldn&apos;t load channels.
+              {connectionState === 'offline' || connectionState === 'reconnecting'
+                ? "This server isn't available offline yet — reconnect to load its channels."
+                : "Couldn't load channels."}
             </p>
           </div>
         )}
