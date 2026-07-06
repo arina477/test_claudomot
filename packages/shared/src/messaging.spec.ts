@@ -35,11 +35,13 @@ describe('MessageResponseSchema — idempotencyKey (wave-58)', () => {
   });
 
   it('VALID: parses payload with idempotencyKey as a UUID string', () => {
-    const payload = { ...BASE_PAYLOAD, idempotencyKey: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' };
+    // Low-entropy UUID-shaped literal (all-zero prefix) so the secret-scan
+    // (gitleaks generic-api-key) does not false-positive on a "key" field.
+    const payload = { ...BASE_PAYLOAD, idempotencyKey: '00000000-0000-4000-8000-000000000001' };
     const result = MessageResponseSchema.safeParse(payload);
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.idempotencyKey).toBe('f47ac10b-58cc-4372-a567-0e02b2c3d479');
+      expect(result.data.idempotencyKey).toBe('00000000-0000-4000-8000-000000000001');
     }
   });
 
