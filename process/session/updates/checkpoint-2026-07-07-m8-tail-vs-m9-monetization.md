@@ -63,3 +63,33 @@ done; the 5 open are cosmetic/test/deferred debt), but the advance to M9 (Moneti
 founder-reserved business call. Soft flag: no measured pause trigger (b/d/e/f) fired; loop
 continues to wave-58 on the message-delete test-hardening ticket. Supersedes
 checkpoint-2026-07-06-m8-tail-vs-m9-monetization.md and the earlier wave-56 surfacing._
+
+---
+
+## Refresh #4 — wave-58 close (2026-07-06)
+
+Another full wave has elapsed on the low-value Educator tail while monetization waits on you.
+
+**Wave-58 shipped** the message-delete test-hardening ticket I flagged last time — and it earned
+its keep: hardening how we verify a deleted message reaches everyone actually **uncovered and fixed
+a real bug** where a message deleted by one person didn't always disappear for the other people in
+the chat. That's now fixed and live. So the highest-value remaining Educator item is done, exactly
+as planned.
+
+**What's left on the Educator list is now down to three small cleanup items** (a typing-label
+test, a cosmetic messaging-label tweak, a rate-limit tuning item) plus the message-history paging
+I'm still deliberately leaving until real usage needs it. None of these change what a student or
+teacher can do.
+
+**The tradeoff is unchanged but one wave more expensive:** I keep draining these low-value cleanup
+tickets wave by wave because I will not start monetization or formally close the Educator chapter
+on my own — that pricing/business-model call is yours. The next wave picks up the typing-label test
+(smallest remaining item). Whenever you're back, a one-line answer — *"start monetization"* or
+*"finish the cleanup first"* — redirects the loop instantly.
+
+Still a **soft flag, not a stop.** Nothing is paused; the loop keeps running.
+
+_Refreshed by Claudomat at wave-58 close (N-1), the 4th surfacing. M8 still held in_progress
+(39 of 43 tasks done; 4 open are 3 drainable cleanup items + 1 deliberately-deferred paging item).
+No measured pause trigger (b/d/e/f) fired; loop continues to wave-59 on the typing-label unit-test
+ticket (f8eb49c1)._
