@@ -123,6 +123,25 @@ test("moderator (A) can delete any message; non-moderator (B) cannot delete A's 
   // A must first load B's message (may need reload if it arrived before A's view updated)
   await expect(pageA.getByText(bMessageMarker)).toBeVisible({ timeout: 15_000 });
 
+  // ── Step 5b: Subscription-proof round-trip ────────────────────────────────
+  // joinChannel (messagingSocket.ts:104-106) is fire-and-forget: the server joins
+  // the socket into 'channel:<channelId>' asynchronously but emits NO ack/event
+  // back. "Connection status: online" only proves the WebSocket is open, NOT that
+  // B's socket is in the channel room. Without this proof step the fan-out
+  // assertion below races: A could delete before B's server-side join completes.
+  //
+  // Proof mechanism: A sends a fresh probe message into the channel; B
+  // hard-asserts it arrives via realtime (message:new is fanned out to
+  // 'channel:<channelId>' — the SAME room that receives message:deleted).
+  // B receiving the probe proves B's socket is live in that room, so the
+  // delete fan-out will arrive on B's already-joined socket.
+  const aProbeMarker = `A-probe-${Date.now()}`;
+  await pageA.getByTestId('composer-input').fill(aProbeMarker);
+  await pageA.keyboard.press('Enter');
+  // B must receive A's probe via realtime — hard assertion, no catch
+  await expect(pageB.getByText(aProbeMarker)).toBeVisible({ timeout: 12_000 });
+  // (A can optionally confirm their own probe appeared; B's assertion is the proof)
+
   // Hover B's message article to reveal row-actions
   const bMessageArticle = pageA.getByRole('article').filter({ hasText: bMessageMarker }).last();
   await bMessageArticle.hover();
@@ -144,22 +163,12 @@ test("moderator (A) can delete any message; non-moderator (B) cannot delete A's 
   await expect(pageA.getByText(bMessageMarker)).toBeHidden({ timeout: 10_000 });
 
   // ── Step 7: B's still-open context receives the message:deleted fan-out ────
-  // The message:deleted socket event should mark B's message as a tombstone.
-  // NOTE: In this headless Playwright 2-context test, B's socket.io channel-room subscription
-  // races with A's deletion — the socket room join (joinChannel) may not complete before A
-  // deletes the message, so the fan-out event can be missed in this headless scenario.
-  // The backend fan-out is proven via wave-41 T-4/T-8 integration tests.
-  // We attempt the assertion but skip gracefully if the socket event doesn't arrive in time.
-  const fanOutDelivered = await pageB
-    .getByText(bMessageMarker)
-    .waitFor({ state: 'hidden', timeout: 8_000 })
-    .then(() => true)
-    .catch(() => false);
-  // Log evidence — pass regardless of fan-out delivery (backend proven; Playwright socket timing gap)
-  // biome-ignore lint/suspicious/noConsoleLog: E2E evidence logging
-  console.log(
-    `[E2E ca43eb12] Socket fan-out to B: ${fanOutDelivered ? 'DELIVERED (tombstone visible)' : 'NOT_DELIVERED_IN_WINDOW (backend proven wave-41)'}`,
-  );
+  // B's channel-room subscription is proven live (step 5b above). The
+  // message:deleted event fans out to 'channel:<channelId>' — the same room B
+  // joined and proved active. Playwright expect() auto-retries within the
+  // bounded window; a broken fan-out path causes this assertion to FAIL.
+
+  await expect(pageB.getByText(bMessageMarker)).toBeHidden({ timeout: 12_000 });
 
   // ── Step 8: Non-moderator check — B does NOT see delete-any on A's message ─
   // B's view should show A's sentinel message

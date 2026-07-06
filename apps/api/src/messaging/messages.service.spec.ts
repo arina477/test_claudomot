@@ -357,6 +357,48 @@ describe('MessagesService.createMessage', () => {
       service.createMessage('nonexistent-ch', AUTHOR_ID, { content: 'Hi' }),
     ).rejects.toThrow(NotFoundException);
   });
+
+  // wave-58: createMessage DTO includes idempotencyKey echoed from the row
+  it('wave-58: DTO carries idempotencyKey from the row (round-trip echo)', async () => {
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1)
+        return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID, name: 'general' }]);
+      if (callCount === 2) return makeSelectChain([]); // muted_until: not muted
+      if (callCount === 3) return makeSelectChain([{ ...mockMessage, idempotency_key: IDEM_KEY }]);
+      return makeSelectChain([]);
+    });
+    mockInsert.mockReturnValue(makeInsertChain());
+
+    const result = await service.createMessage(CHANNEL_ID, AUTHOR_ID, {
+      content: 'Hello wave 12',
+      idempotencyKey: IDEM_KEY,
+    });
+
+    expect(result.idempotencyKey).toBe(IDEM_KEY);
+  });
+
+  // wave-58: DTO carries null idempotencyKey when the row has no key (server-originated or historical)
+  it('wave-58: DTO carries null idempotencyKey when column is null', async () => {
+    const msgNoKey = { ...mockMessage, idempotency_key: null };
+    let callCount = 0;
+    mockSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1)
+        return makeSelectChain([{ id: CHANNEL_ID, server_id: SERVER_ID, name: 'general' }]);
+      if (callCount === 2) return makeSelectChain([]); // muted_until: not muted
+      if (callCount === 3) return makeSelectChain([msgNoKey]);
+      return makeSelectChain([]);
+    });
+    mockInsert.mockReturnValue(makeInsertChain());
+
+    const result = await service.createMessage(CHANNEL_ID, AUTHOR_ID, {
+      content: 'Hello wave 12',
+    });
+
+    expect(result.idempotencyKey).toBeNull();
+  });
 });
 
 // ---------------------------------------------------------------------------

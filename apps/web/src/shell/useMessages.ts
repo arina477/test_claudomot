@@ -28,12 +28,13 @@
  */
 
 import type { MessageResponse, ValidatedAttachment } from '@studyhall/shared';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { api } from '../auth/api';
 import { getCachedMessages, putCachedMessage, putCachedMessages } from '../features/sync/cache';
 import { db } from '../features/sync/db';
 import { drain, enqueue, loadPending, retryOutboxItem } from '../features/sync/outbox';
 import type { DisplayMessage, OptimisticMessage, StagedAttachmentPreview } from './MessageList';
+import { ProfileContext } from './ProfileContext';
 import {
   applyReactionEvent,
   getMessagingSocket,
@@ -78,6 +79,13 @@ type UseMessagesResult = {
 };
 
 export function useMessagesWithRetry(channelId: string | null): UseMessagesResult {
+  // Current viewer's opaque user id — used by message:new echo reconciliation
+  // (fix 1) to identify own-authored messages and remove matching optimistic rows
+  // without depending on the drain() onDelivered callback.
+  const { profile } = useContext(ProfileContext);
+  const currentUserIdRef = useRef<string | null>(null);
+  currentUserIdRef.current = profile?.userId ?? null;
+
   const [realMessages, setRealMessages] = useState<MessageResponse[]>([]);
   const [optimisticMessages, setOptimisticMessages] = useState<OptimisticMessage[]>([]);
   const [loadingInitial, setLoadingInitial] = useState(false);
@@ -95,6 +103,12 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
   // Track in-flight optimistic reaction toggles to deduplicate socket echoes.
   // Key: `${messageId}:${emoji}`, value: true while the POST is in-flight.
   const inflightReactionsRef = useRef<Set<string>>(new Set());
+
+  // Map from confirmed server message id → idempotencyKey.
+  // Populated when any drain/send onSuccess callback fires; used by the
+  // message:deleted handler to tombstone B's own message even when the
+  // optimistic entry hasn't been reconciled out yet (race window).
+  const confirmedIdToKeyRef = useRef<Map<string, string>>(new Map());
 
   useEffect(() => {
     mountedRef.current = true;
@@ -118,6 +132,9 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
             : api.sendDmMessage(target.conversationId, body),
         (idempotencyKey, confirmedId) => {
           if (!mountedRef.current) return;
+          // Track server id → key so message:deleted can tombstone this entry
+          // if the delete arrives before the optimistic row is fully reconciled.
+          confirmedIdToKeyRef.current.set(confirmedId, idempotencyKey);
           // Reconcile: add confirmed message to real list, remove optimistic.
           setRealMessages((prev) => {
             if (prev.some((m) => m.id === confirmedId)) return prev;
@@ -238,6 +255,7 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
     if (!channelId) {
       setRealMessages([]);
       setOptimisticMessages([]);
+      confirmedIdToKeyRef.current.clear();
       setLoadingInitial(false);
       setErrorInitial(false);
       setNextCursor(null);
@@ -254,6 +272,7 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
 
     setRealMessages([]);
     setOptimisticMessages([]);
+    confirmedIdToKeyRef.current.clear();
     setErrorInitial(false);
     setNextCursor(null);
     lastSeenCursorRef.current = null;
@@ -339,6 +358,16 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
   }, [channelId, reloadKey]);
 
   // ── Socket listener — real-time message:new ────────────────────────────────
+  // Fix 1 (PRIMARY, deterministic): when a message:new echo arrives carrying an
+  // idempotencyKey that matches an optimistic row, remove that optimistic row and
+  // seed confirmedIdToKeyRef. This is race-free and identity-based — no content
+  // heuristic. Works independent of the drain() onDelivered callback.
+  //
+  // The idempotencyKey is round-tripped from the outbox's stable UUID through the
+  // POST body → messages.idempotency_key column → MessageResponse.idempotencyKey
+  // (wave-58 fix). When the key is present, the match is exact. When absent (old
+  // server or server-originated message with null key), we skip reconciliation
+  // for that message — drain()'s onDelivered path is the fallback.
   useEffect(() => {
     if (!channelId) return;
     const unsub = onMessageNew((msg: MessageResponse) => {
@@ -354,6 +383,22 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
         }
         return [...prev, msg];
       });
+
+      // Fix 1: deterministic reconcile via idempotencyKey round-trip (wave-58).
+      // When the real message carries a key, find the matching optimistic row by
+      // key (not by content). Skip 'failed' rows — those are explicitly retried.
+      if (msg.idempotencyKey) {
+        const key = msg.idempotencyKey;
+        setOptimisticMessages((prev) => {
+          const matchIdx = prev.findIndex((o) => o.state !== 'failed' && o.idempotencyKey === key);
+          if (matchIdx === -1) return prev;
+          // Seed confirmedIdToKeyRef so message:deleted can find the key
+          // even if drain()'s onDelivered never fired (re-entrancy race).
+          confirmedIdToKeyRef.current.set(msg.id, key);
+          // Drop the matched optimistic row — real row is now in realMessages.
+          return prev.filter((_, i) => i !== matchIdx);
+        });
+      }
     });
     return unsub;
   }, [channelId]);
@@ -370,16 +415,32 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
   }, [channelId]);
 
   // ── Socket listener — message:deleted ─────────────────────────────────────
+  // The backend emits the full tombstoned MessageResponse (isDeleted:true, content:null).
+  // Match on payload.id — there is no messageId field on the DTO (see messagingSocket.ts).
+  // Mirrors the message:updated handler: replace the row with the authoritative DTO.
+  //
+  // Also removes any matching optimistic entry: if the deleted message was sent
+  // by the local user and is still in optimisticMessages (confirmed id known via
+  // confirmedIdToKeyRef but optimistic row not yet reconciled out), drop it so
+  // B's own optimistic copy tombstones alongside the realMessages row.
   useEffect(() => {
     if (!channelId) return;
     const unsub = onMessageDeleted((payload) => {
       if (!mountedRef.current) return;
       if (payload.channelId !== channelId) return;
-      setRealMessages((prev) =>
-        prev.map((m) =>
-          m.id === payload.messageId ? { ...m, isDeleted: true, content: null, reactions: [] } : m,
-        ),
-      );
+      setRealMessages((prev) => {
+        const idx = prev.findIndex((m) => m.id === payload.id);
+        if (idx === -1) return [...prev, payload];
+        return prev.map((m) => (m.id === payload.id ? payload : m));
+      });
+      // If this message was an optimistic send that got confirmed, remove the
+      // optimistic copy too — covers the race where message:deleted arrives
+      // before drain()/onSuccess has cleaned up optimisticMessages.
+      const optimisticKey = confirmedIdToKeyRef.current.get(payload.id);
+      if (optimisticKey !== undefined) {
+        setOptimisticMessages((prev) => prev.filter((m) => m.idempotencyKey !== optimisticKey));
+        confirmedIdToKeyRef.current.delete(payload.id);
+      }
     });
     return unsub;
   }, [channelId]);
@@ -545,6 +606,9 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
                   : api.sendDmMessage(target.conversationId, body),
               (deliveredKey, confirmedId) => {
                 if (!mountedRef.current) return;
+                // Track server id → key so message:deleted can tombstone this
+                // entry if the delete arrives before optimistic row is removed.
+                confirmedIdToKeyRef.current.set(confirmedId, deliveredKey);
                 setRealMessages((prev) => {
                   if (prev.some((m) => m.id === confirmedId)) return prev;
                   return prev;
@@ -587,6 +651,9 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
               })
               .then((confirmed) => {
                 if (!mountedRef.current) return;
+                // Track server id → key so message:deleted can tombstone this
+                // entry if the delete arrives before optimistic row is removed.
+                confirmedIdToKeyRef.current.set(confirmed.id, idempotencyKey);
                 setRealMessages((prev) => {
                   if (prev.some((m) => m.id === confirmed.id)) return prev;
                   return [...prev, confirmed];
@@ -626,6 +693,9 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
           })
           .then((confirmed) => {
             if (!mountedRef.current) return;
+            // Track server id → key so message:deleted can tombstone this
+            // entry if the delete arrives before optimistic row is removed.
+            confirmedIdToKeyRef.current.set(confirmed.id, idempotencyKey);
             setRealMessages((prev) => {
               if (prev.some((m) => m.id === confirmed.id)) return prev;
               return [...prev, confirmed];
@@ -817,9 +887,27 @@ export function useMessagesWithRetry(channelId: string | null): UseMessagesResul
     [channelId, realMessages],
   );
 
+  // Fix 2 (DEFENSE-IN-DEPTH): drop optimistic rows that have already been
+  // reconciled into realMessages. An optimistic row is considered reconciled
+  // when confirmedIdToKeyRef maps a real message's id back to that row's
+  // idempotencyKey — meaning drain()'s onDelivered DID fire and seeded the
+  // map, but setOptimisticMessages filter hasn't run yet (e.g. React batch
+  // timing), OR when fix-1's message:new handler seeded the map but the
+  // setOptimisticMessages updater hasn't committed yet.
+  //
+  // Build the set of idempotencyKeys that have a confirmed real counterpart.
+  const reconciledKeys = new Set<string>();
+  for (const real of realMessages) {
+    const key = confirmedIdToKeyRef.current.get(real.id);
+    if (key !== undefined) reconciledKeys.add(key);
+  }
+
   const messages: DisplayMessage[] = [
     ...realMessages.map((m): DisplayMessage => ({ kind: 'real', ...m })),
-    ...optimisticMessages.map((m): DisplayMessage => ({ kind: 'optimistic', ...m })),
+    // Filter out optimistic rows whose real counterpart is already in realMessages.
+    ...optimisticMessages
+      .filter((o) => !reconciledKeys.has(o.idempotencyKey))
+      .map((m): DisplayMessage => ({ kind: 'optimistic', ...m })),
   ];
 
   const reloadMessages = useCallback(() => {

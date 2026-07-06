@@ -101,6 +101,9 @@ export const MessageResponseSchema = z.object({
   lastReplyAt: z.string().nullable().optional(),
   // wave-19 M3 attachments
   attachments: z.array(AttachmentRefSchema).optional(),
+  // wave-58: client-generated idempotency key echoed back for optimistic reconciliation.
+  // Nullable because historical rows and server-originated messages have NULL.
+  idempotencyKey: z.string().nullable().optional(),
 });
 export type MessageResponse = z.infer<typeof MessageResponseSchema>;
 

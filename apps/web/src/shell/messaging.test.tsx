@@ -22,8 +22,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // Mock socket singleton — captures handlers so tests can trigger them
 let capturedMessageNewHandler: ((msg: MessageResponse) => void) | null = null;
 let capturedMessageUpdatedHandler: ((msg: MessageResponse) => void) | null = null;
-let capturedMessageDeletedHandler: ((p: { messageId: string; channelId: string }) => void) | null =
-  null;
+let capturedMessageDeletedHandler: ((p: MessageResponse) => void) | null = null;
 let capturedReactionAddedHandler:
   | ((p: {
       messageId: string;
@@ -74,7 +73,7 @@ vi.mock('./messagingSocket', () => ({
       capturedMessageUpdatedHandler = null;
     };
   }),
-  onMessageDeleted: vi.fn((handler: (p: { messageId: string; channelId: string }) => void) => {
+  onMessageDeleted: vi.fn((handler: (p: MessageResponse) => void) => {
     capturedMessageDeletedHandler = handler;
     return () => {
       capturedMessageDeletedHandler = null;
@@ -188,6 +187,7 @@ import { MentionAutocomplete } from './MentionAutocomplete';
 import { MessageComposer } from './MessageComposer';
 import { MessageList } from './MessageList';
 import type { DisplayMessage } from './MessageList';
+import { ProfileContext } from './ProfileContext';
 import { ServerContext } from './ServerContext';
 import type { ServerContextValue } from './ServerContext';
 
@@ -205,6 +205,7 @@ function makeMsg(overrides: Partial<MessageResponse> = {}): MessageResponse {
     isDeleted: false,
     reactions: [],
     mentions: [],
+    idempotencyKey: null,
     ...overrides,
   };
 }
@@ -932,13 +933,99 @@ describe('MainColumn — socket message:updated / deleted / reaction events', ()
 
     await waitFor(() => screen.getByText('Will be deleted'));
 
+    // The backend emits the full tombstoned MessageResponse DTO — id field, not messageId.
+    // This is the real wire contract; payload.messageId would be undefined and never match.
+    const tombstone: MessageResponse = {
+      ...msg,
+      isDeleted: true,
+      content: null,
+      reactions: [],
+    };
     act(() => {
-      capturedMessageDeletedHandler?.({ messageId: msg.id, channelId: 'ch-1' });
+      capturedMessageDeletedHandler?.(tombstone);
     });
 
     await waitFor(() => {
       expect(screen.getByText('This message was deleted')).toBeInTheDocument();
       expect(screen.queryByText('Will be deleted')).not.toBeInTheDocument();
+    });
+  });
+
+  // ── Wave-58 B-3: tombstone own optimistic message on message:deleted ─────────
+  // Covers the race where message:deleted arrives while B's own message is still
+  // in optimisticMessages (confirmed server id known but optimistic row not yet
+  // cleaned up by the send's onSuccess callback).
+  //
+  // Scenario:
+  //   1. B sends a message → optimistic pending entry appears.
+  //   2. Server confirms with a real id (api.sendMessage resolves).
+  //   3. confirmedIdToKeyRef is populated by the send's .then() callback.
+  //   4. Before the optimistic entry is cleaned up (same .then()), moderator A
+  //      fires message:deleted for that server id.
+  //   5. B's optimistic copy must disappear alongside the realMessages tombstone.
+  //
+  // In the no-IDB test path (db = null), steps 2-5 collapse into a single
+  // async tick. We use a controlled promise to keep the optimistic entry alive
+  // while we inject message:new (to register the server id) before resolving.
+  it('B-3: own optimistic message tombstones when message:deleted fires for its confirmed server id', async () => {
+    mockApi.listMessages.mockResolvedValue({ messages: [], nextCursor: null });
+
+    let resolveSend!: (v: MessageResponse) => void;
+    const sendPromise = new Promise<MessageResponse>((resolve) => {
+      resolveSend = resolve;
+    });
+    mockApi.sendMessage.mockReturnValue(sendPromise);
+
+    renderWithChannel();
+    await waitFor(() => screen.getByTestId('empty-channel-state'));
+
+    // B sends a message — optimistic pending entry appears immediately.
+    const user = userEvent.setup();
+    await user.type(screen.getByTestId('composer-input'), 'B message unique-marker-b3');
+    await user.keyboard('{Enter}');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('pending-message')).toBeInTheDocument();
+      expect(screen.getByText('B message unique-marker-b3')).toBeInTheDocument();
+    });
+
+    // Build the confirmed MessageResponse the server would return.
+    const confirmedId = 'server-confirmed-id-b3';
+    const confirmed: MessageResponse = makeMsg({
+      id: confirmedId,
+      content: 'B message unique-marker-b3',
+      channelId: 'ch-1',
+    });
+    const tombstone: MessageResponse = {
+      ...confirmed,
+      isDeleted: true,
+      content: null,
+      reactions: [],
+    };
+
+    // Resolve the send AND immediately fire message:deleted in the same act()
+    // flush. The send's .then() callback populates confirmedIdToKeyRef and
+    // the message:deleted handler reads it — both must run in the same tick
+    // so the optimistic entry is gone when the dust settles.
+    act(() => {
+      resolveSend(confirmed);
+    });
+
+    // Give microtasks (the .then() callbacks) a chance to run, then fire the
+    // delete event. At this point confirmedIdToKeyRef has the server id → key
+    // mapping (populated by the .then()), and the message:deleted handler will
+    // use it to drop the optimistic copy.
+    act(() => {
+      capturedMessageDeletedHandler?.(tombstone);
+    });
+
+    await waitFor(() => {
+      // Tombstone text must be visible.
+      expect(screen.getByText('This message was deleted')).toBeInTheDocument();
+      // Original content must not be visible anywhere (neither real nor optimistic).
+      expect(screen.queryByText('B message unique-marker-b3')).not.toBeInTheDocument();
+      // Pending state must be gone.
+      expect(screen.queryByTestId('pending-message')).not.toBeInTheDocument();
     });
   });
 
@@ -986,6 +1073,202 @@ describe('MainColumn — socket message:updated / deleted / reaction events', ()
 
     await waitFor(() => {
       expect(screen.queryByTestId(`reaction-pill-${msg.id}-👍`)).not.toBeInTheDocument();
+    });
+  });
+
+  // ── Wave-58 fix-1 (DETERMINISTIC): message:new echo reconciles own optimistic row ─
+  //
+  // Coverage: the no-IDB fallback path (db=null in jsdom).
+  // The hook calls api.sendMessage with { content, idempotencyKey }. We capture
+  // the idempotencyKey from the call args so we can echo it back in the
+  // message:new payload — exercising the deterministic key-match path (not the
+  // old content heuristic). Asserts:
+  //   (a) optimistic row removed when message:new arrives with matching idempotencyKey.
+  //   (b) subsequent message:deleted tombstones the real row (no lingering optimistic copy).
+  it('W58-fix-1: message:new echo with matching idempotencyKey removes optimistic row (deterministic reconcile)', async () => {
+    mockApi.listMessages.mockResolvedValue({ messages: [], nextCursor: null });
+
+    // Hold sendMessage pending so the optimistic row stays alive until we fire
+    // message:new manually — simulating the race window.
+    let capturedSendBody: { content: string; idempotencyKey?: string } | null = null;
+    mockApi.sendMessage.mockImplementation(
+      (_channelId: string, body: { content: string; idempotencyKey?: string }) => {
+        capturedSendBody = body;
+        return new Promise(() => {}); // never resolves — keeps optimistic row alive
+      },
+    );
+
+    const MY_USER_ID = 'viewer-uuid-w58';
+    const ctx = makeCtx({ selectedChannelId: 'ch-1', selectedChannelName: 'questions' });
+    const fakeProfile = {
+      userId: MY_USER_ID,
+      displayName: 'Me',
+      username: 'me',
+      avatarUrl: null,
+      accentColor: null,
+    };
+
+    render(
+      <ProfileContext.Provider value={{ profile: fakeProfile, refresh: vi.fn() }}>
+        <ServerContext.Provider value={ctx}>
+          <MainColumn />
+        </ServerContext.Provider>
+      </ProfileContext.Provider>,
+    );
+
+    await waitFor(() => screen.getByTestId('empty-channel-state'));
+
+    const user = userEvent.setup();
+    await user.type(screen.getByTestId('composer-input'), 'W58 own message content');
+    await user.keyboard('{Enter}');
+
+    // Optimistic pending row appears.
+    await waitFor(() => {
+      expect(screen.getByTestId('pending-message')).toBeInTheDocument();
+      expect(screen.getByText('W58 own message content')).toBeInTheDocument();
+    });
+
+    // The hook must have called api.sendMessage with an idempotencyKey.
+    // biome-ignore lint/suspicious/noExplicitAny: test type cast after assertion
+    const capturedBody1 = capturedSendBody as any as { content: string; idempotencyKey?: string };
+    expect(capturedBody1.idempotencyKey).toBeDefined();
+    const sentKey = capturedBody1.idempotencyKey as string;
+
+    // Server confirms — message:new echo arrives with the SAME idempotencyKey.
+    const confirmedId = 'server-id-w58-fix1';
+    const confirmedMsg: MessageResponse = makeMsg({
+      id: confirmedId,
+      authorId: MY_USER_ID,
+      content: 'W58 own message content',
+      channelId: 'ch-1',
+      idempotencyKey: sentKey, // round-tripped key — deterministic match
+    });
+
+    act(() => {
+      capturedMessageNewHandler?.(confirmedMsg);
+    });
+
+    // Optimistic row must be gone — real row is now showing.
+    await waitFor(() => {
+      expect(screen.queryByTestId('pending-message')).not.toBeInTheDocument();
+      // Message still visible (as real row, no longer pending).
+      expect(screen.getByText('W58 own message content')).toBeInTheDocument();
+    });
+
+    // Now fire message:deleted for the confirmed id.
+    const tombstone: MessageResponse = {
+      ...confirmedMsg,
+      isDeleted: true,
+      content: null,
+      reactions: [],
+    };
+
+    act(() => {
+      capturedMessageDeletedHandler?.(tombstone);
+    });
+
+    // The message must be tombstoned — original content hidden, no lingering
+    // optimistic copy, tombstone text visible.
+    await waitFor(() => {
+      expect(screen.queryByText('W58 own message content')).not.toBeInTheDocument();
+      expect(screen.getByText('This message was deleted')).toBeInTheDocument();
+      expect(screen.queryByTestId('pending-message')).not.toBeInTheDocument();
+    });
+  });
+
+  // ── Wave-58: message:new WITHOUT idempotencyKey does not crash ────────────
+  // Server-originated messages or old server payloads (null/absent key) must
+  // still be appended correctly without attempting reconciliation.
+  it('W58: message:new with null idempotencyKey appends as real row without crashing', async () => {
+    mockApi.listMessages.mockResolvedValue({ messages: [], nextCursor: null });
+    renderWithChannel();
+    await waitFor(() => screen.getByTestId('empty-channel-state'));
+
+    const incoming = makeMsg({
+      content: 'Server-originated no key',
+      channelId: 'ch-1',
+      idempotencyKey: null,
+    });
+    act(() => {
+      capturedMessageNewHandler?.(incoming);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Server-originated no key')).toBeInTheDocument();
+    });
+  });
+
+  // ── Wave-58 fix-2: render-merge dedupe hides optimistic row when real row exists ─
+  //
+  // Coverage: validates the defense-in-depth dedupe in the messages[] merge.
+  // Uses the hook path (renderWithChannel + message:new with matching key).
+  // After fix-1 reconciles via key match, the dedupe also filters any stale
+  // optimistic copy whose key is in confirmedIdToKeyRef — asserts single render.
+  it('W58-fix-2: optimistic row hidden when a real row with same idempotencyKey already exists (render-merge dedupe)', async () => {
+    mockApi.listMessages.mockResolvedValue({ messages: [], nextCursor: null });
+
+    // Hold sendMessage pending so optimistic row is never cleaned by send callback.
+    let capturedSendBody2: { content: string; idempotencyKey?: string } | null = null;
+    mockApi.sendMessage.mockImplementation(
+      (_channelId: string, body: { content: string; idempotencyKey?: string }) => {
+        capturedSendBody2 = body;
+        return new Promise(() => {});
+      },
+    );
+
+    const MY_USER_ID = 'viewer-uuid-w58-fix2';
+    const ctx = makeCtx({ selectedChannelId: 'ch-1', selectedChannelName: 'questions' });
+    const fakeProfile = {
+      userId: MY_USER_ID,
+      displayName: 'Me',
+      username: 'me',
+      avatarUrl: null,
+      accentColor: null,
+    };
+
+    render(
+      <ProfileContext.Provider value={{ profile: fakeProfile, refresh: vi.fn() }}>
+        <ServerContext.Provider value={ctx}>
+          <MainColumn />
+        </ServerContext.Provider>
+      </ProfileContext.Provider>,
+    );
+
+    await waitFor(() => screen.getByTestId('empty-channel-state'));
+
+    const user = userEvent.setup();
+    await user.type(screen.getByTestId('composer-input'), 'Dedupe test content fix2');
+    await user.keyboard('{Enter}');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('pending-message')).toBeInTheDocument();
+    });
+
+    // biome-ignore lint/suspicious/noExplicitAny: test type cast after assertion
+    const capturedBody2 = capturedSendBody2 as any as { content: string; idempotencyKey?: string };
+    expect(capturedBody2.idempotencyKey).toBeDefined();
+    const sentKey2 = capturedBody2.idempotencyKey as string;
+
+    // Fire message:new with matching key — fix-1 removes optimistic row and seeds confirmedIdToKeyRef.
+    const confirmedId = 'server-id-w58-fix2';
+    const confirmedMsg: MessageResponse = makeMsg({
+      id: confirmedId,
+      authorId: MY_USER_ID,
+      content: 'Dedupe test content fix2',
+      channelId: 'ch-1',
+      idempotencyKey: sentKey2,
+    });
+
+    act(() => {
+      capturedMessageNewHandler?.(confirmedMsg);
+    });
+
+    // After fix-1 reconcile, only one copy of the message should be visible.
+    await waitFor(() => {
+      const elements = screen.getAllByText('Dedupe test content fix2');
+      // Exactly ONE copy rendered — no double-render from real + optimistic.
+      expect(elements).toHaveLength(1);
+      expect(screen.queryByTestId('pending-message')).not.toBeInTheDocument();
     });
   });
 });
