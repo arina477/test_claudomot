@@ -29,6 +29,8 @@ import type {
   CachedDmMessage,
   CachedMessage,
   CachedScheduledSession,
+  CachedServer,
+  CachedServerDetail,
   OutboxItem,
 } from './types';
 
@@ -41,6 +43,8 @@ export class StudyHallDB extends Dexie {
   cachedAssignments!: EntityTable<CachedAssignment, 'id'>;
   cachedScheduledSessions!: EntityTable<CachedScheduledSession, 'id'>;
   cachedAttachmentBlobs!: EntityTable<CachedAttachmentBlob, 'id'>;
+  cachedServers!: EntityTable<CachedServer, 'id'>;
+  cachedServerDetails!: EntityTable<CachedServerDetail, 'id'>;
 
   constructor(
     idbFactory?: IDBFactory,
@@ -160,6 +164,33 @@ export class StudyHallDB extends Dexie {
       cachedAssignments: 'id, serverId',
       cachedScheduledSessions: 'id, serverId, windowKey',
       cachedAttachmentBlobs: 'id, cachedAt',
+    });
+
+    /**
+     * v5 schema — wave-65 server list + detail offline cache addition.
+     *
+     * CRITICAL: ALL EIGHT v1+v2+v3+v4 tables are re-stated VERBATIM below.
+     * (Dexie cumulative-declarative — omitting ANY table in a later version
+     * deletes it and ALL its data on upgrade. Zero tolerance for omissions.
+     * BUILD-PRINCIPLES rule 11 is MANDATORY AND LOAD-BEARING.)
+     *
+     * cachedServers:
+     *   id — primary key (server id string)
+     *
+     * cachedServerDetails:
+     *   id — primary key (server id string — matches the wrapped detail.server.id)
+     */
+    this.version(5).stores({
+      messages: 'id, channelId, [channelId+createdAt], createdAt',
+      channels: 'id, serverId',
+      outbox: '++id, channelId, idempotencyKey, state, [state+createdAt]',
+      dmConversations: 'id, createdAt',
+      dmMessages: 'id, conversationId, [conversationId+createdAt], createdAt',
+      cachedAssignments: 'id, serverId',
+      cachedScheduledSessions: 'id, serverId, windowKey',
+      cachedAttachmentBlobs: 'id, cachedAt',
+      cachedServers: 'id',
+      cachedServerDetails: 'id',
     });
   }
 }

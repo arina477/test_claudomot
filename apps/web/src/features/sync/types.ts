@@ -13,6 +13,8 @@ import type {
   DmMessage,
   MessageResponse,
   ScheduledSession,
+  ServerDetail,
+  ServerSummary,
 } from '@studyhall/shared';
 
 // ── Cache tables ──────────────────────────────────────────────────────────────
@@ -92,6 +94,35 @@ export type CachedScheduledSession = ScheduledSession & {
    * helpers use this for put/get; callers must never query cross-window.
    */
   windowKey: string;
+};
+
+// ── Server cache ──────────────────────────────────────────────────────────────
+
+/**
+ * CachedServer — a ServerSummary persisted to local IDB.
+ * `cachedAt` is added client-side for TTL / staleness decisions.
+ * DTO-intersection pattern: mirrors CachedAssignment/CachedDmConversation in shape.
+ */
+export type CachedServer = ServerSummary & {
+  /** ISO timestamp of when the client stored this row. */
+  cachedAt: string;
+};
+
+/**
+ * CachedServerDetail — a ServerDetail (categories + channels) persisted to local IDB.
+ *
+ * ServerDetail does NOT carry a top-level `id` field (its shape is
+ * `{ server: ServerSummaryWithInvite; categories: CategoryWithChannels[] }`),
+ * so the detail is wrapped in a container that provides the primary key.
+ * The `id` matches the server id (i.e. detail.server.id).
+ */
+export type CachedServerDetail = {
+  /** Server id — primary key. Matches detail.server.id. */
+  id: string;
+  /** Full server detail payload (categories + channels). */
+  detail: ServerDetail;
+  /** ISO timestamp of when the client stored this row. */
+  cachedAt: string;
 };
 
 // ── Attachment media blob cache ───────────────────────────────────────────────
