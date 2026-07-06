@@ -93,6 +93,7 @@ All notable changes to StudyHall are documented here. Format follows
 - The privacy protections shipped last release — hiding a Hidden student from every member list, keeping data export scoped to your own account, and stripping personal info from error reports — are now covered by durable automated tests that run against a real database on every change, so the enforcement can't silently regress. (no visible change) (#50)
 - Real-time study rooms, messaging, and presence now share one plain error reply for bad input and are covered by durable tests that confirm they never leak internal details while still refusing unauthorized requests, so the protection can't silently regress. (no visible change) (#69)
 - The "who can message me" privacy setting is now fully covered by durable database-backed tests: when a member limits messages to people in their shared study servers, someone in a shared server can still reach them while someone with no shared server is reliably blocked, so this protection can't silently regress. (no visible change) (#70)
+- The list of people you can start a direct message with is now safely capped, so an unusually large shared server can never make that lookup return an unbounded result. (no visible change) (#71)
 
 ### Fixed
 
