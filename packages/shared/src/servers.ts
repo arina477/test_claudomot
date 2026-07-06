@@ -22,6 +22,9 @@ export type ServerSummary = z.infer<typeof ServerSummarySchema>;
 
 export const ServerSummaryWithInviteSchema = ServerSummarySchema.extend({
   inviteCode: z.string().nullable(),
+  is_public: z.boolean(),
+  description: z.string().nullable(),
+  topic: z.string().nullable(),
 });
 export type ServerSummaryWithInvite = z.infer<typeof ServerSummaryWithInviteSchema>;
 

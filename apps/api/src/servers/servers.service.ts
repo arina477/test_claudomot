@@ -196,6 +196,9 @@ export class ServersService {
         name: server.name,
         ownerId: server.owner_id,
         inviteCode: server.invite_code ?? null,
+        is_public: server.is_public,
+        description: server.description,
+        topic: server.topic,
       },
       categories: catRows.map((cat) => ({
         id: cat.id,

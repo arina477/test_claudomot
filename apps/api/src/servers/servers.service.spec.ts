@@ -139,6 +139,10 @@ const mockServer = {
   name: 'Test Server',
   owner_id: 'user-1',
   created_at: new Date('2026-01-01T00:00:00Z'),
+  invite_code: null,
+  is_public: false,
+  description: null,
+  topic: null,
 };
 const mockCategory = { id: 'cat-1', server_id: 'server-1', name: 'General', position: 0 };
 const mockMember = {
@@ -360,6 +364,9 @@ describe('ServersService.findServerDetail', () => {
       name: 'Test Server',
       ownerId: 'user-1',
       inviteCode: null,
+      is_public: false,
+      description: null,
+      topic: null,
     });
     expect(result.categories).toHaveLength(1);
     expect(result.categories[0]).toMatchObject({ id: 'cat-1', name: 'General', position: 0 });

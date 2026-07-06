@@ -35,7 +35,15 @@ const mockSummaries: ServerSummary[] = [
 ];
 
 const mockDetail: ServerDetail = {
-  server: { id: 'server-1', name: 'Study Hall', ownerId: 'user-abc', inviteCode: 'perm-code-abc' },
+  server: {
+    id: 'server-1',
+    name: 'Study Hall',
+    ownerId: 'user-abc',
+    inviteCode: 'perm-code-abc',
+    is_public: false,
+    description: null,
+    topic: null,
+  },
   categories: [
     {
       id: 'cat-1',
