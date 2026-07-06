@@ -108,7 +108,7 @@ export function ServerRail({ addServerBtnRef, dmActive = false, onDmHome, onExit
       data-testid="server-rail"
       className="flex w-[72px] shrink-0 flex-col items-center gap-2 py-4"
       style={{
-        backgroundColor: '#0a0a0b',
+        backgroundColor: 'var(--color-surface-900)',
         borderRight: '1px solid rgba(255,255,255,0.06)',
       }}
     >
