@@ -7,10 +7,12 @@ import {
   HttpStatus,
   Param,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import type {
+  DiscoverServersResponse,
   InvitePreview,
   InviteResponse,
   JoinResult,
@@ -19,7 +21,11 @@ import type {
   ServerResponse,
   ServerSummary,
 } from '@studyhall/shared';
-import { CreateInviteSchema, CreateServerSchema } from '@studyhall/shared';
+import {
+  CreateInviteSchema,
+  CreateServerSchema,
+  DiscoverServersQuerySchema,
+} from '@studyhall/shared';
 import { AuthGuard } from '../auth/auth.guard';
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
 import { ServersService } from './servers.service';
@@ -58,6 +64,25 @@ export class ServersController {
     return await this.serversService.findMyServers(userId);
   }
 
+  /**
+   * GET /servers/discover
+   * Returns paginated list of public servers.
+   * Optional query params: q (text search), limit (max 50, default 20), offset (default 0).
+   * Route is declared before :id so NestJS does not swallow "discover" as an id param.
+   */
+  @Get('discover')
+  @UseGuards(AuthGuard)
+  async discoverServers(@Query() rawQuery: unknown): Promise<DiscoverServersResponse> {
+    const parsed = DiscoverServersQuerySchema.safeParse(rawQuery);
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.flatten());
+    }
+    const { q, limit, offset } = parsed.data;
+    return await this.serversService.discoverServers(
+      q !== undefined ? { q, limit, offset } : { limit, offset },
+    );
+  }
+
   @Get(':id')
   @UseGuards(AuthGuard)
   async getServerDetail(
@@ -81,6 +106,27 @@ export class ServersController {
   ): Promise<ServerMember[]> {
     const userId = req.session.getUserId();
     return await this.serversService.listServerMembers(userId, id);
+  }
+
+  // -------------------------------------------------------------------------
+  // Public-server join — wave-67
+  // -------------------------------------------------------------------------
+
+  /**
+   * POST /servers/:id/join-public
+   * Join a public server without an invite code.
+   * Requires authentication (AuthGuard).
+   * Returns 200 {serverId} (idempotent — re-joining returns same shape).
+   * Private server or non-existent server → 403/404.
+   */
+  @Post(':id/join-public')
+  @UseGuards(AuthGuard)
+  async joinPublicServer(
+    @Req() req: SessionAugmentedRequest,
+    @Param('id') id: string,
+  ): Promise<JoinResult> {
+    const userId = req.session.getUserId();
+    return await this.serversService.joinPublicServer(id, userId);
   }
 
   // -------------------------------------------------------------------------
