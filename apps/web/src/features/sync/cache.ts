@@ -11,6 +11,7 @@
  *     to serve the last-seen snapshot rather than a blank view.
  */
 
+import type { ServerDetail, ServerSummary } from '@studyhall/shared';
 import Dexie from 'dexie';
 import type { StudyHallDB } from './db';
 import type {
@@ -21,6 +22,8 @@ import type {
   CachedDmMessage,
   CachedMessage,
   CachedScheduledSession,
+  CachedServer,
+  CachedServerDetail,
 } from './types';
 
 // ── Message cache ─────────────────────────────────────────────────────────────
@@ -287,4 +290,78 @@ export async function putCachedAttachmentBlob(
     cachedAt: new Date().toISOString(),
   };
   await store.cachedAttachmentBlobs.put(row);
+}
+
+// ── Server list cache ─────────────────────────────────────────────────────────
+
+/**
+ * Read all cached servers.
+ * Returns [] on a cold cache (no throw).
+ */
+export async function getCachedServers(store: StudyHallDB): Promise<CachedServer[]> {
+  return store.cachedServers.toArray();
+}
+
+/**
+ * Write-through: replace the full server list in cache (replace-semantics).
+ *
+ * Upserts every server in `servers` stamped with `cachedAt = now`, then
+ * deletes any cached rows whose id is NOT in the new list — so a server the
+ * user has left disappears from cache on the next successful fetch.
+ * Best-effort: never throws into the caller.
+ */
+export async function putCachedServers(
+  store: StudyHallDB,
+  servers: ServerSummary[],
+): Promise<void> {
+  try {
+    const cachedAt = new Date().toISOString();
+    const rows: CachedServer[] = servers.map((s) => ({ ...s, cachedAt }));
+    await store.cachedServers.bulkPut(rows);
+    // Prune servers that are no longer in the list (membership drift).
+    const incomingIds = new Set(servers.map((s) => s.id));
+    const existing = await store.cachedServers.toArray();
+    const toDelete = existing.filter((r) => !incomingIds.has(r.id)).map((r) => r.id);
+    if (toDelete.length > 0) {
+      await store.cachedServers.bulkDelete(toDelete);
+    }
+  } catch {
+    // Best-effort — never surface cache errors to callers.
+  }
+}
+
+// ── Server detail cache ───────────────────────────────────────────────────────
+
+/**
+ * Read a cached server detail by server id.
+ * Returns undefined on a cold cache (no throw).
+ */
+export async function getCachedServerDetail(
+  store: StudyHallDB,
+  serverId: string,
+): Promise<CachedServerDetail | undefined> {
+  return store.cachedServerDetails.get(serverId);
+}
+
+/**
+ * Write-through: upsert a server detail record.
+ *
+ * Wraps `detail` in a container row keyed by `serverId` and stamps `cachedAt = now`.
+ * Best-effort: never throws into the caller.
+ */
+export async function putCachedServerDetail(
+  store: StudyHallDB,
+  serverId: string,
+  detail: ServerDetail,
+): Promise<void> {
+  try {
+    const row: CachedServerDetail = {
+      id: serverId,
+      detail,
+      cachedAt: new Date().toISOString(),
+    };
+    await store.cachedServerDetails.put(row);
+  } catch {
+    // Best-effort — never surface cache errors to callers.
+  }
 }

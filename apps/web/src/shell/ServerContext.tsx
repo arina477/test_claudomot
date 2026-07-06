@@ -14,6 +14,13 @@
 import type { ServerDetail, ServerResponse, ServerSummary } from '@studyhall/shared';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { api } from '../auth/api';
+import {
+  getCachedServerDetail,
+  getCachedServers,
+  putCachedServerDetail,
+  putCachedServers,
+} from '../features/sync/cache';
+import { db } from '../features/sync/db';
 
 export type ServersStatus = 'idle' | 'loading' | 'loaded' | 'error';
 export type DetailStatus = 'idle' | 'loading' | 'loaded' | 'error';
@@ -107,6 +114,8 @@ export function ServerProvider({ children }: Props) {
         if (!mounted.current) return;
         setServers(list);
         setStatus('loaded');
+        // Write-through: persist to offline cache so the rail is available when offline.
+        if (db) void putCachedServers(db, list);
         // Auto-select a server if the invite-join flow stored one
         const pendingId = sessionStorage.getItem('sh:select-server');
         if (pendingId) {
@@ -116,8 +125,18 @@ export function ServerProvider({ children }: Props) {
           }
         }
       })
-      .catch(() => {
+      .catch(async () => {
         if (!mounted.current) return;
+        // Offline fallback — serve the last-known server list from cache.
+        if (db) {
+          const cached = await getCachedServers(db).catch(() => []);
+          if (!mounted.current) return;
+          if (cached.length > 0) {
+            setServers(cached);
+            setStatus('loaded');
+            return;
+          }
+        }
         setStatus('error');
       });
   }, []);
@@ -134,16 +153,29 @@ export function ServerProvider({ children }: Props) {
       setDetailStatus('idle');
       return;
     }
+    const currentId = selectedId;
     setDetailStatus('loading');
     api
-      .getServerDetail(selectedId)
+      .getServerDetail(currentId)
       .then((detail) => {
         if (!mounted.current) return;
         setSelectedDetail(detail);
         setDetailStatus('loaded');
+        // Write-through: persist to offline cache so the sidebar is available when offline.
+        if (db) void putCachedServerDetail(db, currentId, detail);
       })
-      .catch(() => {
+      .catch(async () => {
         if (!mounted.current) return;
+        // Offline fallback — serve the last-known server detail from cache.
+        if (db) {
+          const cached = await getCachedServerDetail(db, currentId).catch(() => undefined);
+          if (!mounted.current) return;
+          if (cached) {
+            setSelectedDetail(cached.detail);
+            setDetailStatus('loaded');
+            return;
+          }
+        }
         setDetailStatus('error');
       });
   }, [selectedId]);
