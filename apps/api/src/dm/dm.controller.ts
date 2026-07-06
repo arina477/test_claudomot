@@ -30,6 +30,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import type {
   DmCandidate,
   DmConversation,
@@ -82,9 +83,14 @@ export class DmController {
   //
   // Returns conversations where caller is a participant, ordered by
   // last-message recency. Empty → 200 [].
+  //
+  // Per-route throttle: DM page-load fires candidates+conversations+messages
+  // reads in a burst; 60 req/60s per IP is bounded (reads-only) and 6× the
+  // global 10/60s default, keeping write handlers at the stricter global rate.
   // -------------------------------------------------------------------------
 
   @Get()
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.OK)
   async listConversations(
@@ -125,9 +131,14 @@ export class DmController {
   //
   // Caller MUST be a participant (DmParticipantGuard — 404 non-leak).
   // Cursor-paginated ASC (oldest→newest). Returns DmMessageListResponse.
+  //
+  // Per-route throttle: DM page-load fires candidates+conversations+messages
+  // reads in a burst; 60 req/60s per IP is bounded (reads-only) and 6× the
+  // global 10/60s default, keeping write handlers at the stricter global rate.
   // -------------------------------------------------------------------------
 
   @Get(':id/messages')
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
   @UseGuards(AuthGuard, DmParticipantGuard)
   @HttpCode(HttpStatus.OK)
   async listMessages(
@@ -161,9 +172,14 @@ export class DmCandidatesController {
   //
   // Session-auth; callerId from session (never client param).
   // Returns 200 DmCandidate[] (may be empty []).
+  //
+  // Per-route throttle: DM page-load fires candidates+conversations+messages
+  // reads in a burst; 60 req/60s per IP is bounded (reads-only) and 6× the
+  // global 10/60s default, keeping write handlers at the stricter global rate.
   // -------------------------------------------------------------------------
 
   @Get('candidates')
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.OK)
   async getDmCandidates(@Req() req: SessionAugmentedRequest): Promise<DmCandidate[]> {
