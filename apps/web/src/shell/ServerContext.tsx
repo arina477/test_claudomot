@@ -106,6 +106,21 @@ export function ServerProvider({ children }: Props) {
     };
   }, []);
 
+  /**
+   * FIX 7 helper: consume the invite-join pending auto-select from sessionStorage.
+   * Used in both the online .then path and the offline .catch path so the
+   * just-joined server is auto-opened from cache when offline too.
+   */
+  const applyPendingSelect = useCallback((list: ServerSummary[]) => {
+    const pendingId = sessionStorage.getItem('sh:select-server');
+    if (pendingId) {
+      sessionStorage.removeItem('sh:select-server');
+      if (list.some((s) => s.id === pendingId)) {
+        setSelectedId(pendingId);
+      }
+    }
+  }, []);
+
   const fetchServers = useCallback(() => {
     setStatus('loading');
     api
@@ -117,29 +132,26 @@ export function ServerProvider({ children }: Props) {
         // Write-through: persist to offline cache so the rail is available when offline.
         if (db) void putCachedServers(db, list);
         // Auto-select a server if the invite-join flow stored one
-        const pendingId = sessionStorage.getItem('sh:select-server');
-        if (pendingId) {
-          sessionStorage.removeItem('sh:select-server');
-          if (list.some((s) => s.id === pendingId)) {
-            setSelectedId(pendingId);
-          }
-        }
+        applyPendingSelect(list);
       })
       .catch(async () => {
         if (!mounted.current) return;
         // Offline fallback — serve the last-known server list from cache.
         if (db) {
-          const cached = await getCachedServers(db).catch(() => []);
+          // getCachedServers already returns ServerSummary[] (cachedAt stripped — FIX 6).
+          const cached = await getCachedServers(db).catch(() => [] as ServerSummary[]);
           if (!mounted.current) return;
           if (cached.length > 0) {
             setServers(cached);
             setStatus('loaded');
+            // FIX 7: apply invite auto-select in the offline path too.
+            applyPendingSelect(cached);
             return;
           }
         }
         setStatus('error');
       });
-  }, []);
+  }, [applyPendingSelect]);
 
   // Fetch server list on mount
   useEffect(() => {
@@ -154,22 +166,26 @@ export function ServerProvider({ children }: Props) {
       return;
     }
     const currentId = selectedId;
+    // FIX 1: per-run cancellation flag — guards BOTH the .then and .catch branches
+    // so a slow resolution for a previous selectedId cannot overwrite the current
+    // server's detail after the user has already switched servers.
+    let cancelled = false;
     setDetailStatus('loading');
     api
       .getServerDetail(currentId)
       .then((detail) => {
-        if (!mounted.current) return;
+        if (cancelled || !mounted.current) return;
         setSelectedDetail(detail);
         setDetailStatus('loaded');
         // Write-through: persist to offline cache so the sidebar is available when offline.
         if (db) void putCachedServerDetail(db, currentId, detail);
       })
       .catch(async () => {
-        if (!mounted.current) return;
+        if (cancelled || !mounted.current) return;
         // Offline fallback — serve the last-known server detail from cache.
         if (db) {
           const cached = await getCachedServerDetail(db, currentId).catch(() => undefined);
-          if (!mounted.current) return;
+          if (cancelled || !mounted.current) return;
           if (cached) {
             setSelectedDetail(cached.detail);
             setDetailStatus('loaded');
@@ -178,6 +194,9 @@ export function ServerProvider({ children }: Props) {
         }
         setDetailStatus('error');
       });
+    return () => {
+      cancelled = true;
+    };
   }, [selectedId]);
 
   const selectServer = useCallback((id: string) => {
@@ -231,6 +250,10 @@ export function ServerProvider({ children }: Props) {
       .then((list) => {
         if (!mounted.current) return;
         setServers(list);
+        // FIX 4: mirror fetchServers' write-through so a just-created/joined
+        // server is present in the offline cache immediately, not only on the
+        // next mount fetch.
+        if (db) void putCachedServers(db, list);
       })
       .catch(() => {
         /* ignore background reconciliation errors */

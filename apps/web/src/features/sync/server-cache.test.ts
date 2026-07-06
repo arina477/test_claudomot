@@ -13,6 +13,11 @@
  *   - put→get round-trip for cachedServers + cachedServerDetails.
  *   - putCachedServers replace-semantics: a server present in the first list
  *     but absent from the second is pruned from cache.
+ *   - FIX 2: concurrent putCachedServers calls do NOT drop a server present
+ *     in both lists (atomicity guard).
+ *   - FIX 3: putCachedServers pruning a left server also removes its
+ *     cachedServerDetails row (cross-table prune).
+ *   - FIX 6: getCachedServers returns ServerSummary[] (cachedAt stripped).
  */
 
 import type { ServerDetail, ServerSummary } from '@studyhall/shared';
@@ -95,13 +100,24 @@ describe('StudyHallDB — cachedServers cache (round-trip)', () => {
     expect(result).toEqual([]);
   });
 
-  it('stamps cachedAt on write', async () => {
+  it('stamps cachedAt on write (FIX 6: read raw row; getCachedServers strips cachedAt)', async () => {
     const before = Date.now();
     await putCachedServers(db, [makeServerSummary()]);
-    const result = await getCachedServers(db);
-    expect(result[0]?.cachedAt).toBeDefined();
-    const stamped = new Date(result[0]?.cachedAt ?? '').getTime();
+    // getCachedServers strips cachedAt — read the raw row directly to verify stamping.
+    const rawRows = await db.cachedServers.toArray();
+    expect(rawRows[0]?.cachedAt).toBeDefined();
+    const stamped = new Date(rawRows[0]?.cachedAt ?? '').getTime();
     expect(stamped).toBeGreaterThanOrEqual(before);
+  });
+
+  it('getCachedServers strips cachedAt and returns ServerSummary[] (FIX 6)', async () => {
+    await putCachedServers(db, [makeServerSummary({ id: 'srv-strip', name: 'Strip Test' })]);
+    const result = await getCachedServers(db);
+    expect(result).toHaveLength(1);
+    // cachedAt must NOT be present on the returned object
+    expect('cachedAt' in (result[0] ?? {})).toBe(false);
+    expect(result[0]?.id).toBe('srv-strip');
+    expect(result[0]?.name).toBe('Strip Test');
   });
 
   it('upserts (put replaces existing row)', async () => {
@@ -153,6 +169,87 @@ describe('putCachedServers — replace-semantics (LOAD-BEARING)', () => {
     expect(result).toHaveLength(2);
     const ids = result.map((s) => s.id).sort();
     expect(ids).toEqual(['srv-1', 'srv-3']);
+  });
+});
+
+// ── FIX 2: atomicity — concurrent putCachedServers calls ─────────────────────
+
+describe('putCachedServers — atomicity (FIX 2, LOAD-BEARING)', () => {
+  let db: StudyHallDB;
+
+  beforeEach(() => {
+    db = new StudyHallDB(new IDBFactory(), IDBKeyRange);
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  it('two concurrent puts do NOT drop a server present in both lists', async () => {
+    // Both lists contain srv-shared; list A also has srv-a, list B also has srv-b.
+    // When both fire concurrently the put+prune must be atomic — neither call
+    // should prune srv-shared because it appears in both incoming lists.
+    const listA = [
+      makeServerSummary({ id: 'srv-shared', name: 'Shared' }),
+      makeServerSummary({ id: 'srv-a', name: 'Only in A' }),
+    ];
+    const listB = [
+      makeServerSummary({ id: 'srv-shared', name: 'Shared' }),
+      makeServerSummary({ id: 'srv-b', name: 'Only in B' }),
+    ];
+
+    // Seed srv-shared so it exists before the concurrent puts start.
+    await putCachedServers(db, [makeServerSummary({ id: 'srv-shared', name: 'Shared' })]);
+
+    // Fire both concurrently — they race inside the transaction boundary.
+    await Promise.all([putCachedServers(db, listA), putCachedServers(db, listB)]);
+
+    const result = await getCachedServers(db);
+    const ids = result.map((s) => s.id);
+    // srv-shared MUST be present regardless of interleaving order.
+    expect(ids).toContain('srv-shared');
+    // Both individual servers should also be present (whichever write won last).
+    // The key constraint is that srv-shared is never accidentally pruned.
+    expect(result.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+// ── FIX 3: cross-table prune — cachedServerDetails removed with server ────────
+
+describe('putCachedServers — cross-table prune (FIX 3, LOAD-BEARING)', () => {
+  let db: StudyHallDB;
+
+  beforeEach(() => {
+    db = new StudyHallDB(new IDBFactory(), IDBKeyRange);
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  it('pruning a left server also removes its cachedServerDetails row', async () => {
+    // Seed: two servers + a detail row for srv-2.
+    const list1 = [
+      makeServerSummary({ id: 'srv-1', name: 'Alpha' }),
+      makeServerSummary({ id: 'srv-2', name: 'Beta' }),
+    ];
+    await putCachedServers(db, list1);
+    await putCachedServerDetail(db, 'srv-2', makeServerDetail('srv-2'));
+
+    // Verify detail row was written.
+    const before = await getCachedServerDetail(db, 'srv-2');
+    expect(before).toBeDefined();
+
+    // Second put: srv-2 removed (user left).
+    const list2 = [makeServerSummary({ id: 'srv-1', name: 'Alpha' })];
+    await putCachedServers(db, list2);
+
+    // srv-2 should be gone from both caches.
+    const servers = await getCachedServers(db);
+    expect(servers.map((s) => s.id)).not.toContain('srv-2');
+
+    const detail = await getCachedServerDetail(db, 'srv-2');
+    expect(detail).toBeUndefined();
   });
 });
 

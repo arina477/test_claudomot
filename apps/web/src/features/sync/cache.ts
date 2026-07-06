@@ -295,19 +295,27 @@ export async function putCachedAttachmentBlob(
 // ── Server list cache ─────────────────────────────────────────────────────────
 
 /**
- * Read all cached servers.
- * Returns [] on a cold cache (no throw).
+ * Read all cached servers, stripping the client-only `cachedAt` field.
+ * Returns ServerSummary[] on a cold cache (no throw).
  */
-export async function getCachedServers(store: StudyHallDB): Promise<CachedServer[]> {
-  return store.cachedServers.toArray();
+export async function getCachedServers(store: StudyHallDB): Promise<ServerSummary[]> {
+  const rows = await store.cachedServers.toArray();
+  return rows.map(({ cachedAt: _cachedAt, ...summary }) => summary);
 }
 
 /**
  * Write-through: replace the full server list in cache (replace-semantics).
  *
  * Upserts every server in `servers` stamped with `cachedAt = now`, then
- * deletes any cached rows whose id is NOT in the new list — so a server the
- * user has left disappears from cache on the next successful fetch.
+ * atomically prunes any cached server rows AND their corresponding detail rows
+ * whose id is NOT in the new list — so a server the user has left disappears
+ * from both caches on the next successful fetch.
+ *
+ * The put + prune computation + delete are wrapped in a single Dexie rw
+ * transaction across both cachedServers and cachedServerDetails, making the
+ * operation atomic — concurrent write-throughs cannot interleave and
+ * accidentally prune a just-written server.
+ *
  * Best-effort: never throws into the caller.
  */
 export async function putCachedServers(
@@ -317,14 +325,20 @@ export async function putCachedServers(
   try {
     const cachedAt = new Date().toISOString();
     const rows: CachedServer[] = servers.map((s) => ({ ...s, cachedAt }));
-    await store.cachedServers.bulkPut(rows);
-    // Prune servers that are no longer in the list (membership drift).
     const incomingIds = new Set(servers.map((s) => s.id));
-    const existing = await store.cachedServers.toArray();
-    const toDelete = existing.filter((r) => !incomingIds.has(r.id)).map((r) => r.id);
-    if (toDelete.length > 0) {
-      await store.cachedServers.bulkDelete(toDelete);
-    }
+
+    await store.transaction('rw', store.cachedServers, store.cachedServerDetails, async () => {
+      await store.cachedServers.bulkPut(rows);
+      // FIX 5: use primaryKeys() (ids only) instead of toArray() (full rows) —
+      // the row values aren't needed, only the ids.
+      const cachedIds = await store.cachedServers.toCollection().primaryKeys();
+      const toDelete = (cachedIds as string[]).filter((id) => !incomingIds.has(id));
+      if (toDelete.length > 0) {
+        // FIX 2+3: prune both the server list AND orphaned detail rows atomically.
+        await store.cachedServers.bulkDelete(toDelete);
+        await store.cachedServerDetails.bulkDelete(toDelete);
+      }
+    });
   } catch {
     // Best-effort — never surface cache errors to callers.
   }

@@ -118,6 +118,9 @@ function ServerContextConsumer() {
       <button data-testid="select-srv-1" type="button" onClick={() => ctx.selectServer('srv-1')}>
         Select srv-1
       </button>
+      <button data-testid="select-srv-2" type="button" onClick={() => ctx.selectServer('srv-2')}>
+        Select srv-2
+      </button>
     </div>
   );
 }
@@ -330,4 +333,126 @@ describe('ServerProvider — online write-through', () => {
       serverDetail,
     );
   });
+
+  it('calls putCachedServers in appendServer reconcile (FIX 4)', async () => {
+    // getServers resolves immediately so appendServer's background reconcile fires.
+    mockApi.getServers.mockResolvedValue(serverSummaries);
+    mockApi.getServerDetail.mockRejectedValue(new Error('not needed'));
+    mockGetCachedServerDetail.mockResolvedValue(undefined);
+
+    render(
+      <ServerProvider>
+        <AppendServerTrigger />
+      </ServerProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('append-status').textContent).toBe('loaded');
+    });
+
+    // Reset call count — initial mount fetch already called putCachedServers once.
+    mockPutCachedServers.mockClear();
+
+    await act(async () => {
+      await userEvent.click(screen.getByTestId('do-append'));
+    });
+
+    await waitFor(() => {
+      // putCachedServers must be called from the reconcile inside appendServer.
+      expect(mockPutCachedServers).toHaveBeenCalled();
+    });
+  });
 });
+
+// ── FIX 1: stale-response cancellation ───────────────────────────────────────
+
+describe('ServerProvider — stale-response cancellation (FIX 1, LOAD-BEARING)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('a late-resolving getServerDetail for a previous selectedId does NOT overwrite the current detail', async () => {
+    mockApi.getServers.mockResolvedValue(serverSummaries);
+    mockPutCachedServers.mockResolvedValue(undefined);
+    mockGetCachedServerDetail.mockResolvedValue(undefined);
+
+    // srv-1 detail: deferred — resolves only after we explicitly release it.
+    // eslint-disable-next-line prefer-const
+    let releaseSrv1: (value: ServerDetail) => void = () => {};
+    const srv1DetailPromise = new Promise<ServerDetail>((resolve) => {
+      releaseSrv1 = resolve;
+    });
+
+    // srv-2 detail: resolves immediately.
+    const srv2Detail: ServerDetail = {
+      server: { id: 'srv-2', name: 'CS 202', ownerId: 'owner-2', inviteCode: null },
+      categories: [],
+    };
+
+    mockApi.getServerDetail.mockImplementation((id: string) => {
+      if (id === 'srv-1') return srv1DetailPromise;
+      if (id === 'srv-2') return Promise.resolve(srv2Detail);
+      return Promise.reject(new Error('unknown'));
+    });
+
+    render(
+      <ServerProvider>
+        <ServerContextConsumer />
+      </ServerProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('status').textContent).toBe('loaded');
+    });
+
+    // Select srv-1 — starts the slow deferred request.
+    await act(async () => {
+      await userEvent.click(screen.getByTestId('select-srv-1'));
+    });
+
+    // Immediately switch to srv-2 before srv-1 resolves — srv-2 detail resolves fast.
+    await act(async () => {
+      await userEvent.click(screen.getByTestId('select-srv-2'));
+    });
+
+    // Wait for srv-2 detail to load.
+    await waitFor(() => {
+      expect(screen.getByTestId('detail-status').textContent).toBe('loaded');
+    });
+
+    // Now release the stale srv-1 response.
+    await act(async () => {
+      releaseSrv1(serverDetail); // serverDetail.server.id === 'srv-1'
+      // Let microtask queue drain.
+      await Promise.resolve();
+    });
+
+    // After the stale srv-1 response resolves, selectedDetail must still be srv-2.
+    expect(screen.getByTestId('selected-detail').textContent).toBe('"srv-2"');
+  });
+});
+
+// ── helper component for FIX 4 appendServer write-through test ────────────────
+
+function AppendServerTrigger() {
+  const ctx = useContext(ServerContext);
+  return (
+    <div>
+      <span data-testid="append-status">{ctx.status}</span>
+      <button
+        data-testid="do-append"
+        type="button"
+        onClick={() =>
+          ctx.appendServer({
+            id: 'srv-new',
+            name: 'New Server',
+            ownerId: 'owner-new',
+            createdAt: new Date().toISOString(),
+          })
+        }
+      >
+        Append
+      </button>
+    </div>
+  );
+}
