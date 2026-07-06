@@ -13,7 +13,14 @@
 
 import Dexie from 'dexie';
 import type { StudyHallDB } from './db';
-import type { CachedChannel, CachedDmConversation, CachedDmMessage, CachedMessage } from './types';
+import type {
+  CachedAssignment,
+  CachedChannel,
+  CachedDmConversation,
+  CachedDmMessage,
+  CachedMessage,
+  CachedScheduledSession,
+} from './types';
 
 // ── Message cache ─────────────────────────────────────────────────────────────
 
@@ -156,4 +163,86 @@ export async function putCachedDmMessage(
   message: CachedDmMessage,
 ): Promise<void> {
   await store.dmMessages.put(message);
+}
+
+// ── Assignment cache ──────────────────────────────────────────────────────────
+
+/**
+ * Read cached assignments for a server.
+ * Returns [] on a cold cache (no throw).
+ */
+export async function getCachedAssignments(
+  store: StudyHallDB,
+  serverId: string,
+): Promise<CachedAssignment[]> {
+  return store.cachedAssignments.where('serverId').equals(serverId).toArray();
+}
+
+/**
+ * Write-through: upsert a batch of assignments received from the server.
+ * Each item is stamped with `cachedAt = now` before storage.
+ */
+export async function putCachedAssignments(
+  store: StudyHallDB,
+  serverId: string,
+  list: Omit<CachedAssignment, 'cachedAt'>[],
+): Promise<void> {
+  if (list.length === 0) return;
+  const cachedAt = new Date().toISOString();
+  const rows: CachedAssignment[] = list.map((item) => ({ ...item, serverId, cachedAt }));
+  await store.cachedAssignments.bulkPut(rows);
+}
+
+// ── Scheduled-session cache (window-keyed) ────────────────────────────────────
+
+/**
+ * Build the composite window key used for session cache lookups.
+ * Format: `${serverId}|${from}|${to}` — exact string match required.
+ */
+function sessionWindowKey(serverId: string, from: string, to: string): string {
+  return `${serverId}|${from}|${to}`;
+}
+
+/**
+ * Read cached scheduled sessions for a server + window.
+ *
+ * The cache is window-keyed: only sessions stored for the EXACT same
+ * (serverId, from, to) triplet are returned. A never-cached or different
+ * window returns [] so the caller falls through to network.
+ */
+export async function getCachedScheduledSessions(
+  store: StudyHallDB,
+  serverId: string,
+  from: string,
+  to: string,
+): Promise<CachedScheduledSession[]> {
+  const windowKey = sessionWindowKey(serverId, from, to);
+  return store.cachedScheduledSessions.where('windowKey').equals(windowKey).toArray();
+}
+
+/**
+ * Write-through: upsert a batch of scheduled sessions for a (serverId, from, to) window.
+ *
+ * Each item is stamped with `cachedAt = now` and tagged with the composite
+ * `windowKey` so getCachedScheduledSessions can scope retrievals to the exact
+ * window. Previous rows for a different window are NOT evicted — they remain
+ * in IDB but are never served (the window-key index ensures isolation).
+ */
+export async function putCachedScheduledSessions(
+  store: StudyHallDB,
+  serverId: string,
+  from: string,
+  to: string,
+  list: Omit<CachedScheduledSession, 'cachedAt' | 'windowKey'>[],
+): Promise<void> {
+  if (list.length === 0) return;
+  const cachedAt = new Date().toISOString();
+  const windowKey = sessionWindowKey(serverId, from, to);
+  const rows: CachedScheduledSession[] = list.map((item) => ({
+    ...item,
+    serverId,
+    cachedAt,
+    windowKey,
+  }));
+  await store.cachedScheduledSessions.bulkPut(rows);
 }
