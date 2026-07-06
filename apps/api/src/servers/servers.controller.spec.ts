@@ -35,7 +35,15 @@ const mockSummaries: ServerSummary[] = [
 ];
 
 const mockDetail: ServerDetail = {
-  server: { id: 'server-1', name: 'Study Hall', ownerId: 'user-abc', inviteCode: 'perm-code-abc' },
+  server: {
+    id: 'server-1',
+    name: 'Study Hall',
+    ownerId: 'user-abc',
+    inviteCode: 'perm-code-abc',
+    is_public: false,
+    description: null,
+    topic: null,
+  },
   categories: [
     {
       id: 'cat-1',
@@ -62,6 +70,7 @@ function makeController() {
     rotateInviteCode: vi.fn<() => Promise<{ invite_code: string }>>(),
     discoverServers: vi.fn<() => Promise<DiscoverServersResponse>>(),
     joinPublicServer: vi.fn<() => Promise<JoinResult>>(),
+    updateServer: vi.fn<() => Promise<ServerSummary>>(),
   };
   // biome-ignore lint/suspicious/noExplicitAny: test mock — full type not needed
   const controller = new ServersController(serversService as any);
@@ -562,5 +571,89 @@ describe('ServersController.joinPublicServer', () => {
     await expect(controller.joinPublicServer(makeReq(), 'ghost-server')).rejects.toThrow(
       NotFoundException,
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /servers/:id (wave-68)
+// ---------------------------------------------------------------------------
+
+describe('ServersController.updateServer', () => {
+  let controller: ServersController;
+  let serversService: ReturnType<typeof makeController>['serversService'];
+
+  beforeEach(() => {
+    ({ controller, serversService } = makeController());
+  });
+
+  const mockSummary: ServerSummary = { id: 'server-1', name: 'Study Hall', ownerId: 'user-abc' };
+
+  it('owner can publish and edit description + topic', async () => {
+    serversService.updateServer.mockResolvedValue(mockSummary);
+
+    const result = await controller.updateServer(makeReq('user-abc'), 'server-1', {
+      is_public: true,
+      description: 'A great server',
+      topic: 'Math',
+    });
+
+    expect(result).toEqual(mockSummary);
+    expect(serversService.updateServer).toHaveBeenCalledWith('server-1', 'user-abc', {
+      is_public: true,
+      description: 'A great server',
+      topic: 'Math',
+    });
+  });
+
+  it('non-owner PATCH propagates ForbiddenException (403)', async () => {
+    serversService.updateServer.mockRejectedValue(
+      new ForbiddenException('Not authorized to update this server'),
+    );
+
+    await expect(
+      controller.updateServer(makeReq('non-owner'), 'server-1', { is_public: true }),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it('PATCH missing server propagates NotFoundException (404)', async () => {
+    serversService.updateServer.mockRejectedValue(new NotFoundException('Server not found'));
+
+    await expect(
+      controller.updateServer(makeReq('user-abc'), 'ghost-server', { is_public: false }),
+    ).rejects.toThrow(NotFoundException);
+  });
+
+  it('invalid body throws BadRequestException (400)', async () => {
+    // description exceeds 500 chars
+    await expect(
+      controller.updateServer(makeReq('user-abc'), 'server-1', {
+        description: 'x'.repeat(501),
+      }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('partial update — only description, is_public not sent', async () => {
+    serversService.updateServer.mockResolvedValue(mockSummary);
+
+    await controller.updateServer(makeReq('user-abc'), 'server-1', {
+      description: 'Just a description',
+    });
+
+    expect(serversService.updateServer).toHaveBeenCalledWith('server-1', 'user-abc', {
+      description: 'Just a description',
+    });
+  });
+
+  it('unpublish — is_public=false accepted', async () => {
+    serversService.updateServer.mockResolvedValue(mockSummary);
+
+    const result = await controller.updateServer(makeReq('user-abc'), 'server-1', {
+      is_public: false,
+    });
+
+    expect(result).toEqual(mockSummary);
+    expect(serversService.updateServer).toHaveBeenCalledWith('server-1', 'user-abc', {
+      is_public: false,
+    });
   });
 });

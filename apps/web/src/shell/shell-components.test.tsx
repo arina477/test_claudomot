@@ -4,6 +4,7 @@
  * ServerRail:  lists real servers from context; empty state; "+" fires openCreateModal.
  * CreateServerModal: client-side name validation; submit disabled/enabled; calls api.
  * ChannelSidebar: no-server state; renders categories+channels when loaded.
+ * ChannelSidebar seam: opening ServerOverviewSettings via ChannelSidebar wires onSaveSuccess=refetchDetail.
  */
 
 import type { ServerDetail } from '@studyhall/shared';
@@ -26,6 +27,9 @@ vi.mock('../auth/api', () => ({
     getServers: vi.fn(),
     getServerDetail: vi.fn(),
     getProfile: vi.fn(),
+    // Required by ServerOverviewSettings (owner gate)
+    getMe: vi.fn(),
+    updateServer: vi.fn(),
   },
 }));
 
@@ -45,6 +49,8 @@ const mockApi = api as unknown as {
   getServers: ReturnType<typeof vi.fn>;
   getServerDetail: ReturnType<typeof vi.fn>;
   getProfile: ReturnType<typeof vi.fn>;
+  getMe: ReturnType<typeof vi.fn>;
+  updateServer: ReturnType<typeof vi.fn>;
 };
 
 // ── shared fixtures ───────────────────────────────────────────────────────────
@@ -76,6 +82,7 @@ function makeServerCtx(override: Partial<ServerContextValue> = {}): ServerContex
     scheduleOpen: false,
     openSchedule: vi.fn(),
     closeSchedule: vi.fn(),
+    refetchDetail: vi.fn(),
     ...override,
   };
 }
@@ -265,7 +272,15 @@ describe('ChannelSidebar', () => {
 
   it('renders categories and channels when server detail is loaded', () => {
     const detail: ServerDetail = {
-      server: { id: 's1', name: 'Organic Chem', ownerId: 'u1', inviteCode: null },
+      server: {
+        id: 's1',
+        name: 'Organic Chem',
+        ownerId: 'u1',
+        inviteCode: null,
+        is_public: false,
+        description: null,
+        topic: null,
+      },
       categories: [
         {
           id: 'cat1',
@@ -292,7 +307,15 @@ describe('ChannelSidebar', () => {
 
   it('renders the server name in the header when loaded', () => {
     const detail: ServerDetail = {
-      server: { id: 's1', name: 'Organic Chem', ownerId: 'u1', inviteCode: null },
+      server: {
+        id: 's1',
+        name: 'Organic Chem',
+        ownerId: 'u1',
+        inviteCode: null,
+        is_public: false,
+        description: null,
+        topic: null,
+      },
       categories: [],
     };
     renderSidebar({
@@ -330,5 +353,93 @@ describe('ChannelSidebar', () => {
     renderSidebar({ selectedId: 's1', detailStatus: 'error' });
     expect(screen.getByText(/couldn't load channels/i)).toBeInTheDocument();
     expect(screen.queryByText(/this server isn't available offline yet/i)).not.toBeInTheDocument();
+  });
+});
+
+// ── ChannelSidebar seam — onSaveSuccess wiring ────────────────────────────────
+//
+// This test verifies the CALLER (ChannelSidebar) wires refetchDetail into
+// ServerOverviewSettings.onSaveSuccess. The component-level test in
+// server-overview-settings.test.tsx injects onSaveSuccess directly and cannot
+// catch a caller that forgets to pass it — this test must go through the seam.
+//
+// Strategy: render ChannelSidebar with a spy injected as refetchDetail via
+// ServerContext; open the Overview settings panel; perform a successful save;
+// assert refetchDetail was called.
+
+describe('ChannelSidebar — ServerOverviewSettings onSaveSuccess seam', () => {
+  const OWNER_ID = 'owner-seam-1';
+  const SERVER_ID = 'srv-seam-1';
+
+  const seamDetail: ServerDetail = {
+    server: {
+      id: SERVER_ID,
+      name: 'Seam Test Server',
+      ownerId: OWNER_ID,
+      inviteCode: null,
+      is_public: false,
+      description: null,
+      topic: null,
+    },
+    categories: [],
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Owner gate: getMe resolves to the owner so Save button is visible.
+    mockApi.getMe.mockResolvedValue({
+      userId: OWNER_ID,
+      email: 'owner@seam.test',
+      emailVerified: true,
+    });
+    mockApi.updateServer.mockResolvedValue({
+      id: SERVER_ID,
+      name: 'Seam Test Server',
+      ownerId: OWNER_ID,
+    });
+  });
+
+  it('calls refetchDetail from ServerContext after a successful save via the ChannelSidebar-mounted ServerOverviewSettings', async () => {
+    const refetchDetail = vi.fn();
+
+    const ctx = makeServerCtx({
+      selectedId: SERVER_ID,
+      selectedDetail: seamDetail,
+      detailStatus: 'loaded',
+      servers: [{ id: SERVER_ID, name: 'Seam Test Server', ownerId: OWNER_ID }],
+      refetchDetail,
+    });
+
+    render(
+      <ProfileContext.Provider value={nullProfile}>
+        <ServerContext.Provider value={ctx}>
+          <ChannelSidebar />
+        </ServerContext.Provider>
+      </ProfileContext.Provider>,
+    );
+
+    // Open the Overview settings panel via the gear button in the sidebar header.
+    fireEvent.click(screen.getByTestId('server-settings-btn'));
+
+    // Wait for ServerOverviewSettings to mount and the owner gate (getMe) to resolve.
+    await waitFor(() => {
+      expect(screen.getByTestId('server-overview-settings')).toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('save-btn')).toBeInTheDocument();
+    });
+
+    // Make a change so the Save button becomes active.
+    fireEvent.change(screen.getByTestId('description-input'), {
+      target: { value: 'A new description.' },
+    });
+
+    // Save.
+    fireEvent.click(screen.getByTestId('save-btn'));
+
+    // The seam: refetchDetail (from ServerContext) must be called after a successful save.
+    await waitFor(() => {
+      expect(refetchDetail).toHaveBeenCalledOnce();
+    });
   });
 });

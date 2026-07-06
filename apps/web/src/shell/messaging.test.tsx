@@ -232,6 +232,7 @@ function makeCtx(override: Partial<ServerContextValue> = {}): ServerContextValue
     scheduleOpen: false,
     openSchedule: vi.fn(),
     closeSchedule: vi.fn(),
+    refetchDetail: vi.fn(),
     ...override,
   };
 }

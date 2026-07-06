@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
   Query,
   Req,
@@ -25,6 +26,7 @@ import {
   CreateInviteSchema,
   CreateServerSchema,
   DiscoverServersQuerySchema,
+  UpdateServerSchema,
 } from '@studyhall/shared';
 import { AuthGuard } from '../auth/auth.guard';
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
@@ -91,6 +93,28 @@ export class ServersController {
   ): Promise<ServerDetail> {
     const userId = req.session.getUserId();
     return await this.serversService.findServerDetail(userId, id);
+  }
+
+  /**
+   * PATCH /servers/:id
+   * Partially update a server's public-profile fields (is_public, description, topic).
+   * Owner-only. Omitted fields are unchanged; null clears the field.
+   * Returns 200 ServerSummary on success.
+   * 400 invalid body / 403 non-owner / 404 missing server.
+   */
+  @Patch(':id')
+  @UseGuards(AuthGuard)
+  async updateServer(
+    @Req() req: SessionAugmentedRequest,
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ): Promise<ServerSummary> {
+    const parsed = UpdateServerSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.flatten());
+    }
+    const userId = req.session.getUserId();
+    return await this.serversService.updateServer(id, userId, parsed.data);
   }
 
   /**

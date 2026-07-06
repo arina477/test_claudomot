@@ -17,7 +17,16 @@ function makeSelectChain(resolveWith: unknown[]) {
     then: (res: (v: unknown) => unknown, rej?: (e: unknown) => unknown) =>
       Promise.resolve(resolveWith).then(res, rej),
   };
-  for (const m of ['from', 'where', 'innerJoin', 'limit', 'orderBy']) {
+  for (const m of [
+    'from',
+    'where',
+    'innerJoin',
+    'leftJoin',
+    'limit',
+    'offset',
+    'orderBy',
+    'groupBy',
+  ]) {
     chain[m] = vi.fn().mockReturnValue(chain);
   }
   return chain;
@@ -47,6 +56,26 @@ function makeUpdateChain() {
     // biome-ignore lint/suspicious/noThenProperty: intentional thenable mock for drizzle update chain
     then: (res: (v: unknown) => unknown, rej?: (e: unknown) => unknown) =>
       Promise.resolve(undefined).then(res, rej),
+  };
+  const setChain: Record<string, unknown> = {};
+  setChain.where = vi.fn().mockReturnValue(whereChain);
+  const chain: Record<string, unknown> = {};
+  chain.set = vi.fn().mockReturnValue(setChain);
+  return chain;
+}
+
+/**
+ * Thennable mock chain for db.update(table).set(data).where(cond).returning().
+ * `returningValue` is the array resolved by `.returning()`.
+ */
+function makeUpdateReturningChain(returningValue: unknown[]) {
+  const returningChain: Record<string, unknown> = {
+    // biome-ignore lint/suspicious/noThenProperty: intentional thenable mock for drizzle update chain
+    then: (res: (v: unknown) => unknown, rej?: (e: unknown) => unknown) =>
+      Promise.resolve(returningValue).then(res, rej),
+  };
+  const whereChain: Record<string, unknown> = {
+    returning: vi.fn().mockReturnValue(returningChain),
   };
   const setChain: Record<string, unknown> = {};
   setChain.where = vi.fn().mockReturnValue(whereChain);
@@ -110,6 +139,10 @@ const mockServer = {
   name: 'Test Server',
   owner_id: 'user-1',
   created_at: new Date('2026-01-01T00:00:00Z'),
+  invite_code: null,
+  is_public: false,
+  description: null,
+  topic: null,
 };
 const mockCategory = { id: 'cat-1', server_id: 'server-1', name: 'General', position: 0 };
 const mockMember = {
@@ -331,6 +364,9 @@ describe('ServersService.findServerDetail', () => {
       name: 'Test Server',
       ownerId: 'user-1',
       inviteCode: null,
+      is_public: false,
+      description: null,
+      topic: null,
     });
     expect(result.categories).toHaveLength(1);
     expect(result.categories[0]).toMatchObject({ id: 'cat-1', name: 'General', position: 0 });
@@ -1375,7 +1411,7 @@ describe('ServersService.listServerMembers — displayName empty-fallback guard 
 
 /**
  * makeDiscoverChain builds a select-chain mock that resolves with `rows`.
- * The discover query uses leftJoin + where + orderBy + limit + offset — all
+ * The discover query uses leftJoin + groupBy + where + orderBy + limit + offset — all
  * fluent methods must be present on the chain for the call to complete.
  */
 function makeDiscoverChain(rows: unknown[]) {
@@ -1384,8 +1420,7 @@ function makeDiscoverChain(rows: unknown[]) {
     then: (res: (v: unknown) => unknown, rej?: (e: unknown) => unknown) =>
       Promise.resolve(rows).then(res, rej),
   };
-  // The correlated-subquery approach uses a single db.select() chain without leftJoin.
-  for (const m of ['from', 'where', 'orderBy', 'limit', 'offset']) {
+  for (const m of ['from', 'leftJoin', 'where', 'groupBy', 'orderBy', 'limit', 'offset']) {
     chain[m] = vi.fn().mockReturnValue(chain);
   }
   return chain;
@@ -1572,5 +1607,104 @@ describe('ServersService.joinPublicServer', () => {
     await expect(service.joinPublicServer('ghost-server', 'user-1')).rejects.toThrow(
       NotFoundException,
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ServersService — updateServer (wave-68)
+// ---------------------------------------------------------------------------
+
+describe('ServersService.updateServer', () => {
+  let service: ServersService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    service = new ServersService(makeRbacServiceMock());
+  });
+
+  const updatedServer = {
+    ...mockServer,
+    is_public: true,
+    description: 'New description',
+    topic: 'Math',
+  };
+
+  it('returns ServerSummary after owner successfully updates (publish + fields)', async () => {
+    let selectCall = 0;
+    mockSelect.mockImplementation(() => {
+      selectCall++;
+      return makeSelectChain(selectCall === 1 ? [mockServer] : []);
+    });
+    mockUpdate.mockReturnValue(makeUpdateReturningChain([updatedServer]));
+
+    const result = await service.updateServer('server-1', 'user-1', {
+      is_public: true,
+      description: 'New description',
+      topic: 'Math',
+    });
+
+    expect(result).toEqual({ id: 'server-1', name: 'Test Server', ownerId: 'user-1' });
+    expect(mockUpdate).toHaveBeenCalledOnce();
+  });
+
+  it('throws ForbiddenException (403) for non-owner — update is NOT applied', async () => {
+    mockSelect.mockReturnValue(makeSelectChain([mockServer]));
+
+    await expect(
+      service.updateServer('server-1', 'user-NONOWNER', { is_public: true }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    // Critical security assertion: db.update must never be called for a non-owner
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it('throws NotFoundException (404) for missing server', async () => {
+    mockSelect.mockReturnValue(makeSelectChain([]));
+
+    await expect(
+      service.updateServer('ghost-server', 'user-1', { is_public: true }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it('partial update — only description changes; is_public is untouched', async () => {
+    mockSelect.mockReturnValue(makeSelectChain([mockServer]));
+    const updateChain = makeUpdateReturningChain([{ ...mockServer, description: 'Updated desc' }]);
+    mockUpdate.mockReturnValue(updateChain);
+
+    await service.updateServer('server-1', 'user-1', { description: 'Updated desc' });
+
+    // Verify the set() call includes description but NOT is_public
+    const setChain = updateChain.set as ReturnType<typeof vi.fn>;
+    const setArg = setChain.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(setArg).toHaveProperty('description', 'Updated desc');
+    expect(setArg).not.toHaveProperty('is_public');
+  });
+
+  it('unpublish — is_public=false flips the server private', async () => {
+    const publicServer = { ...mockServer, is_public: true };
+    mockSelect.mockReturnValue(makeSelectChain([publicServer]));
+    const updateChain = makeUpdateReturningChain([{ ...publicServer, is_public: false }]);
+    mockUpdate.mockReturnValue(updateChain);
+
+    const result = await service.updateServer('server-1', 'user-1', { is_public: false });
+
+    expect(result).toMatchObject({ id: 'server-1', ownerId: 'user-1' });
+    const setChain = updateChain.set as ReturnType<typeof vi.fn>;
+    const setArg = setChain.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(setArg).toHaveProperty('is_public', false);
+  });
+
+  it('null description clears the field', async () => {
+    mockSelect.mockReturnValue(makeSelectChain([{ ...mockServer, description: 'old' }]));
+    const updateChain = makeUpdateReturningChain([{ ...mockServer, description: null }]);
+    mockUpdate.mockReturnValue(updateChain);
+
+    await service.updateServer('server-1', 'user-1', { description: null });
+
+    const setChain = updateChain.set as ReturnType<typeof vi.fn>;
+    const setArg = setChain.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(setArg).toHaveProperty('description', null);
   });
 });

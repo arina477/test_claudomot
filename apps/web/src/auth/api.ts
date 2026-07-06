@@ -866,6 +866,22 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
+  // ── Server overview / publish endpoints (wave-68 M13) ───────────────────
+
+  /**
+   * PATCH /servers/:id {is_public?, description?, topic?} → ServerSummary.
+   * Owner-only. Omitted fields are unchanged; null clears description/topic.
+   * Throws: 400 invalid body, 403 non-owner, 404 not found.
+   */
+  updateServer: (
+    serverId: string,
+    patch: import('@studyhall/shared').UpdateServer,
+  ): Promise<import('@studyhall/shared').ServerSummary> =>
+    request<import('@studyhall/shared').ServerSummary>(`/servers/${serverId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
+
   // ── Server discovery endpoints (wave-67 M12) ─────────────────────────────
 
   /**

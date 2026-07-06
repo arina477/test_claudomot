@@ -16,6 +16,7 @@ import type {
   ServerMember,
   ServerResponse,
   ServerSummary,
+  UpdateServer,
 } from '@studyhall/shared';
 import { and, asc, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import { db } from '../db/index';
@@ -195,6 +196,9 @@ export class ServersService {
         name: server.name,
         ownerId: server.owner_id,
         inviteCode: server.invite_code ?? null,
+        is_public: server.is_public,
+        description: server.description,
+        topic: server.topic,
       },
       categories: catRows.map((cat) => ({
         id: cat.id,
@@ -429,6 +433,63 @@ export class ServersService {
   }
 
   // -------------------------------------------------------------------------
+  // Update server — PATCH /servers/:id (wave-68)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Partially update a server's public-profile fields (is_public, description, topic).
+   *
+   * OWNER-ONLY: same gate idiom as rotateInviteCode (lines 400-408).
+   *   1. Load server row — 404 NotFound if missing.
+   *   2. Check owner_id === userId — 403 ForbiddenException if not.
+   *   3. UPDATE only the fields that are present in the patch object (partial).
+   *      Omitted fields are unchanged; null values clear the column.
+   *   4. Re-fetch and return the updated row as ServerSummary shape.
+   *
+   * Idempotent: patching with the same values produces the same row and same 200.
+   */
+  async updateServer(
+    serverId: string,
+    userId: string,
+    patch: UpdateServer,
+  ): Promise<ServerSummary> {
+    const [server] = await db.select().from(servers).where(eq(servers.id, serverId)).limit(1);
+
+    if (!server) {
+      throw new NotFoundException('Server not found');
+    }
+
+    if (server.owner_id !== userId) {
+      throw new ForbiddenException('Not authorized to update this server');
+    }
+
+    // Build partial SET — only touch fields the caller explicitly supplied.
+    // Using `as Record<string, unknown>` avoids TS narrowing issues with
+    // Drizzle's dynamic .set() signature while staying type-safe via the Zod
+    // validated `patch` object.
+    const setFields: Record<string, unknown> = {};
+    if (patch.is_public !== undefined) setFields.is_public = patch.is_public;
+    if ('description' in patch) setFields.description = patch.description ?? null;
+    if ('topic' in patch) setFields.topic = patch.topic ?? null;
+
+    const [updated] = await db
+      .update(servers)
+      .set(setFields as Parameters<ReturnType<typeof db.update>['set']>[0])
+      .where(eq(servers.id, serverId))
+      .returning();
+
+    if (!updated) {
+      throw new NotFoundException('Server not found');
+    }
+
+    return {
+      id: updated.id,
+      name: updated.name,
+      ownerId: updated.owner_id,
+    };
+  }
+
+  // -------------------------------------------------------------------------
   // Invite preview — public (task 77e2041a)
   // -------------------------------------------------------------------------
 
@@ -542,16 +603,13 @@ export class ServersService {
     const safeLimitCap = 50;
     const safeLimit = Math.min(limit, safeLimitCap);
 
-    // memberCount is computed ONCE via a correlated scalar subquery that is
-    // bound to a single sql expression object.  The same reference is passed to
-    // both the SELECT projection and the ORDER BY clause so Drizzle emits
-    // identical SQL text in both positions — allowing Postgres to recognise the
-    // expressions as equivalent and evaluate the subquery a single time per row.
-    const memberCountExpr = sql<number>`(
-      SELECT count(*)::int
-      FROM server_members sm
-      WHERE sm.server_id = ${servers.id}
-    )`;
+    // memberCount — LEFT JOIN server_members + GROUP BY so that:
+    //   - a public server with 0 members returns 0 (LEFT JOIN preserves the row)
+    //   - a public server with N members returns N
+    // The previous correlated scalar subquery returned 0 at runtime due to
+    // Drizzle's query-building evaluation order; the LEFT JOIN approach is
+    // evaluated fully by Postgres and is immune to that issue.
+    const memberCountExpr = sql<number>`count(${server_members.user_id})::int`;
 
     // Base WHERE: public only
     const publicFilter = eq(servers.is_public, true);
@@ -576,7 +634,9 @@ export class ServersService {
         memberCount: memberCountExpr,
       })
       .from(servers)
+      .leftJoin(server_members, eq(server_members.server_id, servers.id))
       .where(whereClause)
+      .groupBy(servers.id)
       // ORDER BY: memberCount DESC (relevance), name ASC (secondary tie-break),
       // id ASC (stable UUID tie-break — makes offset pagination deterministic).
       .orderBy(desc(memberCountExpr), asc(servers.name), asc(servers.id))

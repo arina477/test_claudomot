@@ -22,6 +22,9 @@ export type ServerSummary = z.infer<typeof ServerSummarySchema>;
 
 export const ServerSummaryWithInviteSchema = ServerSummarySchema.extend({
   inviteCode: z.string().nullable(),
+  is_public: z.boolean(),
+  description: z.string().nullable(),
+  topic: z.string().nullable(),
 });
 export type ServerSummaryWithInvite = z.infer<typeof ServerSummaryWithInviteSchema>;
 
@@ -95,3 +98,16 @@ export const DiscoverServersResponseSchema = z.object({
   servers: z.array(DiscoverServerSchema),
 });
 export type DiscoverServersResponse = z.infer<typeof DiscoverServersResponseSchema>;
+
+// ---------------------------------------------------------------------------
+// UpdateServer — PATCH /servers/:id (wave-68)
+// Partial update: only the supplied fields are written to the row.
+// description and topic accept null to clear the field.
+// ---------------------------------------------------------------------------
+
+export const UpdateServerSchema = z.object({
+  is_public: z.boolean().optional(),
+  description: z.string().max(500).nullable().optional(),
+  topic: z.string().max(100).nullable().optional(),
+});
+export type UpdateServer = z.infer<typeof UpdateServerSchema>;
