@@ -16,6 +16,7 @@ import { useRef, useState } from 'react';
 import { InviteShareModal } from './InviteShareModal';
 import { useProfile } from './ProfileContext';
 import { useServers } from './ServerContext';
+import { ServerOverviewSettings } from './ServerOverviewSettings';
 import { ServerRolesPage } from './ServerRolesPage';
 import { UserMenu } from './UserMenu';
 import {
@@ -172,6 +173,7 @@ export function ChannelSidebar() {
   } = useServers();
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [rolesPageOpen, setRolesPageOpen] = useState(false);
+  const [overviewPageOpen, setOverviewPageOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const inviteBtnRef = useRef<HTMLButtonElement>(null);
   const settingsBtnRef = useRef<HTMLButtonElement>(null);
@@ -254,12 +256,42 @@ export function ChannelSidebar() {
               <UserAddIcon size={15} />
             </button>
           )}
-          {/* Server settings / roles button */}
+          {/* Server overview settings button */}
+          {selectedId && (
+            <button
+              type="button"
+              aria-label="Server settings — Overview"
+              data-testid="server-settings-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                setOverviewPageOpen(true);
+              }}
+              className="flex h-7 w-7 items-center justify-center rounded transition-colors duration-150 focus-visible:outline-none"
+              style={{ color: 'rgba(255,255,255,0.40)', backgroundColor: 'transparent' }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#27272a';
+                (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.92)';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+                (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.40)';
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.boxShadow = '0 0 0 2px rgba(16,185,129,0.4)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              <GearIcon size={15} />
+            </button>
+          )}
+          {/* Server roles button */}
           {selectedId && (
             <button
               type="button"
               aria-label="Server settings — Roles"
-              data-testid="server-settings-btn"
+              data-testid="server-roles-btn"
               onClick={(e) => {
                 e.stopPropagation();
                 setRolesPageOpen(true);
@@ -299,6 +331,20 @@ export function ChannelSidebar() {
           inviteCode={selectedDetail?.server.inviteCode ?? null}
           onClose={() => setInviteModalOpen(false)}
           triggerRef={inviteBtnRef}
+        />
+      )}
+
+      {/* Server Overview settings page — full-screen overlay */}
+      {overviewPageOpen && selectedId && selectedDetail && (
+        <ServerOverviewSettings
+          serverId={selectedId}
+          serverName={selectedDetail.server.name}
+          ownerId={selectedDetail.server.ownerId}
+          onClose={() => setOverviewPageOpen(false)}
+          onGoToRoles={() => {
+            setOverviewPageOpen(false);
+            setRolesPageOpen(true);
+          }}
         />
       )}
 
