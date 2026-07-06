@@ -1,11 +1,12 @@
 /**
- * Assignment module tests — wave-22 M5.
+ * Assignment module tests — wave-22 M5 + wave-63 B-3 offline cache (task 35c57942).
  *
  * Coverage:
  * 1. getUrgency — chip logic: overdue / dueSoon / normal / done
  * 2. AssignmentCard — overdue chip, due-soon chip, normal (no chip), done state
  * 3. AssignmentCard — per-member toggle PUT fires; stopPropagation on toggle wrapper
  * 4. AssignmentsPanel — organizer-only form visibility; empty state
+ * 5. AssignmentsPanel — offline cache write-through + fallback (wave-63 task 35c57942)
  */
 
 import type { Assignment } from '@studyhall/shared';
@@ -46,6 +47,45 @@ const mockApi = api as unknown as {
   listRoles: ReturnType<typeof vi.fn>;
   getProfile: ReturnType<typeof vi.fn>;
 };
+
+// ── Cache mock — offline write-through + fallback ─────────────────────────────
+
+const mockPutCachedAssignments = vi.fn().mockResolvedValue(undefined);
+const mockGetCachedAssignments = vi.fn();
+
+vi.mock('../features/sync/cache', () => ({
+  putCachedAssignments: (...args: unknown[]) => mockPutCachedAssignments(...args),
+  getCachedAssignments: (...args: unknown[]) => mockGetCachedAssignments(...args),
+  // stubs for other cache functions used transitively
+  getCachedMessages: vi.fn().mockResolvedValue([]),
+  putCachedMessages: vi.fn().mockResolvedValue(undefined),
+  putCachedMessage: vi.fn().mockResolvedValue(undefined),
+  getCachedChannel: vi.fn().mockResolvedValue(undefined),
+  putCachedChannel: vi.fn().mockResolvedValue(undefined),
+  getCachedDmConversations: vi.fn().mockResolvedValue([]),
+  putCachedDmConversations: vi.fn().mockResolvedValue(undefined),
+  putCachedDmConversation: vi.fn().mockResolvedValue(undefined),
+  getCachedDmMessages: vi.fn().mockResolvedValue([]),
+  putCachedDmMessages: vi.fn().mockResolvedValue(undefined),
+  putCachedDmMessage: vi.fn().mockResolvedValue(undefined),
+  getCachedScheduledSessions: vi.fn().mockResolvedValue([]),
+  putCachedScheduledSessions: vi.fn().mockResolvedValue(undefined),
+}));
+
+// ── DB mock — assignments panel accesses db for offline cache ─────────────────
+
+vi.mock('../features/sync/db', () => ({
+  db: {
+    cachedAssignments: {
+      where: vi.fn(() => ({
+        equals: vi.fn(() => ({
+          toArray: vi.fn().mockResolvedValue([]),
+        })),
+      })),
+      bulkPut: vi.fn().mockResolvedValue(undefined),
+    },
+  },
+}));
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -408,5 +448,96 @@ describe('AssignmentsPanel', () => {
     await waitFor(() => {
       expect(screen.getByTestId('new-assignment-btn')).toBeInTheDocument();
     });
+  });
+});
+
+// ── 5. AssignmentsPanel — offline cache write-through + fallback ──────────────
+//
+// wave-63 B-3 task 35c57942
+// Online path: successful fetch writes through to putCachedAssignments.
+// Offline path: fetch failure falls back to getCachedAssignments so the panel
+//   renders the cached list rather than the error state.
+
+describe('AssignmentsPanel — offline cache (wave-63 task 35c57942)', () => {
+  const cachedAssignmentList: Assignment[] = [
+    makeAssignment({ id: 'cached-asgn-1', title: 'Cached Assignment A' }),
+    makeAssignment({ id: 'cached-asgn-2', title: 'Cached Assignment B' }),
+  ];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockPutCachedAssignments.mockResolvedValue(undefined);
+    mockGetCachedAssignments.mockResolvedValue(cachedAssignmentList);
+    mockApi.getMyPermissions.mockResolvedValue({
+      owner: false,
+      manage_server: false,
+      manage_roles: false,
+      manage_channels: false,
+      manage_members: false,
+      manage_assignments: false,
+    });
+    mockApi.getServerMembers.mockResolvedValue([]);
+    mockApi.listRoles.mockResolvedValue([]);
+    mockApi.getProfile.mockResolvedValue(null);
+    mockApi.listAssignmentSubmissions.mockResolvedValue({ submissions: [] });
+  });
+
+  function renderOfflinePanel(ctxOverride: Partial<ServerContextValue> = {}) {
+    return render(
+      <ProfileContext.Provider value={nullProfile}>
+        <ServerContext.Provider value={makeServerCtx(ctxOverride)}>
+          <AssignmentsPanel />
+        </ServerContext.Provider>
+      </ProfileContext.Provider>,
+    );
+  }
+
+  it('online success: putCachedAssignments is called with serverId and the fetched list', async () => {
+    const serverAssignments: Assignment[] = [
+      makeAssignment({ id: 'srv-asgn-1', title: 'Server Assignment' }),
+    ];
+    mockApi.listAssignments.mockResolvedValue({ assignments: serverAssignments });
+
+    renderOfflinePanel();
+
+    await waitFor(() => {
+      expect(mockPutCachedAssignments).toHaveBeenCalled();
+    });
+
+    const [, writtenServerId, writtenList] = mockPutCachedAssignments.mock.calls[0] as [
+      unknown,
+      string,
+      Assignment[],
+    ];
+    expect(writtenServerId).toBe('srv-1');
+    expect(writtenList.some((a) => a.id === 'srv-asgn-1')).toBe(true);
+  });
+
+  it('offline reject: getCachedAssignments served — panel renders cached assignments, not error', async () => {
+    mockApi.listAssignments.mockRejectedValue(new Error('Network offline'));
+
+    renderOfflinePanel();
+
+    // Panel should render the cached assignments, not the error state.
+    await waitFor(() => {
+      expect(screen.getAllByTestId('assignment-card')).toHaveLength(2);
+    });
+    expect(screen.getByText('Cached Assignment A')).toBeInTheDocument();
+    expect(screen.getByText('Cached Assignment B')).toBeInTheDocument();
+    // Error state must NOT be shown when the cache provided data.
+    expect(screen.queryByTestId('assignments-error')).not.toBeInTheDocument();
+  });
+
+  it('cold cache offline: shows empty (loaded) state rather than error when cache returns []', async () => {
+    mockApi.listAssignments.mockRejectedValue(new Error('Network offline'));
+    mockGetCachedAssignments.mockResolvedValue([]);
+
+    renderOfflinePanel();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('empty-state')).toBeInTheDocument();
+    });
+    // Error state must NOT be shown on a cold-cache offline scenario.
+    expect(screen.queryByTestId('assignments-error')).not.toBeInTheDocument();
   });
 });

@@ -23,6 +23,8 @@ import type { Assignment } from '@studyhall/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../auth/api';
 import { ErrorState } from '../components/states/ErrorState';
+import { getCachedAssignments, putCachedAssignments } from '../features/sync/cache';
+import { db } from '../features/sync/db';
 import { AssignmentCard } from './AssignmentCard';
 import { AssignmentForm } from './AssignmentForm';
 import { useServers } from './ServerContext';
@@ -120,10 +122,35 @@ export function AssignmentsPanel({ onClose }: Props) {
         );
         setAssignments(sorted);
         setLoadStatus('loaded');
+        // Write-through: persist to offline cache so the list is available when offline.
+        if (db) {
+          void putCachedAssignments(db, serverId, list);
+        }
       })
       .catch(() => {
         if (!mounted.current) return;
-        setLoadStatus('error');
+        // Offline fallback — serve the last-known assignment list from cache.
+        if (db) {
+          getCachedAssignments(db, serverId)
+            .then((cached) => {
+              if (!mounted.current) return;
+              if (cached.length > 0) {
+                const sorted = [...cached].sort(
+                  (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
+                );
+                setAssignments(sorted);
+                setLoadStatus('loaded');
+              } else {
+                setLoadStatus('loaded');
+              }
+            })
+            .catch(() => {
+              if (!mounted.current) return;
+              setLoadStatus('error');
+            });
+        } else {
+          setLoadStatus('error');
+        }
       });
   }, [serverId]);
 
