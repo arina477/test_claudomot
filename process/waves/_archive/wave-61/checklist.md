@@ -60,6 +60,6 @@ LEARN:
 - [x] L-2 Distill (874bd233 done; 5 obs; PROMOTE-ZERO — P-0 REFRAME confirmed-by-application of PRODUCT rules #1/#2)
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers (STOCKOUT → daily-checkpoint → founder; head-next APPROVED)
+- [x] N-2 Seed (queue-exhausted; 999a14d1 do-not-drain excluded; head-next APPROVED)
+- [x] N-3 Handoff (wave-61 closed + archived; measured pause → STATUS: BLOCKED)
