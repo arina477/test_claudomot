@@ -24,16 +24,16 @@ a founder answer to the M9 flag before framing.
 -->
 
 PRODUCT:
-- [ ] P-0 Frame (discover + reframe)
-- [ ] P-1 Decompose
-- [ ] P-2 Spec
-- [ ] P-3 Plan
-- [ ] P-4 Gate
+- [x] P-0 Frame (discover + reframe)
+- [x] P-1 Decompose
+- [x] P-2 Spec
+- [x] P-3 Plan
+- [x] P-4 Gate
 
 DESIGN (evaluate design_gap_flag at P-0; likely SKIP — test-only wave):
-- [ ] D-1 Brief
-- [ ] D-2 Variants (with bounded iteration)
-- [ ] D-3 Review & adopt
+- [~] D-1 Brief
+- [~] D-2 Variants (with bounded iteration)
+- [~] D-3 Review & adopt
 
 BUILD:
 - [ ] B-0 Branch & schema
