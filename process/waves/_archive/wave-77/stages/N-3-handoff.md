@@ -5,7 +5,7 @@ n_stage_verdict: COMPLETE
 verdict_evidence:
   - "next wave: 78"
   - "next wave checklist: process/waves/wave-78/checklist.md"
-  - "archive commit: TBD (chore: N-3 archive wave-77)"
+  - "archive commit: ba03270 (chore: N-3 archive wave-77)"
 prev_wave: 77
 next_wave: 78
 loop_state: ready
