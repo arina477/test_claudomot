@@ -50,10 +50,11 @@ type FetchState =
   | { kind: 'loading' }
   | { kind: 'loaded'; profile: PublicProfile }
   | { kind: 'hidden' }
-  // Client-observable transport failure (network / timeout / 5xx). DISTINCT from
-  // 'hidden': this reads as "couldn't load — try again" and offers a retry.
-  // Derived ONLY from the HTTP status / transport outcome — no server signal of
-  // WHY a profile is hidden (a 404 is always the uniform 'hidden' anti-oracle).
+  // Client-observable transport failure ONLY (network / timeout / 5xx). DISTINCT
+  // from 'hidden': this reads as "couldn't load — try again" and offers a retry.
+  // FAIL-CLOSED allowlist — reachable only for a non-HttpError throw or a 5xx;
+  // every other HttpError status collapses to the uniform 'hidden' anti-oracle,
+  // so no server signal of WHY a profile is hidden can leak through this state.
   | { kind: 'error' };
 
 type Props = {
@@ -183,15 +184,21 @@ export function MemberProfileCard({
   const [attempt, setAttempt] = useState(0);
   const handleRetry = useCallback(() => setAttempt((n) => n + 1), []);
 
-  // Fetch the public profile. The catch branches CLIENT-SIDE on the error:
-  //   - HttpError status 404 → the uniform 'hidden' anti-oracle (wave-77). This
-  //     is byte-identical across every non-visible cause (hidden / blocked /
-  //     soft-deleted / nonexistent) so a probing stranger cannot learn WHY.
-  //   - anything else (network throw, timeout, or a 5xx HttpError) → 'error', a
-  //     DISTINCT retryable state. A 5xx is transport-failure, NOT hidden.
-  //   - 401 keeps existing behaviour (falls through to the retryable state; the
-  //     card is only opened from an authed shell, so a 401 here is transport-ish).
-  // No new server field: the distinction is derived only from status/transport.
+  // Fetch the public profile. The catch branches CLIENT-SIDE on the error,
+  // FAIL-CLOSED: the retryable 'error' state is an ALLOWLIST (transport-only),
+  // 'hidden' is the safe default for every other outcome.
+  //   - NON-HttpError throw (network / timeout / transport failure) → 'error',
+  //     a DISTINCT retryable state.
+  //   - HttpError status >= 500 (server error) → 'error' (transport-ish; retry).
+  //   - EVERY other HttpError status (401 / 403 / 404 / 410 / 429 / …) → the
+  //     uniform 'hidden' anti-oracle (wave-77). This is byte-identical across
+  //     every non-visible cause (hidden / blocked / soft-deleted / nonexistent /
+  //     unauthorized) so a probing stranger cannot learn WHY a profile is hidden.
+  // Today the server returns a uniform 404 for every hidden cause, so this is
+  // not exploitable now — but routing all non-5xx statuses to 'hidden' means a
+  // future target-specific status (e.g. a 403 "you're blocked") degrades to the
+  // safe uniform state instead of becoming a privacy oracle. No new server
+  // field: the distinction is derived only from status / transport.
   // biome-ignore lint/correctness/useExhaustiveDependencies: `attempt` is a deliberate dep — the effect body never reads it; bumping it via handleRetry is the re-trigger mechanism that re-runs this fetch for a manual retry.
   useEffect(() => {
     let cancelled = false;
@@ -203,10 +210,12 @@ export function MemberProfileCard({
       })
       .catch((err) => {
         if (cancelled) return;
-        if (err instanceof HttpError && err.status === 404) {
-          setState({ kind: 'hidden' });
-        } else {
+        // Retryable ONLY for a transport failure: a non-HttpError throw, or a
+        // 5xx server error. Every other HttpError status → the safe 'hidden'.
+        if (!(err instanceof HttpError) || err.status >= 500) {
           setState({ kind: 'error' });
+        } else {
+          setState({ kind: 'hidden' });
         }
       });
     return () => {

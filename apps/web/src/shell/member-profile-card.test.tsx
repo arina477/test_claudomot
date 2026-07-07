@@ -181,6 +181,22 @@ describe('MemberProfileCard — opened from MemberListPanel', () => {
     expect(screen.queryByText(/couldn't load/i)).not.toBeInTheDocument();
   });
 
+  it('HIDDEN (fail-closed anti-oracle): a 403 collapses to the byte-identical hidden state, NO retry', async () => {
+    // The fail-closed default: the retryable 'error' state is an ALLOWLIST
+    // (non-HttpError throw OR 5xx). Every other HttpError status — here a 403
+    // "you're blocked" the server does NOT emit today — must degrade to the
+    // uniform 'hidden' state, never a target-specific retryable oracle. Guards
+    // against a future server status leaking WHY a profile is hidden.
+    mockApi.getPublicProfile.mockRejectedValue(new HttpError(403, '403 Forbidden'));
+    await openCard([makeMember()]);
+    expect(await screen.findByText('Profile Unavailable')).toBeInTheDocument();
+    expect(screen.getByText(/hidden due to visibility settings/i)).toBeInTheDocument();
+    // No retry affordance, and it never reads as a transient error.
+    expect(screen.queryByTestId('member-card-retry')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /try again/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/couldn't load/i)).not.toBeInTheDocument();
+  });
+
   it('ERROR: a network/transport failure → a DISTINCT retryable state WITH a retry button', async () => {
     // A non-HttpError throw is how api.ts surfaces a network/transport failure.
     mockApi.getPublicProfile.mockRejectedValue(new TypeError('Failed to fetch'));
