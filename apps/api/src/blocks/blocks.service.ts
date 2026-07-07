@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import type { Block } from '@studyhall/shared';
+import type { Block, BlockListItem } from '@studyhall/shared';
 import { and, eq, or } from 'drizzle-orm';
 import { db } from '../db/index';
 import { userBlocks, users } from '../db/schema/index';
@@ -17,8 +17,12 @@ import { userBlocks, users } from '../db/schema/index';
 //     DELETE (blocker, blocked). Not-blocked → idempotent no-op (204 upstream).
 //
 //   listBlocks(blockerUserId)
-//     SELECT WHERE blocker_id = blockerUserId (own list only — no IDOR).
-//     Returns Block[].
+//     LEFT JOIN from user_blocks to users on blocked_id = users.id.
+//     Projects display_name / username / avatar_url alongside block row.
+//     LEFT (not INNER) JOIN: a block whose blocked user row is missing
+//     (deleted account — currently unreachable via FK cascade, but defensive)
+//     still appears in the list with displayName 'Unknown user'.
+//     Returns BlockListItem[] (enriched — includes blockedUser nested object).
 //
 //   isBlockedBetween(userA, userB): Promise<boolean>
 //     True if EITHER (A blocks B) OR (B blocks A). The bidirectional predicate
@@ -34,6 +38,7 @@ import { userBlocks, users } from '../db/schema/index';
 // Deferred (not in scope): bulk-block, block analytics, admin block-by-server.
 // ---------------------------------------------------------------------------
 
+// rowToDto — bare Block DTO (used by createBlock, conflict-path fetch).
 function rowToDto(row: {
   id: string;
   blocker_id: string;
@@ -45,6 +50,35 @@ function rowToDto(row: {
     blocker_id: row.blocker_id,
     blocked_id: row.blocked_id,
     created_at: row.created_at.toISOString(),
+  };
+}
+
+// rowToListItemDto — enriched BlockListItem DTO (used by listBlocks).
+//
+// The users join is a LEFT JOIN, so display_name / username / avatar_url may
+// be null when the blocked user row is missing (defensive — FK makes this
+// unreachable in practice). displayName falls back:
+//   display_name → username → 'Unknown user'
+function rowToListItemDto(row: {
+  id: string;
+  blocker_id: string;
+  blocked_id: string;
+  created_at: Date;
+  display_name: string | null;
+  username: string | null;
+  avatar_url: string | null;
+}): BlockListItem {
+  return {
+    id: row.id,
+    blocker_id: row.blocker_id,
+    blocked_id: row.blocked_id,
+    created_at: row.created_at.toISOString(),
+    blockedUser: {
+      userId: row.blocked_id,
+      displayName: row.display_name ?? row.username ?? 'Unknown user',
+      username: row.username ?? null,
+      avatarUrl: row.avatar_url ?? null,
+    },
   };
 }
 
@@ -132,12 +166,28 @@ export class BlocksService {
   //
   // Returns all blocks WHERE blocker_id = blockerUserId (own list only).
   // Uses the blocker_id index (user_blocks_blocker_idx).
+  //
+  // wave-71 enrichment: LEFT JOIN to users on blocked_id = users.id to
+  // project display_name / username / avatar_url. LEFT (not INNER) so a block
+  // whose blocked user row is missing still appears (with fallback displayName).
   // -------------------------------------------------------------------------
 
-  async listBlocks(blockerUserId: string): Promise<Block[]> {
-    const rows = await db.select().from(userBlocks).where(eq(userBlocks.blocker_id, blockerUserId));
+  async listBlocks(blockerUserId: string): Promise<BlockListItem[]> {
+    const rows = await db
+      .select({
+        id: userBlocks.id,
+        blocker_id: userBlocks.blocker_id,
+        blocked_id: userBlocks.blocked_id,
+        created_at: userBlocks.created_at,
+        display_name: users.display_name,
+        username: users.username,
+        avatar_url: users.avatar_url,
+      })
+      .from(userBlocks)
+      .leftJoin(users, eq(userBlocks.blocked_id, users.id))
+      .where(eq(userBlocks.blocker_id, blockerUserId));
 
-    return rows.map(rowToDto);
+    return rows.map(rowToListItemDto);
   }
 
   // -------------------------------------------------------------------------

@@ -4,7 +4,8 @@
  * Design canonical: design/block-ui.html (D-3 APPROVED wave-70) — left pane.
  *
  * Behaviour:
- *   - GET /blocks on mount → list or empty state ("You haven't blocked anyone").
+ *   - Shared useBlocks hook supplies enriched BlockListItem[] (wave-71:
+ *     each item carries blockedUser.{displayName, username, avatarUrl}).
  *   - Loading state: shimmer skeleton rows (DESIGN-SYSTEM §114 — shimmer, not spinner).
  *   - Each row: avatar initials + name + username + inline "Unblock" ghost button.
  *   - Inline Unblock: DELETE /blocks/:blocked_id → row removed optimistically.
@@ -19,10 +20,10 @@
  * Tokens: DESIGN-SYSTEM.md only.
  */
 
-import type { Block } from '@studyhall/shared';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { api } from '../auth/api';
+import type { BlockListItem } from '@studyhall/shared';
+import { useCallback, useState } from 'react';
 import { ProhibitIcon, SpinnerIcon, WarningCircleIcon } from './icons';
+import { useBlocks } from './useBlocks';
 
 // ---------------------------------------------------------------------------
 // Toast
@@ -35,6 +36,8 @@ type ToastMessage = {
   kind: ToastKind;
   text: string;
 };
+
+import { useEffect } from 'react';
 
 function Toast({ toast, onGone }: { toast: ToastMessage; onGone: (id: string) => void }) {
   useEffect(() => {
@@ -95,11 +98,8 @@ function SkeletonRow() {
 // ---------------------------------------------------------------------------
 
 type BlockedUserRowProps = {
-  block: Block;
-  displayName: string;
-  username: string;
-  avatarUrl: string | null;
-  onUnblock: (blockedId: string) => Promise<void>;
+  item: BlockListItem;
+  onUnblock: (blockedId: string, displayName: string) => Promise<void>;
 };
 
 function getInitials(name: string): string {
@@ -110,26 +110,21 @@ function getInitials(name: string): string {
   return name.slice(0, 2).toUpperCase() || '?';
 }
 
-function BlockedUserRow({
-  block,
-  displayName,
-  username,
-  avatarUrl,
-  onUnblock,
-}: BlockedUserRowProps) {
+function BlockedUserRow({ item, onUnblock }: BlockedUserRowProps) {
   const [busy, setBusy] = useState(false);
+  const { displayName, username, avatarUrl } = item.blockedUser;
 
   async function handleUnblock() {
     if (busy) return;
     setBusy(true);
-    await onUnblock(block.blocked_id);
+    await onUnblock(item.blocked_id, displayName);
     // If it fails onUnblock will handle error; if success the row is removed by parent
     setBusy(false);
   }
 
   return (
     <li
-      data-testid={`blocked-row-${block.blocked_id}`}
+      data-testid={`blocked-row-${item.blocked_id}`}
       className="group flex flex-col sm:flex-row sm:items-center justify-between p-2 sm:p-3 rounded-md transition-colors duration-150 gap-3 sm:gap-0"
       style={{ border: '1px solid transparent' }}
       onMouseEnter={(e) => {
@@ -169,6 +164,7 @@ function BlockedUserRow({
           <span
             className="text-sm font-medium leading-tight"
             style={{ color: 'rgba(255,255,255,0.92)' }}
+            data-testid={`blocked-name-${item.blocked_id}`}
           >
             {displayName}
           </span>
@@ -187,7 +183,7 @@ function BlockedUserRow({
       <button
         type="button"
         aria-label={`Unblock ${displayName}`}
-        data-testid={`unblock-btn-${block.blocked_id}`}
+        data-testid={`unblock-btn-${item.blocked_id}`}
         onClick={() => void handleUnblock()}
         disabled={busy}
         className="flex items-center justify-center gap-2 rounded-md text-sm font-medium transition-all duration-150 active:scale-[0.98] self-start sm:self-auto"
@@ -229,79 +225,33 @@ function BlockedUserRow({
 // BlockedUsersPanel
 // ---------------------------------------------------------------------------
 
-/** Minimal shape the panel needs. displayName/username come from the member
- *  API or are inlined with the block row. Since the backend returns only
- *  block rows (blocker_id/blocked_id/created_at), we use blocked_id as the
- *  display name fallback until a richer endpoint is available. */
-type BlockRow = Block & {
-  displayName: string;
-  username: string;
-  avatarUrl: string | null;
-};
-
 export function BlockedUsersPanel() {
-  const [rows, setRows] = useState<BlockRow[]>([]);
-  const [loadStatus, setLoadStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
+  const { blocks, loading, error, refetch, unblockUser } = useBlocks();
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const mountedRef = useRef(true);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  const load = useCallback(() => {
-    setLoadStatus('loading');
-    api
-      .getBlocks()
-      .then((blocks) => {
-        if (!mountedRef.current) return;
-        // Map Block → BlockRow with display name fallback
-        setRows(
-          blocks.map((b) => ({
-            ...b,
-            displayName: b.blocked_id,
-            username: '',
-            avatarUrl: null,
-          })),
-        );
-        setLoadStatus('loaded');
-      })
-      .catch(() => {
-        if (!mountedRef.current) return;
-        setLoadStatus('error');
-      });
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
 
   function removeToast(id: string) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }
 
   const handleUnblock = useCallback(
-    async (blockedId: string) => {
-      // Optimistic: remove immediately
-      setRows((prev) => prev.filter((r) => r.blocked_id !== blockedId));
+    async (blockedId: string, displayName: string) => {
       const pushToast = (text: string, kind: ToastKind) => {
         const id = `${Date.now()}-${Math.random()}`;
         setToasts((prev) => [...prev, { id, kind, text }]);
       };
       try {
-        await api.unblockUser(blockedId);
-        pushToast('User unblocked.', 'default');
+        await unblockUser(blockedId);
+        pushToast(`${displayName} unblocked.`, 'default');
       } catch {
-        // Restore row on failure — re-fetch to get consistent state
-        load();
+        // useBlocks already restored state via re-fetch on failure
         pushToast('Failed to unblock user. Please try again.', 'error');
       }
     },
-    [load],
+    [unblockUser],
   );
+
+  // Derive loadStatus for rendering branches
+  const loadStatus = loading ? 'loading' : error ? 'error' : 'loaded';
 
   return (
     <section
@@ -372,7 +322,7 @@ export function BlockedUsersPanel() {
             </p>
             <button
               type="button"
-              onClick={load}
+              onClick={refetch}
               className="mt-3 rounded-md px-3 py-1.5 text-xs font-medium transition-colors"
               style={{ backgroundColor: '#27272a', color: 'rgba(255,255,255,0.92)' }}
             >
@@ -382,7 +332,7 @@ export function BlockedUsersPanel() {
         )}
 
         {/* Empty state */}
-        {loadStatus === 'loaded' && rows.length === 0 && (
+        {loadStatus === 'loaded' && blocks.length === 0 && (
           <div
             className="flex flex-col items-center justify-center py-12 text-center"
             data-testid="blocked-users-empty"
@@ -406,21 +356,14 @@ export function BlockedUsersPanel() {
         )}
 
         {/* Populated list */}
-        {loadStatus === 'loaded' && rows.length > 0 && (
+        {loadStatus === 'loaded' && blocks.length > 0 && (
           <ul
             className="flex flex-col gap-1"
             data-testid="blocked-users-list"
             style={{ listStyle: 'none', padding: 0, margin: 0 }}
           >
-            {rows.map((row) => (
-              <BlockedUserRow
-                key={row.blocked_id}
-                block={row}
-                displayName={row.displayName}
-                username={row.username}
-                avatarUrl={row.avatarUrl}
-                onUnblock={handleUnblock}
-              />
+            {blocks.map((item) => (
+              <BlockedUserRow key={item.blocked_id} item={item} onUnblock={handleUnblock} />
             ))}
           </ul>
         )}

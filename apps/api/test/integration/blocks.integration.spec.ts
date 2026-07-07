@@ -29,6 +29,14 @@
  *    18. listMessages: A blocks B → A gets 403 on message list for their 1:1 DM.
  *    19. listMessages: A blocks B → B gets 403 on message list for their 1:1 DM.
  *
+ *   listBlocks enrichment (wave-71 FINDING-2 fix):
+ *    20. listBlocks: each item carries blockedUser.{userId, displayName, username, avatarUrl};
+ *        displayName is the real display_name, NOT the raw UUID.
+ *    21. listBlocks: blocked user has no display_name → displayName falls back to username.
+ *    22. listBlocks: blocked user has neither display_name nor username → displayName is
+ *        'Unknown user' (LEFT JOIN fallback — unreachable via FK in production, covered
+ *        structurally; simulated via direct harnessQuery DELETE of the user row after block).
+ *
  * CF-2 (LOAD-BEARING): pg-harness MUST be the first import.
  */
 // CF-2 side-effect import: sets process.env.DATABASE_URL = DATABASE_URL_TEST
@@ -369,6 +377,82 @@ describe.skipIf(SKIP)('Blocks + DM HIDE — real-Postgres (wave-70 M14)', () => 
     await blocksService.createBlock(USER_A, USER_B);
 
     await expect(dmService.listMessages(convId, USER_B)).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  // -----------------------------------------------------------------------
+  // 20. listBlocks enrichment: blockedUser.displayName is the real display_name,
+  //     NOT the raw UUID.
+  // -----------------------------------------------------------------------
+  it('20. listBlocks: each item carries blockedUser display fields; displayName is real display_name not UUID', async () => {
+    // Give USER_B a display_name and avatar_url via direct UPDATE
+    await harnessQuery('UPDATE users SET display_name = $1, avatar_url = $2 WHERE id = $3', [
+      'Bob Blocked',
+      'https://cdn.example.com/bob.png',
+      USER_B,
+    ]);
+
+    await blocksService.createBlock(USER_A, USER_B);
+    const items = await blocksService.listBlocks(USER_A);
+
+    expect(items).toHaveLength(1);
+    const item = items[0];
+    expect(item).toBeDefined();
+
+    // Bare block fields still present
+    expect(item?.blocker_id).toBe(USER_A);
+    expect(item?.blocked_id).toBe(USER_B);
+    expect(item?.id).toBeTruthy();
+    expect(item?.created_at).toBeTruthy();
+
+    // Enriched blockedUser — displayName must be the real name, never the UUID
+    expect(item?.blockedUser.userId).toBe(USER_B);
+    expect(item?.blockedUser.displayName).toBe('Bob Blocked');
+    expect(item?.blockedUser.displayName).not.toBe(USER_B); // never a raw UUID
+    expect(item?.blockedUser.username).toBe('user-b'); // seeded in beforeEach
+    expect(item?.blockedUser.avatarUrl).toBe('https://cdn.example.com/bob.png');
+  });
+
+  // -----------------------------------------------------------------------
+  // 21. listBlocks enrichment: no display_name → displayName falls back to username.
+  // -----------------------------------------------------------------------
+  it('21. listBlocks: no display_name → displayName falls back to username', async () => {
+    // USER_B is seeded with username 'user-b' and no display_name (beforeEach default)
+    await blocksService.createBlock(USER_A, USER_B);
+    const items = await blocksService.listBlocks(USER_A);
+
+    expect(items).toHaveLength(1);
+    const item = items[0];
+    expect(item?.blockedUser.displayName).toBe('user-b');
+    expect(item?.blockedUser.username).toBe('user-b');
+    expect(item?.blockedUser.avatarUrl).toBeNull();
+  });
+
+  // -----------------------------------------------------------------------
+  // 22. listBlocks enrichment: 'Unknown user' fallback when both display_name
+  //     and username are NULL on the joined user row.
+  //
+  // The truly "missing row" case (LEFT JOIN producing all-NULL columns) is
+  // unreachable in production because the blocked_id FK prevents orphan block
+  // rows; the LEFT JOIN is a defensive structural guarantee. Here we exercise
+  // the identical code path — display_name NULL + username NULL → 'Unknown user'
+  // — by clearing both columns on the blocked user via a direct UPDATE.
+  // -----------------------------------------------------------------------
+  it('22. listBlocks: display_name NULL + username NULL → displayName is "Unknown user"', async () => {
+    // Clear both nullable display fields on USER_B
+    await harnessQuery('UPDATE users SET display_name = NULL, username = NULL WHERE id = $1', [
+      USER_B,
+    ]);
+
+    await blocksService.createBlock(USER_A, USER_B);
+    const items = await blocksService.listBlocks(USER_A);
+
+    expect(items).toHaveLength(1);
+    const item = items[0];
+    expect(item?.blocked_id).toBe(USER_B);
+    expect(item?.blockedUser.userId).toBe(USER_B);
+    expect(item?.blockedUser.displayName).toBe('Unknown user');
+    expect(item?.blockedUser.username).toBeNull();
+    expect(item?.blockedUser.avatarUrl).toBeNull();
   });
 });
 

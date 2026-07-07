@@ -17,9 +17,20 @@
  *     which buttons appear on which rows.
  */
 
-import type { Block, ServerMember } from '@studyhall/shared';
+import type { BlockListItem, ServerMember } from '@studyhall/shared';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+// ---------------------------------------------------------------------------
+// useBlocks mock — controls shared blocks store
+// ---------------------------------------------------------------------------
+
+const mockUseBlocks = vi.fn();
+
+vi.mock('./useBlocks', () => ({
+  useBlocks: () => mockUseBlocks(),
+  _resetBlocksStore: vi.fn(),
+}));
 
 // ---------------------------------------------------------------------------
 // API mock
@@ -96,13 +107,33 @@ function makeSelfMember(overrides: Partial<ServerMember> = {}): ServerMember {
   };
 }
 
-function makeBlock(overrides: Partial<Block> = {}): Block {
+/** Enriched block item (wave-71) — carries blockedUser display fields. */
+function makeBlockListItem(overrides: Partial<BlockListItem> = {}): BlockListItem {
   return {
     id: 'blk-1',
     blocker_id: SELF_USER_ID,
     blocked_id: BLOCKED_USER_ID,
     created_at: new Date().toISOString(),
+    blockedUser: {
+      userId: BLOCKED_USER_ID,
+      displayName: 'Blocked User',
+      username: 'blockeduser',
+      avatarUrl: null,
+    },
     ...overrides,
+  };
+}
+
+// Default useBlocks return value — no blocks, not loading
+function makeEmptyBlocksHook() {
+  return {
+    blocks: [] as BlockListItem[],
+    blockedSet: new Set<string>(),
+    loading: false,
+    error: false,
+    refetch: vi.fn(),
+    blockUser: vi.fn(),
+    unblockUser: vi.fn(),
   };
 }
 
@@ -112,6 +143,8 @@ function makeBlock(overrides: Partial<Block> = {}): Block {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Default: no blocks loaded for every test
+  mockUseBlocks.mockReturnValue(makeEmptyBlocksHook());
 });
 
 // ---------------------------------------------------------------------------
@@ -163,7 +196,9 @@ describe('Block affordance + BlockConfirmDialog via MemberListPanel', () => {
   });
 
   it('calls blockUser with correct userId after confirming', async () => {
-    mockApi.blockUser.mockResolvedValue(makeBlock());
+    // Dialog now calls useBlocks().blockUser (the store), not api.blockUser directly.
+    const blockUserFn = vi.fn().mockResolvedValue(undefined);
+    mockUseBlocks.mockReturnValue({ ...makeEmptyBlocksHook(), blockUser: blockUserFn });
     renderMemberPanel([makeMember()], SELF_USER_ID);
     await screen.findByText('Alice Doe');
 
@@ -174,7 +209,7 @@ describe('Block affordance + BlockConfirmDialog via MemberListPanel', () => {
       fireEvent.click(screen.getByTestId('block-dialog-confirm'));
     });
 
-    expect(mockApi.blockUser).toHaveBeenCalledWith(OTHER_USER_ID);
+    expect(blockUserFn).toHaveBeenCalledWith(OTHER_USER_ID);
 
     // Success toast shown
     await waitFor(() => {
@@ -183,7 +218,9 @@ describe('Block affordance + BlockConfirmDialog via MemberListPanel', () => {
   });
 
   it('keeps dialog open and shows error toast when blockUser fails', async () => {
-    mockApi.blockUser.mockRejectedValue(new Error('500 error'));
+    // Dialog now calls useBlocks().blockUser (the store), not api.blockUser directly.
+    const blockUserFn = vi.fn().mockRejectedValue(new Error('500 error'));
+    mockUseBlocks.mockReturnValue({ ...makeEmptyBlocksHook(), blockUser: blockUserFn });
     renderMemberPanel([makeMember()], SELF_USER_ID);
     await screen.findByText('Alice Doe');
 
@@ -209,7 +246,9 @@ describe('Block affordance + BlockConfirmDialog via MemberListPanel', () => {
 
 describe('BlockConfirmDialog — double-submit prevention', () => {
   it('disables confirm button while submitting', async () => {
-    mockApi.blockUser.mockReturnValue(new Promise(() => {})); // never resolves
+    // Dialog now calls useBlocks().blockUser (the store), not api.blockUser directly.
+    const blockUserFn = vi.fn().mockReturnValue(new Promise(() => {})); // never resolves
+    mockUseBlocks.mockReturnValue({ ...makeEmptyBlocksHook(), blockUser: blockUserFn });
     renderMemberPanel([makeMember()], SELF_USER_ID);
     await screen.findByText('Alice Doe');
 
@@ -232,14 +271,19 @@ describe('BlockConfirmDialog — double-submit prevention', () => {
 
 describe('BlockedUsersPanel — GET + render + inline unblock', () => {
   it('renders loading skeleton then blocked user rows', async () => {
-    mockApi.getBlocks.mockResolvedValue([makeBlock()]);
+    // Loading state: start with loading=true then flip to loaded
+    mockUseBlocks
+      .mockReturnValueOnce({ ...makeEmptyBlocksHook(), loading: true })
+      .mockReturnValue({ ...makeEmptyBlocksHook(), blocks: [makeBlockListItem()], loading: false });
 
-    render(<BlockedUsersPanel />);
+    const { rerender } = render(<BlockedUsersPanel />);
 
     // Loading state visible initially
     expect(screen.getByTestId('blocked-users-loading')).toBeInTheDocument();
 
-    // After load, list renders
+    // Rerender with loaded state
+    rerender(<BlockedUsersPanel />);
+
     await waitFor(() => {
       expect(screen.getByTestId('blocked-users-list')).toBeInTheDocument();
     });
@@ -249,7 +293,7 @@ describe('BlockedUsersPanel — GET + render + inline unblock', () => {
   });
 
   it('shows empty state when block list is empty', async () => {
-    mockApi.getBlocks.mockResolvedValue([]);
+    mockUseBlocks.mockReturnValue({ ...makeEmptyBlocksHook(), blocks: [], loading: false });
 
     render(<BlockedUsersPanel />);
     await waitFor(() => {
@@ -259,10 +303,18 @@ describe('BlockedUsersPanel — GET + render + inline unblock', () => {
   });
 
   it('inline unblock calls unblockUser and removes row', async () => {
-    mockApi.getBlocks.mockResolvedValue([makeBlock()]);
-    mockApi.unblockUser.mockResolvedValue(undefined);
+    const unblockFn = vi.fn().mockImplementation(async () => {
+      // Simulate optimistic removal by updating the mock return
+      mockUseBlocks.mockReturnValue({ ...makeEmptyBlocksHook(), blocks: [], loading: false });
+    });
+    mockUseBlocks.mockReturnValue({
+      ...makeEmptyBlocksHook(),
+      blocks: [makeBlockListItem()],
+      loading: false,
+      unblockUser: unblockFn,
+    });
 
-    render(<BlockedUsersPanel />);
+    const { rerender } = render(<BlockedUsersPanel />);
     await waitFor(() => {
       expect(screen.getByTestId(`unblock-btn-${BLOCKED_USER_ID}`)).toBeInTheDocument();
     });
@@ -271,7 +323,10 @@ describe('BlockedUsersPanel — GET + render + inline unblock', () => {
       fireEvent.click(screen.getByTestId(`unblock-btn-${BLOCKED_USER_ID}`));
     });
 
-    expect(mockApi.unblockUser).toHaveBeenCalledWith(BLOCKED_USER_ID);
+    expect(unblockFn).toHaveBeenCalledWith(BLOCKED_USER_ID);
+
+    // Rerender to apply the updated mock return (row now gone)
+    rerender(<BlockedUsersPanel />);
 
     // Row removed
     await waitFor(() => {
@@ -320,10 +375,13 @@ describe('MemberListPanel — own-row Report + Block suppressed', () => {
 
 describe('BlockedUsersPanel — unblock failure keeps row', () => {
   it('row stays in DOM and shows error toast when unblockUser fails', async () => {
-    mockApi.getBlocks
-      .mockResolvedValueOnce([makeBlock()]) // initial load
-      .mockResolvedValue([]); // reload after failure (empty — just for test isolation)
-    mockApi.unblockUser.mockRejectedValue(new Error('network error'));
+    const unblockFn = vi.fn().mockRejectedValue(new Error('network error'));
+    mockUseBlocks.mockReturnValue({
+      ...makeEmptyBlocksHook(),
+      blocks: [makeBlockListItem()],
+      loading: false,
+      unblockUser: unblockFn,
+    });
 
     render(<BlockedUsersPanel />);
     await waitFor(() => {
@@ -334,7 +392,10 @@ describe('BlockedUsersPanel — unblock failure keeps row', () => {
       fireEvent.click(screen.getByTestId(`unblock-btn-${BLOCKED_USER_ID}`));
     });
 
-    expect(mockApi.unblockUser).toHaveBeenCalledWith(BLOCKED_USER_ID);
+    expect(unblockFn).toHaveBeenCalledWith(BLOCKED_USER_ID);
+
+    // Row stays in DOM (useBlocks mock state didn't change on failure)
+    expect(screen.getByTestId(`blocked-row-${BLOCKED_USER_ID}`)).toBeInTheDocument();
 
     // Error toast
     await waitFor(() => {

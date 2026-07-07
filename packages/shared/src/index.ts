@@ -261,8 +261,20 @@ export type { CreateReport, Report, ResolveReport } from './reports.js';
 export { AccountDataResponseSchema } from './account-data.js';
 export type { AccountDataResponse } from './account-data.js';
 
-export { CreateBlockSchema, BlockSchema, BlockListResponseSchema } from './blocks.js';
-export type { CreateBlock, Block, BlockListResponse } from './blocks.js';
+export {
+  CreateBlockSchema,
+  BlockSchema,
+  BlockedUserDisplaySchema,
+  BlockListItemSchema,
+  BlockListResponseSchema,
+} from './blocks.js';
+export type {
+  CreateBlock,
+  Block,
+  BlockedUserDisplay,
+  BlockListItem,
+  BlockListResponse,
+} from './blocks.js';
 
 export {
   NOTIFICATION_TYPES,

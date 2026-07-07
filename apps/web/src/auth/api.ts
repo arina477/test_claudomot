@@ -16,6 +16,7 @@ import type {
   AttachmentPresignResponse,
   AvatarPresignResponse,
   Block,
+  BlockListItem,
   CreateAssignmentInput,
   CreateReport,
   CreateScheduledSessionInput,
@@ -975,12 +976,13 @@ export const api = {
     requestNoContent(`/blocks/${blockedUserId}`, { method: 'DELETE' }),
 
   /**
-   * GET /blocks → { blocks: Block[] }.
-   * Returns the caller's block list (blocks they initiated).
+   * GET /blocks → { blocks: BlockListItem[] }.
+   * Returns the caller's block list (blocks they initiated), enriched with
+   * blockedUser display fields (displayName, username, avatarUrl).
    * Throws: 401 unauthed.
    */
-  getBlocks: (): Promise<Block[]> =>
-    request<{ blocks: Block[] }>('/blocks').then((res) => res.blocks),
+  getBlocks: (): Promise<BlockListItem[]> =>
+    request<{ blocks: BlockListItem[] }>('/blocks').then((res) => res.blocks),
 
   exportAccountData: async (): Promise<void> => {
     const res = await fetch(`${BASE}/profile/data/export`, { credentials: 'include' });
