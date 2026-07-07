@@ -118,4 +118,38 @@ describe('ProfilePage — academic identity editor', () => {
     expect(refresh).toHaveBeenCalled();
     expect(await screen.findByText('Academic identity saved.')).toBeInTheDocument();
   });
+
+  it('selecting the empty role option + Save clears the role via PATCH academicRole:null', async () => {
+    // Loads with a real role, then the user picks "Not specified" and saves.
+    mockApi.getProfile.mockResolvedValue(makeProfile({ academicRole: 'student' }));
+    mockApi.patchProfile.mockImplementation(async (data: Record<string, unknown>) =>
+      // Server coerces '' → null and persists null (B-2). Reflect that.
+      makeProfile({ ...(data as Partial<ProfileResponse>), academicRole: null }),
+    );
+    renderPage();
+
+    const role = (await screen.findByLabelText('Academic role')) as HTMLSelectElement;
+    expect(role.value).toBe('student');
+    await act(async () => {
+      fireEvent.change(role, { target: { value: '' } });
+    });
+
+    const saveBtn = screen.getByRole('button', { name: /save academic identity/i });
+    await act(async () => {
+      fireEvent.click(saveBtn);
+    });
+
+    await waitFor(() => {
+      expect(mockApi.patchProfile).toHaveBeenCalledTimes(1);
+    });
+    const payload = mockApi.patchProfile.mock.calls[0]?.[0];
+    // The clear must be an explicit null (contract also accepts '') — NOT omitted.
+    expect(payload).toHaveProperty('academicRole', null);
+
+    // UI reflects the cleared role after the save round-trips.
+    await waitFor(() => {
+      expect((screen.getByLabelText('Academic role') as HTMLSelectElement).value).toBe('');
+    });
+    expect(await screen.findByText('Academic identity saved.')).toBeInTheDocument();
+  });
 });

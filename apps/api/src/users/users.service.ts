@@ -68,7 +68,9 @@ export class UsersService {
       bio?: string | undefined;
       institution?: string | undefined;
       program?: string | undefined;
-      academicRole?: AcademicRole | undefined;
+      // wave-78 B-2 (task 4be3b084): null = clear (write SQL NULL); undefined = leave.
+      // Widened to match the shared UpdateProfile type (AcademicRole | null | undefined).
+      academicRole?: AcademicRole | null | undefined;
       academicYear?: string | undefined;
     },
   ): Promise<void> {
@@ -80,7 +82,8 @@ export class UsersService {
       bio: string;
       institution: string;
       program: string;
-      academic_role: string;
+      // wave-78 B-2: string | null so a cleared role writes SQL NULL.
+      academic_role: string | null;
       academic_year: string;
       updated_at: Date;
     }> = { updated_at: new Date() };
@@ -110,6 +113,8 @@ export class UsersService {
     if (fields.program !== undefined) {
       patch.program = fields.program;
     }
+    // wave-78 B-2: three-way — undefined stays filtered out (field absent → leave);
+    // null writes SQL NULL (cleared role); an enum string writes the string.
     if (fields.academicRole !== undefined) {
       patch.academic_role = fields.academicRole;
     }

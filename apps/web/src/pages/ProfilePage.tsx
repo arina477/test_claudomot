@@ -10,7 +10,12 @@
  * Display name field from wave-3 is preserved.
  */
 
-import { ACADEMIC_ROLES, type AcademicRole, type ProfileResponse } from '@studyhall/shared';
+import {
+  ACADEMIC_ROLES,
+  type AcademicRole,
+  type ProfileResponse,
+  type UpdateProfileInput,
+} from '@studyhall/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../auth/api';
@@ -344,14 +349,19 @@ export function ProfilePage() {
     setAcademicError('');
     setAcademicSuccess(false);
 
-    // Send every academic field (trimmed). Empty strings clear the field.
-    const payload = {
+    // Send every academic field (trimmed). Empty strings clear text fields.
+    // academicRole is always part of THIS form, so it is always sent: a real
+    // enum when one is picked, or null when the "Not specified" option is
+    // selected — which actively CLEARS the role (the contract coerces '' → null
+    // too, but we send null explicitly). Omitting it would mean "leave as-is",
+    // which is wrong here: the select IS the source of truth for this save.
+    const payload: UpdateProfileInput = {
       pronouns: pronouns.trim(),
       bio: bio.trim(),
       institution: institution.trim(),
       program: program.trim(),
       academicYear: academicYear.trim(),
-      ...(academicRole ? { academicRole } : {}),
+      academicRole: academicRole === '' ? null : academicRole,
     };
 
     try {

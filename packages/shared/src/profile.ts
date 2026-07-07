@@ -36,7 +36,10 @@ export const UpdateProfileSchema = z.object({
   bio: z.string().max(500).optional(),
   institution: z.string().max(120).optional(),
   program: z.string().max(120).optional(),
-  academicRole: z.enum(ACADEMIC_ROLES).optional(),
+  academicRole: z.preprocess(
+    (v) => (v === '' ? null : v),
+    z.enum(ACADEMIC_ROLES).nullable().optional(),
+  ),
   academicYear: z.string().max(40).optional(),
 });
 

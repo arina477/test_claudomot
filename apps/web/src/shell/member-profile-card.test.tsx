@@ -168,6 +168,81 @@ describe('MemberProfileCard — opened from MemberListPanel', () => {
     expect(screen.getByText(/hidden due to visibility settings/i)).toBeInTheDocument();
   });
 
+  it('HIDDEN (anti-oracle): the 404 state has NO retry affordance', async () => {
+    // Guards the wave-77 uniform-404 anti-oracle: the hidden state must stay
+    // byte-identical across every non-visible cause and must NOT offer a retry
+    // (a retry button would be an oracle distinguishing hidden from transient).
+    mockApi.getPublicProfile.mockRejectedValue(new HttpError(404, '404 Not Found'));
+    await openCard([makeMember()]);
+    expect(await screen.findByText('Profile Unavailable')).toBeInTheDocument();
+    expect(screen.queryByTestId('member-card-retry')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /try again/i })).not.toBeInTheDocument();
+    // And it never reads as a transient error.
+    expect(screen.queryByText(/couldn't load/i)).not.toBeInTheDocument();
+  });
+
+  it('HIDDEN (fail-closed anti-oracle): a 403 collapses to the byte-identical hidden state, NO retry', async () => {
+    // The fail-closed default: the retryable 'error' state is an ALLOWLIST
+    // (non-HttpError throw OR 5xx). Every other HttpError status — here a 403
+    // "you're blocked" the server does NOT emit today — must degrade to the
+    // uniform 'hidden' state, never a target-specific retryable oracle. Guards
+    // against a future server status leaking WHY a profile is hidden.
+    mockApi.getPublicProfile.mockRejectedValue(new HttpError(403, '403 Forbidden'));
+    await openCard([makeMember()]);
+    expect(await screen.findByText('Profile Unavailable')).toBeInTheDocument();
+    expect(screen.getByText(/hidden due to visibility settings/i)).toBeInTheDocument();
+    // No retry affordance, and it never reads as a transient error.
+    expect(screen.queryByTestId('member-card-retry')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /try again/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/couldn't load/i)).not.toBeInTheDocument();
+  });
+
+  it('ERROR: a network/transport failure → a DISTINCT retryable state WITH a retry button', async () => {
+    // A non-HttpError throw is how api.ts surfaces a network/transport failure.
+    mockApi.getPublicProfile.mockRejectedValue(new TypeError('Failed to fetch'));
+    await openCard([makeMember()]);
+    expect(await screen.findByText(/couldn't load profile/i)).toBeInTheDocument();
+    expect(screen.getByTestId('member-card-retry')).toBeInTheDocument();
+    // It must NOT read as "profile hidden" (distinct from the anti-oracle state).
+    expect(screen.queryByText('Profile Unavailable')).not.toBeInTheDocument();
+    expect(screen.queryByText(/hidden due to visibility settings/i)).not.toBeInTheDocument();
+  });
+
+  it('ERROR: a 5xx is transport-failure (retryable), NOT the hidden state', async () => {
+    mockApi.getPublicProfile.mockRejectedValue(new HttpError(503, '503 Service Unavailable'));
+    await openCard([makeMember()]);
+    expect(await screen.findByText(/couldn't load profile/i)).toBeInTheDocument();
+    expect(screen.getByTestId('member-card-retry')).toBeInTheDocument();
+    expect(screen.queryByText('Profile Unavailable')).not.toBeInTheDocument();
+  });
+
+  it('RETRY: after a transient failure, retry re-issues the fetch and renders the profile', async () => {
+    mockApi.getPublicProfile
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(makeProfile());
+    await openCard([makeMember()]);
+    const retry = await screen.findByTestId('member-card-retry');
+    await act(async () => {
+      fireEvent.click(retry);
+    });
+    expect(await screen.findByTestId('member-card-name')).toHaveTextContent('Julian Vance');
+    expect(screen.queryByTestId('member-card-retry')).not.toBeInTheDocument();
+    expect(mockApi.getPublicProfile).toHaveBeenCalledTimes(2);
+  });
+
+  it('RETRY: a repeated 404 falls back to the byte-identical hidden state (no retry button)', async () => {
+    mockApi.getPublicProfile
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockRejectedValueOnce(new HttpError(404, '404 Not Found'));
+    await openCard([makeMember()]);
+    const retry = await screen.findByTestId('member-card-retry');
+    await act(async () => {
+      fireEvent.click(retry);
+    });
+    expect(await screen.findByText('Profile Unavailable')).toBeInTheDocument();
+    expect(screen.queryByTestId('member-card-retry')).not.toBeInTheDocument();
+  });
+
   it('academicRole (educator) renders as PLAIN TEXT — no verification/trust badge', async () => {
     mockApi.getPublicProfile.mockResolvedValue(makeProfile({ academicRole: 'educator' }));
     await openCard([makeMember()]);
