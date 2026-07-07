@@ -15,6 +15,7 @@ import type {
   AssignmentSubmissionsListResponse,
   AttachmentPresignResponse,
   AvatarPresignResponse,
+  Block,
   CreateAssignmentInput,
   CreateReport,
   CreateScheduledSessionInput,
@@ -951,6 +952,35 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ action }),
     }),
+
+  // ── Block endpoints (wave-70 M14) ───────────────────────────────────────────
+
+  /**
+   * POST /blocks {blockedUserId} → 201 Block.
+   * Auth-required. Idempotent (re-blocking returns the existing row).
+   * Throws: 400 bad input, 401 unauthed, 409 self-block.
+   */
+  blockUser: (blockedUserId: string): Promise<Block> =>
+    request<Block>('/blocks', {
+      method: 'POST',
+      body: JSON.stringify({ blockedUserId }),
+    }),
+
+  /**
+   * DELETE /blocks/:blockedUserId → 204 void.
+   * Auth-required. Idempotent (unblocking a non-blocked user is a no-op).
+   * Throws: 401 unauthed.
+   */
+  unblockUser: (blockedUserId: string): Promise<void> =>
+    requestNoContent(`/blocks/${blockedUserId}`, { method: 'DELETE' }),
+
+  /**
+   * GET /blocks → { blocks: Block[] }.
+   * Returns the caller's block list (blocks they initiated).
+   * Throws: 401 unauthed.
+   */
+  getBlocks: (): Promise<Block[]> =>
+    request<{ blocks: Block[] }>('/blocks').then((res) => res.blocks),
 
   exportAccountData: async (): Promise<void> => {
     const res = await fetch(`${BASE}/profile/data/export`, { credentials: 'include' });

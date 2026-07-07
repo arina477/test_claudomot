@@ -28,6 +28,7 @@ import type { AccountDataResponse, PrivacySettingsResponse } from '@studyhall/sh
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../auth/api';
 import { ErrorBanner } from '../components/ErrorBanner';
+import { BlockedUsersPanel } from '../shell/BlockedUsersPanel';
 
 // ── Static option tables (defined outside component — no deps) ────────────────
 
@@ -443,7 +444,10 @@ export function SettingsPrivacyPage() {
               </p>
             </section>
 
-            {/* ── Panel 3: Account data (sibling a4169fac) ─────────────────── */}
+            {/* ── Panel 3: Blocked users ────────────────────────────────────── */}
+            <BlockedUsersPanel />
+
+            {/* ── Panel 4: Account data (sibling a4169fac) ─────────────────── */}
             <section
               className="rounded-lg p-6"
               style={{
