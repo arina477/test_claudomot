@@ -47,7 +47,7 @@ l_stage_verdict: COMPLETE
 verdict_evidence:
   - "CHANGELOG.md:96 (Added — #93 mock-billing tier-change + Your-plan panel)"
   - "milestone M9 3e507bc0: NO transition (stays in_progress; real-Stripe founder-reserved rule 6)"
-  - "commit SHA: 9bfadab9296d637245a0d87161abb41c748ce0be (CHANGELOG.md carrier)"
+  - "commit SHA: 7e6dfdfd125aa1e482bf639449f520debf9aab5e (CHANGELOG.md carrier, pushed to main)"
 changelog_entry_added: true
 roadmap_milestones_progressed:
   - {milestone: "M9 — Monetization: freemium tiers (3e507bc0)", before: "in_progress", after: "in_progress"}
