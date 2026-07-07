@@ -22,8 +22,8 @@ import {
 // SUT import AFTER harness so the lazy db proxy resolves to the test DB
 import type { PoolClient } from 'pg';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import * as dbModule from '../../src/db/index';
 import { EntitlementsService } from '../../src/billing/entitlements.service';
+import * as dbModule from '../../src/db/index';
 import { ServersService } from '../../src/servers/servers.service';
 
 // Skip-with-reason when DATABASE_URL_TEST is absent (local dev without PG).

@@ -23,7 +23,6 @@ import {
 // SUT import AFTER harness so the lazy db proxy resolves to the test DB.
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { EntitlementsService } from '../../src/billing/entitlements.service';
 import { ServersService } from '../../src/servers/servers.service';
 
 const SKIP = !process.env.DATABASE_URL_TEST;

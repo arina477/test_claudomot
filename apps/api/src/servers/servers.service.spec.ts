@@ -112,8 +112,8 @@ const mockUpdate = db.update as unknown as MockFn;
 // Default: getVisibleChannelIds returns null (owner → all visible)
 // ---------------------------------------------------------------------------
 
-import type { RbacService } from '../rbac/rbac.service';
 import type { EntitlementsService } from '../billing/entitlements.service';
+import type { RbacService } from '../rbac/rbac.service';
 
 function makeRbacServiceMock(getVisibleChannelIdsReturn: Set<string> | null = null): RbacService {
   return {
@@ -144,7 +144,12 @@ function makeEntitlementsServiceMock(): EntitlementsService {
     }),
     resolveCreateGateForOwner: vi.fn().mockResolvedValue({
       tier: 'free',
-      caps: { storageMb: 2048, callCapacity: 50, educatorAdminTools: false, maxServersPerOwner: 100 },
+      caps: {
+        storageMb: 2048,
+        callCapacity: 50,
+        educatorAdminTools: false,
+        maxServersPerOwner: 100,
+      },
       currentServerCount: 0,
     }),
   } as unknown as EntitlementsService;
