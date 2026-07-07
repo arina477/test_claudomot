@@ -3,7 +3,7 @@
 **Block:** V (Verify)
 **Wave topic:** member-profile-card UX polish — academicRole clearable + card fail-closed hidden-vs-transient-error. LIVE on 855e811.
 **Block exit gate:** V-3
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 
@@ -11,7 +11,7 @@
 |---|---|---|---|
 | V-1 | stages/V-1-karen.md + V-1-jenny.md + V-1-summary.md | done | Karen APPROVE, jenny APPROVE |
 | V-2 | stages/V-2-triage.md | done | |
-| V-3 | stages/V-3-fast-fix.md | pending | |
+| V-3 | stages/V-3-fast-fix.md | done | |
 
 ## Block-specific context
 
