@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StudyHall — Member Profile Card Architecture</title>
+    <title>StudyHall — Portable Identity Card</title>
     
     <!-- Google Fonts: Geist Preload -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
+
 
     <!-- Tailwind Config Emulating StudyHall Design System -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -30,13 +31,7 @@
                     },
                     boxShadow: {
                         'sm': '0 1px 2px rgba(0,0,0,0.4)',
-                        'pop': '0 8px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)',
-                        'glow-focus': '0 0 0 2px rgba(16,185,129,0.4)',
-                        'glow-subtle': '0 0 15px rgba(255,255,255,0.05)'
-                    },
-                    transitionTimingFunction: {
-                        'spring': 'cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                        'smooth': 'cubic-bezier(0.23, 1, 0.32, 1)'
+                        'pop': '0 8px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)'
                     }
                 }
             }
@@ -45,557 +40,310 @@
 
     <style>
         /* Base Environment Overrides */
-        body { background-color: #0a0a0b; color: rgba(255,255,255,0.92); overflow-x: hidden; }
+        body { background-color: #0a0a0b; color: rgba(255,255,255,0.92); }
         
-        /* Advanced Scrollbar (StudyHall Pattern) */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 9999px; }
-        ::-webkit-scrollbar-thumb:hover { background: #52525b; }
-
-        /* Shimmer Animation for Empty/Loading States */
-        @keyframes shimmer {
-            0% { background-position: -1000px 0; }
-            100% { background-position: 1000px 0; }
-        }
-        .animate-shimmer {
-            background: linear-gradient(90deg, #27272a 8%, rgba(63, 63, 70, 0.5) 18%, #27272a 33%);
-            background-size: 1000px 100%;
-            animation: shimmer 2s infinite linear;
-        }
-
-        /* Spring Mount Animations for Popovers */
-        @keyframes slide-in-right {
-            0% { opacity: 0; transform: translateX(20px) scale(0.96); }
-            100% { opacity: 1; transform: translateX(0) scale(1); }
+        /* Smooth, Snappy Easing (<=300ms, NO BOUNCE per feedback) */
+        @keyframes fade-in-scale {
+            0% { opacity: 0; transform: scale(0.96) translateY(4px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
         }
         .animate-popover {
-            animation: slide-in-right 400ms cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            animation: fade-in-scale 200ms ease-out forwards;
         }
 
-        /* Sequential Load Waterfall */
+        /* Standardized Shimmer */
+        @keyframes shimmer {
+            0% { background-position: -400px 0; }
+            100% { background-position: 400px 0; }
+        }
+        .animate-shimmer {
+            background: linear-gradient(90deg, #27272a 8%, rgba(63, 63, 70, 0.6) 18%, #27272a 33%);
+            background-size: 800px 100%;
+            animation: shimmer 1.5s infinite linear;
+        }
+
+        /* Sequential Load Waterfall for presentation */
         .waterfall-render > * {
             opacity: 0;
-            animation: slide-in-right 400ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
+            animation: fade-in-scale 250ms ease-out forwards;
         }
-        .waterfall-render > *:nth-child(1) { animation-delay: 100ms; }
-        .waterfall-render > *:nth-child(2) { animation-delay: 200ms; }
-        .waterfall-render > *:nth-child(3) { animation-delay: 300ms; }
-        .waterfall-render > *:nth-child(4) { animation-delay: 400ms; }
+        .waterfall-render > *:nth-child(1) { animation-delay: 50ms; }
+        .waterfall-render > *:nth-child(2) { animation-delay: 100ms; }
+        .waterfall-render > *:nth-child(3) { animation-delay: 150ms; }
+        .waterfall-render > *:nth-child(4) { animation-delay: 200ms; }
 
-        /* SVG Primitive Reset */
+        /* SVG Primitive Restraint */
         svg { display: block; flex-shrink: 0; shape-rendering: geometricPrecision; }
+
+        /* Accessibility: Prefers Reduced Motion Guards */
+        @media (prefers-reduced-motion: reduce) {
+            .animate-popover, .waterfall-render > * {
+                animation: none !important;
+                opacity: 1 !important;
+                transform: none !important;
+            }
+            .animate-shimmer {
+                animation: none !important;
+                background: #3f3f46 !important; /* Static surface-600 fallback */
+            }
+        }
     </style>
 </head>
-<body class="min-h-[100dvh] flex flex-col xl:flex-row antialiased selection:bg-accent-emerald selection:text-surface-950">
+<body class="min-h-[100dvh] flex items-center justify-center p-8 sm:p-12 selection:bg-accent-emerald selection:text-surface-950">
 
     <!-- 
-      MACRO-ARCHITECTURE (LEFT PANE)
-      The Live App Context View. Proves spatial anchoring, popover behavior, and member list integration.
+      Isolated Component Gallery — Member Profile Card (4 States)
+      Role is designated as "dialog" to map to popover accessibility patterns.
     -->
-    <main class="flex-1 flex overflow-hidden relative min-h-[600px] xl:min-h-screen border-b xl:border-b-0 xl:border-r border-border-hairline">
+    <main class="w-full max-w-7xl mx-auto flex flex-wrap justify-center gap-10 waterfall-render">
         
-        <!-- Fake Channel View (Canvas) -->
-        <div class="flex-1 bg-surface-800 relative z-0 flex flex-col items-center justify-center p-8">
-            <!-- Background Decoration / Context -->
-            <div class="absolute inset-0 pointer-events-none opacity-20" style="background-image: radial-gradient(circle at 30% 30%, rgba(16,185,129,0.15) 0%, transparent 60%);"></div>
+        <!-- ============================================== -->
+        <!-- STATE 1: LOADED (Complete Portable Identity)   -->
+        <!-- ============================================== -->
+        <article 
+            role="dialog" 
+            aria-label="Member Profile: Julian Vance" 
+            tabindex="-1"
+            class="popover-card w-80 rounded-lg bg-surface-900 border border-border-hairline shadow-pop flex flex-col relative overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-emerald"
+        >
+            <!-- Neutral Banner (Replaced raw emerald-950 with standard surface) -->
+            <div class="h-[60px] bg-surface-800 border-b border-border-hairline relative"></div>
             
-            <div class="max-w-md w-full text-center space-y-4">
-                <div class="w-12 h-12 rounded-lg bg-surface-700/50 flex items-center justify-center mx-auto mb-6 ring-1 ring-border-hairline">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-text-secondary"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                </div>
-                <h1 class="text-2xl font-semibold tracking-tight leading-none text-text-primary">Interactive Member Roster</h1>
-                <p class="text-sm text-text-secondary leading-relaxed">
-                    Click any member in the right-hand panel to trigger the contextual portable identity card. 
-                    The popover mounts relative to the click target.
-                </p>
-                <div class="pt-6 font-mono text-[11px] text-text-muted uppercase tracking-widest border-t border-border-hairline/50 inline-block">
-                    System Architecture Demo
+            <!-- Standard Avatar Layout -->
+            <div class="absolute top-5 left-5">
+                <div class="relative ring-4 ring-surface-900 rounded-full bg-surface-700">
+                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=128&h=128&q=80" alt="Julian Vance's avatar" class="w-[64px] h-[64px] rounded-full object-cover">
+                    <!-- Online Presence Dot -->
+                    <div class="absolute bottom-0 right-0 w-4 h-4 bg-surface-900 rounded-full flex items-center justify-center">
+                        <div class="w-2.5 h-2.5 bg-accent-emerald rounded-full"></div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Absolute Container for the active popover to live in -->
-            <div id="live-popover-container" class="absolute pointer-events-none w-full h-full inset-0 z-50"></div>
-        </div>
-
-        <!-- Fake Member List Panel -->
-        <aside class="w-64 bg-surface-900 border-l border-border-hairline flex flex-col z-10 relative shadow-[-4px_0_24px_rgba(0,0,0,0.2)]">
-            <!-- Header -->
-            <div class="h-12 border-b border-border-hairline flex items-center px-4">
-                <span class="text-xs font-semibold text-text-primary uppercase tracking-widest">Members — 4</span>
-            </div>
-            
-            <!-- List -->
-            <div class="flex-1 overflow-y-auto p-2 space-y-[2px]" id="member-roster-list">
+            <!-- Card Content Body -->
+            <div class="pt-[52px] pb-6 px-6 flex flex-col text-left">
                 
-                <!-- Roster Group: Online -->
-                <div class="pt-4 pb-1 px-2">
-                    <span class="text-[11px] font-semibold text-text-muted uppercase tracking-widest">Online — 2</span>
+                <!-- Core Identity -->
+                <div class="flex flex-col mb-4">
+                    <h3 class="text-xl font-medium text-text-primary leading-tight tracking-[-0.01em]">Julian Vance</h3>
+                    <span class="text-xs text-text-secondary mt-0.5">he/him</span>
                 </div>
 
-                <!-- Member 1: Loaded State -->
-                <button data-state="loaded" class="member-item w-full flex items-center gap-3 px-2 py-1.5 rounded-md hover:bg-surface-800 transition-colors group cursor-pointer text-left">
-                    <div class="relative">
-                        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=64&h=64&q=80" alt="Julian Vance" class="w-8 h-8 rounded-full border border-white/5 object-cover">
-                        <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-surface-900 rounded-full flex items-center justify-center">
-                            <div class="w-2 h-2 bg-accent-emerald rounded-full"></div>
+                <!-- Open Bio / Thesis Text -->
+                <p class="text-sm text-text-primary leading-relaxed mb-5">
+                    Thesis: Synthetic data generation in constraint-based LLMs. Teaching Asst. for CS101.
+                </p>
+
+                <!-- Academic Data Stack -->
+                <div class="flex flex-col gap-3">
+                    
+                    <!-- Institution Field -->
+                    <div class="flex items-start gap-2.5">
+                        <div class="mt-[3px] text-text-muted">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16"></path><path d="M12 2v20"></path><path d="M5 6l7-4 7 4"></path><path d="M5 10h14"></path><path d="M7 10v12"></path><path d="M17 10v12"></path></svg>
+                        </div>
+                        <div class="flex flex-col flex-1">
+                            <!-- Typography bumps: text-[10px] -> text-xs -->
+                            <span class="text-xs font-semibold tracking-wider uppercase text-text-secondary leading-none mb-1">Institution</span>
+                            <span class="text-sm text-text-primary leading-snug">Massachusetts Institute of Technology</span>
                         </div>
                     </div>
-                    <div class="flex-1 truncate">
-                        <div class="text-sm font-medium text-text-primary group-hover:text-white transition-colors truncate">Julian Vance</div>
-                        <div class="text-xs text-text-muted truncate">Researching synthetic...</div>
-                    </div>
-                </button>
 
-                <!-- Member 2: Partial State -->
-                <button data-state="partial" class="member-item w-full flex items-center gap-3 px-2 py-1.5 rounded-md hover:bg-surface-800 transition-colors group cursor-pointer text-left">
-                    <div class="relative">
-                        <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=64&h=64&q=80" alt="Sarah Lin" class="w-8 h-8 rounded-full border border-white/5 object-cover">
-                        <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-surface-900 rounded-full flex items-center justify-center">
-                            <div class="w-2 h-2 bg-accent-amber rounded-full"></div>
+                    <!-- Program Field -->
+                    <div class="flex items-start gap-2.5">
+                        <div class="mt-[3px] text-text-muted">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                        </div>
+                        <div class="flex flex-col flex-1">
+                            <span class="text-xs font-semibold tracking-wider uppercase text-text-secondary leading-none mb-1">Program / Field</span>
+                            <span class="text-sm text-text-primary leading-snug">Ph.D. Computer Science</span>
                         </div>
                     </div>
-                    <div class="flex-1 truncate">
-                        <div class="text-sm font-medium text-text-primary group-hover:text-white transition-colors truncate">Sarah Lin</div>
-                        <div class="text-xs text-text-muted truncate">UC Berkeley</div>
-                    </div>
-                </button>
 
-                <!-- Roster Group: Offline -->
-                <div class="pt-4 pb-1 px-2">
-                    <span class="text-[11px] font-semibold text-text-muted uppercase tracking-widest">Offline — 2</span>
+                    <!-- Role Field (No Trust Badges/Verification - strictly text payload) -->
+                    <div class="flex items-start gap-2.5">
+                        <div class="mt-[3px] text-text-muted">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9.5" cy="7.5" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-2-3"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        </div>
+                        <div class="flex flex-col flex-1">
+                            <span class="text-xs font-semibold tracking-wider uppercase text-text-secondary leading-none mb-1">Academic Role</span>
+                            <span class="text-sm text-text-primary leading-snug">Graduate Student</span>
+                        </div>
+                    </div>
+
+                    <!-- Year Field (Restored text-muted icon / standard text color per feedback) -->
+                    <div class="flex items-start gap-2.5">
+                        <div class="mt-[3px] text-text-muted">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+                        </div>
+                        <div class="flex flex-col flex-1">
+                            <span class="text-xs font-semibold tracking-wider uppercase text-text-secondary leading-none mb-1">Academic Year</span>
+                            <span class="text-sm text-text-primary leading-snug">Year 3</span>
+                        </div>
+                    </div>
+
                 </div>
-
-                <!-- Member 3: Loading / Slow Fetch Demo -->
-                <button data-state="loading" class="member-item opacity-60 w-full flex items-center gap-3 px-2 py-1.5 rounded-md hover:bg-surface-800 transition-colors group cursor-pointer text-left">
-                    <div class="relative">
-                        <img src="https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=64&h=64&q=80" alt="Prof. David Chen" class="w-8 h-8 rounded-full border border-white/5 object-cover">
-                        <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-surface-900 rounded-full flex items-center justify-center">
-                            <div class="w-2 h-2 bg-surface-500 rounded-full"></div>
-                        </div>
-                    </div>
-                    <div class="flex-1 truncate">
-                        <div class="text-sm font-medium text-text-primary group-hover:text-white transition-colors truncate">David Chen (Fetching...)</div>
-                    </div>
-                </button>
-
-                <!-- Member 4: Hidden/Blocked State -->
-                <button data-state="hidden" class="member-item opacity-60 w-full flex items-center gap-3 px-2 py-1.5 rounded-md hover:bg-surface-800 transition-colors group cursor-pointer text-left">
-                    <div class="relative">
-                        <div class="w-8 h-8 rounded-full border border-border-hairline bg-surface-700 flex items-center justify-center text-text-muted">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                        </div>
-                        <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-surface-900 rounded-full flex items-center justify-center">
-                            <div class="w-2 h-2 bg-surface-500 rounded-full"></div>
-                        </div>
-                    </div>
-                    <div class="flex-1 truncate">
-                        <div class="text-sm font-medium text-text-primary group-hover:text-white transition-colors truncate">Unknown Member</div>
-                    </div>
-                </button>
-
             </div>
-        </aside>
+        </article>
+
+
+        <!-- ============================================== -->
+        <!-- STATE 2: PARTIAL (Minimal Data Present)        -->
+        <!-- ============================================== -->
+        <article 
+            role="dialog" 
+            aria-label="Member Profile: Sarah Lin" 
+            tabindex="-1"
+            class="popover-card w-80 rounded-lg bg-surface-900 border border-border-hairline shadow-pop flex flex-col relative overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-emerald"
+        >
+            <!-- Neutral Banner (Replaced raw purple-900/20 per feedback) -->
+            <div class="h-[60px] bg-surface-800 border-b border-border-hairline relative"></div>
+            
+            <div class="absolute top-5 left-5">
+                <div class="relative ring-4 ring-surface-900 rounded-full bg-surface-700">
+                    <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=128&h=128&q=80" alt="Sarah Lin's avatar" class="w-[64px] h-[64px] rounded-full object-cover">
+                    <!-- Idle/Away Presence Dot -->
+                    <div class="absolute bottom-0 right-0 w-4 h-4 bg-surface-900 rounded-full flex items-center justify-center">
+                        <div class="w-2.5 h-2.5 bg-accent-amber rounded-full"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-[52px] pb-6 px-6 flex flex-col text-left">
+                <div class="flex flex-col mb-5">
+                    <h3 class="text-xl font-medium text-text-primary leading-tight tracking-[-0.01em]">Sarah Lin</h3>
+                    <span class="text-xs text-text-secondary mt-0.5">she/they</span>
+                </div>
+
+                <!-- 
+                  Missing Bio, Program, Year Fields.
+                  Component naturally shrinks to fit gracefully. 
+                -->
+                <div class="flex flex-col gap-3">
+                    
+                    <div class="flex items-start gap-2.5">
+                        <div class="mt-[3px] text-text-muted">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16"></path><path d="M12 2v20"></path><path d="M5 6l7-4 7 4"></path><path d="M5 10h14"></path><path d="M7 10v12"></path><path d="M17 10v12"></path></svg>
+                        </div>
+                        <div class="flex flex-col flex-1">
+                            <span class="text-xs font-semibold tracking-wider uppercase text-text-secondary leading-none mb-1">Institution</span>
+                            <span class="text-sm text-text-primary leading-snug">UC Berkeley</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-2.5">
+                        <div class="mt-[3px] text-text-muted">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9.5" cy="7.5" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-2-3"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        </div>
+                        <div class="flex flex-col flex-1">
+                            <span class="text-xs font-semibold tracking-wider uppercase text-text-secondary leading-none mb-1">Academic Role</span>
+                            <span class="text-sm text-text-primary leading-snug">Undergraduate</span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </article>
+
+
+        <!-- ============================================== -->
+        <!-- STATE 3: FETCHING / LOADING (Skeleton Shimmer) -->
+        <!-- ============================================== -->
+        <article 
+            role="dialog" 
+            aria-label="Loading Profile" 
+            tabindex="-1"
+            class="popover-card w-80 rounded-lg bg-surface-900 border border-border-hairline shadow-pop flex flex-col relative overflow-hidden focus:outline-none"
+        >
+            <div class="h-[60px] animate-shimmer relative"></div>
+            
+            <div class="absolute top-5 left-5">
+                <div class="ring-4 ring-surface-900 rounded-full w-[64px] h-[64px] animate-shimmer"></div>
+            </div>
+
+            <div class="pt-[58px] pb-6 px-6 flex flex-col text-left">
+                <!-- Header Skeletons -->
+                <div class="flex flex-col mb-6 gap-2">
+                    <div class="h-5 w-3/5 rounded-md animate-shimmer"></div>
+                    <div class="h-3 w-1/4 rounded-sm animate-shimmer"></div>
+                </div>
+
+                <!-- Field Skeletons -->
+                <div class="flex flex-col gap-4">
+                    <div class="flex gap-3">
+                        <div class="w-4 h-4 rounded-sm animate-shimmer shrink-0"></div>
+                        <div class="flex flex-col gap-1.5 flex-1 pt-1">
+                            <div class="h-2 w-1/3 rounded-sm animate-shimmer"></div>
+                            <div class="h-3 w-4/5 rounded-sm animate-shimmer"></div>
+                        </div>
+                    </div>
+                    <div class="flex gap-3">
+                        <div class="w-4 h-4 rounded-sm animate-shimmer shrink-0"></div>
+                        <div class="flex flex-col gap-1.5 flex-1 pt-1">
+                            <div class="h-2 w-1/4 rounded-sm animate-shimmer"></div>
+                            <div class="h-3 w-3/4 rounded-sm animate-shimmer"></div>
+                        </div>
+                    </div>
+                    <div class="flex gap-3">
+                        <div class="w-4 h-4 rounded-sm animate-shimmer shrink-0"></div>
+                        <div class="flex flex-col gap-1.5 flex-1 pt-1">
+                            <div class="h-2 w-2/5 rounded-sm animate-shimmer"></div>
+                            <div class="h-3 w-1/2 rounded-sm animate-shimmer"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </article>
+
+
+        <!-- ============================================== -->
+        <!-- STATE 4: HIDDEN (Privacy Check Failed/Private) -->
+        <!-- ============================================== -->
+        <article 
+            role="dialog" 
+            aria-label="Profile Unavailable" 
+            tabindex="-1"
+            class="popover-card w-80 rounded-lg bg-surface-900 border border-border-hairline shadow-pop flex flex-col relative overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-surface-700"
+        >
+            <!-- Calm Neutral Header -->
+            <div class="h-[60px] bg-surface-800 relative border-b border-border-hairline"></div>
+            
+            <div class="absolute top-5 left-5">
+                <div class="relative ring-4 ring-surface-900 rounded-full bg-surface-700 flex items-center justify-center w-[64px] h-[64px] text-text-muted">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </div>
+            </div>
+
+            <!-- Restrained, No-Alarm Body Content -->
+            <div class="pt-[64px] pb-8 px-6 flex flex-col text-center items-center justify-center min-h-[220px]">
+                
+                <!-- Gentle Eye-Slash Icon (No danger colors) -->
+                <div class="w-10 h-10 rounded-full bg-surface-700/50 border border-white/5 flex items-center justify-center text-text-muted mb-4 ring-4 ring-surface-900/50">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"></path><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path><line x1="2" y1="2" x2="22" y2="22"></line></svg>
+                </div>
+                
+                <h4 class="text-[15px] font-medium text-text-primary mb-1">Profile Unavailable</h4>
+                <p class="text-sm text-text-secondary leading-relaxed px-2">
+                    This member's academic identity is hidden due to visibility settings.
+                </p>
+            </div>
+        </article>
+
     </main>
 
-
-    <!-- 
-      MESO-ARCHITECTURE (RIGHT/BOTTOM PANE)
-      The Specification Gallery proving UI completeness for the 4 distinct states.
-    -->
-    <aside class="w-full xl:w-[500px] 2xl:w-[580px] bg-surface-950 flex flex-col h-auto xl:h-screen overflow-hidden shrink-0 border-l border-border-hairline relative relative z-20">
-        
-        <header class="p-6 border-b border-border-hairline bg-surface-950/80 backdrop-blur-md sticky top-0 z-30">
-            <h2 class="text-lg font-semibold text-text-primary">Portable Identity Card</h2>
-            <p class="text-sm text-text-secondary mt-1 tracking-wide">Component State Registry · V7 Dark</p>
-        </header>
-
-        <div class="flex-1 overflow-y-auto p-6 md:p-8 space-y-12 waterfall-render pb-24">
-            
-            <!-- STATE 1: LOADED -->
-            <section class="space-y-4">
-                <header class="flex items-center gap-3">
-                    <div class="h-px bg-border-hairline flex-1"></div>
-                    <span class="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] whitespace-nowrap">State: Fully Populated</span>
-                    <div class="h-px bg-border-hairline w-12"></div>
-                </header>
-
-                <div class="flex justify-center">
-                    <!-- THE CANONICAL CARD -->
-                    <div class="w-80 rounded-lg bg-surface-900 border border-border-hairline shadow-pop flex flex-col relative overflow-hidden group">
-                        <!-- Header Banner (Subtle accent derivation) -->
-                        <div class="h-[60px] bg-emerald-950/30 relative"></div>
-                        
-                        <!-- Avatar Floating -->
-                        <div class="absolute top-5 left-5">
-                            <div class="relative ring-4 ring-surface-900 rounded-full bg-surface-700">
-                                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=128&h=128&q=80" alt="Julian Vance avatar" class="w-[64px] h-[64px] rounded-full object-cover">
-                                <!-- Presence Indicator Overlay -->
-                                <div class="absolute bottom-0 right-0 w-4 h-4 bg-surface-900 rounded-full flex items-center justify-center">
-                                    <div class="w-2.5 h-2.5 bg-accent-emerald rounded-full"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Card Body -->
-                        <div class="pt-[52px] pb-6 px-6 flex flex-col text-left">
-                            
-                            <!-- Identity Core -->
-                            <div class="flex flex-col mb-4">
-                                <h3 class="text-xl font-medium text-text-primary leading-tight tracking-[-0.01em]">Julian Vance</h3>
-                                <span class="text-xs text-text-secondary mt-0.5">he/him</span>
-                            </div>
-
-                            <!-- Bio (No label, just raw text) -->
-                            <p class="text-sm text-text-primary leading-relaxed mb-5">
-                                Thesis: Synthetic data generation in constraint-based LLMs. Teaching Asst. for CS101.
-                            </p>
-
-                            <!-- Data Stack -->
-                            <div class="flex flex-col gap-3">
-                                
-                                <!-- Field: Institution -->
-                                <div class="flex items-start gap-2.5">
-                                    <div class="mt-[3px] text-text-muted">
-                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16"></path><path d="M12 2v20"></path><path d="M5 6l7-4 7 4"></path><path d="M5 10h14"></path><path d="M7 10v12"></path><path d="M17 10v12"></path></svg>
-                                    </div>
-                                    <div class="flex flex-col flex-1">
-                                        <span class="text-[10px] font-semibold tracking-[0.1em] uppercase text-text-secondary leading-none mb-1">Institution</span>
-                                        <span class="text-sm text-text-primary leading-snug">Massachusetts Institute of Technology</span>
-                                    </div>
-                                </div>
-
-                                <!-- Field: Program -->
-                                <div class="flex items-start gap-2.5">
-                                    <div class="mt-[3px] text-text-muted">
-                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-                                    </div>
-                                    <div class="flex flex-col flex-1">
-                                        <span class="text-[10px] font-semibold tracking-[0.1em] uppercase text-text-secondary leading-none mb-1">Program / Field</span>
-                                        <span class="text-sm text-text-primary leading-snug">Ph.D. Computer Science</span>
-                                    </div>
-                                </div>
-
-                                <!-- Field: Role -->
-                                <div class="flex items-start gap-2.5">
-                                    <div class="mt-[3px] text-text-muted">
-                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9.5" cy="7.5" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-2-3"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                                    </div>
-                                    <div class="flex flex-col flex-1">
-                                        <span class="text-[10px] font-semibold tracking-[0.1em] uppercase text-text-secondary leading-none mb-1">Academic Role</span>
-                                        <span class="text-sm text-text-primary leading-snug">Graduate Student</span>
-                                    </div>
-                                </div>
-
-                                <!-- Field: Year (with Amber Accent) -->
-                                <div class="flex items-start gap-2.5">
-                                    <div class="mt-[3px] text-accent-amber">
-                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
-                                    </div>
-                                    <div class="flex flex-col flex-1">
-                                        <span class="text-[10px] font-semibold tracking-[0.1em] uppercase text-text-secondary leading-none mb-1">Academic Year</span>
-                                        <span class="text-sm text-accent-amber leading-snug">Year 3 Tracker</span>
-                                    </div>
-                                </div>
-
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- STATE 2: PARTIAL DATA -->
-            <section class="space-y-4">
-                <header class="flex items-center gap-3">
-                    <div class="h-px bg-border-hairline flex-1"></div>
-                    <span class="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] whitespace-nowrap">State: Partial Data</span>
-                    <div class="h-px bg-border-hairline w-12"></div>
-                </header>
-
-                <div class="flex justify-center">
-                    <div class="w-80 rounded-lg bg-surface-900 border border-border-hairline shadow-pop flex flex-col relative overflow-hidden">
-                        <div class="h-[60px] bg-purple-900/20 relative"></div>
-                        
-                        <div class="absolute top-5 left-5">
-                            <div class="relative ring-4 ring-surface-900 rounded-full bg-surface-700">
-                                <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=128&h=128&q=80" alt="Sarah Lin avatar" class="w-[64px] h-[64px] rounded-full object-cover">
-                                <div class="absolute bottom-0 right-0 w-4 h-4 bg-surface-900 rounded-full flex items-center justify-center">
-                                    <div class="w-2.5 h-2.5 bg-accent-amber rounded-full"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="pt-[52px] pb-6 px-6 flex flex-col text-left">
-                            <div class="flex flex-col mb-5">
-                                <h3 class="text-xl font-medium text-text-primary leading-tight tracking-[-0.01em]">Sarah Lin</h3>
-                                <span class="text-xs text-text-secondary mt-0.5">she/they</span>
-                            </div>
-
-                            <!-- Missing Bio, Missing Program, Missing Year. Only Institution and Role shown, instantly collapsed vertically. -->
-                            <div class="flex flex-col gap-3">
-                                
-                                <div class="flex items-start gap-2.5">
-                                    <div class="mt-[3px] text-text-muted">
-                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16"></path><path d="M12 2v20"></path><path d="M5 6l7-4 7 4"></path><path d="M5 10h14"></path><path d="M7 10v12"></path><path d="M17 10v12"></path></svg>
-                                    </div>
-                                    <div class="flex flex-col flex-1">
-                                        <span class="text-[10px] font-semibold tracking-[0.1em] uppercase text-text-secondary leading-none mb-1">Institution</span>
-                                        <span class="text-sm text-text-primary leading-snug">UC Berkeley</span>
-                                    </div>
-                                </div>
-
-                                <div class="flex items-start gap-2.5">
-                                    <div class="mt-[3px] text-text-muted">
-                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9.5" cy="7.5" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-2-3"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                                    </div>
-                                    <div class="flex flex-col flex-1">
-                                        <span class="text-[10px] font-semibold tracking-[0.1em] uppercase text-text-secondary leading-none mb-1">Academic Role</span>
-                                        <span class="text-sm text-text-primary leading-snug">Undergraduate</span>
-                                    </div>
-                                </div>
-
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- STATE 3: SHIMMER/LOADING -->
-            <section class="space-y-4">
-                <header class="flex items-center gap-3">
-                    <div class="h-px bg-border-hairline flex-1"></div>
-                    <span class="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] whitespace-nowrap">State: Fetching</span>
-                    <div class="h-px bg-border-hairline w-12"></div>
-                </header>
-
-                <div class="flex justify-center">
-                    <div class="w-80 rounded-lg bg-surface-900 border border-border-hairline shadow-pop flex flex-col relative overflow-hidden pointer-events-none">
-                        <!-- Banner Shimmer -->
-                        <div class="h-[60px] animate-shimmer relative"></div>
-                        
-                        <!-- Avatar Shimmer -->
-                        <div class="absolute top-5 left-5">
-                            <div class="ring-4 ring-surface-900 rounded-full w-[64px] h-[64px] animate-shimmer"></div>
-                        </div>
-
-                        <div class="pt-[58px] pb-6 px-6 flex flex-col text-left">
-                            <!-- Name Shimmer -->
-                            <div class="flex flex-col mb-6 gap-2">
-                                <div class="h-5 w-3/5 rounded-md animate-shimmer"></div>
-                                <div class="h-3 w-1/4 rounded-sm animate-shimmer"></div>
-                            </div>
-
-                            <!-- List Shimmer -->
-                            <div class="flex flex-col gap-4">
-                                <div class="flex gap-3">
-                                    <div class="w-4 h-4 rounded-sm animate-shimmer shrink-0"></div>
-                                    <div class="flex flex-col gap-1.5 flex-1 pt-1">
-                                        <div class="h-2 w-1/3 rounded-sm animate-shimmer"></div>
-                                        <div class="h-3 w-4/5 rounded-sm animate-shimmer"></div>
-                                    </div>
-                                </div>
-                                <div class="flex gap-3">
-                                    <div class="w-4 h-4 rounded-sm animate-shimmer shrink-0"></div>
-                                    <div class="flex flex-col gap-1.5 flex-1 pt-1">
-                                        <div class="h-2 w-1/4 rounded-sm animate-shimmer"></div>
-                                        <div class="h-3 w-3/4 rounded-sm animate-shimmer"></div>
-                                    </div>
-                                </div>
-                                <div class="flex gap-3">
-                                    <div class="w-4 h-4 rounded-sm animate-shimmer shrink-0"></div>
-                                    <div class="flex flex-col gap-1.5 flex-1 pt-1">
-                                        <div class="h-2 w-2/5 rounded-sm animate-shimmer"></div>
-                                        <div class="h-3 w-1/2 rounded-sm animate-shimmer"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-             <!-- STATE 4: HIDDEN / PRIVATE -->
-             <section class="space-y-4">
-                <header class="flex items-center gap-3">
-                    <div class="h-px bg-border-hairline flex-1"></div>
-                    <span class="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] whitespace-nowrap">State: Hidden / Blocked</span>
-                    <div class="h-px bg-border-hairline w-12"></div>
-                </header>
-
-                <div class="flex justify-center">
-                    <div class="w-80 rounded-lg bg-surface-900 border border-border-hairline shadow-pop flex flex-col relative overflow-hidden">
-                        
-                        <!-- Empty Calm Banner -->
-                        <div class="h-[60px] bg-surface-700/50 relative border-b border-border-hairline"></div>
-                        
-                        <!-- Default Avatar -->
-                        <div class="absolute top-5 left-5">
-                            <div class="relative ring-4 ring-surface-900 rounded-full bg-surface-700 flex items-center justify-center w-[64px] h-[64px] text-text-muted">
-                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                            </div>
-                        </div>
-
-                        <!-- Calm Empty State Body -->
-                        <div class="pt-[64px] pb-8 px-6 flex flex-col text-center items-center justify-center min-h-[220px]">
-                            
-                            <div class="w-10 h-10 rounded-full bg-surface-700/50 border border-white/5 flex items-center justify-center text-text-muted mb-4 ring-4 ring-surface-900/50">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"></path><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path><line x1="2" y1="2" x2="22" y2="22"></line></svg>
-                            </div>
-                            
-                            <h4 class="text-[15px] font-medium text-text-primary mb-1">Profile Unavailable</h4>
-                            <p class="text-sm text-text-secondary leading-relaxed">
-                                This member's academic identity is hidden due to their visibility settings.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-        </div>
-    </aside>
-
-
-    <!-- INTERACTION LOGIC -->
+    <!-- Functionality: Escape Key Accessibility Check -->
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const memberList = document.querySelectorAll('.member-item');
-            const popoverContainer = document.getElementById('live-popover-container');
-
-            // Stored HTML templates for the interactive demo mapping to the bento list
-            const htmlTemplates = {
-                loaded: `
-                    <!-- Popover Card Frame (Pointer events auto to catch clicks inside if we had any) -->
-                    <div class="absolute right-0 translate-x-[-20px] pointer-events-auto bg-surface-900 rounded-lg border border-border-hairline flex flex-col overflow-hidden w-80 animate-popover shadow-pop origin-right" style="top: var(--local-top);">
-                        <div class="h-[60px] bg-emerald-950/30 relative"></div>
-                        <div class="absolute top-5 left-5">
-                            <div class="relative ring-4 ring-surface-900 rounded-full bg-surface-700">
-                                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=128&h=128&q=80" class="w-[64px] h-[64px] rounded-full object-cover">
-                                <div class="absolute bottom-0 right-0 w-4 h-4 bg-surface-900 rounded-full flex items-center justify-center">
-                                    <div class="w-2.5 h-2.5 bg-accent-emerald rounded-full"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="pt-[52px] pb-6 px-6 flex flex-col text-left">
-                            <div class="flex flex-col mb-4">
-                                <h3 class="text-xl font-medium text-text-primary leading-tight tracking-[-0.01em]">Julian Vance</h3>
-                                <span class="text-xs text-text-secondary mt-0.5">he/him</span>
-                            </div>
-                            <p class="text-sm text-text-primary leading-relaxed mb-5">Thesis: Synthetic data generation in constraint-based LLMs. Teaching Asst. for CS101.</p>
-                            <div class="flex flex-col gap-3">
-                                <div class="flex items-start gap-2.5">
-                                    <div class="mt-[3px] text-text-muted"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 22h16"></path><path d="M12 2v20"></path><path d="M5 6l7-4 7 4"></path><path d="M5 10h14"></path><path d="M7 10v12"></path><path d="M17 10v12"></path></svg></div>
-                                    <div class="flex flex-col flex-1">
-                                        <span class="text-[10px] font-semibold tracking-[0.1em] uppercase text-text-secondary leading-none mb-1">Institution</span>
-                                        <span class="text-sm text-text-primary leading-snug">Massachusetts Institute of Technology</span>
-                                    </div>
-                                </div>
-                                <div class="flex items-start gap-2.5">
-                                    <div class="mt-[3px] text-accent-amber"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg></div>
-                                    <div class="flex flex-col flex-1">
-                                        <span class="text-[10px] font-semibold tracking-[0.1em] uppercase text-text-secondary leading-none mb-1">Academic Year</span>
-                                        <span class="text-sm text-accent-amber leading-snug">Year 3 Tracker</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `,
-                partial: `
-                    <div class="absolute right-0 translate-x-[-20px] pointer-events-auto bg-surface-900 rounded-lg border border-border-hairline flex flex-col overflow-hidden w-80 animate-popover shadow-pop origin-right" style="top: var(--local-top);">
-                        <div class="h-[60px] bg-purple-900/20 relative"></div>
-                        <div class="absolute top-5 left-5">
-                            <div class="relative ring-4 ring-surface-900 rounded-full bg-surface-700">
-                                <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=128&h=128&q=80" class="w-[64px] h-[64px] rounded-full object-cover">
-                                <div class="absolute bottom-0 right-0 w-4 h-4 bg-surface-900 rounded-full flex items-center justify-center">
-                                    <div class="w-2.5 h-2.5 bg-accent-amber rounded-full"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="pt-[52px] pb-6 px-6 flex flex-col text-left">
-                            <div class="flex flex-col mb-5">
-                                <h3 class="text-xl font-medium text-text-primary leading-tight tracking-[-0.01em]">Sarah Lin</h3>
-                                <span class="text-xs text-text-secondary mt-0.5">she/they</span>
-                            </div>
-                            <div class="flex flex-col gap-3">
-                                <div class="flex items-start gap-2.5">
-                                    <div class="mt-[3px] text-text-muted"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 22h16"></path><path d="M12 2v20"></path><path d="M5 6l7-4 7 4"></path><path d="M5 10h14"></path><path d="M7 10v12"></path><path d="M17 10v12"></path></svg></div>
-                                    <div class="flex flex-col flex-1">
-                                        <span class="text-[10px] font-semibold tracking-[0.1em] uppercase text-text-secondary leading-none mb-1">Institution</span>
-                                        <span class="text-sm text-text-primary leading-snug">UC Berkeley</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `,
-                loading: `
-                    <div class="absolute right-0 translate-x-[-20px] pointer-events-auto bg-surface-900 rounded-lg border border-border-hairline flex flex-col overflow-hidden w-80 animate-popover shadow-pop origin-right" style="top: var(--local-top);">
-                        <div class="h-[60px] animate-shimmer relative"></div>
-                        <div class="absolute top-5 left-5">
-                            <div class="ring-4 ring-surface-900 rounded-full w-[64px] h-[64px] animate-shimmer"></div>
-                        </div>
-                        <div class="pt-[58px] pb-6 px-6 flex flex-col text-left">
-                            <div class="flex flex-col mb-6 gap-2">
-                                <div class="h-5 w-3/5 rounded-md animate-shimmer"></div>
-                                <div class="h-3 w-1/4 rounded-sm animate-shimmer"></div>
-                            </div>
-                            <div class="flex flex-col gap-4">
-                                <div class="flex gap-3"><div class="w-4 h-4 rounded-sm animate-shimmer shrink-0"></div><div class="flex flex-col gap-1.5 flex-1 pt-1"><div class="h-2 w-1/3 rounded-sm animate-shimmer"></div><div class="h-3 w-4/5 rounded-sm animate-shimmer"></div></div></div>
-                                <div class="flex gap-3"><div class="w-4 h-4 rounded-sm animate-shimmer shrink-0"></div><div class="flex flex-col gap-1.5 flex-1 pt-1"><div class="h-2 w-1/4 rounded-sm animate-shimmer"></div><div class="h-3 w-3/4 rounded-sm animate-shimmer"></div></div></div>
-                            </div>
-                        </div>
-                    </div>
-                `,
-                hidden: `
-                    <div class="absolute right-0 translate-x-[-20px] pointer-events-auto bg-surface-900 rounded-lg border border-border-hairline flex flex-col overflow-hidden w-80 animate-popover shadow-pop origin-right" style="top: var(--local-top);">
-                        <div class="h-[60px] bg-surface-700/50 relative border-b border-border-hairline"></div>
-                        <div class="absolute top-5 left-5">
-                            <div class="relative ring-4 ring-surface-900 rounded-full bg-surface-700 flex items-center justify-center w-[64px] h-[64px] text-text-muted">
-                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                            </div>
-                        </div>
-                        <div class="pt-[64px] pb-8 px-6 flex flex-col text-center items-center justify-center min-h-[220px]">
-                            <div class="w-10 h-10 rounded-full bg-surface-700/50 border border-white/5 flex items-center justify-center text-text-muted mb-4 ring-4 ring-surface-900/50">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"></path><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path><line x1="2" y1="2" x2="22" y2="22"></line></svg>
-                            </div>
-                            <h4 class="text-[15px] font-medium text-text-primary mb-1">Profile Unavailable</h4>
-                            <p class="text-sm text-text-secondary leading-relaxed">This member's academic identity is hidden due to visibility settings.</p>
-                        </div>
-                    </div>
-                `
-            };
-
-            // Click interceptor for the live demo
-            memberList.forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    // Prevent multiple rapid clicks from spamming DOM
-                    popoverContainer.innerHTML = '';
-                    
-                    const state = btn.getAttribute('data-state');
-                    const rect = btn.getBoundingClientRect();
-                    const containerRect = popoverContainer.parentElement.getBoundingClientRect();
-
-                    // Calculate top offset relative to the canvas container (aligning with button)
-                    let calculateTop = (rect.top - containerRect.top) - 100; 
-                    if (calculateTop < 20) calculateTop = 20; // Safe-guard top boundary
-                    
-                    // Inject HTML and CSS Variable for dynamic positioning
-                    const html = htmlTemplates[state].replace('var(--local-top)', `${calculateTop}px`);
-                    popoverContainer.innerHTML = html;
-
-                    // Light up active button state
-                    memberList.forEach(b => b.classList.remove('bg-surface-800'));
-                    btn.classList.add('bg-surface-800');
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const popovers = document.querySelectorAll('.popover-card');
+                popovers.forEach(card => {
+                    // Simulating the unmount/hide action required for popup dismissals.
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.96)';
+                    card.style.pointerEvents = 'none';
+                    card.style.transition = 'all 150ms ease-in';
                 });
-            });
-
-            // Dismiss popover on click outside (in the main canvas area)
-            document.querySelector('.flex-1.bg-surface-800').addEventListener('click', (e) => {
-                if (e.target.id === 'live-popover-container' || e.target.classList.contains('flex-1')) {
-                    popoverContainer.innerHTML = '';
-                    memberList.forEach(b => b.classList.remove('bg-surface-800'));
-                }
-            });
+            }
         });
     </script>
 </body>
