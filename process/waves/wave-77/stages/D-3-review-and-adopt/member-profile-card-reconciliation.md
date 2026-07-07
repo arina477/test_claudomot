@@ -16,3 +16,11 @@
 8. Strip the demo harness (fake roster / "System Architecture Demo" / gallery dividers / demo script) — keep ONLY the card frame + the 4 state bodies.
 Keep: 4 states (loaded/loading/hidden/partial), the CALM hidden state (eye-slash "Profile Unavailable", no danger), NO verification badge (plain-text role), read-only, no email, shadow-pop, DS surface/text tokens.
 Next: D-2 refine (aidesigner) iteration 1 → re-run D-3.
+
+---
+## Iteration 1→2 reconciliation — CONVERGED
+| Reviewer | Verdict |
+|---|---|
+| /plan-design-review | APPROVE (8.8/10) |
+| /ui-ux-pro-max | APPROVE |
+**Matrix: APPROVE+APPROVE → Phase 2 (head-designer gate).** Converged after 1 refine (all fences held; purple→surface-800, raw-emerald-950→surface-800, amber off Academic Year, ease-out 200ms no-bounce, Esc-dismiss + prefers-reduced-motion, labels ≥12px, demo scaffolding stripped). Non-blocking B-3 port notes: strip Tailwind/Google-Fonts CDN (bundled pipeline); single portalled card not gallery wrapper (BUILD-14); aria-busy skeleton; aria-label presence dot; Esc unmount+focus-restore; 2 off-4px-scale spacing values; icons GraduationCap/BookOpen/Users/Clock/User/EyeSlash → icons.tsx inline-SVG.
