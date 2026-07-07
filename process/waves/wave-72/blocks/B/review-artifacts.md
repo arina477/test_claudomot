@@ -3,7 +3,7 @@
 **Block:** B (Build)
 **Wave topic:** Account self-deletion / right-to-erasure (M10 first slice) — soft-delete + PII scrub + session-revoke + both-doors re-auth block + owned-server guard + Danger-Zone UI
 **Block exit gate:** B-6
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 
@@ -15,7 +15,7 @@
 | B-3 | process/waves/wave-72/stages/B-3-frontend.md | done | Danger-Zone UI + 18 tests (task 898490b1) |
 | B-4 | process/waves/wave-72/stages/B-4-wiring.md | done | repo typecheck 4/4, route mounted |
 | B-5 | process/waves/wave-72/stages/B-5-verify.md | done | lint/tests/build green |
-| B-6 | process/waves/wave-72/stages/B-6-review.md | pending | |
+| B-6 | process/waves/wave-72/stages/B-6-review.md | done | Phase1 APPROVED + /review P1 fixed |
 
 ## Block-specific context
 
@@ -44,3 +44,16 @@ none
 ## Gate verdict log
 
 <appended by fresh head-builder spawn at B-6 Action 1; one entry per attempt>
+
+## Block-exit handoff
+
+```yaml
+build_block_status:    complete
+branch:                wave-72-account-deletion
+stages_run:            [B-0, B-1, B-2, B-3, B-4, B-5, B-6]
+stages_skipped:        []   # D-block skipped upstream (design_gap_flag=false); no B-stage skipped
+review_verdict:        APPROVE
+deviations_logged:     [presence-via-socket-disconnect, username-null, panel-in-shell-dir, ceb9606-cross-spec-lint-fix]
+last_commit_sha:       24506bc
+ready_for_ci:          true
+```

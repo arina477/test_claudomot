@@ -16,7 +16,7 @@
 - [x] B-3 Frontend
 - [x] B-4 Wiring
 - [x] B-5 Verify
-- [ ] B-6 Review
+- [x] B-6 Review
 ## C — CI/CD
 - [ ] C-1 PR, CI & merge
 - [ ] C-2 Deploy & verify
