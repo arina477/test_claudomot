@@ -211,6 +211,13 @@
       "when": 1783426800719,
       "tag": "0029_clammy_the_fallen",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1783458768795,
+      "tag": "0030_funny_tarantula",
+      "breakpoints": true
     }
   ]
 }

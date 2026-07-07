@@ -17,6 +17,12 @@ export const users = pgTable(
     created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
     deleted_at: timestamp('deleted_at', { withTimezone: true }),
+    pronouns: text('pronouns'),
+    bio: text('bio'),
+    institution: text('institution'),
+    program: text('program'),
+    academic_role: text('academic_role'),
+    academic_year: text('academic_year'),
   },
   (table) => [uniqueIndex('users_username_lower_idx').on(sql`lower(${table.username})`)],
 );

@@ -1,4 +1,5 @@
 import { ConflictException, Injectable } from '@nestjs/common';
+import type { AcademicRole } from '@studyhall/shared';
 import { eq } from 'drizzle-orm';
 import { db } from '../db/index';
 import { users } from '../db/schema/index';
@@ -62,12 +63,25 @@ export class UsersService {
       displayName?: string | undefined;
       username?: string | undefined;
       accentColor?: string | undefined;
+      // wave-77 M13 leg-2 (task 10068f9e): academic-identity fields
+      pronouns?: string | undefined;
+      bio?: string | undefined;
+      institution?: string | undefined;
+      program?: string | undefined;
+      academicRole?: AcademicRole | undefined;
+      academicYear?: string | undefined;
     },
   ): Promise<void> {
     const patch: Partial<{
       display_name: string;
       username: string;
       accent_color: string;
+      pronouns: string;
+      bio: string;
+      institution: string;
+      program: string;
+      academic_role: string;
+      academic_year: string;
       updated_at: Date;
     }> = { updated_at: new Date() };
 
@@ -80,6 +94,27 @@ export class UsersService {
     }
     if (fields.accentColor !== undefined) {
       patch.accent_color = fields.accentColor;
+    }
+    // wave-77 M13 leg-2: persist the academic-identity fields (all nullable text
+    // columns added by B-0). undefined = untouched (partial PATCH); the Zod schema
+    // (UpdateProfileSchema) already bounds every field's length and enum membership.
+    if (fields.pronouns !== undefined) {
+      patch.pronouns = fields.pronouns;
+    }
+    if (fields.bio !== undefined) {
+      patch.bio = fields.bio;
+    }
+    if (fields.institution !== undefined) {
+      patch.institution = fields.institution;
+    }
+    if (fields.program !== undefined) {
+      patch.program = fields.program;
+    }
+    if (fields.academicRole !== undefined) {
+      patch.academic_role = fields.academicRole;
+    }
+    if (fields.academicYear !== undefined) {
+      patch.academic_year = fields.academicYear;
     }
 
     try {

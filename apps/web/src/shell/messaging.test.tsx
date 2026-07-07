@@ -1107,6 +1107,12 @@ describe('MainColumn — socket message:updated / deleted / reaction events', ()
       username: 'me',
       avatarUrl: null,
       accentColor: null,
+      pronouns: null,
+      bio: null,
+      institution: null,
+      program: null,
+      academicRole: null,
+      academicYear: null,
     };
 
     render(
@@ -1225,6 +1231,12 @@ describe('MainColumn — socket message:updated / deleted / reaction events', ()
       username: 'me',
       avatarUrl: null,
       accentColor: null,
+      pronouns: null,
+      bio: null,
+      institution: null,
+      program: null,
+      academicRole: null,
+      academicYear: null,
     };
 
     render(

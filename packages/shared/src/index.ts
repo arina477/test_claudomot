@@ -5,11 +5,19 @@ export { MeResponseSchema } from './auth.js';
 export type { MeResponse } from './auth.js';
 
 export {
+  ACADEMIC_ROLES,
   ProfileResponseSchema,
   UpdateProfileSchema,
   AvatarPresignResponseSchema,
+  PublicProfileSchema,
 } from './profile.js';
-export type { ProfileResponse, UpdateProfileInput, AvatarPresignResponse } from './profile.js';
+export type {
+  AcademicRole,
+  ProfileResponse,
+  UpdateProfileInput,
+  AvatarPresignResponse,
+  PublicProfile,
+} from './profile.js';
 
 export {
   CreateServerSchema,

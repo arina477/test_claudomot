@@ -64,6 +64,14 @@ vi.mock('../auth/api', () => ({
     getMyPermissions: vi.fn(),
     timeoutMember: vi.fn(),
     removeTimeout: vi.fn(),
+    getPublicProfile: vi.fn(),
+  },
+  HttpError: class HttpError extends Error {
+    status: number;
+    constructor(status: number, message: string) {
+      super(message);
+      this.status = status;
+    }
   },
 }));
 
