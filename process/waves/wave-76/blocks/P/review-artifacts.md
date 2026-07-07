@@ -10,7 +10,7 @@
 |---|---|---|---|
 | P-0 | process/waves/wave-76/stages/P-0-frame.md | done | PROCEED (all 3 reviewers); 2 P-2 notes (educator-predicate, /status disposition) |
 | P-1 | process/waves/wave-76/stages/P-1-decompose.md | done | PROCEED; multi-spec; design_gap_flag TRUE (new console+analytics) → D-block |
-| P-2 | process/waves/wave-76/stages/P-2-spec.md | pending | |
+| P-2 | process/waves/wave-76/stages/P-2-spec.md | done | multi-spec 4 blocks → primary 682e0912; educator predicate + /status disposition resolved |
 | P-3 | process/waves/wave-76/stages/P-3-plan.md | pending | |
 | P-4 | process/waves/wave-76/stages/P-4-gemini-review.md | pending | |
 
