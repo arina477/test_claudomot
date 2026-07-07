@@ -10,8 +10,8 @@
 |---|---|---|---|
 | B-0 | process/waves/wave-74/stages/B-0-branch-and-schema.md | done | subscriptions (migration 0029, server_id FK=uuid) |
 | B-1 | process/waves/wave-74/stages/B-1-contracts.md | done | Tier/Entitlements DTO (task e34642ef) |
-| B-2 | process/waves/wave-74/stages/B-2-backend.md | pending | EntitlementsService + createServer gate + verify-reads test |
-| B-3 | process/waves/wave-74/stages/B-3-frontend.md | pending | optional thin "Your plan" display (task 2f61a317) |
+| B-2 | process/waves/wave-74/stages/B-2-backend.md | done | service + gate + verify-reads THROWS test |
+| B-3 | process/waves/wave-74/stages/B-3-frontend.md | skipped | optional display deferred (low-value until upgrade path) |
 | B-4 | process/waves/wave-74/stages/B-4-wiring.md | pending | |
 | B-5 | process/waves/wave-74/stages/B-5-verify.md | pending | |
 | B-6 | process/waves/wave-74/stages/B-6-review.md | pending | |

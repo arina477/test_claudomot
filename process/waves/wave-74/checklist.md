@@ -14,8 +14,8 @@
 ## B — Build
 - [x] B-0 Branch & schema
 - [x] B-1 Contracts
-- [ ] B-2 Backend
-- [ ] B-3 Frontend
+- [x] B-2 Backend
+- [x] B-3 (skipped — optional display deferred) Frontend
 - [ ] B-4 Wiring
 - [ ] B-5 Verify
 - [ ] B-6 Review
