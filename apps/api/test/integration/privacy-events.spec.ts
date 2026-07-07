@@ -179,6 +179,25 @@ describe.skipIf(SKIP)('AppendPrivacyEventService + hook seams (wave-73 B-2)', ()
     expect(evt?.target_id).toBe(USER_A);
   });
 
+  it('3b. updatePrivacy with UNCHANGED settings: ZERO privacy_settings_changed events written', async () => {
+    // First call — genuine change from default 'everyone' to 'nobody' → one event.
+    await privacyService.updatePrivacy(USER_A, {
+      profileVisibility: 'nobody',
+      whoCanDm: 'nobody',
+    });
+
+    // Second call — identical values → must NOT write another event.
+    await privacyService.updatePrivacy(USER_A, {
+      profileVisibility: 'nobody',
+      whoCanDm: 'nobody',
+    });
+
+    const events = await fetchPrivacyEvents(USER_A);
+    const changedEvents = events.filter((e) => e.event_type === 'privacy_settings_changed');
+    // Only the first (genuine) change should have produced an event.
+    expect(changedEvents).toHaveLength(1);
+  });
+
   it('8. no-PII: privacy_settings_changed context has ONLY visibility/whoCanDm values — no email/display_name', async () => {
     // Give USER_A a display_name and confirm it does NOT appear in context.
     await harnessQuery('UPDATE users SET display_name = $1 WHERE id = $2', [
@@ -235,6 +254,17 @@ describe.skipIf(SKIP)('AppendPrivacyEventService + hook seams (wave-73 B-2)', ()
     expect(evt?.target_id).toBe(USER_B);
   });
 
+  it('4b. createBlock idempotency: re-blocking an already-blocked user writes exactly ONE user_blocked event', async () => {
+    // First block — genuine insert → one event expected.
+    await blocksService.createBlock(USER_A, USER_B);
+    // Second call — conflict path (onConflictDoNothing) → no additional event.
+    await blocksService.createBlock(USER_A, USER_B);
+
+    const events = await fetchPrivacyEvents(USER_A);
+    const blockedEvents = events.filter((e) => e.event_type === 'user_blocked');
+    expect(blockedEvents).toHaveLength(1);
+  });
+
   // ─────────────────────────────────────────────────────────────────────────
   // 5. removeBlock seam
   // ─────────────────────────────────────────────────────────────────────────
@@ -250,6 +280,15 @@ describe.skipIf(SKIP)('AppendPrivacyEventService + hook seams (wave-73 B-2)', ()
     expect(evt?.actor_id).toBe(USER_A);
     expect(evt?.target_type).toBe('user');
     expect(evt?.target_id).toBe(USER_B);
+  });
+
+  it('5b. removeBlock on non-existent block: ZERO user_unblocked events written', async () => {
+    // USER_A never blocked USER_B — delete is a no-op; no audit event must fire.
+    await blocksService.removeBlock(USER_A, USER_B);
+
+    const events = await fetchPrivacyEvents(USER_A);
+    const unblockedEvents = events.filter((e) => e.event_type === 'user_unblocked');
+    expect(unblockedEvents).toHaveLength(0);
   });
 
   // ─────────────────────────────────────────────────────────────────────────

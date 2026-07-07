@@ -64,22 +64,29 @@ export class PrivacyService {
     // Context carries ONLY non-PII visibility/whoCanDm enum values (no
     // email, display_name, or any PII — PII discipline per karen+jenny P-4).
     // Failure MUST NOT fail the updatePrivacy response.
-    try {
-      await this.appendPrivacyEvent.append(userId, 'privacy_settings_changed', {
-        targetType: 'self',
-        targetId: userId,
-        context: {
-          visibilityFrom: before.profileVisibility,
-          visibilityTo: after.profileVisibility,
-          whoCanDmFrom: before.whoCanDm,
-          whoCanDmTo: after.whoCanDm,
-        },
-      });
-    } catch (err) {
-      this.logger.warn(
-        `appendPrivacyEvent failed for privacy_settings_changed (actor=${userId}) — update is committed; audit log failure is non-fatal.`,
-        err instanceof Error ? err.stack : String(err),
-      );
+    // Gate: only append when the settings actually changed. A re-save of
+    // identical values must NOT write a no-op event into the append-only ledger.
+    const settingsChanged =
+      before.profileVisibility !== after.profileVisibility || before.whoCanDm !== after.whoCanDm;
+
+    if (settingsChanged) {
+      try {
+        await this.appendPrivacyEvent.append(userId, 'privacy_settings_changed', {
+          targetType: 'self',
+          targetId: userId,
+          context: {
+            visibilityFrom: before.profileVisibility,
+            visibilityTo: after.profileVisibility,
+            whoCanDmFrom: before.whoCanDm,
+            whoCanDmTo: after.whoCanDm,
+          },
+        });
+      } catch (err) {
+        this.logger.warn(
+          `appendPrivacyEvent failed for privacy_settings_changed (actor=${userId}) — update is committed; audit log failure is non-fatal.`,
+          err instanceof Error ? err.stack : String(err),
+        );
+      }
     }
 
     return after;

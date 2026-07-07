@@ -152,18 +152,21 @@ export class BlocksService {
     }
 
     // ── Privacy audit hook (best-effort, non-blocking) ───────────────────────
-    // Fires AFTER the block row is committed. A logging failure MUST NOT fail
-    // or roll back the block action — mirror deleteAccount's post-commit pattern.
-    try {
-      await this.appendPrivacyEvent.append(blockerUserId, 'user_blocked', {
-        targetType: 'user',
-        targetId: blockedUserId,
-      });
-    } catch (err) {
-      this.logger.warn(
-        `appendPrivacyEvent failed for user_blocked (blocker=${blockerUserId}, blocked=${blockedUserId}) — block is committed; audit log failure is non-fatal.`,
-        err instanceof Error ? err.stack : String(err),
-      );
+    // Fires AFTER the block row is committed, but ONLY when a new row was
+    // actually inserted. The idempotent conflict path (row already existed)
+    // must NOT append a duplicate user_blocked event into the append-only ledger.
+    if (insertReturning.length > 0) {
+      try {
+        await this.appendPrivacyEvent.append(blockerUserId, 'user_blocked', {
+          targetType: 'user',
+          targetId: blockedUserId,
+        });
+      } catch (err) {
+        this.logger.warn(
+          `appendPrivacyEvent failed for user_blocked (blocker=${blockerUserId}, blocked=${blockedUserId}) — block is committed; audit log failure is non-fatal.`,
+          err instanceof Error ? err.stack : String(err),
+        );
+      }
     }
 
     return blockDto;
@@ -176,25 +179,30 @@ export class BlocksService {
   // -------------------------------------------------------------------------
 
   async removeBlock(blockerUserId: string, blockedUserId: string): Promise<void> {
-    await db
+    const deleted = await db
       .delete(userBlocks)
       .where(
         and(eq(userBlocks.blocker_id, blockerUserId), eq(userBlocks.blocked_id, blockedUserId)),
-      );
+      )
+      .returning();
     // No error if no row matched — idempotent.
 
     // ── Privacy audit hook (best-effort, non-blocking) ───────────────────────
-    // Fires AFTER the DELETE commits. Failure must not surface to the caller.
-    try {
-      await this.appendPrivacyEvent.append(blockerUserId, 'user_unblocked', {
-        targetType: 'user',
-        targetId: blockedUserId,
-      });
-    } catch (err) {
-      this.logger.warn(
-        `appendPrivacyEvent failed for user_unblocked (blocker=${blockerUserId}, blocked=${blockedUserId}) — unblock is committed; audit log failure is non-fatal.`,
-        err instanceof Error ? err.stack : String(err),
-      );
+    // Fires AFTER the DELETE commits, but ONLY when a row was actually removed.
+    // Unblocking a user who was never blocked must NOT write a false
+    // user_unblocked event into the append-only privacy_events ledger.
+    if (deleted.length > 0) {
+      try {
+        await this.appendPrivacyEvent.append(blockerUserId, 'user_unblocked', {
+          targetType: 'user',
+          targetId: blockedUserId,
+        });
+      } catch (err) {
+        this.logger.warn(
+          `appendPrivacyEvent failed for user_unblocked (blocker=${blockerUserId}, blocked=${blockedUserId}) — unblock is committed; audit log failure is non-fatal.`,
+          err instanceof Error ? err.stack : String(err),
+        );
+      }
     }
   }
 
