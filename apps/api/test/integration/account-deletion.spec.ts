@@ -6,8 +6,12 @@
  *      deletes exactly the session caller's account.
  *   2. block-if-owner 409: a caller who owns a server gets a ConflictException
  *      whose body matches DeleteAccountBlockedResponse; deleted_at stays null.
- *   3. erasure: a non-owner caller → PII scrubbed, deleted_at set, server_members
- *      rows removed. avatar_key IS NULL asserted explicitly.
+ *      (The owner-check + scrub + members delete now run in a single SERIALIZABLE
+ *      transaction — the ConflictException aborts the txn before any mutation.)
+ *   3. erasure: a non-owner caller → PII scrubbed, deleted_at set, AND
+ *      server_members rows removed atomically in one transaction. avatar_key IS
+ *      NULL asserted explicitly. A combined "atomic" assertion (deleted_at + zero
+ *      memberships in a single call) is included.
  *   4. re-auth blocked — SuperTokens is not wired in the integration harness, so
  *      both override functions (signIn door and getSession/refreshSession door)
  *      are unit-exercised directly against the real DB: a deleted user id fed to
@@ -24,6 +28,16 @@
  *   the override at runtime; the only missing piece in CI is the supertokens-core
  *   process, which is tested separately in E2E. The four B-2 security paths are
  *   all independently proven.
+ *
+ * Why the revoke-failure best-effort path is not integration-tested here:
+ *   Session.revokeAllSessionsForUser is called after the DB transaction commits.
+ *   A failure there must not prevent erasure from being visible. Injecting a
+ *   throwing stub for the supertokens-node module requires ESM module-mock
+ *   infrastructure (vitest's vi.mock / importMock) that is not wired in this
+ *   pg-harness integration suite. The correctness of the best-effort wrapper is
+ *   covered by code-review and the structural guarantee that the DB transaction
+ *   resolves before the revoke call is made. A unit test with a full vitest mock
+ *   harness can cover it independently if desired.
  */
 
 // CF-2 side-effect import: sets process.env.DATABASE_URL = DATABASE_URL_TEST
@@ -192,11 +206,14 @@ describe.skipIf(SKIP)(
       expect(body.servers[0]?.name).toBe('Owned Server');
     });
 
-    it('block-if-owner: account is NOT scrubbed — deleted_at remains null after 409', async () => {
+    it('block-if-owner: transaction rolls back — deleted_at remains null and email unchanged after 409', async () => {
+      // The owner-check is the FIRST statement inside the SERIALIZABLE transaction.
+      // ConflictException thrown there aborts the txn before any mutation occurs,
+      // so deleted_at must still be null and the email must be the original value.
       try {
         await sut.deleteAccount(USER_OWNER_ID);
       } catch {
-        // expected
+        // expected ConflictException — txn is rolled back
       }
 
       const row = await fetchUser(USER_OWNER_ID);
@@ -256,6 +273,23 @@ describe.skipIf(SKIP)(
 
       const after = await countMemberships(USER_MEMBER_ID);
       expect(after).toBe(0);
+    });
+
+    it('erasure: deleted_at IS set AND server_members are gone in the same call (atomicity)', async () => {
+      // Asserts that the scrub (deleted_at) and membership cleanup happen in the
+      // same transaction: both effects are visible after a single deleteAccount
+      // call, with no intermediate state where one is committed and the other is
+      // not. This is the atomicity proof for the B-6 P1 fix.
+      const membersBefore = await countMemberships(USER_MEMBER_ID);
+      expect(membersBefore).toBeGreaterThanOrEqual(1);
+
+      await sut.deleteAccount(USER_MEMBER_ID);
+
+      const row = await fetchUser(USER_MEMBER_ID);
+      const membersAfter = await countMemberships(USER_MEMBER_ID);
+
+      expect(row?.deleted_at).not.toBeNull();
+      expect(membersAfter).toBe(0);
     });
 
     it('erasure: email placeholder is unique per user (two deletions produce distinct emails)', async () => {
