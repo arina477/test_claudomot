@@ -8,7 +8,7 @@ function makeReq(userId = 'user-abc') {
   return { session: { getUserId: () => userId } };
 }
 
-// Minimal user row with all fields B-2 introduces.
+// Minimal user row with all fields B-2 introduces, incl. wave-77 academic-identity.
 function makeUser(overrides: Record<string, unknown> = {}) {
   return {
     id: 'user-abc',
@@ -17,6 +17,12 @@ function makeUser(overrides: Record<string, unknown> = {}) {
     username: null,
     avatar_url: null,
     accent_color: null,
+    pronouns: null,
+    bio: null,
+    institution: null,
+    program: null,
+    academic_role: null,
+    academic_year: null,
     created_at: new Date(),
     updated_at: new Date(),
     ...overrides,
@@ -33,10 +39,15 @@ function makeController() {
     updateProfile: vi.fn().mockResolvedValue(undefined),
     setAvatarUrl: vi.fn().mockResolvedValue(undefined),
   };
-  // ProfileController constructor accepts UsersService — pass mock directly.
-  // biome-ignore lint/suspicious/noExplicitAny: test mock — full UsersService type not needed
-  const controller = new ProfileController(usersService as any);
-  return { controller, usersService };
+  // wave-77: ProfileController also takes ProfileVisibilityService (used only by
+  // GET /profile/:userId — not exercised in this self-endpoint unit spec).
+  const profileVisibility = {
+    resolve: vi.fn(),
+  };
+  // ProfileController constructor accepts (UsersService, ProfileVisibilityService).
+  // biome-ignore lint/suspicious/noExplicitAny: test mock — full types not needed
+  const controller = new ProfileController(usersService as any, profileVisibility as any);
+  return { controller, usersService, profileVisibility };
 }
 
 describe('ProfileController', () => {
@@ -109,6 +120,12 @@ describe('ProfileController', () => {
         username: 'bob_99',
         avatarUrl: null,
         accentColor: '#ff0000',
+        pronouns: null,
+        bio: null,
+        institution: null,
+        program: null,
+        academicRole: null,
+        academicYear: null,
       });
     });
 
@@ -121,7 +138,58 @@ describe('ProfileController', () => {
         username: null,
         avatarUrl: null,
         accentColor: null,
+        pronouns: null,
+        bio: null,
+        institution: null,
+        program: null,
+        academicRole: null,
+        academicYear: null,
       });
+    });
+
+    it('returns the academic-identity fields when present (wave-77 M13 leg-2)', async () => {
+      usersService.findById.mockResolvedValue(
+        makeUser({
+          pronouns: 'she/her',
+          bio: 'CS major',
+          institution: 'MIT',
+          program: 'Computer Science',
+          academic_role: 'student',
+          academic_year: 'Sophomore',
+        }),
+      );
+      const result = await controller.getProfile(makeReq());
+      expect(result).toMatchObject({
+        pronouns: 'she/her',
+        bio: 'CS major',
+        institution: 'MIT',
+        program: 'Computer Science',
+        academicRole: 'student',
+        academicYear: 'Sophomore',
+      });
+    });
+
+    it('round-trips academic fields through PATCH → persists then GET returns them', async () => {
+      // PATCH validates + persists via updateProfile, then re-reads via findById.
+      usersService.findById.mockResolvedValue(
+        makeUser({ institution: 'Stanford', academic_role: 'educator' }),
+      );
+      const result = await controller.updateProfile(makeReq(), {
+        institution: 'Stanford',
+        academicRole: 'educator',
+      });
+      expect(usersService.updateProfile).toHaveBeenCalledWith('user-abc', {
+        institution: 'Stanford',
+        academicRole: 'educator',
+      });
+      expect(result).toMatchObject({ institution: 'Stanford', academicRole: 'educator' });
+    });
+
+    it('rejects an out-of-enum academicRole with BadRequestException (400)', async () => {
+      await expect(
+        // biome-ignore lint/suspicious/noExplicitAny: intentionally invalid enum value
+        controller.updateProfile(makeReq(), { academicRole: 'wizard' } as any),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('throws NotFoundException when user does not exist', async () => {
