@@ -30,7 +30,7 @@
  */
 
 import type { AcademicRole, PublicProfile } from '@studyhall/shared';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { HttpError, api } from '../auth/api';
 import {
@@ -40,6 +40,7 @@ import {
   GraduationCapIcon,
   UserIcon,
   UsersIcon,
+  WarningIcon,
 } from './icons';
 
 const CARD_WIDTH = 320; // w-80
@@ -48,7 +49,12 @@ const VIEWPORT_MARGIN = 8; // edge-clamp gutter
 type FetchState =
   | { kind: 'loading' }
   | { kind: 'loaded'; profile: PublicProfile }
-  | { kind: 'hidden' };
+  | { kind: 'hidden' }
+  // Client-observable transport failure (network / timeout / 5xx). DISTINCT from
+  // 'hidden': this reads as "couldn't load — try again" and offers a retry.
+  // Derived ONLY from the HTTP status / transport outcome — no server signal of
+  // WHY a profile is hidden (a 404 is always the uniform 'hidden' anti-oracle).
+  | { kind: 'error' };
 
 type Props = {
   /** Opaque target UUID (BUILD-13). */
@@ -172,7 +178,20 @@ export function MemberProfileCard({
   const cardRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
 
-  // Fetch the public profile. Uniform 404 → the calm hidden state (NOT an error).
+  // Retry counter — bumping it re-runs the fetch effect (which owns the single
+  // cancellation path), so a manual retry reuses the exact same load + cleanup.
+  const [attempt, setAttempt] = useState(0);
+  const handleRetry = useCallback(() => setAttempt((n) => n + 1), []);
+
+  // Fetch the public profile. The catch branches CLIENT-SIDE on the error:
+  //   - HttpError status 404 → the uniform 'hidden' anti-oracle (wave-77). This
+  //     is byte-identical across every non-visible cause (hidden / blocked /
+  //     soft-deleted / nonexistent) so a probing stranger cannot learn WHY.
+  //   - anything else (network throw, timeout, or a 5xx HttpError) → 'error', a
+  //     DISTINCT retryable state. A 5xx is transport-failure, NOT hidden.
+  //   - 401 keeps existing behaviour (falls through to the retryable state; the
+  //     card is only opened from an authed shell, so a 401 here is transport-ish).
+  // No new server field: the distinction is derived only from status/transport.
   useEffect(() => {
     let cancelled = false;
     setState({ kind: 'loading' });
@@ -183,19 +202,16 @@ export function MemberProfileCard({
       })
       .catch((err) => {
         if (cancelled) return;
-        // 404 (or any hidden/unavailable signal) → calm "Profile Unavailable".
         if (err instanceof HttpError && err.status === 404) {
           setState({ kind: 'hidden' });
         } else {
-          // Network/other failure also degrades to the calm state (read-only,
-          // no alarming error surface per the adopted design).
-          setState({ kind: 'hidden' });
+          setState({ kind: 'error' });
         }
       });
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, attempt]);
 
   // Position + edge-clamp against the viewport. Runs before paint and re-clamps
   // once the real card height is known (so tall/short bodies both stay on-screen).
@@ -274,7 +290,9 @@ export function MemberProfileCard({
       ? 'Loading profile'
       : state.kind === 'hidden'
         ? 'Profile Unavailable'
-        : `Member profile: ${state.profile.displayName ?? state.profile.username ?? 'member'}`;
+        : state.kind === 'error'
+          ? "Couldn't load profile"
+          : `Member profile: ${state.profile.displayName ?? state.profile.username ?? 'member'}`;
 
   return createPortal(
     <div
@@ -355,6 +373,73 @@ export function MemberProfileCard({
             <p className="px-2 text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.60)' }}>
               This member&apos;s academic identity is hidden due to visibility settings.
             </p>
+          </div>
+        </>
+      )}
+
+      {/* ── ERROR — transport failure (network / timeout / 5xx): retryable ─── */}
+      {/* DISTINCT from 'hidden': reads "couldn't load — try again", offers a    */}
+      {/* retry. Reuses the same container + DS tokens as the hidden state — a   */}
+      {/* copy/affordance variant, no new design surface.                        */}
+      {state.kind === 'error' && (
+        <>
+          <div
+            className="relative h-[60px]"
+            style={{ backgroundColor: '#1c1c1f', borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+            aria-hidden="true"
+          />
+          <div className="absolute left-5 top-5">
+            <div
+              className="flex h-16 w-16 items-center justify-center rounded-full"
+              style={{
+                backgroundColor: '#27272a',
+                color: 'rgba(255,255,255,0.40)',
+                boxShadow: '0 0 0 4px #121214',
+              }}
+            >
+              <UserIcon size={28} />
+            </div>
+          </div>
+          <div className="flex min-h-[220px] flex-col items-center justify-center px-6 pb-8 pt-[64px] text-center">
+            <div
+              className="mb-4 flex h-10 w-10 items-center justify-center rounded-full"
+              style={{
+                // Amber alert accent (DESIGN-SYSTEM.md: warning/reconnecting) —
+                // a recoverable "try again", not the danger-red of a hard error.
+                backgroundColor: 'rgba(245,158,11,0.12)',
+                border: '1px solid rgba(245,158,11,0.25)',
+                color: '#f59e0b',
+              }}
+            >
+              <WarningIcon size={20} />
+            </div>
+            <h4
+              className="mb-1 text-[15px] font-medium"
+              style={{ color: 'rgba(255,255,255,0.92)' }}
+            >
+              Couldn&apos;t load profile
+            </h4>
+            <p
+              className="mb-4 px-2 text-sm leading-relaxed"
+              style={{ color: 'rgba(255,255,255,0.60)' }}
+            >
+              Something went wrong reaching this profile. Check your connection and try again.
+            </p>
+            {/* DS Button — secondary variant (surface-700 fill + hairline border,
+                radius-md, sm). A real <button> with a focus-visible ring. */}
+            <button
+              type="button"
+              onClick={handleRetry}
+              data-testid="member-card-retry"
+              className="h-8 rounded-md px-4 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2"
+              style={{
+                backgroundColor: '#27272a',
+                border: '1px solid rgba(255,255,255,0.10)',
+                color: 'rgba(255,255,255,0.92)',
+              }}
+            >
+              Try again
+            </button>
           </div>
         </>
       )}
