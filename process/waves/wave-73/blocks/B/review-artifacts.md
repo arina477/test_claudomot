@@ -3,7 +3,7 @@
 **Block:** B (Build)
 **Wave topic:** M10 privacy-events audit log — privacy_events table + AppendPrivacyEvent service + 4 non-blocking after-commit write hooks + "Your privacy activity" read list
 **Block exit gate:** B-6
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 
@@ -15,7 +15,7 @@
 | B-3 | process/waves/wave-73/stages/B-3-frontend.md | done | privacy-activity panel + 10 tests (task 5a2521bc) |
 | B-4 | process/waves/wave-73/stages/B-4-wiring.md | done | repo typecheck 4/4 |
 | B-5 | process/waves/wave-73/stages/B-5-verify.md | done | lint/tests/build green |
-| B-6 | process/waves/wave-73/stages/B-6-review.md | pending | |
+| B-6 | process/waves/wave-73/stages/B-6-review.md | done | Phase1 APPROVED + /review 4 P2 fixed |
 
 ## Block-specific context
 
@@ -40,3 +40,14 @@ none
 ## Gate verdict log
 
 <appended by fresh head-builder spawn at B-6 Action 1>
+
+## Block-exit handoff
+```yaml
+build_block_status: complete
+branch: wave-73-privacy-audit-log
+stages_run: [B-0, B-1, B-2, B-3, B-4, B-5, B-6]
+stages_skipped: []
+review_verdict: APPROVE
+last_commit_sha: 5a2dfeb
+ready_for_ci: true
+```
