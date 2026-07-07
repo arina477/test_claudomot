@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyHall — Block UI Architecture</title>
+    
+    <!-- 
+      aesthetic_dna: Calm, academic dark-mode (Discord-for-students)
+      ui_paradigm: Multi-context split-pane (Settings Panel + Contextual Trigger Layout) / Mobile Portal Modal
+      palette: Surface-950/900/800 layers, Accent-Emerald, Danger-btn #b91c1c
+    -->
+
+    <!-- Tailwind CSS (Framework) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Geist Font (Typography) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- Phosphor Icons (Iconography) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Geist', '-apple-system', 'Segoe UI', 'sans-serif'],
+                        mono: ['Geist Mono', 'ui-monospace', 'monospace'],
+                    },
+                    colors: {
+                        surface: {
+                            950: '#0a0a0b',
+                            900: '#121214',
+                            800: '#1c1c1f',
+                            700: '#27272a',
+                            600: '#3f3f46',
+                            500: '#52525b',
+                        },
+                        text: {
+                            primary: 'rgba(255,255,255,0.92)',
+                            secondary: 'rgba(255,255,255,0.60)',
+                            muted: 'rgba(255,255,255,0.40)',
+                        },
+                        accent: {
+                            emerald: '#10b981',
+                            amber: '#f59e0b',
+                        },
+                        danger: {
+                            btn: '#b91c1c',     // WCAG AA Pass text-on-fill
+                            btnHover: '#991b1b',
+                            base: '#ef4444',    // Info/borders only
+                            text: '#f87171',
+                        }
+                    },
+                    boxShadow: {
+                        'pop': '0 8px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)',
+                        'sm': '0 1px 2px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)',
+                    },
+                    borderColor: {
+                        hairline: 'rgba(255,255,255,0.06)',
+                        hover: 'rgba(255,255,255,0.10)',
+                    },
+                    animation: {
+                        'shimmer': 'shimmer 2s infinite linear',
+                        'spin-slow': 'spin 1.5s linear infinite',
+                    },
+                    keyframes: {
+                        shimmer: {
+                            '0%': { backgroundPosition: '-1000px 0' },
+                            '100%': { backgroundPosition: '1000px 0' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* CSS Variables for raw access if needed outside Tailwind */
+        :root {
+            --spacing-base: 4px;
+        }
+
+        body {
+            background-color: #0a0a0b;
+            color: rgba(255,255,255,0.92);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+
+        /* Shimmer gradient for Skeletons */
+        .skeleton-bg {
+            background: linear-gradient(90deg, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.02) 75%);
+            background-size: 1000px 100%;
+        }
+
+        /* Spring animations for Modal / Modals Bottom Sheet logic */
+        .modal-enter {
+            opacity: 1 !important;
+            pointer-events: auto !important;
+        }
+        
+        .modal-enter .modal-content {
+            transform: translateY(0) scale(1) !important;
+        }
+
+        @media (min-width: 640px) {
+            .modal-enter .modal-content {
+                transform: translateY(-50%) translateX(-50%) scale(1) !important;
+            }
+        }
+
+        /* Row collapse animation configuration */
+        .collapsing-row {
+            transition: all 300ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            opacity: 0;
+            transform: scale(0.95);
+            margin-top: -52px; /* Pull up */
+            pointer-events: none;
+        }
+
+        /* Toast entry */
+        .toast-enter {
+            transform: translateY(0) scale(1) !important;
+            opacity: 1 !important;
+        }
+
+        /* Kebab Dropdown */
+        .dropdown-open {
+            opacity: 1 !important;
+            visibility: visible !important;
+            transform: scale(1) translateY(0) !important;
+        }
+    </style>
+</head>
+<body class="min-h-[100dvh] flex flex-col overflow-x-hidden selection:bg-accent-emerald selection:text-surface-950">
+
+    <!-- 
+      MACRO_ARCHITECTURE
+      A split-pane diagnostic layout.
+      Left: Settings Shell (Blocked Users List).
+      Right: App Context (Member List / Trigger point).
+    -->
+    <main class="flex-1 w-full max-w-[1400px] mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-6 md:gap-8 min-h-screen items-start">
+
+        <!-- ========================================== -->
+        <!-- PANE 1: USER SETTINGS (Blocked Users List) -->
+        <!-- ========================================== -->
+        <section class="flex flex-col gap-4 bg-surface-900 border border-hairline rounded-xl overflow-hidden shadow-sm h-full max-h-[85vh]">
+            <!-- Settings Header -->
+            <header class="px-6 py-5 border-b border-hairline flex flex-col gap-1 shrink-0">
+                <div class="flex items-center gap-2 text-text-secondary text-sm font-medium mb-1">
+                    <i class="ph ph-shield-check text-lg"></i>
+                    User Settings / Privacy
+                </div>
+                <h1 class="text-xl font-semibold tracking-tight leading-none text-text-primary">Blocked Users</h1>
+                <p class="text-sm text-text-secondary mt-1">Review block list. Blocked members cannot DM you and their messages are hidden.</p>
+            </header>
+
+            <!-- Settings Content (List States) -->
+            <div class="flex-1 overflow-y-auto p-6 relative flex flex-col gap-4">
+                
+                <!-- Loading State (Hidden by default, triggered via dev controls) -->
+                <div id="list-loading-state" class="hidden flex-col gap-2 w-full">
+                    <div class="h-[52px] skeleton-bg animate-shimmer rounded-md flex items-center px-4 gap-3 w-full">
+                        <div class="w-8 h-8 rounded-full bg-white/5 shrink-0"></div>
+                        <div class="w-32 h-4 rounded bg-white/5"></div>
+                    </div>
+                    <div class="h-[52px] skeleton-bg animate-shimmer rounded-md flex items-center px-4 gap-3 w-full animation-delay-100">
+                        <div class="w-8 h-8 rounded-full bg-white/5 shrink-0"></div>
+                        <div class="w-24 h-4 rounded bg-white/5"></div>
+                    </div>
+                </div>
+
+                <!-- Empty State (Hidden by default) -->
+                <div id="list-empty-state" class="hidden flex-1 flex-col items-center justify-center text-center py-12 px-4">
+                    <div class="w-12 h-12 rounded-full bg-surface-800 border border-hairline flex items-center justify-center mb-4 shadow-sm">
+                        <i class="ph ph-prohibit text-text-secondary text-2xl"></i>
+                    </div>
+                    <h3 class="text-base font-semibold text-text-primary mb-1">You haven't blocked anyone</h3>
+                    <p class="text-sm text-text-secondary max-w-[260px]">When you block a user for your safety, they will appear here.</p>
+                </div>
+
+                <!-- Populated List State -->
+                <ul id="blocked-users-list" class="flex flex-col gap-1 w-full m-0 p-0 list-none">
+                    
+                    <!-- Row 1 -->
+                    <li class="blocked-row group flex flex-col sm:flex-row sm:items-center justify-between p-2 sm:p-3 rounded-md hover:bg-white/[0.02] transition-colors duration-150 border border-transparent hover:border-hover gap-3 sm:gap-0">
+                        <div class="flex items-center gap-3">
+                            <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=80&q=80" alt="Elena Rostova" class="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover bg-surface-800" draggable="false">
+                            <div class="flex flex-col">
+                                <span class="text-sm sm:text-base font-medium text-text-primary leading-tight">Elena Rostova</span>
+                                <span class="text-xs text-text-secondary leading-tight mt-0.5">@erostova</span>
+                            </div>
+                        </div>
+                        <button type="button" aria-label="Unblock Elena Rostova" onclick="handleUnblock(this, 'Elena Rostova')" class="unblock-btn h-8 px-3 rounded-md text-sm font-medium text-text-secondary hover:text-text-primary bg-transparent hover:bg-surface-700 transition-all duration-150 active:scale-[0.98] border border-transparent flex items-center justify-center gap-2 self-start sm:self-auto min-w-[80px]">
+                            <span class="btn-text">Unblock</span>
+                            <i class="ph ph-spinner-gap animate-spin-slow hidden btn-spinner"></i>
+                        </button>
+                    </li>
+
+                    <!-- Row 2 -->
+                    <li class="blocked-row group flex flex-col sm:flex-row sm:items-center justify-between p-2 sm:p-3 rounded-md hover:bg-white/[0.02] transition-colors duration-150 border border-transparent hover:border-hover gap-3 sm:gap-0">
+                        <div class="flex items-center gap-3">
+                            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&q=80" alt="Marcus Vance" class="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover bg-surface-800" draggable="false">
+                            <div class="flex flex-col">
+                                <span class="text-sm sm:text-base font-medium text-text-primary leading-tight">Marcus Vance</span>
+                                <span class="text-xs text-text-secondary leading-tight mt-0.5">@mvance_bio</span>
+                            </div>
+                        </div>
+                        <button type="button" aria-label="Unblock Marcus Vance" onclick="handleUnblock(this, 'Marcus Vance')" class="unblock-btn h-8 px-3 rounded-md text-sm font-medium text-text-secondary hover:text-text-primary bg-transparent hover:bg-surface-700 transition-all duration-150 active:scale-[0.98] border border-transparent flex items-center justify-center gap-2 self-start sm:self-auto min-w-[80px]">
+                            <span class="btn-text">Unblock</span>
+                            <i class="ph ph-spinner-gap animate-spin-slow hidden btn-spinner"></i>
+                        </button>
+                    </li>
+                </ul>
+
+            </div>
+        </section>
+
+        <!-- ============================================== -->
+        <!-- PANE 2: APP CONTEXT (Member Row & Interactions)-->
+        <!-- ============================================== -->
+        <section class="flex flex-col gap-6 h-full">
+            
+            <div class="bg-surface-900 border border-hairline rounded-xl p-6 shadow-sm flex flex-col">
+                <header class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold tracking-tight text-text-primary">Member List Context</h2>
+                    <span class="text-xs font-mono text-text-secondary px-2 py-1 bg-surface-800 rounded-sm border border-hairline">design/member-moderation.html</span>
+                </header>
+
+                <div class="text-sm text-text-secondary mb-4 leading-relaxed">
+                    The block affordance resides in member contextual menus. It is <b>never</b> shown on the viewer's own row.
+                </div>
+
+                <div class="bg-surface-950 border border-hairline rounded-lg p-2 flex flex-col gap-1 w-full max-w-sm">
+                    
+                    <!-- Row: SELF (No block option) -->
+                    <div class="flex items-center justify-between p-2 rounded-md hover:bg-surface-800 transition-colors group relative cursor-pointer">
+                        <div class="flex items-center gap-3">
+                            <div class="relative">
+                                <img src="https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=80&q=80" alt="Alex (You)" class="w-8 h-8 rounded-full object-cover">
+                                <div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-accent-emerald border-2 border-surface-950 rounded-full"></div>
+                            </div>
+                            <span class="text-sm font-medium text-text-primary">Alex <span class="text-xs text-text-secondary ml-1">(You)</span></span>
+                        </div>
+                        <button class="w-6 h-6 flex items-center justify-center text-text-muted hover:text-text-primary rounded hover:bg-surface-700 opacity-0 group-hover:opacity-100 transition-all">
+                            <i class="ph ph-dots-three-vertical"></i>
+                        </button>
+                    </div>
+
+                    <!-- Row: OTHER USER (Has block option) -->
+                    <div class="flex items-center justify-between p-2 rounded-md hover:bg-surface-800 transition-colors group relative cursor-pointer" onclick="toggleDropdown(event)">
+                        <div class="flex items-center gap-3 pointer-events-none">
+                            <div class="relative">
+                                <img src="https://images.unsplash.com/photo-1527980965255-d3b416303d12?auto=format&fit=crop&w=80&q=80" alt="Dr. Aris Thorne" class="w-8 h-8 rounded-full object-cover">
+                            </div>
+                            <span class="text-sm font-medium text-text-primary">Dr. Aris Thorne</span>
+                        </div>
+                        
+                        <button type="button" aria-haspopup="menu" aria-label="Member options" class="kebab-trigger w-6 h-6 flex items-center justify-center text-text-secondary hover:text-text-primary rounded hover:bg-surface-700 transition-all z-10 block pointer-events-auto shadow-[0_0_15px_rgba(255,255,255,0.05)]">
+                            <i class="ph ph-dots-three-vertical"></i>
+                        </button>
+
+                        <!-- Conceptual Dropdown (Portal simulation) -->
+                        <div class="context-menu absolute right-8 top-8 w-48 bg-surface-800 border border-hairline rounded-lg shadow-pop p-1.5 z-20 opacity-0 invisible scale-95 origin-top-right transition-all duration-150">
+                            <button class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded text-sm text-text-primary hover:bg-surface-700 transition-colors">
+                                <i class="ph ph-user text-text-secondary"></i> View Profile
+                            </button>
+                            <button class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded text-sm text-text-primary hover:bg-surface-700 transition-colors">
+                                <i class="ph ph-chat-teardrop text-text-secondary"></i> Message
+                            </button>
+                            <div class="h-px w-full bg-hairline my-1"></div>
+                            <!-- BLOCK ACTION TRIGGER -->
+                            <button onclick="openBlockModal('Dr. Aris Thorne')" class="block-trigger-btn w-full text-left flex items-center justify-between px-2 py-1.5 rounded text-sm text-danger-text hover:bg-danger-base/10 transition-colors group/btn">
+                                <span class="flex items-center gap-2">
+                                    <i class="ph ph-prohibit"></i> Block User
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Developer State Controller (Spec specific) -->
+            <div class="bg-surface-900 border border-hairline rounded-xl p-6 shadow-sm mt-auto">
+                <header class="mb-4">
+                    <h2 class="text-sm font-medium text-text-secondary uppercase tracking-wider">Spec Controls</h2>
+                </header>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="openBlockModal('Sample User')" class="h-8 px-3 bg-surface-700 hover:bg-surface-600 rounded-md text-xs font-medium transition-colors border border-hairline">Show Dialog</button>
+                    <button onclick="simulateListLoading()" class="h-8 px-3 bg-surface-700 hover:bg-surface-600 rounded-md text-xs font-medium transition-colors border border-hairline">List: Loading</button>
+                    <button onclick="resetList()" class="h-8 px-3 bg-surface-700 hover:bg-surface-600 rounded-md text-xs font-medium transition-colors border border-hairline">Reset Grid</button>
+                    <button onclick="showToast('Network error. Failed to block.', 'error')" class="h-8 px-3 bg-surface-800 hover:bg-surface-700 rounded-md text-xs text-danger-text font-medium transition-colors border border-danger-base/20">Trigger Error Toast</button>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- ============================================================== -->
+    <!-- MACRO_ARCHITECTURE: SYSTEM LAYERS (Modals & Toasts Top Level) -->
+    <!-- ============================================================== -->
+
+    <!-- BLOCK CONFIRMATION DIALOG 
+         Positioned at root to escape transformed ancestors.
+         Mobile: Bottom sheet. Desktop: Centered modal. -->
+    <div id="block-modal-backdrop" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300 flex items-end sm:items-start" aria-hidden="true">
+        
+        <!-- Focus Trap / Actual Dialog -->
+        <div id="block-modal" role="dialog" aria-modal="true" aria-labelledby="dialog-title" class="modal-content absolute w-full sm:w-[400px] bg-surface-900 border border-hairline shadow-pop flex flex-col 
+             bottom-0 sm:bottom-auto sm:top-1/2 left-0 sm:left-1/2 
+             transform translate-y-full sm:translate-y-0 sm:-translate-x-1/2 sm:scale-95
+             rounded-t-2xl sm:rounded-xl
+             transition-all duration-300 ease-[cubic-bezier(0.175,0.885,0.32,1.275)]
+             max-h-[90vh] sm:max-h-none overflow-hidden">
+             
+             <div class="p-5 sm:p-6 flex flex-col">
+                 <!-- Header -->
+                 <div class="flex items-start justify-between mb-3">
+                     <h2 id="dialog-title" class="text-xl font-semibold tracking-tight text-text-primary">Block <span id="modal-target-name" class="truncate max-w-[200px] inline-block align-bottom">User</span>?</h2>
+                     <!-- Mobile Drag Handle indicator (cosmetic) -->
+                     <div class="w-10 h-1 bg-surface-600 rounded-full sm:hidden absolute top-3 left-1/2 -translate-x-1/2"></div>
+                 </div>
+                 
+                 <!-- Body -->
+                 <p class="text-sm text-text-secondary leading-relaxed mb-6">
+                     They won't be able to DM you and you won't see their content in servers. This action won't notify them.
+                 </p>
+
+                 <!-- Footer Actions -->
+                 <!-- Note: standard pattern, primary/destructive action on right -->
+                 <div class="flex items-center justify-end gap-3 flex-col-reverse sm:flex-row w-full sm:w-auto">
+                     <button type="button" onclick="closeBlockModal()" class="w-full sm:w-auto h-10 px-4 rounded-md text-sm font-medium text-text-secondary hover:text-text-primary bg-transparent hover:bg-surface-700 transition-colors duration-150 active:scale-[0.98] border border-transparent">
+                         Cancel
+                     </button>
+                     
+                     <!-- DANGER BUTTON: Must use --danger-btn #b91c1c per spec -->
+                     <button type="button" id="confirm-block-btn" onclick="submitBlock()" class="w-full sm:w-auto h-10 px-4 rounded-md text-sm font-semibold text-white bg-danger-btn hover:bg-danger-btnHover transition-colors duration-150 active:scale-[0.98] shadow-sm flex items-center justify-center gap-2 relative overflow-hidden group">
+                         <span class="btn-text">Block User</span>
+                         <i class="ph ph-spinner-gap animate-spin-slow hidden btn-spinner absolute"></i>
+                     </button>
+                 </div>
+             </div>
+        </div>
+    </div>
+
+    <!-- TOAST CONTAINER -->
+    <div id="toast-container" class="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-[60] flex flex-col gap-2 pointer-events-none w-full sm:w-auto px-4 sm:px-0">
+        <!-- Toasts injected conditionally here via JS -->
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- INTERACTION LOGIC (Vanilla JS Orchestration) -->
+    <!-- ========================================== -->
+    <script>
+        // --- State Variables ---
+        let currentBlockTarget = '';
+        let isDropdownOpen = false;
+        let isSubmitting = false;
+        let previousActiveElement = null; // For focus trap restoration
+
+        // --- DOM Elements ---
+        const modalBackdrop = document.getElementById('block-modal-backdrop');
+        const modal = document.getElementById('block-modal');
+        const modalTargetNameEl = document.getElementById('modal-target-name');
+        const confirmBtn = document.getElementById('confirm-block-btn');
+        const toastContainer = document.getElementById('toast-container');
+        const contextMenu = document.querySelector('.context-menu');
+        
+        const listContainer = document.getElementById('blocked-users-list');
+        const emptyState = document.getElementById('list-empty-state');
+        const loadingState = document.getElementById('list-loading-state');
+
+        // --- Member Context Menu Logic ---
+        function toggleDropdown(e) {
+            // Prevent trigger if clicking on the kebab specific area
+            if (e.target.closest('.block-trigger-btn')) return;
+            
+            isDropdownOpen = !isDropdownOpen;
+            if (isDropdownOpen) {
+                contextMenu.classList.add('dropdown-open');
+                // document listener to close
+                document.addEventListener('click', closeDropdownOutside);
+            } else {
+                closeDropdown();
+            }
+        }
+
+        function closeDropdown() {
+            contextMenu.classList.remove('dropdown-open');
+            isDropdownOpen = false;
+            document.removeEventListener('click', closeDropdownOutside);
+        }
+
+        function closeDropdownOutside(e) {
+            if (!e.target.closest('.group.relative')) {
+                closeDropdown();
+            }
+        }
+
+        // --- Modal & Focus Trap Logic ---
+        function openBlockModal(userName) {
+            closeDropdown();
+            currentBlockTarget = userName;
+            modalTargetNameEl.textContent = userName;
+            
+            // Save focus
+            previousActiveElement = document.activeElement;
+            
+            // Open animation classes
+            modalBackdrop.classList.add('modal-enter');
+            modalBackdrop.removeAttribute('aria-hidden');
+            
+            // Trap focus inside modal logic (simplified for single file)
+            setTimeout(() => {
+                confirmBtn.focus();
+            }, 100);
+
+            // Accessiblity trap listener
+            document.addEventListener('keydown', handleModalKeydown);
+        }
+
+        function closeBlockModal() {
+            if (isSubmitting) return; // Prevent close while loading
+            
+            modalBackdrop.classList.remove('modal-enter');
+            modalBackdrop.setAttribute('aria-hidden', 'true');
+            currentBlockTarget = '';
+            
+            document.removeEventListener('keydown', handleModalKeydown);
+            
+            // Restore focus
+            if (previousActiveElement) previousActiveElement.focus();
+            
+            // Reset button state just in case
+            resetConfirmBtn();
+        }
+
+        function handleModalKeydown(e) {
+            if (e.key === 'Escape') {
+                closeBlockModal();
+                return;
+            }
+            if (e.key === 'Tab') {
+                const focusable = modal.querySelectorAll('button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+                if (!focusable.length) return;
+                
+                const first = focusable[0];
+                const last = focusable[focusable.length - 1];
+
+                if (e.shiftKey) { // Shift + Tab
+                    if (document.activeElement === first) {
+                        e.preventDefault();
+                        last.focus();
+                    }
+                } else { // Tab
+                    if (document.activeElement === last) {
+                        e.preventDefault();
+                        first.focus();
+                    }
+                }
+            }
+        }
+
+        // --- Action Orchestration (Simulated Networking) ---
+        function submitBlock() {
+            if (isSubmitting) return;
+            isSubmitting = true;
+            
+            // Set Loading UI on Button
+            confirmBtn.disabled = true;
+            confirmBtn.classList.add('opacity-80', 'cursor-not-allowed');
+            confirmBtn.querySelector('.btn-text').classList.add('opacity-0');
+            confirmBtn.querySelector('.btn-spinner').classList.remove('hidden');
+
+            // Simulate API calls
+            setTimeout(() => {
+                // Success Path
+                isSubmitting = false;
+                closeBlockModal();
+                showToast(`Successfully blocked ${currentBlockTarget}.`, 'success');
+                
+                // Flip contextual button visually for spec demonstration
+                const triggerBtn = document.querySelector('.block-trigger-btn');
+                if (triggerBtn) {
+                    triggerBtn.innerHTML = `<span class="flex items-center gap-2"><i class="ph ph-user-minus"></i> Unblock User</span>`;
+                    triggerBtn.classList.remove('text-danger-text', 'hover:bg-danger-base/10');
+                    triggerBtn.classList.add('text-text-primary', 'hover:bg-surface-700');
+                }
+
+                // Add to list visually (optional enhancement for spec context)
+                forceAddToList(currentBlockTarget);
+
+            }, 800);
+        }
+
+        function resetConfirmBtn() {
+            confirmBtn.disabled = false;
+            confirmBtn.classList.remove('opacity-80', 'cursor-not-allowed');
+            confirmBtn.querySelector('.btn-text').classList.remove('opacity-0');
+            confirmBtn.querySelector('.btn-spinner').classList.add('hidden');
+        }
+
+        function handleUnblock(btnElement, userName) {
+            // Set row level loading
+            btnElement.disabled = true;
+            btnElement.classList.add('cursor-wait');
+            btnElement.querySelector('.btn-text').classList.add('opacity-0');
+            btnElement.querySelector('.btn-spinner').classList.remove('hidden');
+
+            setTimeout(() => {
+                // Remove row animation
+                const row = btnElement.closest('.blocked-row');
+                row.classList.add('collapsing-row');
+                
+                setTimeout(() => {
+                    row.remove();
+                    checkEmptyState();
+                    showToast(`Unblocked ${userName}.`, 'default');
+                }, 300); // match CSS duration
+
+            }, 600);
+        }
+
+        // --- List View State Management ---
+        function checkEmptyState() {
+            const rows = listContainer.querySelectorAll('.blocked-row');
+            if (rows.length === 0) {
+                listContainer.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                emptyState.classList.add('flex');
+            } else {
+                listContainer.classList.remove('hidden');
+                emptyState.classList.add('hidden');
+                emptyState.classList.remove('flex');
+            }
+        }
+
+        function simulateListLoading() {
+            listContainer.classList.add('hidden');
+            emptyState.classList.add('hidden');
+            loadingState.classList.remove('hidden');
+            loadingState.classList.add('flex');
+
+            setTimeout(() => {
+                loadingState.classList.add('hidden');
+                loadingState.classList.remove('flex');
+                checkEmptyState(); // go back to list
+            }, 1500);
+        }
+
+        function resetList() {
+            // Just structural reset for the Spec
+            location.reload();
+        }
+
+        function forceAddToList(name) {
+             const html = `
+                <li class="blocked-row group flex flex-col sm:flex-row sm:items-center justify-between p-2 sm:p-3 rounded-md hover:bg-white/[0.02] transition-colors duration-150 border border-transparent hover:border-hover gap-3 sm:gap-0">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-surface-700 flex items-center justify-center text-xs font-medium">${name.charAt(0)}</div>
+                        <div class="flex flex-col">
+                            <span class="text-sm sm:text-base font-medium text-text-primary leading-tight">${name}</span>
+                            <span class="text-xs text-text-secondary leading-tight mt-0.5">@${name.toLowerCase().replace(/\s/g, '')}</span>
+                        </div>
+                    </div>
+                    <button type="button" aria-label="Unblock ${name}" onclick="handleUnblock(this, '${name}')" class="unblock-btn h-8 px-3 rounded-md text-sm font-medium text-text-secondary hover:text-text-primary bg-transparent hover:bg-surface-700 transition-all duration-150 active:scale-[0.98] border border-transparent flex items-center justify-center gap-2 self-start sm:self-auto min-w-[80px]">
+                        <span class="btn-text">Unblock</span>
+                        <i class="ph ph-spinner-gap animate-spin-slow hidden btn-spinner"></i>
+                    </button>
+                </li>
+             `;
+             if (emptyState.classList.contains('flex')) {
+                 emptyState.classList.add('hidden');
+                 emptyState.classList.remove('flex');
+                 listContainer.classList.remove('hidden');
+             }
+             listContainer.insertAdjacentHTML('beforeend', html);
+        }
+
+        // --- Toast System (A11y Compliant) ---
+        function showToast(message, type = 'success') {
+            const id = 'toast-' + Math.random().toString(36).substr(2, 9);
+            const role = type === 'error' ? 'alert' : 'status';
+            const accentColor = type === 'error' ? 'bg-danger-base' : (type === 'success' ? 'bg-accent-emerald' : 'bg-surface-600');
+            const icon = type === 'error' ? 'ph-warning-circle' : 'ph-check-circle';
+
+            const toastHTML = `
+                <div id="${id}" role="${role}" aria-live="polite" class="bg-surface-700 rounded-md shadow-pop p-3 pr-4 flex items-center gap-3 border border-hairline relative overflow-hidden transform translate-y-4 scale-95 opacity-0 transition-all duration-300 pointer-events-auto">
+                    <!-- Accent Bar -->
+                    <div class="absolute left-0 top-0 bottom-0 w-1 ${accentColor}"></div>
+                    <i class="ph ${icon} text-lg ${type === 'error' ? 'text-danger-text' : (type === 'success' ? 'text-accent-emerald' : 'text-text-secondary')} pl-1"></i>
+                    <span class="text-sm font-medium text-text-primary">${message}</span>
+                </div>
+            `;
+            
+            toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+            
+            // Trigger animation
+            const toastEl = document.getElementById(id);
+            requestAnimationFrame(() => {
+                toastEl.classList.add('toast-enter');
+            });
+
+            // Auto dismiss
+            setTimeout(() => {
+                toastEl.classList.remove('toast-enter');
+                setTimeout(() => toastEl.remove(), 300);
+            }, 4000);
+        }
+
+        // Initialize state check
+        checkEmptyState();
+    </script>
+</body>
+</html>
