@@ -16,6 +16,7 @@ export const users = pgTable(
     who_can_dm: text('who_can_dm').notNull().default('everyone'),
     created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+    deleted_at: timestamp('deleted_at', { withTimezone: true }),
   },
   (table) => [uniqueIndex('users_username_lower_idx').on(sql`lower(${table.username})`)],
 );

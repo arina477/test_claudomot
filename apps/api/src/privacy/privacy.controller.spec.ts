@@ -16,7 +16,10 @@
 import { BadRequestException } from '@nestjs/common';
 import type { PrivacySettingsResponse } from '@studyhall/shared';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AccountDataService } from './account-data.service';
+import type { AccountDeletionService } from './account-deletion.service';
 import { PrivacyController } from './privacy.controller';
+import type { PrivacyService } from './privacy.service';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -68,9 +71,15 @@ function makeController() {
       activitySummary: { serversJoined: 0, accountCreatedAt: new Date().toISOString() },
     }),
   };
-  // biome-ignore lint/suspicious/noExplicitAny: test mock — full service types not needed
-  const controller = new PrivacyController(privacyService as any, accountDataService as any);
-  return { controller, privacyService, accountDataService };
+  const accountDeletionService = {
+    deleteAccount: vi.fn().mockResolvedValue({ status: 'deleted' }),
+  };
+  const controller = new PrivacyController(
+    privacyService as unknown as PrivacyService,
+    accountDataService as unknown as AccountDataService,
+    accountDeletionService as unknown as AccountDeletionService,
+  );
+  return { controller, privacyService, accountDataService, accountDeletionService };
 }
 
 // ---------------------------------------------------------------------------

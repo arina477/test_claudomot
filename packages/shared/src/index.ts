@@ -262,6 +262,17 @@ export { AccountDataResponseSchema } from './account-data.js';
 export type { AccountDataResponse } from './account-data.js';
 
 export {
+  DeleteAccountRequestSchema,
+  DeleteAccountResponseSchema,
+  DeleteAccountBlockedResponseSchema,
+} from './account-deletion.js';
+export type {
+  DeleteAccountRequest,
+  DeleteAccountResponse,
+  DeleteAccountBlockedResponse,
+} from './account-deletion.js';
+
+export {
   CreateBlockSchema,
   BlockSchema,
   BlockedUserDisplaySchema,

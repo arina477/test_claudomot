@@ -2,7 +2,7 @@
 **Block:** P (Product)
 **Wave topic:** M10 first slice — account self-deletion (right-to-erasure): API + service + shared DTO + Settings › Privacy UI
 **Block exit gate:** P-4
-**Status:** in-progress
+**Status:** gate-passed
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
 |---|---|---|---|

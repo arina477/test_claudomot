@@ -521,17 +521,25 @@ describe('StudyTimerWidget', () => {
     const workInputs = screen.getAllByTestId(/work-input$/);
     fireEvent.change(workInputs[0] as HTMLElement, { target: { value: '30' } });
 
-    // Apply should now be enabled
+    // Wait for React to flush the state update so isApplyEnabled is recomputed and
+    // the Apply button is genuinely enabled before we click. Re-query inside waitFor
+    // to get a live (post-render) reference — stale references captured before the
+    // flush can still show disabled=true when the form's handleSubmit runs, causing
+    // the isApplyEnabled guard to skip the onApply call silently.
+    let enabledApply: HTMLElement | undefined;
     await waitFor(() => {
       const applies = screen.getAllByTestId(/apply$/);
-      // At least one is enabled
-      expect(applies.some((b) => !(b as HTMLButtonElement).disabled)).toBe(true);
+      enabledApply = applies.find((b) => !(b as HTMLButtonElement).disabled) as
+        | HTMLElement
+        | undefined;
+      expect(enabledApply).toBeDefined();
     });
 
-    const applies = screen.getAllByTestId(/apply$/);
-    const enabledApply = applies.find((b) => !(b as HTMLButtonElement).disabled);
-    expect(enabledApply).toBeDefined();
-    if (enabledApply) fireEvent.click(enabledApply);
+    // Wrap the click in act so React flushes the submit handler's synchronous
+    // state updates (setIsApplyingConfig) before we observe the spy call.
+    await act(async () => {
+      if (enabledApply) fireEvent.click(enabledApply);
+    });
 
     await waitFor(() =>
       expect(mockApi.configureStudyTimer).toHaveBeenCalledWith(SERVER_ID, {
