@@ -107,7 +107,7 @@ describe('ProfilePage — academic identity editor', () => {
     await waitFor(() => {
       expect(mockApi.patchProfile).toHaveBeenCalledTimes(1);
     });
-    const payload = mockApi.patchProfile.mock.calls[0][0];
+    const payload = mockApi.patchProfile.mock.calls[0]?.[0];
     expect(payload).toMatchObject({
       institution: 'UC Berkeley',
       academicRole: 'educator',
