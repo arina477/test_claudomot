@@ -112,6 +112,7 @@ All notable changes to StudyHall are documented here. Format follows
 - The list of people you can start a direct message with is now safely capped, so an unusually large shared server can never make that lookup return an unbounded result. (no visible change) (#71)
 - Aligned a few direct-message surface shades to the design system, so the server rail, the start-a-message picker, and the disabled send button now match the app's standard dark palette. (#75)
 - Opening a study server you've never used offline now shows a calm "not available offline yet — reconnect to load it" note in the channel sidebar instead of an error-worded "Couldn't load channels" message; a genuine failure while online still reads as an error. (#81)
+- Profile polish for the portable academic identity: your academic role can now be cleared back to unset after you've picked one, so a role you no longer want isn't stuck on your profile. And a member's profile card now tells apart a genuinely hidden profile from a temporary connection hiccup — it offers a retry only for a real network or server error, and never reveals why a profile is hidden. (#97)
 
 ### Fixed
 
