@@ -18,6 +18,20 @@ import { ConnectionStateIndicator } from './ConnectionStateIndicator';
 import { ServerContext } from './ServerContext';
 import type { ServerContextValue } from './ServerContext';
 
+// useBlocks mock — MemberListPanel uses shared blocks store; default to empty
+vi.mock('./useBlocks', () => ({
+  useBlocks: () => ({
+    blocks: [],
+    blockedSet: new Set(),
+    loading: false,
+    error: false,
+    refetch: vi.fn(),
+    blockUser: vi.fn(),
+    unblockUser: vi.fn(),
+  }),
+  _resetBlocksStore: vi.fn(),
+}));
+
 // Mock api so MainColumn/useMessages don't trigger real fetch
 vi.mock('../auth/api', () => ({
   api: {

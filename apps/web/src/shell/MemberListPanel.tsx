@@ -50,6 +50,7 @@ import {
   UsersIcon,
   WarningCircleIcon,
 } from './icons';
+import { useBlocks } from './useBlocks';
 import { usePresence } from './usePresence';
 
 // ---------------------------------------------------------------------------
@@ -419,9 +420,17 @@ type MemberItemProps = {
   serverId: string;
   /** Session user's own userId — used to suppress Report + Block on own row. */
   selfUserId?: string | null | undefined;
+  /**
+   * Whether this member is currently in the caller's block list.
+   * Derived from useBlocks().blockedSet at MemberListPanel level.
+   * While blocks are loading (undefined) the affordance defaults to Block
+   * (loading fail-safe — P-4 AC: never show wrong action from unknown state).
+   */
+  isBlocked: boolean;
   onMutedChange: (userId: string, mutedUntil: string | null) => void;
   onReport: (userId: string, displayName: string) => void;
   onBlock: (userId: string, displayName: string) => void;
+  onUnblock: (userId: string) => Promise<void>;
 };
 
 function MemberItem({
@@ -430,9 +439,11 @@ function MemberItem({
   canModerate,
   serverId,
   selfUserId,
+  isBlocked,
   onMutedChange,
   onReport,
   onBlock,
+  onUnblock,
 }: MemberItemProps) {
   const initials = getInitials(member.displayName);
   const memberIsMuted = isMuted(member.mutedUntil);
@@ -543,8 +554,9 @@ function MemberItem({
           </button>
         )}
 
-        {/* Block affordance — suppressed on own row (spec C + D) */}
-        {!isSelf && (
+        {/* Block/Unblock affordance — suppressed on own row (spec C + D, wave-70).
+            isBlocked drives the label/action; loading defaults to Block (P-4 AC). */}
+        {!isSelf && !isBlocked && (
           <button
             type="button"
             aria-label={`Block ${member.displayName}`}
@@ -559,6 +571,27 @@ function MemberItem({
             onMouseLeave={(e) => {
               (e.currentTarget as HTMLButtonElement).style.backgroundColor = '';
               (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.40)';
+            }}
+          >
+            <ProhibitIcon size={12} />
+          </button>
+        )}
+        {!isSelf && isBlocked && (
+          <button
+            type="button"
+            aria-label={`Unblock ${member.displayName}`}
+            data-testid={`unblock-member-btn-${member.userId}`}
+            onClick={() => void onUnblock(member.userId)}
+            className="flex h-6 w-6 items-center justify-center rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+            style={{ color: '#10b981' }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+                'rgba(16,185,129,0.10)';
+              (e.currentTarget as HTMLButtonElement).style.color = '#34d399';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = '';
+              (e.currentTarget as HTMLButtonElement).style.color = '#10b981';
             }}
           >
             <ProhibitIcon size={12} />
@@ -698,6 +731,10 @@ export function MemberListPanel({
 
   const { getStatus, tick } = usePresence();
 
+  // Shared blocks state — one fetch feeds this panel + BlockedUsersPanel.
+  // blockedSet is empty while loading (loading fail-safe: defaults to Block).
+  const { blockedSet, unblockUser } = useBlocks();
+
   // Report dialog state
   const [reportTarget, setReportTarget] = useState<{ userId: string; displayName: string } | null>(
     null,
@@ -713,6 +750,14 @@ export function MemberListPanel({
   const handleBlockMember = useCallback((userId: string, displayName: string) => {
     setBlockTarget({ userId, displayName });
   }, []);
+
+  // Unblock — calls shared store; optimistic update propagates via useBlocks
+  const handleUnblockMember = useCallback(
+    async (userId: string) => {
+      await unblockUser(userId);
+    },
+    [unblockUser],
+  );
 
   useEffect(() => {
     mountedRef.current = true;
@@ -852,9 +897,11 @@ export function MemberListPanel({
                         canModerate={canModerateMembers}
                         serverId={serverId ?? ''}
                         selfUserId={selfUserId}
+                        isBlocked={blockedSet.has(m.userId)}
                         onMutedChange={handleMutedChange}
                         onReport={handleReportMember}
                         onBlock={handleBlockMember}
+                        onUnblock={handleUnblockMember}
                       />
                     ))}
                   </ul>
@@ -884,9 +931,11 @@ export function MemberListPanel({
                         canModerate={canModerateMembers}
                         serverId={serverId ?? ''}
                         selfUserId={selfUserId}
+                        isBlocked={blockedSet.has(m.userId)}
                         onMutedChange={handleMutedChange}
                         onReport={handleReportMember}
                         onBlock={handleBlockMember}
+                        onUnblock={handleUnblockMember}
                       />
                     ))}
                   </ul>

@@ -20,6 +20,23 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemberListPanel } from './MemberListPanel';
 
 // ---------------------------------------------------------------------------
+// useBlocks mock — MemberListPanel uses shared blocks store; default to empty
+// ---------------------------------------------------------------------------
+
+vi.mock('./useBlocks', () => ({
+  useBlocks: () => ({
+    blocks: [],
+    blockedSet: new Set(),
+    loading: false,
+    error: false,
+    refetch: vi.fn(),
+    blockUser: vi.fn(),
+    unblockUser: vi.fn(),
+  }),
+  _resetBlocksStore: vi.fn(),
+}));
+
+// ---------------------------------------------------------------------------
 // Minimal presence mock so MemberListPanel renders without socket side-effects
 // ---------------------------------------------------------------------------
 

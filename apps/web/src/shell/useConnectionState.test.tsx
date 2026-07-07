@@ -252,6 +252,20 @@ describe('useConnectionState', () => {
 // We render AppHome and check that the ConnectionStateIndicator reflects the
 // disconnected state instead of the former hardcoded 'online'.
 
+// useBlocks mock — MemberListPanel uses shared blocks store; default to empty
+vi.mock('./useBlocks', () => ({
+  useBlocks: () => ({
+    blocks: [],
+    blockedSet: new Set(),
+    loading: false,
+    error: false,
+    refetch: vi.fn(),
+    blockUser: vi.fn(),
+    unblockUser: vi.fn(),
+  }),
+  _resetBlocksStore: vi.fn(),
+}));
+
 // Minimal mocks for AppHome's dependencies.
 vi.mock('../auth/api', () => ({
   api: {
