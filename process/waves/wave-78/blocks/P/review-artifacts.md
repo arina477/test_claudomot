@@ -10,7 +10,7 @@
 | Stage | Deliverable file | Status | Notes |
 |---|---|---|---|
 | P-0 | process/waves/wave-78/stages/P-0-frame.md | done | seeded at P-0 Action 0; discovery + reframe |
-| P-1 | process/waves/wave-78/stages/P-1-decompose.md | pending | |
+| P-1 | process/waves/wave-78/stages/P-1-decompose.md | done | |
 | P-2 | process/waves/wave-78/stages/P-2-spec.md | pending | |
 | P-3 | process/waves/wave-78/stages/P-3-plan.md | pending | |
 | P-4 | process/waves/wave-78/stages/P-4-gemini-review.md | pending | |
@@ -20,7 +20,7 @@
 - **Wave topic:** member-profile-card UX polish (academicRole clearable + hidden-vs-network-error distinction)
 - **Spec-contract short-circuit verdict:** no-prior-spec (V-2 prose descriptions, no fenced YAML head)
 - **Roadmap milestone:** M13 (b7400254) in_progress — leg-2 follow-up
-- **design_gap_flag:** unset — set at P-1
+- **design_gap_flag:** false (both surfaces adopted wave-77; changes reuse existing DS)
 - **claimed_task_ids:** [4be3b084 (seed), 3b3530d8 (sibling)] — set final at P-2
 - **Tier-3 product decisions resolved this wave:** none (UX polish, no money/security/major-UX-tradeoff)
 - **Autonomous mode active during P-block:** automatic
