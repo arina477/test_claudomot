@@ -4,10 +4,14 @@ import { eq } from 'drizzle-orm';
 import Session from 'supertokens-node/recipe/session';
 import { db } from '../db/index';
 import { server_members, servers, users } from '../db/schema/index';
+// biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
+import { AppendPrivacyEventService } from './append-privacy-event.service';
 
 @Injectable()
 export class AccountDeletionService {
   private readonly logger = new Logger(AccountDeletionService.name);
+
+  constructor(private readonly appendPrivacyEvent: AppendPrivacyEventService) {}
 
   async deleteAccount(callerUserId: string): Promise<DeleteAccountResponse> {
     // ── Idempotency guard (fast-path, outside transaction) ────────────────────
@@ -108,6 +112,22 @@ export class AccountDeletionService {
     } catch (err) {
       this.logger.warn(
         `revokeAllSessionsForUser failed for ${callerUserId} after successful erasure — erasure is committed and both re-auth doors are closed via deleted_at; token revocation is defence-in-depth and its failure is non-fatal.`,
+        err instanceof Error ? err.stack : String(err),
+      );
+    }
+
+    // ── Privacy audit hook (best-effort, AFTER session revocation) ───────────
+    // Fires after both the erasure transaction and the session revocation
+    // attempt complete. A failure here MUST NOT fail the deletion response.
+    // Mirrors the session revocation best-effort pattern above.
+    try {
+      await this.appendPrivacyEvent.append(callerUserId, 'account_deleted', {
+        targetType: 'self',
+        targetId: callerUserId,
+      });
+    } catch (err) {
+      this.logger.warn(
+        `appendPrivacyEvent failed for account_deleted (actor=${callerUserId}) — erasure is committed; audit log failure is non-fatal.`,
         err instanceof Error ? err.stack : String(err),
       );
     }

@@ -30,6 +30,7 @@ import { api } from '../auth/api';
 import { ErrorBanner } from '../components/ErrorBanner';
 import { BlockedUsersPanel } from '../shell/BlockedUsersPanel';
 import { DangerZonePanel } from '../shell/DangerZonePanel';
+import { PrivacyActivityPanel } from '../shell/PrivacyActivityPanel';
 
 // ── Static option tables (defined outside component — no deps) ────────────────
 
@@ -595,7 +596,10 @@ export function SettingsPrivacyPage() {
               )}
             </section>
 
-            {/* ── Panel 5: Danger Zone ──────────────────────────────────────── */}
+            {/* ── Panel 5: Privacy activity ─────────────────────────────────── */}
+            <PrivacyActivityPanel />
+
+            {/* ── Panel 6: Danger Zone ──────────────────────────────────────── */}
             <DangerZonePanel />
           </div>
         )}

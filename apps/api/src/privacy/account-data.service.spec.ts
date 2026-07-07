@@ -25,6 +25,7 @@ vi.mock('../db/index', () => ({
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '../db/index';
 import { AccountDataService } from './account-data.service';
+import type { AppendPrivacyEventService } from './append-privacy-event.service';
 
 // Typed reference to the mocked db.select — avoids per-test casting noise.
 type MockFn = ReturnType<typeof vi.fn>;
@@ -84,7 +85,9 @@ describe('AccountDataService.getAccountData', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // AccountDataService has no constructor dependencies — instantiate directly.
-    sut = new AccountDataService();
+    sut = new AccountDataService({
+      append: vi.fn().mockResolvedValue(undefined),
+    } as unknown as AppendPrivacyEventService);
   });
 
   /** Helper: mock two sequential select calls (users lookup, then memberships). */
@@ -198,7 +201,9 @@ describe('AccountDataService.exportAccountData', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    sut = new AccountDataService();
+    sut = new AccountDataService({
+      append: vi.fn().mockResolvedValue(undefined),
+    } as unknown as AppendPrivacyEventService);
   });
 
   it('returns the same aggregation shape as getAccountData (thin delegation wrapper)', async () => {

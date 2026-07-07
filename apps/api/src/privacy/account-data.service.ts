@@ -1,11 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import type { AccountDataResponse } from '@studyhall/shared';
 import { eq } from 'drizzle-orm';
 import { db } from '../db/index';
 import { server_members, servers, users } from '../db/schema/index';
+// biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
+import { AppendPrivacyEventService } from './append-privacy-event.service';
 
 @Injectable()
 export class AccountDataService {
+  private readonly logger = new Logger(AccountDataService.name);
+
+  constructor(private readonly appendPrivacyEvent: AppendPrivacyEventService) {}
   async getAccountData(userId: string): Promise<AccountDataResponse> {
     const userRows = await db.select().from(users).where(eq(users.id, userId)).limit(1);
     const user = userRows[0];
@@ -50,6 +55,23 @@ export class AccountDataService {
 
   // exportAccountData reuses the same aggregate — the controller sets download headers.
   async exportAccountData(userId: string): Promise<AccountDataResponse> {
-    return this.getAccountData(userId);
+    const result = await this.getAccountData(userId);
+
+    // ── Privacy audit hook (best-effort, AFTER data is gathered) ─────────────
+    // Fires after the export data is assembled. Failure MUST NOT fail the export
+    // response — mirrors deleteAccount's post-commit best-effort pattern.
+    try {
+      await this.appendPrivacyEvent.append(userId, 'data_exported', {
+        targetType: 'self',
+        targetId: userId,
+      });
+    } catch (err) {
+      this.logger.warn(
+        `appendPrivacyEvent failed for data_exported (actor=${userId}) — export succeeded; audit log failure is non-fatal.`,
+        err instanceof Error ? err.stack : String(err),
+      );
+    }
+
+    return result;
   }
 }

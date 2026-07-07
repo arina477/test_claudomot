@@ -12,3 +12,4 @@ export * from './dm';
 export * from './study-timer';
 export * from './reports';
 export * from './user-blocks';
+export * from './privacy_events';

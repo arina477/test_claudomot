@@ -4,7 +4,11 @@
  * sessions work across origins.
  */
 
-import { DeleteAccountBlockedResponseSchema, DeleteAccountResponseSchema } from '@studyhall/shared';
+import {
+  DeleteAccountBlockedResponseSchema,
+  DeleteAccountResponseSchema,
+  PrivacyEventListResponseSchema,
+} from '@studyhall/shared';
 import type {
   AccountDataResponse,
   Assignment,
@@ -36,6 +40,7 @@ import type {
   MessagesAfterResponse,
   MyMentionsResponse,
   NotificationListResponse,
+  PrivacyEventListResponse,
   PrivacySettingsResponse,
   ProfileResponse,
   ReactionToggleInput,
@@ -684,6 +689,18 @@ export const api = {
     request<PrivacySettingsResponse>('/profile/privacy', {
       method: 'PUT',
       body: JSON.stringify(body),
+    }),
+
+  /**
+   * GET /profile/privacy-events → PrivacyEventListResponse {events}.
+   * Returns the session user's own privacy audit events, created_at DESC,
+   * limit 100. Session-only (AuthGuard). Throws: 401 unauthed.
+   */
+  getPrivacyEvents: (): Promise<PrivacyEventListResponse> =>
+    request<unknown>('/profile/privacy-events').then((raw) => {
+      const parsed = PrivacyEventListResponseSchema.safeParse(raw);
+      if (!parsed.success) throw new Error('Unexpected privacy-events response shape');
+      return parsed.data;
     }),
 
   /**

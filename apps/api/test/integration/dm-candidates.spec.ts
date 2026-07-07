@@ -35,9 +35,10 @@ import {
 
 // SUT import AFTER harness so the lazy db proxy resolves to the test DB.
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BlocksService } from '../../src/blocks/blocks.service';
 import { DmService } from '../../src/dm/dm.service';
+import type { AppendPrivacyEventService } from '../../src/privacy/append-privacy-event.service';
 
 // Skip-with-reason when DATABASE_URL_TEST is absent (local dev without PG).
 // Runs in CI where the Postgres 16 service + DATABASE_URL_TEST are provided
@@ -92,7 +93,12 @@ describe.skipIf(SKIP)(
       // real BlocksService here so the getDmCandidates integration tests remain
       // unaffected (no blocks seeded, so isBlockedBetween always returns false).
       const emitter = new EventEmitter2();
-      const blocksService = new BlocksService();
+      // BlocksService now requires AppendPrivacyEventService — pass a no-op stub
+      // since these tests exercise getDmCandidates, not the audit log.
+      const noopAppend = {
+        append: vi.fn().mockResolvedValue(undefined),
+      } as unknown as AppendPrivacyEventService;
+      const blocksService = new BlocksService(noopAppend);
       sut = new DmService(emitter, blocksService);
     });
 

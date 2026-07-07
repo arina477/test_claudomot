@@ -30,8 +30,9 @@ import {
 } from './pg-harness';
 
 // SUT import AFTER harness so the lazy db proxy resolves to the test DB.
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AccountDataService } from '../../src/privacy/account-data.service';
+import type { AppendPrivacyEventService } from '../../src/privacy/append-privacy-event.service';
 
 // Skip-with-reason when DATABASE_URL_TEST is absent.
 const SKIP = !process.env.DATABASE_URL_TEST;
@@ -54,8 +55,12 @@ describe.skipIf(SKIP)(
 
     beforeAll(async () => {
       await setupHarness();
-      // AccountDataService has no constructor dependencies — instantiate directly.
-      sut = new AccountDataService();
+      // AccountDataService now requires AppendPrivacyEventService — pass a no-op stub
+      // since these tests exercise getAccountData / IDOR scoping, not the audit log.
+      const noopAppend = {
+        append: vi.fn().mockResolvedValue(undefined),
+      } as unknown as AppendPrivacyEventService;
+      sut = new AccountDataService(noopAppend);
     });
 
     afterAll(async () => {
