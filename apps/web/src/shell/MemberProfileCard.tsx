@@ -192,6 +192,7 @@ export function MemberProfileCard({
   //   - 401 keeps existing behaviour (falls through to the retryable state; the
   //     card is only opened from an authed shell, so a 401 here is transport-ish).
   // No new server field: the distinction is derived only from status/transport.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `attempt` is a deliberate dep — the effect body never reads it; bumping it via handleRetry is the re-trigger mechanism that re-runs this fetch for a manual retry.
   useEffect(() => {
     let cancelled = false;
     setState({ kind: 'loading' });
