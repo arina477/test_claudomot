@@ -12,7 +12,7 @@
 | B-1 | process/waves/wave-75/stages/B-1-contracts.md | done | TierChangeRequest/ServerPlan DTOs (2a8c224) |
 | B-2 | process/waves/wave-75/stages/B-2-backend.md | done | 2 commits a63264c+9b9ec24; 795 api tests green |
 | B-3 | process/waves/wave-75/stages/B-3-frontend.md | done | ServerPlanPanel + api client (ddc9b14); 679 web tests green |
-| B-4 | process/waves/wave-75/stages/B-4-wiring.md | pending | |
+| B-4 | process/waves/wave-75/stages/B-4-wiring.md | done | repo typecheck 4/4; routes registered both sides |
 | B-5 | process/waves/wave-75/stages/B-5-verify.md | pending | |
 | B-6 | process/waves/wave-75/stages/B-6-review.md | pending | |
 
