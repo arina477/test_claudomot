@@ -76,3 +76,32 @@ Reports I created during probing, all **dismissed** (non-destructive), queue res
 - Also dismissed the 5 T-5-left-open reports (`305f4b95`, `cd0a2d04`, `ca337bbe`, `75ec1fb4`, `ae76e5ea`) to clear the queue.
 
 **No message deleted, no member timed out.** All dispositions were `dismiss`. Final `GET reports?status=open` → 0.
+
+---
+
+## V-3 fast-fix re-verification
+
+**Scope:** confirm the two V-3 fast-fixes BEHAVE correctly on deployed prod. Deployed revision **`b1ff064`** (the fast-fix — verified via `git log`: `b1ff064 fix: wave-69 fast-fix — own-content report leak + mobile inbox (#85)`).
+**Target:** web https://web-production-bce1a8.up.railway.app · **Fixture A** `studyhall-e2e-fixture@example.com` (session already live in the browser; userId `21984eb2-8029-4c1b-9e73-bc586a0be4d2`, owner of Fixture Proof Server `ad62cd12`).
+**Probe date:** 2026-07-07. Method: live UI exercise on the deployed revision + confirming DOM geometry via `browser_evaluate` + corroborating source read of the deployed commit.
+
+### VERDICT: APPROVE (both fixes behave correctly live)
+
+Both fast-fixes take effect on the deployed revision `b1ff064` and match the Spec-C intent (report affordance NOT on own content; inbox usable on mobile).
+
+### F1 — own-content report leak (message) → FIXED, confirmed live
+- **Live behavior:** In Fixture Proof Server → `#general`, all 33 rendered message rows are authored by Fixture A (author UUID `21984eb2…` on every row — own messages). On every own message the hover-action set is now **`Add reaction` · `Edit your message` · `Delete your message`** — **Report ABSENT, Edit PRESENT.** Verified by enumerating each `.msg-row`'s buttons: `anyReport: 0 / 33`, `anyEdit: 33 / 33`. Spot-checked the most-recent non-deleted own message `A-probe-1783387921608` (hover screenshot).
+- **This is the exact inversion of the pre-fix defect** (isOwn always false → Report on all, Edit on none).
+- **Conditional, not a blanket removal (so Report still shows for genuine non-own):** deployed `MainColumn.tsx:343` now passes `currentUserId={profile?.userId ?? null}` (UUID) — was `profile?.username`. `MessageList.tsx:1060` `isOwn = !!currentUserId && msg.authorId === currentUserId` (UUID↔UUID); `:1312` `onReport={!isOwn ? … : null}`; `:1306` `onEdit={isOwn && …}`; RowActions `:854` renders the Report button only when `onReport !== null`. So a genuinely non-own message (isOwn=false) still renders Report — the fix corrects the identity comparison, it does not globally hide Report.
+- **Non-own counter-check caveat:** `#general` holds only A-authored messages this session, so no non-own *message* was available to positively show Report present (anticipated by the task — non-own message test data is scarce). The member-list DID expose a non-own member (`Report studyhall-e2e-fixture-b` / `Moderate studyhall-e2e-fixture-b` present alongside the own `studyhall-e2e-fixture` row), consistent with the affordance being data-driven. The key required check — **own-message Edit-present / Report-absent** — is definitively confirmed.
+- **Evidence:** `/home/claudomat/project/v3-f1-own-message-hover-edit-present-report-absent.png`
+
+### T6-M1 — mobile report inbox off-screen → FIXED, confirmed live
+- **Desktop 1440 (no regression):** opened the Reports inbox → overlay `div.fixed.inset-0` at **x=0, y=0, w=1440, h=812/900**, heading "Active Reports", empty state (queue empty post V-1 cleanup). Fully usable.
+- **Mobile 375px (the fix):** resized to 375×812, opened the ChannelSidebar drawer (`Toggle channel sidebar`), then opened the inbox from the **in-drawer `Reports inbox` affordance** (the exact previously-broken mobile-triggered path, clicked at on-screen x=269). Resulting overlay geometry: **x=0, y=0, w=375, h=812 → `fillsViewport: true`, `transform: none`.** Content visible + usable: "Active Reports" + empty state "No open reports. Your community is running smoothly."
+- **This is the exact inversion of the pre-fix defect** (overlay trapped at x=-188, ~260px off-screen inside the drawer's `translateX(-260px)` transformed ancestor).
+- **Root-cause fix corroborated in the deployed source:** `ChannelSidebar.tsx:414-422` now renders the overlay via `createPortal` ("so the fixed overlay escapes the sidebar's [transformed ancestor]") — matching the live `transform: none` + full-viewport reading. The `fixed inset-0` overlay now resolves against the viewport, not the drawer.
+- **Evidence:** `/home/claudomat/project/v3-t6m1-inbox-mobile-375-fullscreen.png` (375px full-screen) · `/home/claudomat/project/v3-t6m1-inbox-desktop-1440.png` (1440 no-regression)
+
+### Cleanup
+No test report was filed during re-verification — the empty-state rendered directly, so the inbox was observed without populating it. Queue untouched (still 0 open). No messages deleted, no members timed out. Browser context left open (no `browser_close`).

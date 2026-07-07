@@ -59,3 +59,34 @@ Claim: C-2 Action 2 table — api deployment `2522c446-…` and web deployment `
 - T-8 recorded a bonus positive: a 10/60s rate limit IS present on POST /reports (the P-block "no rate limit" deferral does not reproduce on the deployed revision). Plus one LOW hardening item (`x-powered-by: Express` exposed) → V-2.
 
 **Bottom line: the wave's load-bearing claims are TRUE in the deployed state. APPROVE.**
+
+## V-3 fast-fix re-verification
+
+**Scope:** Scoped re-verification of the 2 V-3 fast-fix CLAIMS against the deployed revision. Source-claim truth (files/exports present on the merge tree + deployed), not spec conformance.
+**Fast-fix merge SHA:** `b1ff0642037f9c018077c68ea5eb3410de9c0db1` (2 commits squash-merged). **Re-probe date:** 2026-07-07.
+**Prod web:** `https://web-production-bce1a8.up.railway.app`.
+
+### Claim F1 — `currentUserId` bound to `profile?.userId` (not `profile?.username`) — TRUE
+- `git rev-parse HEAD` → `b1ff0642037f9c018077c68ea5eb3410de9c0db1` (current `main` == fast-fix merge SHA; the tree read below IS the merge tree).
+- `apps/web/src/shell/MainColumn.tsx:343` → `currentUserId={profile?.userId ?? null}` — confirmed via both `git show HEAD:…` (line 343) and direct Read.
+- Neighboring line 344 `viewerUsername={profile?.username ?? null}` confirms `userId` and `username` are now distinctly bound; the wrong-prop bug (username passed as currentUserId) is corrected.
+- Verdict: **PRESENT** on the merge tree.
+
+### Claim T6-M1 — report-inbox overlay rendered via `createPortal` to `document.body` — TRUE
+- `apps/web/src/shell/ChannelSidebar.tsx:16` → `import { createPortal } from 'react-dom';` — import present.
+- `apps/web/src/shell/ChannelSidebar.tsx:419` → `createPortal(` wraps the overlay JSX; `:470` → `document.body,` is the second arg — portal target confirmed.
+- Overlay element `apps/web/src/shell/ChannelSidebar.tsx:421-422` → `data-testid="report-inbox-overlay"` + `className="fixed inset-0 z-40 flex flex-col"` — the fixed full-viewport overlay is the portal child (escapes the sidebar's `translateX(-260px)` containing block per the inline rationale at :414-415).
+- Verdict: **PRESENT** on the merge tree — import + createPortal wrap + `document.body` target + testid'd `fixed inset-0` overlay all confirmed.
+
+### Deployed hash match — TRUE
+- `git rev-parse HEAD` == `b1ff0642037f9c018077c68ea5eb3410de9c0db1` (== fast-fix merge SHA; no divergence between the tree verified above and what was shipped).
+- Ship deliverable `process/waves/wave-69/stages/C-fastfix-ship.md` (deployment-state evidence, authoritative Railway deployment endpoint — NOT /healthz):
+  - Merge SHA `b1ff064…`; local `main` fast-forwarded `bf7e143 → b1ff064`, HEAD == merge SHA.
+  - New web deployment `bfb0276a-bb9f-4abf-8b65-7e9d840c49e6`; progression BUILDING → DEPLOYING → **SUCCESS (91s)**.
+  - `web_deployed_sha: b1ff064…` with `web_deployed_sha_matches_merge: true` — the SUCCESS deployment's commitHash equals the merge SHA (no stale-revision race).
+  - `web_http_status: 200`; ship deliverable overall `status: PASS`.
+- Live re-probe (this pass): `GET https://web-production-bce1a8.up.railway.app/` → **HTTP 200**; served index references `/assets/index-BSP7eKaD.js` + `/assets/index-BxqJGpMW.css` (a built revision is being served, not a dev/placeholder response).
+- Verdict: current `main` HEAD == merge SHA, and the web service served that exact SHA to a SUCCESS deployment.
+
+### Fast-fix verdict: **APPROVE**
+Both fast-fix commits are real, present on the merge tree at `b1ff064` (F1 → `MainColumn.tsx:343`; T6-M1 → `ChannelSidebar.tsx:16,419,421-422,470`), and deployed — Railway served `b1ff064` to deployment `bfb0276a` with status SUCCESS and the web root returns HTTP 200 on the new bundle. No divergence between the verified tree and the deployed revision.
