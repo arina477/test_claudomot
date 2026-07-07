@@ -1,6 +1,9 @@
 import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import type { ServerAnalytics } from '@studyhall/shared';
 import { AuthGuard } from '../auth/auth.guard';
 import { EducatorAccessGuard } from './educator-access.guard';
+// biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
+import { EducatorAnalyticsService } from './educator-analytics.service';
 import { EntitlementGuard, RequireEntitlement } from './entitlement.guard';
 
 // ---------------------------------------------------------------------------
@@ -26,6 +29,8 @@ import { EntitlementGuard, RequireEntitlement } from './entitlement.guard';
 
 @Controller('servers/:serverId/educator-tools')
 export class EducatorToolsController {
+  constructor(private readonly analyticsService: EducatorAnalyticsService) {}
+
   @Get('status')
   @UseGuards(AuthGuard, EntitlementGuard, EducatorAccessGuard)
   @RequireEntitlement('educatorAdminTools')
@@ -34,5 +39,18 @@ export class EducatorToolsController {
     // for this server (tier === 'school') AND EducatorAccessGuard confirmed the
     // caller is the owner or an educator; otherwise one threw 403.
     return { serverId, enabled: true };
+  }
+
+  // GET /servers/:serverId/educator-tools/analytics
+  //   Same guard stack as /status: AuthGuard (verification-REQUIRED) +
+  //   EntitlementGuard('educatorAdminTools') + EducatorAccessGuard. Returns
+  //   server-scoped aggregate rollups (ServerAnalytics) — counts only, no PII.
+  @Get('analytics')
+  @UseGuards(AuthGuard, EntitlementGuard, EducatorAccessGuard)
+  @RequireEntitlement('educatorAdminTools')
+  getAnalytics(@Param('serverId') serverId: string): Promise<ServerAnalytics> {
+    // Reaching this handler means all three guards passed (school tier + owner/
+    // educator). The service emits aggregate counts only — no raw content/PII.
+    return this.analyticsService.getServerAnalytics(serverId);
   }
 }

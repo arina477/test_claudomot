@@ -27,9 +27,11 @@ vi.mock('../db/index', () => ({
   },
 }));
 
+import type { ServerAnalytics } from '@studyhall/shared';
 import { db } from '../db/index';
 import type { RbacService } from '../rbac/rbac.service';
 import { EducatorAccessGuard } from './educator-access.guard';
+import type { EducatorAnalyticsService } from './educator-analytics.service';
 import { EducatorToolsController } from './educator-tools.controller';
 import { EntitlementGuard, REQUIRE_ENTITLEMENT_KEY } from './entitlement.guard';
 import { EntitlementsService } from './entitlements.service';
@@ -50,6 +52,16 @@ function makeSelectChain(resolveWith: unknown[]) {
 }
 
 const SERVER_ID = 'server-unlock';
+
+// Stub analytics service — the controller's only constructor dependency. The
+// /status handler never touches it; /analytics tests inject a resolving stub.
+function makeAnalyticsStub(result?: ServerAnalytics) {
+  const getServerAnalytics = vi.fn().mockResolvedValue(result);
+  return {
+    service: { getServerAnalytics } as unknown as EducatorAnalyticsService,
+    getServerAnalytics,
+  };
+}
 
 // A real ExecutionContext whose handler carries the @RequireEntitlement metadata
 // (applied here via Reflect.defineMetadata to match SetMetadata's storage),
@@ -72,7 +84,7 @@ describe('EducatorTools entitlement enforcement — free→school unlock', () =>
     vi.clearAllMocks();
     service = new EntitlementsService();
     guard = new EntitlementGuard(new Reflector(), service);
-    controller = new EducatorToolsController();
+    controller = new EducatorToolsController(makeAnalyticsStub().service);
     // Ensure the decorator metadata is present on the handler for the real Reflector.
     Reflect.defineMetadata(
       REQUIRE_ENTITLEMENT_KEY,
@@ -140,7 +152,7 @@ describe('EducatorTools /status — educator-access gate (wave-76 T8-F1 fix)', (
 
   it('owner / educator (can=true) → guard allows and handler returns { serverId, enabled: true }', async () => {
     const { guard: accessGuard, can } = makeAccessGuard(true);
-    const controller = new EducatorToolsController();
+    const controller = new EducatorToolsController(makeAnalyticsStub().service);
 
     const allowed = await accessGuard.canActivate(makeEduCtx(SERVER_ID, EDU_USER_ID));
     expect(allowed).toBe(true);
@@ -155,5 +167,66 @@ describe('EducatorTools /status — educator-access gate (wave-76 T8-F1 fix)', (
     await expect(accessGuard.canActivate(makeEduCtx(SERVER_ID, EDU_USER_ID))).rejects.toThrow(
       ForbiddenException,
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// wave-76 M13: GET /analytics — same guard stack as /status.
+//
+// The handler returns the shared ServerAnalytics shape (delegated to the
+// service stub). Authorization is enforced by the SAME EducatorAccessGuard, so
+// the 403 (non-owner/non-educator) and 401 (unauth — no session) cases are
+// exercised through the guard exactly as /status.
+// ---------------------------------------------------------------------------
+
+const ANALYTICS_FIXTURE: ServerAnalytics = {
+  memberCount: 3,
+  roleBreakdown: [{ roleId: 'r1', roleName: 'Teacher', memberCount: 1 }],
+  messageVolume: 12,
+  assignmentCount: 2,
+  submissionRollup: { assignmentCount: 2, submissionCount: 5 },
+  recentActivity: [
+    { type: 'message_sent', count: 12 },
+    { type: 'assignment_submitted', count: 5 },
+    { type: 'session_scheduled', count: 1 },
+  ],
+};
+
+// Unauthenticated context — no session on the request (mirrors what the app sees
+// when AuthGuard has NOT populated a session). EducatorAccessGuard rejects it.
+function makeUnauthCtx(serverId: string) {
+  const handler = EducatorToolsController.prototype.getAnalytics;
+  return {
+    getHandler: () => handler,
+    getClass: () => EducatorToolsController,
+    switchToHttp: () => ({ getRequest: () => ({ params: { serverId } }) }),
+  } as unknown as ExecutionContext;
+}
+
+describe('EducatorTools /analytics — wave-76 M13', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('owner / educator → handler returns the ServerAnalytics shape', async () => {
+    const { service, getServerAnalytics } = makeAnalyticsStub(ANALYTICS_FIXTURE);
+    const controller = new EducatorToolsController(service);
+
+    const body = await controller.getAnalytics(SERVER_ID);
+    expect(body).toEqual(ANALYTICS_FIXTURE);
+    expect(getServerAnalytics).toHaveBeenCalledWith(SERVER_ID);
+  });
+
+  it('non-owner / non-educator → EducatorAccessGuard throws 403', async () => {
+    const { guard: accessGuard } = makeAccessGuard(false);
+    await expect(accessGuard.canActivate(makeEduCtx(SERVER_ID, EDU_USER_ID))).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  it('unauthenticated (no session) → EducatorAccessGuard throws 403 (never reaches can)', async () => {
+    const { guard: accessGuard, can } = makeAccessGuard(true);
+    await expect(accessGuard.canActivate(makeUnauthCtx(SERVER_ID))).rejects.toThrow(
+      ForbiddenException,
+    );
+    expect(can).not.toHaveBeenCalled();
   });
 });

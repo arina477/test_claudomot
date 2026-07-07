@@ -4,6 +4,7 @@ import { RbacModule } from '../rbac/rbac.module';
 import { BILLING_PROVIDER } from './billing-provider.interface';
 import { BillingController } from './billing.controller';
 import { EducatorAccessGuard } from './educator-access.guard';
+import { EducatorAnalyticsService } from './educator-analytics.service';
 import { EducatorToolsController } from './educator-tools.controller';
 import { EntitlementGuard } from './entitlement.guard';
 import { EntitlementsService } from './entitlements.service';
@@ -41,6 +42,7 @@ import { MockBillingProvider } from './mock-billing.provider';
     EntitlementsService,
     EntitlementGuard,
     EducatorAccessGuard,
+    EducatorAnalyticsService,
     { provide: BILLING_PROVIDER, useClass: MockBillingProvider },
   ],
   exports: [EntitlementsService],
