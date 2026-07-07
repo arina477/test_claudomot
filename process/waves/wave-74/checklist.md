@@ -12,7 +12,7 @@
 - [ ] D-2 Variants
 - [ ] D-3 Review & adopt
 ## B — Build
-- [ ] B-0 Branch & schema
+- [x] B-0 Branch & schema
 - [ ] B-1 Contracts
 - [ ] B-2 Backend
 - [ ] B-3 Frontend
