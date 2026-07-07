@@ -89,6 +89,7 @@ All notable changes to StudyHall are documented here. Format follows
 - Publish your study server to the public directory: from server settings, an owner can now switch their server between private and public and add a short description and topic, so the community shows up in discovery with a clear summary — and can be pulled back to private at any time. (#83)
 - Report abuse in public communities: a Report control on public server listings, on members, and on messages opens a quick dialog to flag what's wrong. Server owners and moderators get a Reports inbox to review open reports and act — time out a member, delete a message, or dismiss the report. (#84)
 - Block a user: from a member's menu you can block someone, and they can no longer send you direct messages or see your content — the block works both ways and across every server. Manage everyone you've blocked from Settings › Privacy, and unblock anytime. (#86)
+- Blocked-user names + one-click Block/Unblock: the member menu's Block button now shows Block or Unblock depending on whether you've already blocked someone (and flips instantly), and your Settings › Privacy blocked list shows real names and avatars instead of ids. (#87)
 
 ### Changed
 

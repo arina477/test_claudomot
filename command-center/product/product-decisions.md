@@ -779,3 +779,10 @@ These are staged for the next P-0 walk (may re-home to M7 launch-polish or a suc
 - out of scope (fenced to later M14 bundles): review-queue/triage UI, appeal flow, automated abuse detection, report rate-limits, distinct platform-admin unlist role.
 - next step for caller: re-parent existing member-row task cc783559 under seed bc5986a9 as trailing-polish sibling; set claimed_task_ids = [bc5986a9, c8c9742a, 6e4d56b2, cc783559].
 - decomposed by: milestone-decomposer sub-agent (expand-current-bundle mode, automatic).
+
+## 2026-07-07 — M14 (Trust & Safety) COMPLETE → public-launch GO + next-theme pick are founder-reserved
+**Decision (milestone close, mechanical):** M14 "Trust & Safety: moderation for public discovery" transitioned in_progress→done. All 4 mvp-critical Scope legs shipped + proven LIVE across waves 69-71: (1) report a server/member/message + owner/mod action loop (wave-69), (2) directory-level unlist (wave-68 reuse), (3) user-to-user Block with bidirectional cross-server DM HIDE (wave-70, T-8-proven live), (4) the public-directory content-moderation gate — report→action→resolution + block provably reachable. Wave-71 finished the Block UI polish (state-reflecting toggle + enriched blocked-list names). 9/9 child tasks done; open_count=0.
+**Founder-reserved follow-ups (surfaced by the P-0 ceo-reviewer, NOT brain-decidable):**
+- **Public-launch GO:** the public-directory moderation gate is now met at launch quality — whether to flip the public server directory LIVE is the founder's call (launch decision).
+- **Next milestone theme:** the 3 queued todo milestones — M9 (Monetization: freemium tiers), M10 (Compliance & data rights), M13 (Institution partnerships & portable identity) — are founder-reserved strategic theme picks; the brain does not autonomously choose monetization vs compliance vs partnerships.
+→ The wave loop pauses at wave-71 N-1 for the founder to decide the public-launch GO + the next milestone theme.
