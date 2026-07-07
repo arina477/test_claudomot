@@ -1,7 +1,10 @@
+import { eq } from 'drizzle-orm';
 import supertokens from 'supertokens-node';
 import EmailPassword from 'supertokens-node/recipe/emailpassword';
 import EmailVerification from 'supertokens-node/recipe/emailverification';
 import Session from 'supertokens-node/recipe/session';
+import { db } from '../db/index';
+import { users } from '../db/schema/index';
 import type { EmailService } from '../email/email.service';
 import type { UsersService } from '../users/users.service';
 
@@ -44,6 +47,29 @@ export function initSuperTokens(usersService: UsersService, emailService: EmailS
                   id: result.user.id,
                   email: result.user.emails[0] ?? '',
                 });
+              }
+              return result;
+            },
+            // RE-AUTH BLOCK door (i): signIn override.
+            //
+            // After the original signIn returns OK we look up the local users
+            // row. If deleted_at IS NOT NULL the account has been soft-deleted;
+            // we return WRONG_CREDENTIALS_ERROR so the login is rejected without
+            // leaking deletion status to the caller. This closes the "fresh
+            // login attempt after deletion" path independently of the session
+            // door below.
+            signIn: async (input) => {
+              const result = await original.signIn(input);
+              if (result.status === 'OK') {
+                const rows = await db
+                  .select({ deleted_at: users.deleted_at })
+                  .from(users)
+                  .where(eq(users.id, result.user.id))
+                  .limit(1);
+
+                if (rows[0]?.deleted_at !== null && rows[0]?.deleted_at !== undefined) {
+                  return { status: 'WRONG_CREDENTIALS_ERROR' };
+                }
               }
               return result;
             },
@@ -95,6 +121,69 @@ export function initSuperTokens(usersService: UsersService, emailService: EmailS
             ? 'none'
             : 'lax',
         cookieSecure: process.env.NODE_ENV === 'production',
+        // RE-AUTH BLOCK door (ii): session-verify override.
+        //
+        // We override getSession AND refreshSession so BOTH the access-token
+        // verify path AND the refresh-token rotation path check deleted_at.
+        //
+        // Why getSession covers the verify path:
+        //   Every authenticated NestJS request passes through verifySession()
+        //   (in SessionNoVerifyGuard and AuthGuard), which internally calls
+        //   getSession. Overriding getSession means every verify attempt for a
+        //   deleted user raises UNAUTHORISED and the request is rejected with 401.
+        //
+        // Why refreshSession covers the refresh path:
+        //   When an access token expires the client POSTs /auth/session/refresh.
+        //   SuperTokens calls refreshSession internally. Without this override a
+        //   deleted user holding a valid refresh token could silently obtain a new
+        //   access token and continue operating. Overriding refreshSession closes
+        //   that window independently — even if the revoke in deleteAccount's
+        //   revokeAllSessionsForUser already invalidated the specific tokens, the
+        //   override is a defence-in-depth check that fires on any future rotation
+        //   attempt (e.g., tokens issued by a replayed pre-deletion refresh).
+        override: {
+          functions: (original) => ({
+            ...original,
+            getSession: async (input) => {
+              const session = await original.getSession(input);
+              if (session) {
+                const userId = session.getUserId();
+                const rows = await db
+                  .select({ deleted_at: users.deleted_at })
+                  .from(users)
+                  .where(eq(users.id, userId))
+                  .limit(1);
+
+                if (rows[0]?.deleted_at !== null && rows[0]?.deleted_at !== undefined) {
+                  throw new Session.Error({
+                    message: 'Account has been deleted',
+                    type: Session.Error.UNAUTHORISED,
+                    payload: { clearTokens: true },
+                  });
+                }
+              }
+              return session;
+            },
+            refreshSession: async (input) => {
+              const session = await original.refreshSession(input);
+              const userId = session.getUserId();
+              const rows = await db
+                .select({ deleted_at: users.deleted_at })
+                .from(users)
+                .where(eq(users.id, userId))
+                .limit(1);
+
+              if (rows[0]?.deleted_at !== null && rows[0]?.deleted_at !== undefined) {
+                throw new Session.Error({
+                  message: 'Account has been deleted',
+                  type: Session.Error.UNAUTHORISED,
+                  payload: { clearTokens: true },
+                });
+              }
+              return session;
+            },
+          }),
+        },
       }),
     ],
   });

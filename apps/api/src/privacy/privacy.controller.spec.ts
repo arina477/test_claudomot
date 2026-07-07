@@ -68,9 +68,16 @@ function makeController() {
       activitySummary: { serversJoined: 0, accountCreatedAt: new Date().toISOString() },
     }),
   };
+  const accountDeletionService = {
+    deleteAccount: vi.fn().mockResolvedValue({ status: 'deleted' }),
+  };
   // biome-ignore lint/suspicious/noExplicitAny: test mock — full service types not needed
-  const controller = new PrivacyController(privacyService as any, accountDataService as any);
-  return { controller, privacyService, accountDataService };
+  const controller = new PrivacyController(
+    privacyService as any,
+    accountDataService as any,
+    accountDeletionService as any,
+  );
+  return { controller, privacyService, accountDataService, accountDeletionService };
 }
 
 // ---------------------------------------------------------------------------

@@ -5,15 +5,23 @@ import {
   Get,
   Header,
   HttpCode,
+  Post,
   Put,
   Req,
   UseGuards,
 } from '@nestjs/common';
-import type { AccountDataResponse, PrivacySettingsResponse } from '@studyhall/shared';
-import { UpdatePrivacySchema } from '@studyhall/shared';
+import type {
+  AccountDataResponse,
+  DeleteAccountBlockedResponse,
+  DeleteAccountResponse,
+  PrivacySettingsResponse,
+} from '@studyhall/shared';
+import { DeleteAccountRequestSchema, UpdatePrivacySchema } from '@studyhall/shared';
 import { SessionNoVerifyGuard } from '../auth/session-no-verify.guard';
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
 import { AccountDataService } from './account-data.service';
+// biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
+import { AccountDeletionService } from './account-deletion.service';
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
 import { PrivacyService } from './privacy.service';
 
@@ -29,6 +37,7 @@ export class PrivacyController {
   constructor(
     private readonly privacyService: PrivacyService,
     private readonly accountDataService: AccountDataService,
+    private readonly accountDeletionService: AccountDeletionService,
   ) {}
 
   // GET /profile/privacy → 200 PrivacySettingsResponse
@@ -61,6 +70,31 @@ export class PrivacyController {
   async getAccountData(@Req() req: SessionAugmentedRequest): Promise<AccountDataResponse> {
     const userId = req.session.getUserId();
     return this.accountDataService.getAccountData(userId);
+  }
+
+  // POST /profile/delete → 200 DeleteAccountResponse | 409 DeleteAccountBlockedResponse
+  //
+  // Security invariants:
+  //   - callerId is ALWAYS taken from req.session.getUserId() — no userId param
+  //     in path or body. A user can only delete their own account (no IDOR).
+  //   - confirm: true in the body is a required confirmation gate. Absent or
+  //     false body → 400 before any deletion logic runs.
+  //   - On owner-block the service throws ConflictException(409) whose body is
+  //     the DeleteAccountBlockedResponse shape; NestJS serialises it as-is.
+  @Post('delete')
+  @HttpCode(200)
+  @UseGuards(SessionNoVerifyGuard)
+  async deleteAccount(
+    @Req() req: SessionAugmentedRequest,
+    @Body() body: unknown,
+  ): Promise<DeleteAccountResponse | DeleteAccountBlockedResponse> {
+    const parsed = DeleteAccountRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.flatten());
+    }
+
+    const callerId = req.session.getUserId();
+    return this.accountDeletionService.deleteAccount(callerId);
   }
 
   // GET /profile/data/export → 200, Content-Disposition attachment, JSON body
