@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { CreateReport, Report, ResolveReportAction } from '@studyhall/shared';
+import { ReportStatus } from '@studyhall/shared';
 import { and, eq } from 'drizzle-orm';
 import { db } from '../db/index';
 import { channels, messages, reports, server_members, servers } from '../db/schema/index';
@@ -54,8 +55,9 @@ import { RbacService } from '../rbac/rbac.service';
 // analytics, per-reporter rate-limiting.
 // ---------------------------------------------------------------------------
 
-/** Default timeout applied when resolving a report with action='timeout'. 60 minutes. */
-const DEFAULT_TIMEOUT_MINUTES = 60;
+/** Default timeout applied when resolving a report with action='timeout'. 1440 minutes = 24 hours.
+ * Matches the "Timeout 24h" label shown to moderators in the ReportInbox UI. */
+const DEFAULT_TIMEOUT_MINUTES = 1440;
 
 // ---------------------------------------------------------------------------
 // rowToDto — convert a Drizzle reports row to the shared Report DTO shape.
@@ -202,6 +204,17 @@ export class ReportsService {
       throw new ForbiddenException('Insufficient permissions: moderate_members required');
     }
 
+    // Validate status against the known enum before querying — an unrecognised
+    // value would silently return [] because the DB has no matching rows.
+    if (status !== undefined) {
+      const parsed = ReportStatus.safeParse(status);
+      if (!parsed.success) {
+        throw new BadRequestException(
+          `Invalid status "${status}" — must be one of: ${ReportStatus.options.join(', ')}`,
+        );
+      }
+    }
+
     const rows = status
       ? await db
           .select()
@@ -239,91 +252,126 @@ export class ReportsService {
     reportId: string,
     action: ResolveReportAction,
   ): Promise<Report> {
-    // Step 1: load the report
-    const [report] = await db.select().from(reports).where(eq(reports.id, reportId)).limit(1);
+    // -----------------------------------------------------------------------
+    // TOCTOU double-resolve guard — transaction + SELECT FOR UPDATE approach.
+    //
+    // We open a transaction and SELECT the report row FOR UPDATE so that a
+    // second concurrent resolveReport call blocks at the SELECT until the first
+    // transaction commits. When the second call finally acquires the lock it
+    // re-reads the row and sees status !== 'open', throwing 409.
+    //
+    // ModerationService.setMemberTimeout and MessagesService.deleteMessage both
+    // use the module-level `db` and cannot accept a tx handle, so their writes
+    // fall outside this transaction boundary. That is acceptable: both side
+    // effects are idempotent (soft-delete is idempotent; re-applying a timeout
+    // overwrites with a fresh expiry). The row lock held from the FOR UPDATE
+    // SELECT through the status-flip UPDATE ensures only one concurrent caller
+    // proceeds past the open-check per report.
+    //
+    // The final status-flip UPDATE also carries an eq(reports.status, 'open')
+    // predicate as a belt-and-suspenders guard: if the row lock path were ever
+    // bypassed (e.g. READ COMMITTED isolation + a non-standard driver), an
+    // empty .returning() here would still surface a ConflictException.
+    // -----------------------------------------------------------------------
 
-    if (!report) {
-      throw new NotFoundException(`Report ${reportId} not found`);
-    }
-
-    // Step 2: cross-server tamper guard
-    // A moderator of server X MUST NOT action a report belonging to server Y.
-    if (report.target_server_id !== serverId) {
-      // Return 404 (not 403) to avoid leaking existence of reports in other servers.
-      throw new NotFoundException(`Report ${reportId} not found`);
-    }
-
-    // Step 3: gate on moderate_members (mirrors setMemberTimeout authz)
-    const canModerate = await this.rbacService.can(callerUserId, serverId, 'moderate_members');
-    if (!canModerate) {
-      throw new ForbiddenException('Insufficient permissions: moderate_members required');
-    }
-
-    // Step 4: already-resolved/dismissed → 409
-    if (report.status !== 'open') {
-      throw new ConflictException(`Report is already ${report.status} — cannot resolve again`);
-    }
-
-    // Step 5: dispatch action
-    if (action === 'timeout') {
-      // Route through ModerationService — rank guard is enforced there.
-      if (!report.target_user_id) {
-        throw new BadRequestException(
-          'Cannot apply timeout: report has no target_user_id (wrong target_type?)',
-        );
-      }
-      // setMemberTimeout(serverId, callerUserId, targetUserId, durationMinutes)
-      await this.moderationService.setMemberTimeout(
-        serverId,
-        callerUserId,
-        report.target_user_id,
-        DEFAULT_TIMEOUT_MINUTES,
-      );
-    } else if (action === 'delete_message') {
-      // Resolve channel_id from the messages row — report does not store it.
-      if (!report.target_message_id) {
-        throw new BadRequestException(
-          'Cannot delete message: report has no target_message_id (wrong target_type?)',
-        );
-      }
-      const [msg] = await db
-        .select({ channel_id: messages.channel_id })
-        .from(messages)
-        .where(eq(messages.id, report.target_message_id))
+    return await db.transaction(async (tx) => {
+      // Step 1: load the report — FOR UPDATE acquires a row lock, serialising
+      // concurrent resolveReport calls on this report.
+      const [report] = await tx
+        .select()
+        .from(reports)
+        .where(eq(reports.id, reportId))
+        .for('update')
         .limit(1);
-      if (!msg) {
-        // Message already deleted (soft-delete, row still exists) is handled by
-        // MessagesService.deleteMessage (idempotent). A missing row is unexpected.
-        throw new NotFoundException('Message referenced by report not found');
+
+      if (!report) {
+        throw new NotFoundException(`Report ${reportId} not found`);
       }
-      // Route through MessagesService — delete rank guard enforced there.
-      // deleteMessage(channelId, messageId, userId)
-      await this.messagesService.deleteMessage(
-        msg.channel_id,
-        report.target_message_id,
-        callerUserId,
-      );
-    }
-    // 'dismiss' → no side effect; proceed to status flip.
 
-    // Step 6: flip status
-    const newStatus = action === 'dismiss' ? 'dismissed' : 'resolved';
-    const now = new Date();
+      // Step 2: cross-server tamper guard
+      // A moderator of server X MUST NOT action a report belonging to server Y.
+      if (report.target_server_id !== serverId) {
+        // Return 404 (not 403) to avoid leaking existence of reports in other servers.
+        throw new NotFoundException(`Report ${reportId} not found`);
+      }
 
-    const [updated] = await db
-      .update(reports)
-      .set({
-        status: newStatus,
-        resolved_at: now,
-        resolved_by: callerUserId,
-      })
-      .where(eq(reports.id, reportId))
-      .returning();
+      // Step 3: gate on moderate_members (mirrors setMemberTimeout authz)
+      const canModerate = await this.rbacService.can(callerUserId, serverId, 'moderate_members');
+      if (!canModerate) {
+        throw new ForbiddenException('Insufficient permissions: moderate_members required');
+      }
 
-    if (!updated) {
-      throw new Error('Report update failed');
-    }
+      // Step 4: already-resolved/dismissed → 409
+      if (report.status !== 'open') {
+        throw new ConflictException(`Report is already ${report.status} — cannot resolve again`);
+      }
 
-    return rowToDto(updated);
+      // Step 5: dispatch action (runs against module-level db, outside this tx —
+      // acceptable; see TOCTOU guard note above).
+      if (action === 'timeout') {
+        // Route through ModerationService — rank guard is enforced there.
+        if (!report.target_user_id) {
+          throw new BadRequestException(
+            'Cannot apply timeout: report has no target_user_id (wrong target_type?)',
+          );
+        }
+        // setMemberTimeout(serverId, callerUserId, targetUserId, durationMinutes)
+        await this.moderationService.setMemberTimeout(
+          serverId,
+          callerUserId,
+          report.target_user_id,
+          DEFAULT_TIMEOUT_MINUTES,
+        );
+      } else if (action === 'delete_message') {
+        // Resolve channel_id from the messages row — report does not store it.
+        if (!report.target_message_id) {
+          throw new BadRequestException(
+            'Cannot delete message: report has no target_message_id (wrong target_type?)',
+          );
+        }
+        const [msg] = await db
+          .select({ channel_id: messages.channel_id })
+          .from(messages)
+          .where(eq(messages.id, report.target_message_id))
+          .limit(1);
+        if (!msg) {
+          // Message already deleted (soft-delete, row still exists) is handled by
+          // MessagesService.deleteMessage (idempotent). A missing row is unexpected.
+          throw new NotFoundException('Message referenced by report not found');
+        }
+        // Route through MessagesService — delete rank guard enforced there.
+        // deleteMessage(channelId, messageId, userId)
+        await this.messagesService.deleteMessage(
+          msg.channel_id,
+          report.target_message_id,
+          callerUserId,
+        );
+      }
+      // 'dismiss' → no side effect; proceed to status flip.
+
+      // Step 6: flip status — WHERE predicate includes eq(reports.status, 'open') as
+      // a belt-and-suspenders guard. If returning() is empty, another resolve won
+      // the race despite the row lock (should not happen under normal Postgres
+      // READ COMMITTED + FOR UPDATE, but guarded defensively).
+      const newStatus = action === 'dismiss' ? 'dismissed' : 'resolved';
+      const now = new Date();
+
+      const [updated] = await tx
+        .update(reports)
+        .set({
+          status: newStatus,
+          resolved_at: now,
+          resolved_by: callerUserId,
+        })
+        .where(and(eq(reports.id, reportId), eq(reports.status, 'open')))
+        .returning();
+
+      if (!updated) {
+        // Conditional flip found no 'open' row — another concurrent resolve won.
+        throw new ConflictException('Report was resolved by a concurrent request');
+      }
+
+      return rowToDto(updated);
+    });
   }
 }

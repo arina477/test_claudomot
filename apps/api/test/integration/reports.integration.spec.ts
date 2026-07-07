@@ -32,7 +32,12 @@ import {
   truncateTables,
 } from './pg-harness';
 
-import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MessagesService } from '../../src/messaging/messages.service';
 import { ModerationService } from '../../src/rbac/moderation.service';
@@ -351,10 +356,16 @@ describe.skipIf(SKIP)('Reports — real-Postgres authz + behavior (wave-69 M14)'
   });
 
   // -----------------------------------------------------------------------
-  // 8. resolve 'timeout' happy path → report resolved, member timed out
+  // 8. resolve 'timeout' happy path → report resolved, member timed out ~24h
+  //
+  // Pins the applied timeout duration to ~1440 minutes (24h) so a mismatch
+  // between DEFAULT_TIMEOUT_MINUTES and the "Timeout 24h" UI label is caught.
+  // Tolerance: ±60 s to allow for test execution time and clock skew.
   // -----------------------------------------------------------------------
 
-  it('resolveReport timeout: member timed out, report status → resolved', async () => {
+  it('resolveReport timeout: member timed out for ~24h, report status → resolved', async () => {
+    const beforeResolve = Date.now();
+
     const report = await reportsService.createReport(REGULAR_USER_ID, {
       target_type: 'member',
       target_server_id: SERVER_A_ID,
@@ -377,8 +388,19 @@ describe.skipIf(SKIP)('Reports — real-Postgres authz + behavior (wave-69 M14)'
       'SELECT muted_until FROM server_members WHERE server_id = $1 AND user_id = $2',
       [SERVER_A_ID, TARGET_USER_ID],
     );
-    expect(memberRows[0]?.muted_until).not.toBeNull();
-    expect(new Date(memberRows[0]?.muted_until as Date).getTime()).toBeGreaterThan(Date.now());
+    const mutedUntil = memberRows[0]?.muted_until;
+    expect(mutedUntil).not.toBeNull();
+
+    // Pin the duration: muted_until must be within [23h59m, 24h01m] of when
+    // the resolve call started. This catches DEFAULT_TIMEOUT_MINUTES mismatches
+    // (e.g. the old 60-minute value would fail this check).
+    const mutedUntilMs = new Date(mutedUntil as Date).getTime();
+    const expectedDurationMs = 24 * 60 * 60 * 1000; // 1440 min = 24h in ms
+    const toleranceMs = 60 * 1000; // ±60 s
+    const lowerBound = beforeResolve + expectedDurationMs - toleranceMs;
+    const upperBound = beforeResolve + expectedDurationMs + toleranceMs;
+    expect(mutedUntilMs).toBeGreaterThanOrEqual(lowerBound);
+    expect(mutedUntilMs).toBeLessThanOrEqual(upperBound);
   });
 
   // -----------------------------------------------------------------------
@@ -402,7 +424,67 @@ describe.skipIf(SKIP)('Reports — real-Postgres authz + behavior (wave-69 M14)'
   });
 
   // -----------------------------------------------------------------------
-  // 10. getServerReports: moderator can list reports + status filter works
+  // 10. double-resolve race — sequential already-resolved case → 409
+  //
+  // Covers the conditional-flip guard (status predicate on the UPDATE WHERE
+  // clause) + the transaction FOR UPDATE serialisation path. The deterministic
+  // case: resolve once, then resolve again on the now-resolved report.
+  // The concurrent case (two simultaneous callers) is non-deterministic in
+  // integration tests so we assert only the sequential already-resolved path;
+  // the row-lock + conditional-flip guard covers the concurrent path in
+  // production, and the test below ensures the guard surfaces the right error.
+  // -----------------------------------------------------------------------
+
+  it('resolveReport: resolving an already-resolved report → ConflictException (409), no second side effect', async () => {
+    const report = await reportsService.createReport(REGULAR_USER_ID, {
+      target_type: 'server',
+      target_server_id: SERVER_A_ID,
+      reason: 'race condition test',
+    });
+
+    // First resolve succeeds (dismiss → no side effect to double-count)
+    const first = await reportsService.resolveReport(
+      MODERATOR_A_ID,
+      SERVER_A_ID,
+      report.id,
+      'dismiss',
+    );
+    expect(first.status).toBe('dismissed');
+
+    // Second resolve on the already-dismissed report must throw 409
+    await expect(
+      reportsService.resolveReport(MODERATOR_A_ID, SERVER_A_ID, report.id, 'dismiss'),
+    ).rejects.toBeInstanceOf(ConflictException);
+
+    // DB must still show 'dismissed' (not flipped again)
+    const rows = await harnessQuery<{ status: string }>(
+      'SELECT status FROM reports WHERE id = $1',
+      [report.id],
+    );
+    expect(rows[0]?.status).toBe('dismissed');
+  });
+
+  // -----------------------------------------------------------------------
+  // 11. getServerReports: invalid status query param → BadRequestException (400)
+  // -----------------------------------------------------------------------
+
+  it('getServerReports: invalid status value → BadRequestException (400)', async () => {
+    await expect(
+      reportsService.getServerReports(MODERATOR_A_ID, SERVER_A_ID, 'garbage'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    // Edge cases: empty string and a near-miss value
+    await expect(
+      reportsService.getServerReports(MODERATOR_A_ID, SERVER_A_ID, ''),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    await expect(
+      reportsService.getServerReports(MODERATOR_A_ID, SERVER_A_ID, 'Open'), // wrong case
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  // -----------------------------------------------------------------------
+  // 12. getServerReports: moderator can list reports + status filter works
   // -----------------------------------------------------------------------
 
   it('getServerReports: moderator retrieves open reports for server', async () => {
