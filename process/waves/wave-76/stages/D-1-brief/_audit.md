@@ -1,0 +1,2 @@
+# Wave 76 — D-1 Audit
+1 design gap inventoried: **Educator Admin Console** (apps/web EducatorAdminConsole.tsx — new owner/educator-gated settings surface rendering server analytics aggregates). Grep of design/ confirms no existing mockup for an educator/admin console or analytics dashboard surface. Brief authored: educator-admin-console-brief.md. No prior-wave bug-design tasks for this wave's tasks. No other gaps (backend legs are design-independent).
