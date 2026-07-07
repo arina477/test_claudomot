@@ -111,3 +111,6 @@ Promoted at L-2 Distill from `process/waves/wave-<N>/blocks/L/observations.md` b
 
 15. Wrap a multi-step mutation that must be all-or-nothing in a DB transaction, not separate auto-committed statements.
    Why: Auto-committed statements can partly apply, leaving a half-scrubbed or inconsistent record.
+
+16. Resolve an authz or visibility check by delegating to the shared tested seam, not by re-querying membership inline.
+   Why: Inline membership re-derivation can drift from the seam and open a privacy leak.
