@@ -183,6 +183,13 @@
       "when": 1783380521830,
       "tag": "0025_strong_gladiator",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1783391709430,
+      "tag": "0026_quick_thunderbird",
+      "breakpoints": true
     }
   ]
 }

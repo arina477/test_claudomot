@@ -11,3 +11,4 @@ export * from './scheduling';
 export * from './dm';
 export * from './study-timer';
 export * from './reports';
+export * from './user-blocks';

@@ -36,6 +36,7 @@ import {
 // SUT import AFTER harness so the lazy db proxy resolves to the test DB.
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { BlocksService } from '../../src/blocks/blocks.service';
 import { DmService } from '../../src/dm/dm.service';
 
 // Skip-with-reason when DATABASE_URL_TEST is absent (local dev without PG).
@@ -85,10 +86,14 @@ describe.skipIf(SKIP)(
 
     beforeAll(async () => {
       await setupHarness();
-      // DmService constructor requires EventEmitter2. getDmCandidates does not
-      // use the emitter, so a minimal stub is sufficient here.
+      // DmService constructor requires EventEmitter2 + BlocksService.
+      // getDmCandidates does not use either directly, but uses BlocksService
+      // for the block HIDE predicate in the query (wave-70 addition). We pass a
+      // real BlocksService here so the getDmCandidates integration tests remain
+      // unaffected (no blocks seeded, so isBlockedBetween always returns false).
       const emitter = new EventEmitter2();
-      sut = new DmService(emitter);
+      const blocksService = new BlocksService();
+      sut = new DmService(emitter, blocksService);
     });
 
     afterAll(async () => {

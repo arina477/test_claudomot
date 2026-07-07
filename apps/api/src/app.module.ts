@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AssignmentsModule } from './assignments/assignments.module';
 import { AuthModule } from './auth/auth.module';
+import { BlocksModule } from './blocks/blocks.module';
 import { DmModule } from './dm/dm.module';
 import { FilesModule } from './files/files.module';
 import { HealthModule } from './health/health.module';
@@ -54,6 +55,7 @@ import { VoiceModule } from './voice/voice.module';
     PrivacyModule,
     StudyTimerModule,
     ReportsModule,
+    BlocksModule,
     StudyRoomModule,
   ],
   providers: [

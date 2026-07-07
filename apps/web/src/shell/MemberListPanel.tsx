@@ -36,12 +36,14 @@
 import type { ServerMember } from '@studyhall/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../auth/api';
+import { BlockConfirmDialog } from './BlockConfirmDialog';
 import { PresenceDot } from './PresenceDot';
 import { ReportDialog } from './ReportDialog';
 import {
   ArrowLeftIcon,
   DotsThreeIcon,
   FlagIcon,
+  ProhibitIcon,
   SpeakerHighIcon2,
   SpeakerXFillIcon,
   SpinnerIcon,
@@ -415,8 +417,11 @@ type MemberItemProps = {
   online: boolean;
   canModerate: boolean;
   serverId: string;
+  /** Session user's own userId — used to suppress Report + Block on own row. */
+  selfUserId?: string | null | undefined;
   onMutedChange: (userId: string, mutedUntil: string | null) => void;
   onReport: (userId: string, displayName: string) => void;
+  onBlock: (userId: string, displayName: string) => void;
 };
 
 function MemberItem({
@@ -424,11 +429,14 @@ function MemberItem({
   online,
   canModerate,
   serverId,
+  selfUserId,
   onMutedChange,
   onReport,
+  onBlock,
 }: MemberItemProps) {
   const initials = getInitials(member.displayName);
   const memberIsMuted = isMuted(member.mutedUntil);
+  const isSelf = Boolean(selfUserId && member.userId === selfUserId);
   const [menuOpen, setMenuOpen] = useState(false);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const kebabRef = useRef<HTMLButtonElement>(null);
@@ -504,7 +512,7 @@ function MemberItem({
         {member.displayName}
       </span>
 
-      {/* Right slot: muted indicator + report flag + kebab */}
+      {/* Right slot: muted indicator + report flag + block + kebab */}
       <div className="flex items-center gap-1 shrink-0 pl-1 pr-2">
         {/* Amber muted indicator — visible to ALL when timed out (wave-41 design) */}
         {memberIsMuted && (
@@ -513,28 +521,65 @@ function MemberItem({
           </span>
         )}
 
-        {/* Report member flag — visible on row hover/focus to all members */}
-        <button
-          type="button"
-          aria-label={`Report ${member.displayName}`}
-          data-testid={`report-member-btn-${member.userId}`}
-          onClick={() => onReport(member.userId, member.displayName)}
-          className="flex h-6 w-6 items-center justify-center rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
-          style={{ color: 'rgba(255,255,255,0.40)' }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(239,68,68,0.10)';
-            (e.currentTarget as HTMLButtonElement).style.color = '#f87171';
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = '';
-            (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.40)';
-          }}
-        >
-          <FlagIcon size={12} />
-        </button>
+        {/* Report member flag — suppressed on own row (spec D) */}
+        {!isSelf && (
+          <button
+            type="button"
+            aria-label={`Report ${member.displayName}`}
+            data-testid={`report-member-btn-${member.userId}`}
+            onClick={() => onReport(member.userId, member.displayName)}
+            className="flex h-6 w-6 items-center justify-center rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+            style={{ color: 'rgba(255,255,255,0.40)' }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(239,68,68,0.10)';
+              (e.currentTarget as HTMLButtonElement).style.color = '#f87171';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = '';
+              (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.40)';
+            }}
+          >
+            <FlagIcon size={12} />
+          </button>
+        )}
 
-        {/* Moderation kebab — only for viewers with moderate_members */}
-        {canModerate && (
+        {/* Block affordance — suppressed on own row (spec C + D) */}
+        {!isSelf && (
+          <button
+            type="button"
+            aria-label={`Block ${member.displayName}`}
+            data-testid={`block-member-btn-${member.userId}`}
+            onClick={() => onBlock(member.userId, member.displayName)}
+            className="flex h-6 w-6 items-center justify-center rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+            style={{ color: 'rgba(255,255,255,0.40)' }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(239,68,68,0.10)';
+              (e.currentTarget as HTMLButtonElement).style.color = '#f87171';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = '';
+              (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.40)';
+            }}
+          >
+            <ProhibitIcon size={12} />
+          </button>
+        )}
+
+        {/* Self-row kebab — aria-hidden per D-3 note (no actions, cosmetic only) */}
+        {isSelf && (
+          <button
+            type="button"
+            aria-hidden="true"
+            tabIndex={-1}
+            className="flex h-6 w-6 items-center justify-center rounded opacity-0 group-hover:opacity-100"
+            style={{ color: 'rgba(255,255,255,0.40)', pointerEvents: 'none' }}
+          >
+            <DotsThreeIcon size={14} />
+          </button>
+        )}
+
+        {/* Moderation kebab — only for viewers with moderate_members, not shown on own row */}
+        {canModerate && !isSelf && (
           <button
             ref={kebabRef}
             type="button"
@@ -629,9 +674,19 @@ type Props = {
    * itself (same pattern as AssignmentsPanel).
    */
   canModerateMembers?: boolean;
+  /**
+   * The session user's own UUID (profile.userId). When provided, the panel
+   * suppresses Report + Block affordances on the viewer's own row (spec D).
+   * Threaded from AppShell → ProfileContext.
+   */
+  selfUserId?: string | null;
 };
 
-export function MemberListPanel({ serverId, canModerateMembers: canModerateFromProp }: Props) {
+export function MemberListPanel({
+  serverId,
+  canModerateMembers: canModerateFromProp,
+  selfUserId,
+}: Props) {
   const [members, setMembers] = useState<ServerMember[]>([]);
   const [loadStatus, setLoadStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const mountedRef = useRef(true);
@@ -649,6 +704,14 @@ export function MemberListPanel({ serverId, canModerateMembers: canModerateFromP
   );
   const handleReportMember = useCallback((userId: string, displayName: string) => {
     setReportTarget({ userId, displayName });
+  }, []);
+
+  // Block dialog state
+  const [blockTarget, setBlockTarget] = useState<{ userId: string; displayName: string } | null>(
+    null,
+  );
+  const handleBlockMember = useCallback((userId: string, displayName: string) => {
+    setBlockTarget({ userId, displayName });
   }, []);
 
   useEffect(() => {
@@ -788,8 +851,10 @@ export function MemberListPanel({ serverId, canModerateMembers: canModerateFromP
                         online={true}
                         canModerate={canModerateMembers}
                         serverId={serverId ?? ''}
+                        selfUserId={selfUserId}
                         onMutedChange={handleMutedChange}
                         onReport={handleReportMember}
+                        onBlock={handleBlockMember}
                       />
                     ))}
                   </ul>
@@ -818,8 +883,10 @@ export function MemberListPanel({ serverId, canModerateMembers: canModerateFromP
                         online={false}
                         canModerate={canModerateMembers}
                         serverId={serverId ?? ''}
+                        selfUserId={selfUserId}
                         onMutedChange={handleMutedChange}
                         onReport={handleReportMember}
+                        onBlock={handleBlockMember}
                       />
                     ))}
                   </ul>
@@ -840,6 +907,15 @@ export function MemberListPanel({ serverId, canModerateMembers: canModerateFromP
           {...(serverId ? { serverId } : {})}
           displayLabel={reportTarget.displayName}
           onClose={() => setReportTarget(null)}
+        />
+      )}
+
+      {/* Block confirm dialog */}
+      {blockTarget && (
+        <BlockConfirmDialog
+          targetUserId={blockTarget.userId}
+          displayName={blockTarget.displayName}
+          onClose={() => setBlockTarget(null)}
         />
       )}
     </aside>

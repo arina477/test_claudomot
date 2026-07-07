@@ -15,13 +15,14 @@
  * NOTE: ServerProvider must be an ancestor. AppHome provides it.
  */
 
-import { useRef, useState } from 'react';
+import { useContext, useRef, useState } from 'react';
 import { ChannelSidebar } from './ChannelSidebar';
 import type { ConnectionState } from './ConnectionStateIndicator';
 import { CreateServerModal } from './CreateServerModal';
 import { DmHome } from './DmHome';
 import { MainColumn } from './MainColumn';
 import { MemberListPanel } from './MemberListPanel';
+import { ProfileContext } from './ProfileContext';
 import { useServers } from './ServerContext';
 import { ServerRail } from './ServerRail';
 import { XIcon } from './icons';
@@ -36,6 +37,7 @@ export function AppShell({ connectionState = 'online' }: Props) {
   /** When true, the DM home surface is shown instead of the channel view. */
   const [dmHomeActive, setDmHomeActive] = useState(false);
   const { createModalOpen, closeCreateModal, appendServer, selectedId } = useServers();
+  const { profile } = useContext(ProfileContext);
   const addServerBtnRef = useRef<HTMLButtonElement>(null);
 
   function toggleSidebar() {
@@ -131,7 +133,7 @@ export function AppShell({ connectionState = 'online' }: Props) {
        */}
       {!dmHomeActive && (
         <div className="hidden lg:flex" style={{ flexShrink: 0 }}>
-          <MemberListPanel serverId={selectedId} />
+          <MemberListPanel serverId={selectedId} selfUserId={profile?.userId ?? null} />
         </div>
       )}
 
