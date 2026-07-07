@@ -2,7 +2,7 @@
 # seed: 156aa2ee (audit-log substrate + write hooks) | siblings: 03940edd (shared DTO), 5a2521bc (read list)
 # active_milestone: 97d65b49 (M10 Compliance & data rights, in_progress)
 ## P — Product
-- [ ] P-0 Frame
+- [x] P-0 Frame
 - [ ] P-1 Decompose
 - [ ] P-2 Spec
 - [ ] P-3 Plan
