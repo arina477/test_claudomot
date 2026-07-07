@@ -108,3 +108,6 @@ Promoted at L-2 Distill from `process/waves/wave-<N>/blocks/L/observations.md` b
 
 14. Render a fixed or full-screen overlay through a portal to document.body so a transformed ancestor cannot move it.
    Why: A transformed ancestor is the containing block for position:fixed, hiding it off-screen.
+
+15. Wrap a multi-step mutation that must be all-or-nothing in a DB transaction, not separate auto-committed statements.
+   Why: Auto-committed statements can partly apply, leaving a half-scrubbed or inconsistent record.
