@@ -84,10 +84,9 @@
         .stat-card {
             background-color: var(--surface-900);
             border-radius: 0.5rem;
-            padding: 1.5rem;
             border: 1px solid var(--border-hairline);
             box-shadow: var(--shadow-sm);
-            transition: all 150ms ease;
+            transition: border-color 150ms ease;
         }
         
         @media (prefers-reduced-motion: no-preference) {
@@ -102,6 +101,12 @@
             text-transform: uppercase;
             letter-spacing: 0.1em; 
             color: var(--text-secondary);
+        }
+
+        /* Accessible Focus Ring Utility */
+        .focus-visible-glow:focus-visible {
+            outline: none;
+            box-shadow: var(--glow-focus);
         }
 
         /* State visibility blocks - Edit "block" vs "none" here to preview specific states */
@@ -140,11 +145,11 @@
             <div class="mt-1 text-xs" style="color: var(--text-secondary);">Server Settings</div>
         </div>
         <div class="px-3 py-2 space-y-0.5">
-            <a href="#" class="block px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150 hover:bg-[var(--surface-800)]" style="color: var(--text-secondary);">Overview</a>
-            <a href="#" class="block px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150 hover:bg-[var(--surface-800)]" style="color: var(--text-secondary);">Roles</a>
-            <a href="#" class="block px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150 hover:bg-[var(--surface-800)]" style="color: var(--text-secondary);">Your Plan</a>
+            <a href="#" class="block px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150 hover:bg-[var(--surface-800)] focus-visible-glow" style="color: var(--text-secondary);">Overview</a>
+            <a href="#" class="block px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150 hover:bg-[var(--surface-800)] focus-visible-glow" style="color: var(--text-secondary);">Roles</a>
+            <a href="#" class="block px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150 hover:bg-[var(--surface-800)] focus-visible-glow" style="color: var(--text-secondary);">Your Plan</a>
             <!-- Active Gated Navigation Item -->
-            <a href="#" class="flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150" style="background-color: var(--surface-700); color: var(--accent-emerald);">
+            <a href="#" class="flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150 focus-visible-glow" style="background-color: var(--surface-700); color: var(--accent-emerald);">
                 <span class="flex items-center gap-2">
                     <i class="ph ph-shield-check text-lg"></i>
                     Educator Console
@@ -153,7 +158,7 @@
         </div>
         <div class="mt-auto p-4">
             <div class="h-[1px] w-full mb-4" style="background: var(--border-hairline);"></div>
-            <button class="flex items-center gap-2 px-3 py-2 w-full rounded-md text-sm font-medium transition-colors duration-150 hover:bg-[var(--surface-800)]" style="color: var(--text-secondary);">
+            <button class="flex items-center gap-2 px-3 py-2 w-full rounded-md text-sm font-medium transition-colors duration-150 hover:bg-[var(--surface-800)] focus-visible-glow" style="color: var(--text-secondary);">
                 <i class="ph ph-arrow-left text-lg"></i>
                 Back to Server
             </button>
@@ -164,7 +169,7 @@
     <main class="flex-1 h-full overflow-y-auto relative" style="background-color: var(--surface-800);">
         <!-- Mobile Header Fallback -->
         <header class="md:hidden flex items-center h-14 px-4 border-b sticky top-0 z-50 backdrop-blur-md" style="border-color: var(--border-hairline); background-color: rgba(28, 28, 31, 0.8);">
-            <button class="mr-4" style="color: var(--text-secondary);"><i class="ph ph-list text-2xl"></i></button>
+            <button class="mr-4 rounded-md focus-visible-glow" style="color: var(--text-secondary);"><i class="ph ph-list text-2xl"></i></button>
             <h1 class="text-sm font-semibold" style="color: var(--text-primary);">Educator Console</h1>
         </header>
 
@@ -174,24 +179,24 @@
             <!-- STATE: LOADING -->
             <div class="console-state-loading">
                 <div class="panel-container">
-                    <div class="p-6 border-b flex items-center gap-3" style="border-color: var(--border-hairline);">
+                    <div class="p-4 sm:p-6 border-b flex items-center gap-3" style="border-color: var(--border-hairline);">
                         <i class="ph ph-spinner animate-spin text-xl" style="color: var(--text-secondary);"></i>
                         <div class="skeleton-block w-48 h-6"></div>
                     </div>
-                    <div class="p-6 space-y-6">
+                    <div class="p-4 sm:p-6 space-y-6">
                         <!-- Stat Grid Skeleton -->
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div class="stat-card space-y-4">
+                            <div class="stat-card p-4 sm:p-6 space-y-4">
                                 <div class="skeleton-block w-24 h-3"></div>
                                 <div class="skeleton-block w-20 h-8"></div>
                                 <div class="skeleton-block w-full h-10 mt-2"></div>
                             </div>
-                            <div class="stat-card space-y-4">
+                            <div class="stat-card p-4 sm:p-6 space-y-4">
                                 <div class="skeleton-block w-32 h-3"></div>
                                 <div class="skeleton-block w-24 h-8"></div>
                                 <div class="skeleton-block w-full h-10 mt-2"></div>
                             </div>
-                            <div class="stat-card space-y-4">
+                            <div class="stat-card p-4 sm:p-6 space-y-4">
                                 <div class="skeleton-block w-28 h-3"></div>
                                 <div class="skeleton-block w-16 h-8"></div>
                                 <div class="skeleton-block w-full h-10 mt-2"></div>
@@ -211,15 +216,15 @@
             <div class="console-state-empty">
                 <div class="panel-container">
                     <!-- Standard Panel Header -->
-                    <div class="p-6 border-b flex items-center gap-3" style="border-color: var(--border-hairline);">
+                    <div class="p-4 sm:p-6 border-b flex items-center gap-3" style="border-color: var(--border-hairline);">
                         <i class="ph ph-shield-check text-xl" style="color: var(--accent-emerald);"></i>
                         <h2 class="text-[17px] font-semibold" style="color: var(--text-primary);">Educator Console</h2>
                         <span class="px-2 py-0.5 rounded text-[11px] font-medium tracking-wide uppercase border bg-[var(--surface-900)]" style="border-color: var(--border-hairline); color: var(--text-secondary);">School Plan</span>
                     </div>
                     
-                    <div class="py-24 px-6 text-center flex flex-col items-center justify-center">
+                    <div class="py-24 px-4 sm:px-6 text-center flex flex-col items-center justify-center">
                         <div class="w-16 h-16 rounded-full flex items-center justify-center border mb-6" style="background: var(--surface-900); border-color: var(--surface-700);">
-                            <i class="ph ph-tray text-2xl" style="color: var(--text-secondary);"></i>
+                            <i class="ph ph-clipboard-text text-2xl" style="color: var(--text-secondary);"></i>
                         </div>
                         <h3 class="text-xl font-semibold mb-2" style="color: var(--text-primary);">No activity yet</h3>
                         <p class="text-sm max-w-md mx-auto leading-relaxed" style="color: var(--text-secondary);">
@@ -231,9 +236,9 @@
 
             <!-- STATE: FORBIDDEN -->
             <div class="console-state-forbidden">
-                <div class="panel-container flex flex-col items-center justify-center py-24 px-6 text-center">
+                <div class="panel-container flex flex-col items-center justify-center py-24 px-4 sm:px-6 text-center">
                     <div class="w-16 h-16 rounded-full flex items-center justify-center mb-6" style="background: rgba(239, 68, 68, 0.1);">
-                        <i class="ph ph-lock p text-2xl" style="color: var(--danger-text);"></i>
+                        <i class="ph ph-lock text-2xl" style="color: var(--danger-text);"></i>
                     </div>
                     <h3 class="text-xl font-semibold mb-2" style="color: var(--danger-text);">Access Restricted</h3>
                     <p class="text-sm max-w-sm mx-auto leading-relaxed" style="color: var(--text-secondary);">
@@ -250,7 +255,7 @@
                 
                 <div class="panel-container">
                     <!-- Standard Panel Header (Matches ServerPlanPanel) -->
-                    <div class="p-6 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4" style="border-color: var(--border-hairline);">
+                    <div class="p-4 sm:p-6 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4" style="border-color: var(--border-hairline);">
                         
                         <div>
                             <div class="flex items-center gap-3">
@@ -273,20 +278,20 @@
                     </div>
 
                     <!-- Macro Architecture Body (Calm Grid) -->
-                    <div class="p-6 space-y-8">
+                    <div class="p-4 sm:p-6 space-y-8">
                         
                         <!-- Meso-Architecture: 3-column equal grid for strict, low-noise stat grouping -->
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
                             
                             <!-- MODULE 1: Membership & Roles -->
-                            <div class="stat-card flex flex-col justify-between">
+                            <div class="stat-card p-4 sm:p-6 flex flex-col justify-between">
                                 <div>
                                     <h3 class="label-text flex items-center gap-2 mb-2">
                                         <i class="ph ph-users text-[15px]" style="color: var(--text-secondary);"></i>
                                         Total Members
                                     </h3>
                                     <div class="flex items-baseline gap-2 mb-6">
-                                        <span class="text-2xl font-semibold tabular-nums leading-none" style="color: var(--text-primary);">342</span>
+                                        <span class="text-xl font-semibold tabular-nums leading-none" style="color: var(--text-primary);">342</span>
                                     </div>
                                 </div>
                                 <!-- DL Sub-stats -->
@@ -303,14 +308,14 @@
                             </div>
 
                             <!-- MODULE 2: Communication -->
-                            <div class="stat-card flex flex-col justify-between">
+                            <div class="stat-card p-4 sm:p-6 flex flex-col justify-between">
                                 <div>
                                     <h3 class="label-text flex items-center gap-2 mb-2">
                                         <i class="ph ph-chat-circle text-[15px]" style="color: var(--text-secondary);"></i>
                                         Messages (7D)
                                     </h3>
                                     <div class="flex items-baseline gap-2 mb-6">
-                                        <span class="text-2xl font-semibold tabular-nums leading-none" style="color: var(--text-primary);">15,289</span>
+                                        <span class="text-xl font-semibold tabular-nums leading-none" style="color: var(--text-primary);">15,289</span>
                                     </div>
                                 </div>
                                 <div class="mt-auto pt-4 border-t" style="border-color: var(--border-hairline);">
@@ -321,14 +326,14 @@
                             </div>
 
                             <!-- MODULE 3: Assignments Overview -->
-                            <div class="stat-card flex flex-col justify-between">
+                            <div class="stat-card p-4 sm:p-6 flex flex-col justify-between">
                                 <div>
                                     <h3 class="label-text flex items-center gap-2 mb-2">
                                         <i class="ph ph-clipboard-text text-[15px]" style="color: var(--text-secondary);"></i>
                                         Assignments Total
                                     </h3>
                                     <div class="flex items-baseline gap-2 mb-6">
-                                        <span class="text-2xl font-semibold tabular-nums leading-none" style="color: var(--text-primary);">942</span>
+                                        <span class="text-xl font-semibold tabular-nums leading-none" style="color: var(--text-primary);">942</span>
                                         <span class="text-sm font-medium" style="color: var(--text-secondary);">processed</span>
                                     </div>
                                 </div>
@@ -402,7 +407,7 @@
                                     </li>
                                 </ul>
                                 
-                                <!-- Read-only footer footer bounds -->
+                                <!-- Read-only footer bounds -->
                                 <div class="p-3 text-center border-t border-[var(--border-hairline)]" style="background: var(--surface-900);">
                                     <span class="text-xs font-medium" style="color: var(--text-secondary);">Displaying recent ledger. 142 total events recorded this week.</span>
                                 </div>

@@ -22,3 +22,12 @@
 
 **Overall steer:** pull back to the calm, read-only, low-noise academic settings surface (ServerPlanPanel-consistent), NOT a kinetic growth dashboard.
 Next destination: **D-2 refine** (aidesigner refine_design, iteration 1) → re-run D-3 Phase 1.
+
+---
+## Iteration 1→2 reconciliation
+| Reviewer | Verdict |
+|---|---|
+| /plan-design-review | APPROVE (9.0/10) — all brief fences confirmed fixed |
+| /ui-ux-pro-max | REVISE — 3 minor mechanical items |
+**Matrix: APPROVE + REVISE → aggregate B's concerns → D-2 refine (iteration 2; cap 3).** Concerns are mechanical (not aesthetic): (1) icons must all map to the shipped inline-SVG set apps/web/src/shell/icons.tsx (swap ph-tray → an on-set icon; the CDN-webfont-vs-inline-SVG idiom is a B-3 port note, annotated at adopt); (2) stat numerals text-2xl → text-xl (DS §2: 24px reserved for landing headlines; brief §4 Body-m); (3) plan-design non-blocking polish folded in: strip the stray `p` class typo on the forbidden lock icon, responsive card padding p-4 sm:p-6, focus-visible rings on nav.
+Next: D-2 refine (aidesigner) iteration 2 → re-run D-3 Phase 1.
