@@ -22,9 +22,42 @@ import {
 // SUT import AFTER harness so the lazy db proxy resolves to the test DB
 import type { PoolClient } from 'pg';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { EntitlementsService } from '../../src/billing/entitlements.service';
+import type { EntitlementsService } from '../../src/billing/entitlements.service';
 import * as dbModule from '../../src/db/index';
 import { ServersService } from '../../src/servers/servers.service';
+
+// ---------------------------------------------------------------------------
+// Permissive EntitlementsService stub for createServer integration tests.
+//
+// resolveCreateGateForOwner returns { tier, caps, currentServerCount }.
+// createServer destructures { caps, currentServerCount } and checks:
+//   currentServerCount >= caps.maxServersPerOwner → ForbiddenException.
+// Stub returns currentServerCount=0 and maxServersPerOwner=100 so the gate
+// ALWAYS passes. This avoids a live DB SELECT through the wrapped pool
+// during fault-injection tests where pool.connect() is patched.
+// ---------------------------------------------------------------------------
+function makeEntitlementsStub(): EntitlementsService {
+  return {
+    resolveCreateGateForOwner: async (_ownerId: string) => ({
+      tier: 'free' as const,
+      caps: {
+        storageMb: 2_048,
+        callCapacity: 50,
+        educatorAdminTools: false,
+        maxServersPerOwner: 100,
+      },
+      currentServerCount: 0,
+    }),
+    resolveForServer: async (_serverId: string) => ({
+      tier: 'free' as const,
+      entitlements: {
+        storageMb: 2_048,
+        callCapacity: 50,
+        educatorAdminTools: false,
+      },
+    }),
+  } as unknown as EntitlementsService;
+}
 
 // Skip-with-reason when DATABASE_URL_TEST is absent (local dev without PG).
 // Runs in CI where the Postgres 16 service + DATABASE_URL_TEST are provided.
@@ -124,10 +157,10 @@ describe.skipIf(SKIP)('createServer — real-Postgres transaction (rollback + co
   // -----------------------------------------------------------------------
   function makeSut(): ServersService {
     // ServersService constructor requires rbacService + entitlementsService.
-    // createServer does not use rbacService; pass a stub.
-    // Use the real EntitlementsService so the create-gate resolves correctly
-    // against the test DB (owner has 0 servers → permissive free cap passes).
-    return new ServersService({} as never, new EntitlementsService());
+    // createServer does not use rbacService; pass a stub for both.
+    // Use makeEntitlementsStub() so the create-gate ALWAYS passes without
+    // making a live DB call through the (possibly wrapped) pool.
+    return new ServersService({} as never, makeEntitlementsStub());
   }
 
   // -----------------------------------------------------------------------
