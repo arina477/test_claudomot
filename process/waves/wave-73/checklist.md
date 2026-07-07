@@ -31,7 +31,7 @@
 - [x] T-6 Layout
 - [x] T-7 Perf (skipped — not heavy)
 - [x] T-8 Security
-- [ ] T-9 Journey
+- [x] T-9 Journey
 ## V — Verify
 - [ ] V-1 Reviews
 - [ ] V-2 Triage

@@ -3,7 +3,7 @@
 **Block:** T (Test)
 **Wave topic:** M10 privacy-events audit log (append-only + 4 hooks + read-list)
 **Block exit gate:** T-9
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Pattern | Status | Notes |
@@ -25,3 +25,13 @@
 
 ## Gate verdict log
 <appended by head-tester at T-9>
+
+## Block-exit handoff
+```yaml
+test_block_status: complete
+stages_run: [T-1, T-2, T-3, T-4, T-5, T-6, T-8, T-9]
+stages_skipped: [T-7 perf (not heavy)]
+findings_total: 1
+findings_critical: 0
+ready_for_verify: true
+```
