@@ -26,7 +26,7 @@ n_stage_verdict: COMPLETE
 verdict_evidence:
   - "next wave: 71"
   - "next wave checklist: process/waves/wave-71/checklist.md"
-  - "archive commit: __ARCHIVE_SHA__"
+  - "archive commit: ebf13ef39e3836fe836e0a8011ae63892793a249"
   - "wave-70 waves row: UPDATE status='ok' → 1 row (wave_number=70)"
 prev_wave: 70
 next_wave: 71
