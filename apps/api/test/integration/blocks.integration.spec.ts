@@ -53,9 +53,10 @@ import {
 
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BlocksService } from '../../src/blocks/blocks.service';
 import { DmService } from '../../src/dm/dm.service';
+import type { AppendPrivacyEventService } from '../../src/privacy/append-privacy-event.service';
 
 // Skip when DATABASE_URL_TEST is absent.
 const SKIP = !process.env.DATABASE_URL_TEST;
@@ -78,7 +79,12 @@ describe.skipIf(SKIP)('Blocks + DM HIDE — real-Postgres (wave-70 M14)', () => 
 
   beforeAll(async () => {
     await setupHarness();
-    blocksService = new BlocksService();
+    // BlocksService now requires AppendPrivacyEventService — pass a no-op stub
+    // since these tests exercise block/DM HIDE semantics, not the audit log.
+    const noopAppend = {
+      append: vi.fn().mockResolvedValue(undefined),
+    } as unknown as AppendPrivacyEventService;
+    blocksService = new BlocksService(noopAppend);
     const emitter = new EventEmitter2();
     dmService = new DmService(emitter, blocksService);
   });

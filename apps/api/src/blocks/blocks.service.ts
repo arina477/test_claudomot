@@ -1,8 +1,10 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import type { Block, BlockListItem } from '@studyhall/shared';
 import { and, eq, or } from 'drizzle-orm';
 import { db } from '../db/index';
 import { userBlocks, users } from '../db/schema/index';
+// biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
+import { AppendPrivacyEventService } from '../privacy/append-privacy-event.service';
 
 // ---------------------------------------------------------------------------
 // BlocksService — wave-70 M14 user-to-user block feature
@@ -84,6 +86,10 @@ function rowToListItemDto(row: {
 
 @Injectable()
 export class BlocksService {
+  private readonly logger = new Logger(BlocksService.name);
+
+  constructor(private readonly appendPrivacyEvent: AppendPrivacyEventService) {}
+
   // -------------------------------------------------------------------------
   // createBlock — POST /blocks
   //
@@ -123,27 +129,44 @@ export class BlocksService {
       })
       .returning();
 
+    let blockDto: Block;
     if (insertReturning.length > 0) {
       const row = insertReturning[0];
       if (!row) throw new Error('Block insert returned empty array unexpectedly');
-      return rowToDto(row);
+      blockDto = rowToDto(row);
+    } else {
+      // Conflict path: row already existed — fetch and return it.
+      const [existing] = await db
+        .select()
+        .from(userBlocks)
+        .where(
+          and(eq(userBlocks.blocker_id, blockerUserId), eq(userBlocks.blocked_id, blockedUserId)),
+        )
+        .limit(1);
+
+      if (!existing) {
+        // Should never happen: we just got a conflict on this exact pair.
+        throw new Error('Block row vanished after conflict — unexpected');
+      }
+      blockDto = rowToDto(existing);
     }
 
-    // Conflict path: row already existed — fetch and return it.
-    const [existing] = await db
-      .select()
-      .from(userBlocks)
-      .where(
-        and(eq(userBlocks.blocker_id, blockerUserId), eq(userBlocks.blocked_id, blockedUserId)),
-      )
-      .limit(1);
-
-    if (!existing) {
-      // Should never happen: we just got a conflict on this exact pair.
-      throw new Error('Block row vanished after conflict — unexpected');
+    // ── Privacy audit hook (best-effort, non-blocking) ───────────────────────
+    // Fires AFTER the block row is committed. A logging failure MUST NOT fail
+    // or roll back the block action — mirror deleteAccount's post-commit pattern.
+    try {
+      await this.appendPrivacyEvent.append(blockerUserId, 'user_blocked', {
+        targetType: 'user',
+        targetId: blockedUserId,
+      });
+    } catch (err) {
+      this.logger.warn(
+        `appendPrivacyEvent failed for user_blocked (blocker=${blockerUserId}, blocked=${blockedUserId}) — block is committed; audit log failure is non-fatal.`,
+        err instanceof Error ? err.stack : String(err),
+      );
     }
 
-    return rowToDto(existing);
+    return blockDto;
   }
 
   // -------------------------------------------------------------------------
@@ -159,6 +182,20 @@ export class BlocksService {
         and(eq(userBlocks.blocker_id, blockerUserId), eq(userBlocks.blocked_id, blockedUserId)),
       );
     // No error if no row matched — idempotent.
+
+    // ── Privacy audit hook (best-effort, non-blocking) ───────────────────────
+    // Fires AFTER the DELETE commits. Failure must not surface to the caller.
+    try {
+      await this.appendPrivacyEvent.append(blockerUserId, 'user_unblocked', {
+        targetType: 'user',
+        targetId: blockedUserId,
+      });
+    } catch (err) {
+      this.logger.warn(
+        `appendPrivacyEvent failed for user_unblocked (blocker=${blockerUserId}, blocked=${blockedUserId}) — unblock is committed; audit log failure is non-fatal.`,
+        err instanceof Error ? err.stack : String(err),
+      );
+    }
   }
 
   // -------------------------------------------------------------------------

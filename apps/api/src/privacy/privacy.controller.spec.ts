@@ -18,6 +18,7 @@ import type { PrivacySettingsResponse } from '@studyhall/shared';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AccountDataService } from './account-data.service';
 import type { AccountDeletionService } from './account-deletion.service';
+import type { AppendPrivacyEventService } from './append-privacy-event.service';
 import { PrivacyController } from './privacy.controller';
 import type { PrivacyService } from './privacy.service';
 
@@ -74,10 +75,14 @@ function makeController() {
   const accountDeletionService = {
     deleteAccount: vi.fn().mockResolvedValue({ status: 'deleted' }),
   };
+  const appendPrivacyEventService = {
+    listForActor: vi.fn().mockResolvedValue({ events: [] }),
+  };
   const controller = new PrivacyController(
     privacyService as unknown as PrivacyService,
     accountDataService as unknown as AccountDataService,
     accountDeletionService as unknown as AccountDeletionService,
+    appendPrivacyEventService as unknown as AppendPrivacyEventService,
   );
   return { controller, privacyService, accountDataService, accountDeletionService };
 }

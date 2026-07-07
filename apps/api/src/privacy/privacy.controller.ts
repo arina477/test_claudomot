@@ -14,6 +14,7 @@ import type {
   AccountDataResponse,
   DeleteAccountBlockedResponse,
   DeleteAccountResponse,
+  PrivacyEventListResponse,
   PrivacySettingsResponse,
 } from '@studyhall/shared';
 import { DeleteAccountRequestSchema, UpdatePrivacySchema } from '@studyhall/shared';
@@ -22,6 +23,8 @@ import { SessionNoVerifyGuard } from '../auth/session-no-verify.guard';
 import { AccountDataService } from './account-data.service';
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
 import { AccountDeletionService } from './account-deletion.service';
+// biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
+import { AppendPrivacyEventService } from './append-privacy-event.service';
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
 import { PrivacyService } from './privacy.service';
 
@@ -38,6 +41,7 @@ export class PrivacyController {
     private readonly privacyService: PrivacyService,
     private readonly accountDataService: AccountDataService,
     private readonly accountDeletionService: AccountDeletionService,
+    private readonly appendPrivacyEventService: AppendPrivacyEventService,
   ) {}
 
   // GET /profile/privacy → 200 PrivacySettingsResponse
@@ -106,5 +110,18 @@ export class PrivacyController {
   async exportAccountData(@Req() req: SessionAugmentedRequest): Promise<AccountDataResponse> {
     const userId = req.session.getUserId();
     return this.accountDataService.exportAccountData(userId);
+  }
+
+  // GET /profile/privacy-events → 200 PrivacyEventListResponse
+  //
+  // Security invariants:
+  //   - callerId is ALWAYS taken from req.session.getUserId() — no userId param
+  //     in path or query. Returns ONLY the caller's own events (no IDOR).
+  //   - Returns at most 100 events, newest first.
+  @Get('privacy-events')
+  @UseGuards(SessionNoVerifyGuard)
+  async listPrivacyEvents(@Req() req: SessionAugmentedRequest): Promise<PrivacyEventListResponse> {
+    const callerId = req.session.getUserId();
+    return this.appendPrivacyEventService.listForActor(callerId);
   }
 }

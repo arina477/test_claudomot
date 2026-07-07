@@ -57,10 +57,11 @@ import {
 import { ConflictException } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import Session from 'supertokens-node/recipe/session';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '../../src/db/index';
 import { users } from '../../src/db/schema/index';
 import { AccountDeletionService } from '../../src/privacy/account-deletion.service';
+import type { AppendPrivacyEventService } from '../../src/privacy/append-privacy-event.service';
 
 // Skip when DATABASE_URL_TEST is absent (local dev without test DB).
 const SKIP = !process.env.DATABASE_URL_TEST;
@@ -132,8 +133,12 @@ describe.skipIf(SKIP)(
 
     beforeAll(async () => {
       await setupHarness();
-      // AccountDeletionService has no constructor dependencies — instantiate directly.
-      sut = new AccountDeletionService();
+      // AccountDeletionService now requires AppendPrivacyEventService — pass a no-op stub.
+      // These tests exercise the erasure + re-auth paths, not the audit log.
+      const noopAppend = {
+        append: vi.fn().mockResolvedValue(undefined),
+      } as unknown as AppendPrivacyEventService;
+      sut = new AccountDeletionService(noopAppend);
     });
 
     afterAll(async () => {

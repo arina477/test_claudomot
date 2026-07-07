@@ -29,6 +29,7 @@ vi.mock('../db/index', () => ({
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '../db/index';
 import { scrubPii } from '../instrument';
+import type { AppendPrivacyEventService } from './append-privacy-event.service';
 import { PrivacyService } from './privacy.service';
 
 // Typed references to mocked db methods — avoids per-test casting noise.
@@ -88,7 +89,9 @@ describe('PrivacyService.getPrivacy', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // PrivacyService has no constructor dependencies — instantiate directly.
-    sut = new PrivacyService();
+    sut = new PrivacyService({
+      append: vi.fn().mockResolvedValue(undefined),
+    } as unknown as AppendPrivacyEventService);
   });
 
   it('returns mapped PrivacySettingsResponse for a real user row', async () => {
@@ -132,7 +135,9 @@ describe('PrivacyService.updatePrivacy', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    sut = new PrivacyService();
+    sut = new PrivacyService({
+      append: vi.fn().mockResolvedValue(undefined),
+    } as unknown as AppendPrivacyEventService);
   });
 
   it('persists BOTH profile_visibility AND who_can_dm columns in a single UPDATE call', async () => {
