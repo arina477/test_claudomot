@@ -9,7 +9,7 @@
 | Stage | Deliverable file | Status | Notes |
 |---|---|---|---|
 | B-0 | process/waves/wave-77/stages/B-0-branch-and-schema.md | done | branch + migration 0030 (262ecdb); C-2 applies to prod |
-| B-1 | process/waves/wave-77/stages/B-1-contracts.md | pending | profile contract + PublicProfileSchema |
+| B-1 | process/waves/wave-77/stages/B-1-contracts.md | done | PublicProfileSchema (no email) + academic fields (f9ee379) |
 | B-2 | process/waves/wave-77/stages/B-2-backend.md | pending | self API + cross-server view + fail-closed visibility resolver |
 | B-3 | process/waves/wave-77/stages/B-3-frontend.md | pending | editor + member card per design/member-profile-card.html |
 | B-4 | process/waves/wave-77/stages/B-4-wiring.md | pending | |
