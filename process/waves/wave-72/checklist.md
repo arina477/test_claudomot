@@ -31,7 +31,7 @@
 - [x] T-8 Security
 - [x] T-9 Journey
 ## V — Verify
-- [ ] V-1 Reviews
+- [x] V-1 Reviews
 - [ ] V-2 Triage
 - [ ] V-3 Fast-fix
 ## L — Learn

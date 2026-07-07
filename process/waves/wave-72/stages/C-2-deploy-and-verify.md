@@ -38,3 +38,6 @@ canary_status: skipped
 canary_skip_reason: "DAU ~0 < 1000 threshold; T-block synthetic probes are the post-deploy signal."
 note: "migration-first ordering honored; both services deployed with explicit commitSha; rollback baselines api=b74ab74b web=a9992ce6 (670c46e)."
 ```
+
+## Addendum (post-P0 redeploy)
+C-2 originally deployed e5bfba1. During the T-block a P0 white-screen (require-is-not-defined) was found + fixed forward (PR #89 → **69ad79b**: @studyhall/shared emits ESM). Both services were REDEPLOYED on 69ad79b (BUILDING→DEPLOYING→SUCCESS, verified: served web bundle `index-DcCKmloX.js` has zero raw require(), api /health 200, POST /profile/delete 401). **Current live commit = 69ad79b.** Migration 0027 was applied before the original e5bfba1 api deploy and remains applied (additive, unaffected by the redeploy).
