@@ -32,7 +32,7 @@ scenarios_run: 0
 scenarios_failed: 0
 regressions_critical: 0
 regressions_significant: 0
-journey_map_commit: <set on commit>
+journey_map_commit: 49f91f6
 findings:
   - {severity: medium, journey: auth-session, description: "session tokens in JS-readable headers (pre-existing app-wide) → V-2"}
   - {severity: low, journey: account-deletion, description: "service-worker serves stale bundle once to returning users until SW updates → V-2"}
