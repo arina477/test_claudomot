@@ -38,7 +38,7 @@
 - [x] V-3 Fast-fix
 ## L — Learn
 - [x] L-1 Docs
-- [ ] L-2 Distill
+- [x] L-2 Distill
 ## N — Next
 - [ ] N-1 Survey & triggers
 - [ ] N-2 Seed
