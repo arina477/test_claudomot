@@ -37,6 +37,7 @@ import type { ServerMember } from '@studyhall/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../auth/api';
 import { BlockConfirmDialog } from './BlockConfirmDialog';
+import { MemberProfileCard } from './MemberProfileCard';
 import { PresenceDot } from './PresenceDot';
 import { ReportDialog } from './ReportDialog';
 import {
@@ -427,6 +428,8 @@ type MemberItemProps = {
    * (loading fail-safe — P-4 AC: never show wrong action from unknown state).
    */
   isBlocked: boolean;
+  /** Presence status ('online' | 'idle' | 'offline') threaded to the profile card. */
+  presence: 'online' | 'idle' | 'offline';
   onMutedChange: (userId: string, mutedUntil: string | null) => void;
   onReport: (userId: string, displayName: string) => void;
   onBlock: (userId: string, displayName: string) => void;
@@ -440,6 +443,7 @@ function MemberItem({
   serverId,
   selfUserId,
   isBlocked,
+  presence,
   onMutedChange,
   onReport,
   onBlock,
@@ -451,6 +455,20 @@ function MemberItem({
   const [menuOpen, setMenuOpen] = useState(false);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const kebabRef = useRef<HTMLButtonElement>(null);
+
+  // Member profile card open state (wave-77 M13 leg-2).
+  const [cardOpen, setCardOpen] = useState(false);
+  const [cardAnchor, setCardAnchor] = useState<DOMRect | null>(null);
+  const openTriggerRef = useRef<HTMLButtonElement>(null);
+
+  function handleOpenCard() {
+    if (cardOpen) {
+      setCardOpen(false);
+      return;
+    }
+    setCardAnchor(openTriggerRef.current?.getBoundingClientRect() ?? null);
+    setCardOpen(true);
+  }
 
   function handleKebabClick() {
     if (menuOpen) {
@@ -479,49 +497,61 @@ function MemberItem({
         (e.currentTarget as HTMLLIElement).style.backgroundColor = 'transparent';
       }}
     >
-      {/* Avatar + presence dot */}
-      <div className="relative shrink-0">
-        {member.avatarUrl ? (
-          <img
-            src={member.avatarUrl}
-            alt={member.displayName}
-            className="w-8 h-8 rounded-full object-cover"
-            style={{
-              opacity: online ? (memberIsMuted ? 0.6 : 1) : 0.7,
-              filter: memberIsMuted ? 'grayscale(40%)' : undefined,
-            }}
-          />
-        ) : (
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0"
-            style={{
-              backgroundColor: online ? '#27272a' : 'rgba(39,39,42,0.6)',
-              color: online ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.40)',
-              opacity: memberIsMuted ? 0.6 : 1,
-            }}
-            aria-label={member.displayName}
-          >
-            {initials}
-          </div>
-        )}
-        {/* Presence dot */}
-        <PresenceDot online={online} />
-      </div>
-
-      {/* Name — muted tint when timed out */}
-      <span
-        className="text-[14px] font-medium truncate transition-colors flex-1 min-w-0"
-        style={{
-          color: memberIsMuted
-            ? 'rgba(255,255,255,0.40)'
-            : online
-              ? 'rgba(212,212,216,0.92)'
-              : 'rgba(255,255,255,0.50)',
-        }}
-        data-testid={`member-name-${member.userId}`}
+      {/* Avatar + name — clickable to open the member profile card (wave-77). */}
+      <button
+        ref={openTriggerRef}
+        type="button"
+        aria-haspopup="dialog"
+        aria-expanded={cardOpen}
+        aria-label={`View ${member.displayName}'s profile`}
+        data-testid={`member-open-profile-${member.userId}`}
+        onClick={handleOpenCard}
+        className="flex flex-1 min-w-0 items-center gap-3 bg-transparent text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70 rounded-md"
       >
-        {member.displayName}
-      </span>
+        {/* Avatar + presence dot */}
+        <div className="relative shrink-0">
+          {member.avatarUrl ? (
+            <img
+              src={member.avatarUrl}
+              alt={member.displayName}
+              className="w-8 h-8 rounded-full object-cover"
+              style={{
+                opacity: online ? (memberIsMuted ? 0.6 : 1) : 0.7,
+                filter: memberIsMuted ? 'grayscale(40%)' : undefined,
+              }}
+            />
+          ) : (
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0"
+              style={{
+                backgroundColor: online ? '#27272a' : 'rgba(39,39,42,0.6)',
+                color: online ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.40)',
+                opacity: memberIsMuted ? 0.6 : 1,
+              }}
+              aria-label={member.displayName}
+            >
+              {initials}
+            </div>
+          )}
+          {/* Presence dot */}
+          <PresenceDot online={online} />
+        </div>
+
+        {/* Name — muted tint when timed out */}
+        <span
+          className="text-[14px] font-medium truncate transition-colors flex-1 min-w-0"
+          style={{
+            color: memberIsMuted
+              ? 'rgba(255,255,255,0.40)'
+              : online
+                ? 'rgba(212,212,216,0.92)'
+                : 'rgba(255,255,255,0.50)',
+          }}
+          data-testid={`member-name-${member.userId}`}
+        >
+          {member.displayName}
+        </span>
+      </button>
 
       {/* Right slot: muted indicator + report flag + block + kebab */}
       <div className="flex items-center gap-1 shrink-0 pl-1 pr-2">
@@ -647,6 +677,17 @@ function MemberItem({
           anchorRect={anchorRect}
           onClose={handleClose}
           onMutedChange={onMutedChange}
+        />
+      )}
+
+      {/* Member profile card — portalled to document.body + edge-clamped */}
+      {cardOpen && (
+        <MemberProfileCard
+          userId={member.userId}
+          presence={presence}
+          anchorRect={cardAnchor}
+          triggerRef={openTriggerRef}
+          onClose={() => setCardOpen(false)}
         />
       )}
     </li>
@@ -898,6 +939,7 @@ export function MemberListPanel({
                         serverId={serverId ?? ''}
                         selfUserId={selfUserId}
                         isBlocked={blockedSet.has(m.userId)}
+                        presence="online"
                         onMutedChange={handleMutedChange}
                         onReport={handleReportMember}
                         onBlock={handleBlockMember}
@@ -932,6 +974,7 @@ export function MemberListPanel({
                         serverId={serverId ?? ''}
                         selfUserId={selfUserId}
                         isBlocked={blockedSet.has(m.userId)}
+                        presence="offline"
                         onMutedChange={handleMutedChange}
                         onReport={handleReportMember}
                         onBlock={handleBlockMember}

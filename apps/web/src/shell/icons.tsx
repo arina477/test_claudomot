@@ -1481,3 +1481,58 @@ export function FadersIcon({ size = 16, className, style }: IconProps) {
     </svg>
   );
 }
+
+/**
+ * Graduation-cap outline — institution field icon on the member profile card.
+ * Ported from design/member-profile-card.html (D-3 adopted, wave-77).
+ */
+export function GraduationCapIcon({ size = 16, className, style }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      style={style}
+      aria-hidden="true"
+    >
+      <path d="M4 22h16" />
+      <path d="M12 2v20" />
+      <path d="M5 6l7-4 7 4" />
+      <path d="M5 10h14" />
+      <path d="M7 10v12" />
+      <path d="M17 10v12" />
+    </svg>
+  );
+}
+
+/**
+ * Single-person outline — neutral avatar fallback on the member profile card
+ * (used for the calm "Profile Unavailable" state). Ported from
+ * design/member-profile-card.html (D-3 adopted, wave-77).
+ */
+export function UserIcon({ size = 16, className, style }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      style={style}
+      aria-hidden="true"
+    >
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}

@@ -44,6 +44,7 @@ import type {
   PrivacyEventListResponse,
   PrivacySettingsResponse,
   ProfileResponse,
+  PublicProfile,
   ReactionToggleInput,
   ReactionToggleResponse,
   Report,
@@ -165,6 +166,19 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
+
+  /**
+   * GET /profile/:userId → PublicProfile (cross-server safe-field allowlist; NEVER email).
+   *
+   * wave-77 M13 leg-2. The backend responds with a UNIFORM 404 for every
+   * non-visible case (missing / soft-deleted / blocked / nobody /
+   * server-members-not-shared / unknown-visibility) so a probing stranger
+   * cannot learn WHY a profile is hidden. Callers MUST treat an HttpError with
+   * status 404 as the calm "Profile Unavailable" state — NOT an error.
+   * userId is the opaque target UUID; it never becomes the viewer identity.
+   */
+  getPublicProfile: (userId: string): Promise<PublicProfile> =>
+    request<PublicProfile>(`/profile/${encodeURIComponent(userId)}`),
 
   /**
    * POST /profile/avatar/presign → {uploadUrl, key}.

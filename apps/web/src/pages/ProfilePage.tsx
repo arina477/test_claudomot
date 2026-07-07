@@ -10,7 +10,7 @@
  * Display name field from wave-3 is preserved.
  */
 
-import type { ProfileResponse } from '@studyhall/shared';
+import { ACADEMIC_ROLES, type AcademicRole, type ProfileResponse } from '@studyhall/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../auth/api';
@@ -42,6 +42,23 @@ function validateUsername(value: string): string | null {
     return 'Username must be 3–20 characters: lowercase letters, numbers, underscores only.';
   return null;
 }
+
+// ── Academic-identity field bounds (mirror the shared UpdateProfileSchema Zod
+//    max()s so the client blocks over-length input before the PATCH) ──────────
+
+const ACADEMIC_MAX = {
+  pronouns: 40,
+  bio: 500,
+  institution: 120,
+  program: 120,
+  academicYear: 40,
+} as const;
+
+const ROLE_OPTION_LABELS: Record<AcademicRole, string> = {
+  student: 'Student',
+  educator: 'Educator',
+  staff: 'Staff',
+};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -111,6 +128,17 @@ export function ProfilePage() {
   const [accentSaving, setAccentSaving] = useState(false);
   const [accentError, setAccentError] = useState('');
 
+  // Academic identity (wave-77 M13 leg-2)
+  const [pronouns, setPronouns] = useState('');
+  const [bio, setBio] = useState('');
+  const [institution, setInstitution] = useState('');
+  const [program, setProgram] = useState('');
+  const [academicRole, setAcademicRole] = useState<AcademicRole | ''>('');
+  const [academicYear, setAcademicYear] = useState('');
+  const [academicSaving, setAcademicSaving] = useState(false);
+  const [academicError, setAcademicError] = useState('');
+  const [academicSuccess, setAcademicSuccess] = useState(false);
+
   // ── Load profile ──────────────────────────────────────────────────────────
 
   const loadProfile = useCallback(() => {
@@ -140,6 +168,12 @@ export function ProfilePage() {
     const accent = data.accentColor ?? DEFAULT_ACCENT;
     setAccentColor(accent);
     applyAccentVars(accent);
+    setPronouns(data.pronouns ?? '');
+    setBio(data.bio ?? '');
+    setInstitution(data.institution ?? '');
+    setProgram(data.program ?? '');
+    setAcademicRole(data.academicRole ?? '');
+    setAcademicYear(data.academicYear ?? '');
   }
 
   // ── Derived dirty flags ───────────────────────────────────────────────────
@@ -283,6 +317,59 @@ export function ProfilePage() {
       setAccentError('Could not save accent colour. Please try again.');
     } finally {
       setAccentSaving(false);
+    }
+  }
+
+  // ── Academic identity save ────────────────────────────────────────────────
+
+  // Client-side over-length guard mirroring the shared Zod max()s.
+  const academicClientError =
+    pronouns.length > ACADEMIC_MAX.pronouns
+      ? `Pronouns must be ${ACADEMIC_MAX.pronouns} characters or fewer.`
+      : bio.length > ACADEMIC_MAX.bio
+        ? `Bio must be ${ACADEMIC_MAX.bio} characters or fewer.`
+        : institution.length > ACADEMIC_MAX.institution
+          ? `Institution must be ${ACADEMIC_MAX.institution} characters or fewer.`
+          : program.length > ACADEMIC_MAX.program
+            ? `Program must be ${ACADEMIC_MAX.program} characters or fewer.`
+            : academicYear.length > ACADEMIC_MAX.academicYear
+              ? `Academic year must be ${ACADEMIC_MAX.academicYear} characters or fewer.`
+              : null;
+
+  async function handleAcademicSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (academicClientError) return;
+
+    setAcademicSaving(true);
+    setAcademicError('');
+    setAcademicSuccess(false);
+
+    // Send every academic field (trimmed). Empty strings clear the field.
+    const payload = {
+      pronouns: pronouns.trim(),
+      bio: bio.trim(),
+      institution: institution.trim(),
+      program: program.trim(),
+      academicYear: academicYear.trim(),
+      ...(academicRole ? { academicRole } : {}),
+    };
+
+    try {
+      const updated = await api.patchProfile(payload);
+      // Reflect the server-canonical values immediately.
+      setProfile((p) => (p ? { ...p, ...updated } : updated));
+      setPronouns(updated.pronouns ?? '');
+      setBio(updated.bio ?? '');
+      setInstitution(updated.institution ?? '');
+      setProgram(updated.program ?? '');
+      setAcademicRole(updated.academicRole ?? '');
+      setAcademicYear(updated.academicYear ?? '');
+      setAcademicSuccess(true);
+      refreshShell();
+    } catch {
+      setAcademicError('Could not save your academic identity. Please try again.');
+    } finally {
+      setAcademicSaving(false);
     }
   }
 
@@ -689,6 +776,235 @@ export function ProfilePage() {
               style={{ backgroundColor: accentColor, color: '#fff' }}
             >
               {usernameSaving ? 'Saving…' : 'Save username'}
+            </button>
+          </form>
+        </section>
+
+        <hr style={{ borderColor: 'rgba(255,255,255,0.06)' }} className="mb-10" />
+
+        {/* ── Academic identity section (wave-77 M13 leg-2) ─────────────────── */}
+        <section className="mb-10">
+          <h2
+            className="mb-4 text-[11px] font-bold uppercase tracking-wider"
+            style={{ color: 'rgba(255,255,255,0.40)' }}
+          >
+            Academic identity
+          </h2>
+          <p className="mb-5 text-sm" style={{ color: 'rgba(255,255,255,0.60)' }}>
+            Self-declared details shown on your profile card across StudyHall. All optional.
+          </p>
+
+          {academicError && (
+            <div className="mb-4">
+              <ErrorBanner message={academicError} />
+            </div>
+          )}
+
+          {academicSuccess && (
+            <output
+              className="mb-4 flex items-center gap-2 rounded-md p-3 text-sm"
+              style={{
+                backgroundColor: 'rgba(16,185,129,0.10)',
+                border: '1px solid rgba(16,185,129,0.20)',
+                color: '#10b981',
+                display: 'flex',
+              }}
+            >
+              <span aria-hidden="true">✓</span>
+              Academic identity saved.
+            </output>
+          )}
+
+          <form onSubmit={handleAcademicSave} className="flex flex-col gap-4">
+            {/* Pronouns */}
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="pronouns"
+                className="text-sm font-medium"
+                style={{ color: 'rgba(255,255,255,0.92)' }}
+              >
+                Pronouns
+              </label>
+              <input
+                id="pronouns"
+                type="text"
+                value={pronouns}
+                onChange={(e) => {
+                  setPronouns(e.target.value);
+                  setAcademicSuccess(false);
+                }}
+                placeholder="she/her, he/him, they/them…"
+                maxLength={ACADEMIC_MAX.pronouns}
+                className="h-10 w-full rounded-md px-3 text-sm focus:outline-none"
+                style={{
+                  backgroundColor: '#121214',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  color: 'rgba(255,255,255,0.92)',
+                }}
+              />
+            </div>
+
+            {/* Bio */}
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="bio"
+                className="text-sm font-medium"
+                style={{ color: 'rgba(255,255,255,0.92)' }}
+              >
+                Bio
+              </label>
+              <textarea
+                id="bio"
+                value={bio}
+                onChange={(e) => {
+                  setBio(e.target.value);
+                  setAcademicSuccess(false);
+                }}
+                placeholder="A short line about what you study or work on."
+                maxLength={ACADEMIC_MAX.bio}
+                rows={3}
+                className="w-full rounded-md px-3 py-2 text-sm focus:outline-none resize-y"
+                style={{
+                  backgroundColor: '#121214',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  color: 'rgba(255,255,255,0.92)',
+                }}
+              />
+              <span className="text-xs" style={{ color: 'rgba(255,255,255,0.40)' }}>
+                {bio.length}/{ACADEMIC_MAX.bio}
+              </span>
+            </div>
+
+            {/* Institution */}
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="institution"
+                className="text-sm font-medium"
+                style={{ color: 'rgba(255,255,255,0.92)' }}
+              >
+                Institution
+              </label>
+              <input
+                id="institution"
+                type="text"
+                value={institution}
+                onChange={(e) => {
+                  setInstitution(e.target.value);
+                  setAcademicSuccess(false);
+                }}
+                placeholder="Your school or university"
+                maxLength={ACADEMIC_MAX.institution}
+                className="h-10 w-full rounded-md px-3 text-sm focus:outline-none"
+                style={{
+                  backgroundColor: '#121214',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  color: 'rgba(255,255,255,0.92)',
+                }}
+              />
+            </div>
+
+            {/* Program / Field */}
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="program"
+                className="text-sm font-medium"
+                style={{ color: 'rgba(255,255,255,0.92)' }}
+              >
+                Program / Field
+              </label>
+              <input
+                id="program"
+                type="text"
+                value={program}
+                onChange={(e) => {
+                  setProgram(e.target.value);
+                  setAcademicSuccess(false);
+                }}
+                placeholder="e.g. Ph.D. Computer Science"
+                maxLength={ACADEMIC_MAX.program}
+                className="h-10 w-full rounded-md px-3 text-sm focus:outline-none"
+                style={{
+                  backgroundColor: '#121214',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  color: 'rgba(255,255,255,0.92)',
+                }}
+              />
+            </div>
+
+            {/* Academic role — select from ACADEMIC_ROLES */}
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="academic-role"
+                className="text-sm font-medium"
+                style={{ color: 'rgba(255,255,255,0.92)' }}
+              >
+                Academic role
+              </label>
+              <select
+                id="academic-role"
+                value={academicRole}
+                onChange={(e) => {
+                  setAcademicRole(e.target.value as AcademicRole | '');
+                  setAcademicSuccess(false);
+                }}
+                className="h-10 w-full rounded-md px-3 text-sm focus:outline-none"
+                style={{
+                  backgroundColor: '#121214',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  color: academicRole ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.40)',
+                }}
+              >
+                <option value="">Not specified</option>
+                {ACADEMIC_ROLES.map((role) => (
+                  <option key={role} value={role}>
+                    {ROLE_OPTION_LABELS[role]}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Academic year */}
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="academic-year"
+                className="text-sm font-medium"
+                style={{ color: 'rgba(255,255,255,0.92)' }}
+              >
+                Academic year
+              </label>
+              <input
+                id="academic-year"
+                type="text"
+                value={academicYear}
+                onChange={(e) => {
+                  setAcademicYear(e.target.value);
+                  setAcademicSuccess(false);
+                }}
+                placeholder="e.g. Year 3, Freshman, 2026 cohort"
+                maxLength={ACADEMIC_MAX.academicYear}
+                className="h-10 w-full rounded-md px-3 text-sm focus:outline-none"
+                style={{
+                  backgroundColor: '#121214',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  color: 'rgba(255,255,255,0.92)',
+                }}
+              />
+            </div>
+
+            {academicClientError && (
+              <p role="alert" className="text-xs" style={{ color: '#ef4444' }}>
+                {academicClientError}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={academicSaving || !!academicClientError}
+              aria-busy={academicSaving}
+              className="self-start rounded-md px-5 py-2 text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none"
+              style={{ backgroundColor: accentColor, color: '#fff' }}
+            >
+              {academicSaving ? 'Saving…' : 'Save academic identity'}
             </button>
           </form>
         </section>
