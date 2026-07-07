@@ -13,8 +13,8 @@
 | B-1 | process/waves/wave-73/stages/B-1-contracts.md | done | privacy-event DTO (task 03940edd) |
 | B-2 | process/waves/wave-73/stages/B-2-backend.md | done | service + 4 hooks + read endpoint + live-DB test (task 156aa2ee) |
 | B-3 | process/waves/wave-73/stages/B-3-frontend.md | done | privacy-activity panel + 10 tests (task 5a2521bc) |
-| B-4 | process/waves/wave-73/stages/B-4-wiring.md | pending | |
-| B-5 | process/waves/wave-73/stages/B-5-verify.md | pending | |
+| B-4 | process/waves/wave-73/stages/B-4-wiring.md | done | repo typecheck 4/4 |
+| B-5 | process/waves/wave-73/stages/B-5-verify.md | done | lint/tests/build green |
 | B-6 | process/waves/wave-73/stages/B-6-review.md | pending | |
 
 ## Block-specific context
