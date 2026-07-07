@@ -3,7 +3,7 @@
 **Block:** B (Build)
 **Wave topic:** M13 educator admin console + analytics — composed authz (EducatorAccessGuard via RbacService.can) + analytics aggregates API + Educator Admin Console UI
 **Block exit gate:** B-6
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
@@ -14,7 +14,7 @@
 | B-3 | process/waves/wave-76/stages/B-3-frontend.md | done | EducatorAdminConsole (a720dee); 687 web tests green; icons.tsx port |
 | B-4 | process/waves/wave-76/stages/B-4-wiring.md | done | typecheck 4/4 (1 drift fixed f0f555f); routes registered |
 | B-5 | process/waves/wave-76/stages/B-5-verify.md | done | lint clean; api 808 + web 687 + shared 41 green; build 3/3 |
-| B-6 | process/waves/wave-76/stages/B-6-review.md | pending | |
+| B-6 | process/waves/wave-76/stages/B-6-review.md | done | APPROVED (Phase1 negatives reproduced + /review clean; commit-discipline PASS) |
 
 ## Block-specific context
 - **Spec contract:** tasks row 682e0912-30db-495c-984e-34dd046b1504 (DB); spec at process/waves/wave-76/stages/P-2-spec.md
@@ -32,3 +32,17 @@ none
 
 ## Gate verdict log
 <appended by head-builder at B-6>
+
+
+## Block-exit handoff
+```yaml
+build_block_status: complete
+branch: wave-76-educator-admin-console
+stages_run: [B-0, B-1, B-2, B-3, B-4, B-5, B-6]
+stages_skipped: [B-0 schema sub-actions (no migration)]
+review_verdict: APPROVE
+deviations_logged: [shared/dist rebuild→C, guard-spec exactOptionalPropertyTypes fixed f0f555f, recentActivity=totals-by-type, members split heuristic, /analytics unit-401-as-guard-403]
+last_commit_sha: 8ee2fe3
+ready_for_ci: true
+carry_to_T: [T-8 payments/authz negatives (owner/educator gate on /status + /analytics; RbacService.can); T-4 analytics-aggregate correctness vs real DB + the unknown-server 403-vs-404 disposition; T-6 console layout vs adopted design]
+```
