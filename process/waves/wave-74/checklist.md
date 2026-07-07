@@ -5,7 +5,7 @@
 - [x] P-0 Frame
 - [x] P-1 Decompose
 - [x] P-2 Spec
-- [ ] P-3 Plan
+- [x] P-3 Plan
 - [ ] P-4 Gate
 ## D — Design (if design_gap_flag)
 - [ ] D-1 Brief
