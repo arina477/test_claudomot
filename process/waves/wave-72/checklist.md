@@ -4,7 +4,7 @@
 - [x] P-1 Decompose
 - [x] P-2 Spec
 - [x] P-3 Plan
-- [ ] P-4 Gate
+- [x] P-4 Gate
 ## D — Design (if design_gap_flag)
 - [ ] D-1 Brief
 - [ ] D-2 Variants
