@@ -3,7 +3,7 @@
 **Block:** B (Build)
 **Wave topic:** M13 leg-2 portable academic identity — academic profile fields + self API + cross-server profile-view (fail-closed visibility) + editor + member card
 **Block exit gate:** B-6
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
@@ -14,7 +14,7 @@
 | B-3 | process/waves/wave-77/stages/B-3-frontend.md | done | MemberProfileCard + editor (26fc38d); 696 web tests green; portal/Esc/no-badge |
 | B-4 | process/waves/wave-77/stages/B-4-wiring.md | done | typecheck 4/4 (1 drift fixed 4e616f8); routes registered |
 | B-5 | process/waves/wave-77/stages/B-5-verify.md | done | lint clean; api 811 + web 696 + shared 41 green; build 3/3 |
-| B-6 | process/waves/wave-77/stages/B-6-review.md | pending | |
+| B-6 | process/waves/wave-77/stages/B-6-review.md | done | APPROVED (negatives reproduced + integration matrix CI-run confirmed; commit-discipline PASS) |
 
 ## Block-specific context
 - **Spec contract:** tasks row 10a68f9e (DB); spec at process/waves/wave-77/stages/P-2-spec.md
@@ -32,3 +32,18 @@
 
 ## Gate verdict log
 <appended by head-builder at B-6>
+
+
+## Block-exit handoff
+```yaml
+build_block_status: complete
+branch: wave-77-portable-identity
+stages_run: [B-0, B-1, B-2, B-3, B-4, B-5, B-6]
+review_verdict: APPROVE
+deviations_logged: [migration generate-only→C-2 applies, integration matrix CI-run→C-1, web-fixture drift fixed 4e616f8, 2 new icons, presence online/offline-only, network-error→calm-hidden→V-2]
+last_commit_sha: c462307
+ready_for_ci: true
+carry_to_C1: [the 13-case profile-visibility integration matrix RUNS in CI (postgres:16) — merge-blocking security validation]
+carry_to_C2: [apply migration 0030 to prod before api deploy (db:migrate)]
+carry_to_T: [T-8 cross-server visibility live negatives (stranger-not-leaked, blocked, nobody, fail-closed); T-6 member card layout vs adopted design; T-4 the visibility matrix vs real DB]
+```
