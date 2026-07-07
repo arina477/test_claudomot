@@ -52,6 +52,7 @@ import type {
   ScheduledSession,
   ScheduledSessionListResponse,
   SendMessageInput,
+  ServerAnalytics,
   ServerDetail,
   ServerMember,
   ServerPlan,
@@ -1087,6 +1088,21 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ targetTier: TierSchema.parse(targetTier) }),
     }),
+
+  // ── Educator admin console (wave-76 M13) ──────────────────────────────────
+
+  /**
+   * GET /servers/:serverId/educator-tools/analytics → ServerAnalytics
+   *   {memberCount, roleBreakdown, messageVolume, assignmentCount,
+   *    submissionRollup, recentActivity}.
+   * Server-scoped aggregate COUNTS only — no raw content, no PII. Guard stack
+   * is AuthGuard + EntitlementGuard('educatorAdminTools') + EducatorAccessGuard:
+   * the server tier must enable educator tools (school) AND the caller must be
+   * the owner or an educator. Throws: 401 unauthed, 403 non-entitled tier OR
+   * non-owner/non-educator caller, 404 unknown server.
+   */
+  getServerEducatorAnalytics: (serverId: string): Promise<ServerAnalytics> =>
+    request<ServerAnalytics>(`/servers/${serverId}/educator-tools/analytics`),
 
   exportAccountData: async (): Promise<void> => {
     const res = await fetch(`${BASE}/profile/data/export`, { credentials: 'include' });
