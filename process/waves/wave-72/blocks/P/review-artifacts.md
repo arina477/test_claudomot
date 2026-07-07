@@ -7,7 +7,7 @@
 | Stage | Deliverable file | Status | Notes |
 |---|---|---|---|
 | P-0 | stages/P-0-frame.md | done | reframe CONVERGED (PROCEED) → account-erasure; soft-delete default; SuperTokens-auth-user + owned-server spec-gaps → P-2; regime+metric → founder checkpoint (non-blocking) |
-| P-1 | stages/P-1-decompose.md | done | multi-spec (3 tasks, ~2.5-3.2k LOC > floor) PROCEED; design_gap_flag=true (Danger-Zone delete UX) → D |
+| P-1 | stages/P-1-decompose.md | done | multi-spec (3 tasks, >floor) PROCEED; design_gap_flag=FALSE (Danger-Zone already in settings-privacy.html) → B directly |
 | P-2 | stages/P-2-spec.md | pending | |
 | P-3 | stages/P-3-plan.md | pending | |
 | P-4 | blocks/P/gate-verdict.md | pending | |

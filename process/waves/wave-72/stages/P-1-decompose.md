@@ -5,17 +5,17 @@ claimed_task_ids.length = 3 → **wave_type: multi-spec**. Floor: >2,500 net LOC
 Estimate ~2,500-3,200 net LOC (with the SuperTokens auth-user deletion + owned-server/cross-table disposition the P-0 problem-framer flagged as load-bearing) → **clears the multi-spec floor** (>2,500). No RESCOPE.
 ## Verdict: PROCEED
 claimed_task_ids = [9658fb0b (erasure API + service + SuperTokens auth-user delete + owned-server disposition — SEED), e11f8746 (shared account-deletion DTO), 898490b1 (Delete-my-account Danger-Zone UI + typed-confirm)]
-## design_gap_flag: true
+## design_gap_flag: false (CORRECTED)
 ```yaml
-design_gap_flag: true
-missing_surfaces:
-  - "Delete-my-account Danger-Zone (Settings › Privacy): a high-stakes DESTRUCTIVE flow — a Danger-Zone section + a confirm dialog with an explicit consequence list + a typed-confirmation (type your username / 'DELETE') to prevent accidental deletion + irreversibility warning. No mockup in design/. This is a distinct destructive-UX pattern (heavier than the block/report confirm). Prior art: design/moderation-report.html + design/block-ui.html (danger #b91c1c confirm dialog chrome, focus-trap, mobile sheet, toast) + design/server-settings.html (settings surface). The typed-confirmation + Danger-Zone framing are net-new."
+design_gap_flag: false
+missing_surfaces: []
 ```
-The erasure API + DTO are non-UI (backend/contract). The Danger-Zone destructive UI warrants a D-3 mockup to get the irreversibility/consequence/typed-confirm UX right (accidental account deletion is a severe failure mode).
+CORRECTION: the Delete-my-account Danger-Zone is ALREADY DESIGNED — `design/settings-privacy.html` "Panel 5: Danger Zone (Deletion)" has the delete-account section, the "Delete account" button, a "Delete Account" confirm dialog (warning icon), and a consequence-acknowledgment checkbox. The erasure API + DTO are non-UI. So NO new UI surface → D-block SKIPS → B directly.
+**NOTE for P-2/P-3 (design ↔ default reconciliation):** the settings-privacy.html Danger-Zone copy says deletion "requires email verification and initiates a 30-day grace period." That implies a soft-delete + grace-period + purge-after-30-days flow (which aligns WELL with the soft-delete default — soft-delete now, optional purge later). P-2 must decide: implement the full email-verification + 30-day-grace flow the mockup shows, OR a simpler immediate soft-delete+scrub+session-revoke (deferring the grace-period/email-verify to a later M10 slice). Reconcile the mockup's implied flow with the seed's soft-delete default; if the grace-period is deferred, the UI copy may need a minor adjustment (a B-3 note) OR the grace-period is speced in. Lean: implement soft-delete + session-revoke + SuperTokens-auth-user-disable now; the 30-day-grace purge job is a natural later M10 slice — but the mockup's copy sets the user expectation, so P-2 decides.
 ```yaml
 wave_type: multi-spec
 verdict: PROCEED
 claimed_task_ids: [9658fb0b-567a-44f7-b873-c8d110e7d391, e11f8746-e85f-4900-ac82-a08c50f147d3, 898490b1-e658-4968-adfd-e75a85c75864]
 floor_merge_attempt: 0
-design_gap_flag: true
+design_gap_flag: false
 ```
