@@ -3,16 +3,16 @@
 **Block:** P (Product)
 **Wave topic:** M9 mock-payment freemium upgrade path — BillingProvider seam + mock upgrade endpoint + real tier limits/educator-tools enforcement + "Your plan"/upgrade UI + createServer TOCTOU hardening
 **Block exit gate:** P-4
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
 |---|---|---|---|
 | P-0 | process/waves/wave-75/stages/P-0-frame.md | done | PROCEED; mvp-thinner THIN → db90252a deferred; narrowed to 3 tasks |
 | P-1 | process/waves/wave-75/stages/P-1-decompose.md | done | PROCEED; multi-spec; floor satisfied/waived (rule 5) |
-| P-2 | process/waves/wave-75/stages/P-2-spec.md | pending | |
-| P-3 | process/waves/wave-75/stages/P-3-plan.md | pending | approach + plan |
-| P-4 | process/waves/wave-75/stages/P-4-gemini-review.md | pending | Phase 2 reviewer output |
+| P-2 | process/waves/wave-75/stages/P-2-spec.md | done | multi-spec, 3 blocks, written to primary task 4bc40741 |
+| P-3 | process/waves/wave-75/stages/P-3-plan.md | done | no migration/deps; billing seam + controller + guard + panel |
+| P-4 | process/waves/wave-75/blocks/P/gate-verdict.md | done | APPROVED attempt-2 (karen+jenny APPROVE; Gemini UNAVAILABLE 429). Security gate: guard hole caught+fixed |
 
 ## Block-specific context
 - **Wave topic:** M9 mock-payment freemium upgrade path (4-task bundle)

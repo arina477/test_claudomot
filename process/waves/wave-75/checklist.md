@@ -12,9 +12,9 @@
 PRODUCT:
 - [x] P-0 Frame (discover + reframe)
 - [x] P-1 Decompose
-- [ ] P-2 Spec
-- [ ] P-3 Plan
-- [ ] P-4 Gate
+- [x] P-2 Spec
+- [x] P-3 Plan
+- [x] P-4 Gate
 
 DESIGN (skipped — design_gap_flag:false, thin panel reuses shipped DS patterns):
 - [ ] D-1 Brief
