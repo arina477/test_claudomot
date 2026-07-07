@@ -70,13 +70,9 @@ function buildLabel(eventType: PrivacyEventType, context: Record<string, unknown
       return 'You exported your data';
     case 'privacy_settings_changed': {
       const base = 'You changed your privacy settings';
-      if (
-        context != null &&
-        'visibilityFrom' in context &&
-        'visibilityTo' in context
-      ) {
-        const from = visibilityLabel(context['visibilityFrom']);
-        const to = visibilityLabel(context['visibilityTo']);
+      if (context != null && 'visibilityFrom' in context && 'visibilityTo' in context) {
+        const from = visibilityLabel(context.visibilityFrom);
+        const to = visibilityLabel(context.visibilityTo);
         return `${base} (profile visibility ${from} → ${to})`;
       }
       return base;
