@@ -3,7 +3,7 @@
 **Block:** V (Verify)
 **Wave topic:** Account self-deletion / right-to-erasure (soft-delete + both re-auth doors + owner guard + Danger-Zone UI)
 **Block exit gate:** V-3
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 
@@ -29,3 +29,16 @@ none
 ## Gate verdict log
 
 <appended by fresh head-verifier spawn at V-3 Action 1>
+
+## Block-exit handoff
+```yaml
+verify_block_status:    complete
+karen_verdict:          APPROVE
+jenny_verdict:          APPROVE
+triaged_findings:
+  blocking_resolved:    []
+  non_blocking_task_ids: [9535895f-1d80-4a59-b93e-dff05ff94c6e, 6eed0fc2-6f5e-42cd-8be4-b2364a5d066b]
+  noise_suppressed:     6
+fast_fix_cycles:        0
+ready_for_learn:        true
+```
