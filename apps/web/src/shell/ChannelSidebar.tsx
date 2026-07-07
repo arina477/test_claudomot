@@ -13,6 +13,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '../auth/api';
 import { InviteShareModal } from './InviteShareModal';
 import { useProfile } from './ProfileContext';
@@ -409,56 +410,65 @@ export function ChannelSidebar() {
         />
       )}
 
-      {/* Reports inbox — full-screen overlay; moderator/owner gated */}
-      {reportInboxOpen && selectedId && canModerateMembers && (
-        <div
-          data-testid="report-inbox-overlay"
-          className="fixed inset-0 z-40 flex flex-col"
-          style={{ backgroundColor: '#1c1c1f' }}
-        >
-          {/* Close bar */}
+      {/* Reports inbox — full-screen overlay; moderator/owner gated.
+          Rendered via createPortal so the fixed overlay escapes the sidebar's
+          transform:translateX(-260px) containing block on mobile. */}
+      {reportInboxOpen &&
+        selectedId &&
+        canModerateMembers &&
+        createPortal(
           <div
-            className="h-14 shrink-0 flex items-center justify-between px-6"
-            style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', backgroundColor: '#121214' }}
+            data-testid="report-inbox-overlay"
+            className="fixed inset-0 z-40 flex flex-col"
+            style={{ backgroundColor: '#1c1c1f' }}
           >
-            <span className="text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.92)' }}>
-              {selectedDetail?.server.name ?? 'Server'} — Reports
-            </span>
-            <button
-              type="button"
-              aria-label="Close reports inbox"
-              onClick={() => setReportInboxOpen(false)}
-              className="flex h-7 w-7 items-center justify-center rounded-md transition-colors focus-visible:outline-none"
-              style={{ color: 'rgba(255,255,255,0.40)', backgroundColor: 'transparent' }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#27272a';
-                (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.92)';
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
-                (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.40)';
+            {/* Close bar */}
+            <div
+              className="h-14 shrink-0 flex items-center justify-between px-6"
+              style={{
+                borderBottom: '1px solid rgba(255,255,255,0.06)',
+                backgroundColor: '#121214',
               }}
             >
-              {/* X icon inline */}
-              <svg
-                width={16}
-                height={16}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1.5}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
+              <span className="text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.92)' }}>
+                {selectedDetail?.server.name ?? 'Server'} — Reports
+              </span>
+              <button
+                type="button"
+                aria-label="Close reports inbox"
+                onClick={() => setReportInboxOpen(false)}
+                className="flex h-7 w-7 items-center justify-center rounded-md transition-colors focus-visible:outline-none"
+                style={{ color: 'rgba(255,255,255,0.40)', backgroundColor: 'transparent' }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#27272a';
+                  (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.92)';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+                  (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.40)';
+                }}
               >
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          </div>
-          <ReportInbox serverId={selectedId} canModerateMembers={canModerateMembers} />
-        </div>
-      )}
+                {/* X icon inline */}
+                <svg
+                  width={16}
+                  height={16}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <ReportInbox serverId={selectedId} canModerateMembers={canModerateMembers} />
+          </div>,
+          document.body,
+        )}
 
       {/* Scrollable channel list */}
       <div className="flex-1 overflow-y-auto px-2 py-4">
