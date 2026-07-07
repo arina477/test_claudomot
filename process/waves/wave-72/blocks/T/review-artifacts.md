@@ -3,7 +3,7 @@
 **Block:** T (Test)
 **Wave topic:** Account self-deletion / right-to-erasure (soft-delete + both re-auth doors + owner guard + Danger-Zone UI)
 **Block exit gate:** T-9
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 
@@ -37,3 +37,14 @@ none
 ## Gate verdict log
 
 <appended by fresh head-tester spawn at T-9 Action 1>
+
+## Block-exit handoff
+```yaml
+test_block_status:    complete
+stages_run:           [T-1, T-2, T-3, T-4, T-5, T-6, T-8, T-9]
+stages_skipped:       [T-7 perf (not a heavy wave)]
+findings_total:       6   # 1 medium, 3 low/ops, 2 cosmetic — all non-blocking → V-2
+findings_critical:    0   # (the P0 white-screen was found + resolved WITHIN the block)
+findings_aggregate:   process/waves/wave-72/blocks/T/findings-aggregate.md
+ready_for_verify:     true
+```
