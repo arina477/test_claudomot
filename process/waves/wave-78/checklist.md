@@ -8,7 +8,7 @@
 **Note:** M13 leg-2 follow-up — member-profile-card UX polish bundle (both from wave-77 V-2). Small, cohesive, same surface. Likely UI wave → P-1 may design_gap on the card retry/unset affordances (D-block optional). FENCED (founder-reserved): B2B2C go-to-market + M13 success metric. M13 stays in_progress; leg-3 (privacy/E2E) still unauthored. todo-milestone queue EMPTY — if M13 closes later, N-1 fires roadmap-planning (stockout).
 
 PRODUCT:
-- [ ] P-0 Frame (discover + reframe)
+- [x] P-0 Frame (discover + reframe)
 - [ ] P-1 Decompose
 - [ ] P-2 Spec
 - [ ] P-3 Plan
