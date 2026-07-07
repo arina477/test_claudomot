@@ -33,6 +33,13 @@ vi.mock('../auth/api', async (importOriginal) => {
     api: {
       getMe: vi.fn(),
       updateServer: vi.fn(),
+      // ServerPlanPanel is mounted inside ServerOverviewSettings (wave-75).
+      getServerPlan: vi.fn().mockResolvedValue({
+        serverId: 'srv-overview-1',
+        tier: 'free',
+        entitlements: { storageMb: 2048, callCapacity: 5, educatorAdminTools: false },
+      }),
+      changeServerTier: vi.fn(),
     },
   };
 });

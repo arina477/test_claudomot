@@ -30,6 +30,13 @@ vi.mock('../auth/api', () => ({
     // Required by ServerOverviewSettings (owner gate)
     getMe: vi.fn(),
     updateServer: vi.fn(),
+    // Required by ServerPlanPanel mounted inside ServerOverviewSettings (wave-75)
+    getServerPlan: vi.fn().mockResolvedValue({
+      serverId: 'srv-test',
+      tier: 'free',
+      entitlements: { storageMb: 2048, callCapacity: 5, educatorAdminTools: false },
+    }),
+    changeServerTier: vi.fn(),
     // Required by ChannelSidebar (moderator gate — wave-69)
     getMyPermissions: vi.fn().mockResolvedValue({
       owner: false,
