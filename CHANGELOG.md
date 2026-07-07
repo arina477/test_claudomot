@@ -93,6 +93,7 @@ All notable changes to StudyHall are documented here. Format follows
 - Delete your own account: a Danger Zone in Settings › Privacy lets you permanently close your account after an explicit confirmation. Deleting scrubs your personal details (name, username, email, avatar), removes you from every study server, signs you out, and blocks any future sign-in. If you still own study servers, you're asked to transfer or delete those first. (#88, #89)
 - Your privacy activity: a new log in Settings › Privacy shows a plain-language history of your own privacy actions — account deletion, data exports, privacy-setting changes, and blocks or unblocks. The record is append-only and private to you, so no one else can see or alter your history. (#90)
 - Internal groundwork for paid tiers: every study server now sits on a free plan by default, and the app quietly checks that plan when you create a server. There is no visible change and nothing is charged — real billing (Stripe, prices, checkout) is not turned on yet. The free plan's limits are set well above any current usage, so no existing account is affected. (#91, #92)
+- Server owners can now see their server's plan (Free / Server Pro / School) and its storage, call, and educator-tools limits under Settings › Overview, and switch plans through a test-mode checkout — no real charge, since billing is not live yet. Switching takes effect immediately, so a higher plan's limits (and educator admin tools on School) unlock right away. (#93)
 
 ### Changed
 
