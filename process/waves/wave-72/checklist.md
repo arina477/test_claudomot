@@ -39,5 +39,5 @@
 - [x] L-2 Distill
 ## N — Next
 - [x] N-1 Survey & triggers
-- [ ] N-2 Seed
+- [x] N-2 Seed
 - [ ] N-3 Handoff
