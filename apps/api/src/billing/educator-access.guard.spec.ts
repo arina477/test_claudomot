@@ -61,9 +61,7 @@ describe('EducatorAccessGuard', () => {
 
   it('missing :serverId param → ForbiddenException (wiring bug, never checks can)', async () => {
     const { guard, can } = makeGuard(true);
-    await expect(guard.canActivate(makeCtx({ serverId: undefined }))).rejects.toThrow(
-      ForbiddenException,
-    );
+    await expect(guard.canActivate(makeCtx({}))).rejects.toThrow(ForbiddenException);
     expect(can).not.toHaveBeenCalled();
   });
 
