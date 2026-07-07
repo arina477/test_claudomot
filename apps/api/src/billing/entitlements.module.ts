@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { BILLING_PROVIDER } from './billing-provider.interface';
 import { BillingController } from './billing.controller';
+import { EducatorToolsController } from './educator-tools.controller';
+import { EntitlementGuard } from './entitlement.guard';
 import { EntitlementsService } from './entitlements.service';
 import { MockBillingProvider } from './mock-billing.provider';
 
@@ -28,8 +30,12 @@ import { MockBillingProvider } from './mock-billing.provider';
 
 @Module({
   imports: [AuthModule],
-  controllers: [BillingController],
-  providers: [EntitlementsService, { provide: BILLING_PROVIDER, useClass: MockBillingProvider }],
+  controllers: [BillingController, EducatorToolsController],
+  providers: [
+    EntitlementsService,
+    EntitlementGuard,
+    { provide: BILLING_PROVIDER, useClass: MockBillingProvider },
+  ],
   exports: [EntitlementsService],
 })
 export class EntitlementsModule {}

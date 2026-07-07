@@ -91,9 +91,9 @@ describe('EntitlementsService.resolveForServer', () => {
     const result = await service.resolveForServer('server-pro-id');
 
     expect(result.tier).toBe('server_pro');
-    // server_pro caps should be higher than free caps
+    // server_pro caps should be higher than free caps (free: storageMb 2048, callCapacity 10)
     expect(result.entitlements.storageMb).toBeGreaterThan(2_048);
-    expect(result.entitlements.callCapacity).toBeGreaterThan(50);
+    expect(result.entitlements.callCapacity).toBeGreaterThan(10);
     expect(result.entitlements.educatorAdminTools).toBe(false);
   });
 
@@ -114,6 +114,79 @@ describe('EntitlementsService.resolveForServer', () => {
     // Must NOT throw; must return free caps
     expect(result.tier).toBe('free');
     expect(result.entitlements.educatorAdminTools).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Group A2 — CANONICAL cap values (wave-75 brain-set)
+// ---------------------------------------------------------------------------
+
+describe('EntitlementsService — canonical TIER_CAPS values (wave-75)', () => {
+  let service: EntitlementsService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    service = new EntitlementsService();
+  });
+
+  it('free tier → storageMb 2048, callCapacity 10, educatorAdminTools false', async () => {
+    mockSelect.mockReturnValue(makeSelectChain([])); // no row → free
+    const { tier, entitlements } = await service.resolveForServer('s-free');
+    expect(tier).toBe('free');
+    expect(entitlements).toEqual({
+      storageMb: 2_048,
+      callCapacity: 10,
+      educatorAdminTools: false,
+    });
+  });
+
+  it('server_pro tier → storageMb 51200, callCapacity 50, educatorAdminTools false', async () => {
+    mockSelect.mockReturnValue(makeSelectChain([{ tier: 'server_pro' }]));
+    const { tier, entitlements } = await service.resolveForServer('s-pro');
+    expect(tier).toBe('server_pro');
+    expect(entitlements).toEqual({
+      storageMb: 51_200,
+      callCapacity: 50,
+      educatorAdminTools: false,
+    });
+  });
+
+  it('school tier → storageMb 512000, callCapacity 100, educatorAdminTools true', async () => {
+    mockSelect.mockReturnValue(makeSelectChain([{ tier: 'school' }]));
+    const { tier, entitlements } = await service.resolveForServer('s-school');
+    expect(tier).toBe('school');
+    expect(entitlements).toEqual({
+      storageMb: 512_000,
+      callCapacity: 100,
+      educatorAdminTools: true,
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Group A3 — create-gate NON-REGRESSION (free-cap must not restrict 646 owner)
+// ---------------------------------------------------------------------------
+
+describe('EntitlementsService.resolveCreateGateForOwner — non-regression (646 free owner)', () => {
+  let service: EntitlementsService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    service = new EntitlementsService();
+  });
+
+  it('free owner with 646 existing servers stays UNDER the cap (gate non-restrictive)', async () => {
+    // count(*)::int subquery → 646 (the largest observed owner as of wave-74).
+    mockSelect.mockReturnValue(makeSelectChain([{ count: 646 }]));
+
+    const { tier, caps, currentServerCount } = await service.resolveCreateGateForOwner('owner-646');
+
+    expect(tier).toBe('free');
+    expect(currentServerCount).toBe(646);
+    expect(caps.maxServersPerOwner).toBe(100_000);
+    // The create-gate comparison (currentServerCount >= maxServersPerOwner) must
+    // be FALSE — i.e. the owner is NOT blocked. This is the wave-74 regression guard.
+    expect(currentServerCount < caps.maxServersPerOwner).toBe(true);
   });
 });
 
