@@ -12,9 +12,9 @@
 | B-0 | process/waves/wave-72/stages/B-0-branch-and-schema.md | done | schema ran: users.deleted_at (migration 0027) |
 | B-1 | process/waves/wave-72/stages/B-1-contracts.md | done | DeleteAccount DTO authored (task e11f8746) |
 | B-2 | process/waves/wave-72/stages/B-2-backend.md | done | erasure API + both doors + owner guard (task 9658fb0b) |
-| B-3 | process/waves/wave-72/stages/B-3-frontend.md | pending | Danger-Zone UI per settings-privacy.html Panel 5 (task 898490b1) |
-| B-4 | process/waves/wave-72/stages/B-4-wiring.md | pending | |
-| B-5 | process/waves/wave-72/stages/B-5-verify.md | pending | |
+| B-3 | process/waves/wave-72/stages/B-3-frontend.md | done | Danger-Zone UI + 18 tests (task 898490b1) |
+| B-4 | process/waves/wave-72/stages/B-4-wiring.md | done | repo typecheck 4/4, route mounted |
+| B-5 | process/waves/wave-72/stages/B-5-verify.md | done | lint/tests/build green |
 | B-6 | process/waves/wave-72/stages/B-6-review.md | pending | |
 
 ## Block-specific context
