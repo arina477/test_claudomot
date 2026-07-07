@@ -439,3 +439,27 @@ Web/api live (T-9-verified on deploy 0c71585: api /health 200; web /, /login, /s
 - Also this wave: the member-row own-Report suppression fix (spec-D, MemberListPanel isSelf guard) — completes the wave-69 own-content-leak remediation on the member surface.
 
 **Monetization substrate note (wave-74, M9 — backend-internal, no new user-facing route):** a `subscriptions` tier model (every server resolves to 'free' by default) + an `EntitlementsService` (tier→capability caps from a founder-tunable placeholder config) now back a read-only entitlement gate in `createServer` (servers-per-owner cap; free placeholder=100,000 → non-restrictive; enforceable once real tiers are assigned). No user-facing surface this slice (the "Your plan" display + Stripe/checkout are fenced to the next M9 slice, founder-reserved). Live on d79dd18.
+
+## Server Settings — "Your plan" panel + billing endpoints (wave-75, M9 mock-payment freemium upgrade path — LIVE, T-9-verified in prod)
+
+**Merge 3b94e276 (PR #93). Deployed api + web SUCCESS. wave_type = backend + ui + auth(payments). Mock/test payment only — real Stripe fenced (founder keys, rule 6); tier config + prices brain-set.**
+
+WHAT SHIPPED: a "Your plan" panel on the existing per-server **Settings → Overview** surface (extends the wave-68 Server-Settings node — NO new page route; panel reuses PrivacyActivityPanel chrome). Three new REST endpoints under the billing module, all behind the verification-REQUIRED `AuthGuard`:
+
+| Endpoint | Auth / gate | Behaviour | Live-verified |
+|---|---|---|---|
+| `POST /servers/:serverId/billing/tier` (api, tier change) | AuthGuard + owner-only | Body `{targetTier}` Zod→400; owner-check 404→403→mutate (no-IDOR, side-effect-free 403); mock `BillingProvider` upserts `subscriptions` ON CONFLICT(server_id); same-tier 200 idempotent. Returns 200 `ServerPlan {serverId,tier,entitlements}`. | 200 owner (free→server_pro→school); 403 non-owner (tier UNMODIFIED); 400 invalid; 404 unknown; 401 unauth/malformed |
+| `GET /servers/:serverId/billing/plan` (api, read) | AuthGuard + owner-or-member | Returns 200 `ServerPlan`; 403 non-member; 404 unknown; 401 unauth. | 200 shape matches DTO + canonical caps exactly (free 2048/10/false) |
+| `GET /servers/:serverId/educator-tools/status` (api, entitlement gate stub) | AuthGuard + EntitlementGuard('educatorAdminTools') | 200 `{enabled:true}` when tier=school; 403 fail-closed on free/server_pro. Models ONLY the gate; real educator tools fenced. | free→403 fail-closed; school→200 unlock (end-to-end) |
+
+CANONICAL TIER_CAPS now live (brain-set): free {storage 2GB, callCapacity 10, educatorAdminTools false}, server_pro {50GB, 50, false}, school {500GB, 100, true}. free.maxServersPerOwner stays 100_000 (NON-REGRESSION guard — must exceed largest owner count 646; wave-74 free-cap incident not reintroduced; create-server → 201 confirmed live for Fixture A).
+
+**M9 SUCCESS METRIC MET LIVE (T-5, prod web-production-bce1a8, Fixture A):** on a server Fixture A owns, opened Settings→Overview → "Your plan" shows CURRENT PLAN Free / Storage 2 GB; selected Server Pro radio → clicked "Switch plan (test mode — no charge)" → the displayed tier + limits refreshed to **Server Pro / 50 GB / voice 50 IMMEDIATELY with no reload**, and the change **survived a full close+reopen** of the settings surface (persistence, not just optimistic re-render). Mock-checkout disclosure visible ("test checkout — StudyHall does not charge your card and no payment is taken"; reference prices Free $0 / Server Pro $8mo / School $99mo shown). 0 console errors. Panel token-compliant (dark base rgb(10,10,11), zinc-800 button, 6px radius, 40%-white muted disclosure 12px, no overflow) at 1440.
+
+SECURITY (T-8, prod, Fixtures A+B): no-IDOR (B POST tier on A's server → 403, tier unchanged, side-effect-free); educator gate fail-closed→unlock (free 403 → school 200); AuthGuard verification-required (unauth + malformed bearer → 401 on all 3 endpoints; 401 precedes 403 — the P-4-caught SessionNoVerifyGuard hole is closed); non-regression create-server 201; secret-grep clean.
+
+DATA: no schema change — reuses wave-74 `subscriptions` (UNIQUE(server_id), migration 0029). Tier change = INSERT ON CONFLICT(server_id) DO UPDATE.
+
+KNOWN findings → V-2 (non-blocking, 0 critical): (medium) `GET /educator-tools/status` has no owner/member check — any authed user reads the boolean tier-status of any tier-unlocked server (no mutation/PII; the FENCED real educator tools MUST add a member gate). (medium, process) the authored pg-harness `subscriptions`-upsert integration test (`apps/api/test/integration/billing-subscriptions-upsert.spec.ts`) typechecks+lints clean but is CI-pending on a follow-up PR (no local pg); upsert effect proven end-to-end live. (low) pg-harness `truncateTables()` omits `subscriptions`. (low) benign act() warnings on 19 pre-existing settings tests.
+
+Verified-prod fixtures: studyhall-e2e-fixture (A) + studyhall-e2e-fixture-b (B). Prod left clean: two throwaway servers (0c8192da, 37a55026) reverted to free (no DELETE /servers endpoint exists — rows persist empty, same limitation as prior waves); shared proof server ad62cd12 never mutated.
