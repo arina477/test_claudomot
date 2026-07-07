@@ -44,9 +44,9 @@ describe.skipIf(SKIP)('ServersService.listServerMembers — real-Postgres member
 
   beforeAll(async () => {
     await setupHarness();
-    // ServersService constructor requires rbacService, but listServerMembers
-    // does not call it — pass a stub exactly as create-server-rollback does.
-    sut = new ServersService({} as never);
+    // ServersService constructor requires rbacService + entitlementsService;
+    // listServerMembers calls neither — pass stubs.
+    sut = new ServersService({} as never, {} as never);
   });
 
   afterAll(async () => {

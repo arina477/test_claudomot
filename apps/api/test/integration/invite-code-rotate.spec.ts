@@ -42,8 +42,8 @@ describe.skipIf(SKIP)('ServersService.rotateInviteCode — real-Postgres (task d
 
   beforeAll(async () => {
     await setupHarness();
-    // rotateInviteCode does not call rbacService — pass empty stub.
-    sut = new ServersService({} as never);
+    // rotateInviteCode does not call rbacService or entitlementsService — pass stubs.
+    sut = new ServersService({} as never, {} as never);
   });
 
   afterAll(async () => {

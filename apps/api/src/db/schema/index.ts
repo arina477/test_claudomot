@@ -11,5 +11,6 @@ export * from './scheduling';
 export * from './dm';
 export * from './study-timer';
 export * from './reports';
+export * from './subscriptions';
 export * from './user-blocks';
 export * from './privacy_events';

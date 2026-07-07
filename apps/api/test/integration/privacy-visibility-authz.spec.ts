@@ -51,9 +51,9 @@ describe.skipIf(SKIP)(
 
     beforeAll(async () => {
       await setupHarness();
-      // ServersService constructor requires rbacService, but listServerMembers
-      // does not call it — pass a stub exactly as servers-member-gate.spec.ts does.
-      sut = new ServersService({} as never);
+      // ServersService constructor requires rbacService + entitlementsService;
+      // listServerMembers calls neither — pass stubs.
+      sut = new ServersService({} as never, {} as never);
     });
 
     afterAll(async () => {

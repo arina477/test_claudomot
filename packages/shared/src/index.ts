@@ -332,3 +332,6 @@ export type {
   TypingStopInput,
   TypingActive,
 } from './presence.js';
+
+export { TierSchema, EntitlementsSchema } from './entitlements.js';
+export type { Tier, Entitlements } from './entitlements.js';
