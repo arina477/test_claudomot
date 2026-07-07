@@ -3,7 +3,7 @@
 **Block:** B (Build)
 **Wave topic:** member-profile-card UX polish — academicRole clearable + hidden-vs-transient-error on card
 **Block exit gate:** B-6
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 
@@ -15,7 +15,7 @@
 | B-3 | process/waves/wave-78/stages/B-3-frontend.md | done | react-specialist (editor + api.ts + card + tests) |
 | B-4 | process/waves/wave-78/stages/B-4-wiring.md | done | |
 | B-5 | process/waves/wave-78/stages/B-5-verify.md | done | |
-| B-6 | process/waves/wave-78/stages/B-6-review.md | pending | |
+| B-6 | process/waves/wave-78/stages/B-6-review.md | done | |
 
 ## Block-specific context
 
