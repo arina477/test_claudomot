@@ -102,3 +102,6 @@ Promoted at L-2 Distill from `process/waves/wave-<N>/blocks/L/observations.md` b
 
 12. Test a component's success callback through its real parent caller, not the component rendered in isolation.
    Why: An isolated test injecting the prop passes while the caller never wires it, no-oping live.
+
+13. Pass the opaque user id, not the display username, to any prop compared for identity such as isOwn or isSelf.
+   Why: A username-vs-id mismatch makes the identity check always-false, hiding owner affordances.
