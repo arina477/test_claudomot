@@ -8,7 +8,7 @@
 <!-- NOTE: thin seed → P-1 RESCOPE-AUTO-MERGE expected to expand (candidate merge-in: 1c633d2f — GET /blocks display-name/avatar enrichment, wave_id NULL, still seedable). -->
 
 PRODUCT:
-- [ ] P-0 Frame (discover + reframe)
+- [x] P-0 Frame (discover + reframe)
 - [ ] P-1 Decompose
 - [ ] P-2 Spec
 - [ ] P-3 Plan
