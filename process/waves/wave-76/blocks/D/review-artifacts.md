@@ -3,7 +3,7 @@
 **Block:** D (Design)
 **Wave topic:** Educator Admin Console + analytics dashboard (M13 leg-1 UI surface)
 **Block exit gate:** D-3
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file(s) | Status | Notes |
@@ -25,3 +25,14 @@ none
 
 ## Gate verdict log
 <appended by head-designer at D-3>
+
+
+## Block-exit handoff
+```yaml
+design_block_status: complete
+gaps_resolved: [educator-admin-console → design/educator-admin-console.html]
+gaps_deferred: []
+design_system_updates: []
+canonicalized_at: 2026-07-07
+b3_port_notes: [icons.tsx inline-SVG port, aria-current, 1024px breakpoint, wire placeholders to real aggregates]
+```

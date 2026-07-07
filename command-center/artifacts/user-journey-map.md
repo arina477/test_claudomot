@@ -463,3 +463,9 @@ DATA: no schema change — reuses wave-74 `subscriptions` (UNIQUE(server_id), mi
 KNOWN findings → V-2 (non-blocking, 0 critical): (medium) `GET /educator-tools/status` has no owner/member check — any authed user reads the boolean tier-status of any tier-unlocked server (no mutation/PII; the FENCED real educator tools MUST add a member gate). (medium, process) the authored pg-harness `subscriptions`-upsert integration test (`apps/api/test/integration/billing-subscriptions-upsert.spec.ts`) typechecks+lints clean but is CI-pending on a follow-up PR (no local pg); upsert effect proven end-to-end live. (low) pg-harness `truncateTables()` omits `subscriptions`. (low) benign act() warnings on 19 pre-existing settings tests.
 
 Verified-prod fixtures: studyhall-e2e-fixture (A) + studyhall-e2e-fixture-b (B). Prod left clean: two throwaway servers (0c8192da, 37a55026) reverted to free (no DELETE /servers endpoint exists — rows persist empty, same limitation as prior waves); shared proof server ad62cd12 never mutated.
+
+## [wave-76] Educator Admin Console (M13 leg-1)
+- **Screen:** Educator Admin Console — `apps/web/src/shell/EducatorAdminConsole.tsx` (new), on the per-server Settings surface (alongside Overview / Roles / Your Plan). Canonical design: `design/educator-admin-console.html`.
+- **Access:** owner OR educator member (role with `manage_assignments`) on a school-tier server (educatorAdminTools=true); hidden/blocked otherwise (ServerPlanPanel gating idiom).
+- **Renders:** server analytics aggregates (members + role breakdown; message volume; assignment count + submission rollup; recent activity) — read-only. States: loading / loaded / empty ("No activity yet") / forbidden.
+- **Endpoints:** GET /servers/:serverId/educator-tools/analytics (new) + GET /servers/:serverId/educator-tools/status (wave-75, now owner/educator-gated). Composed authz: AuthGuard + EntitlementGuard(educatorAdminTools) + EducatorAccessGuard (owner OR manage_assignments).

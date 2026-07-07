@@ -1,122 +1,84 @@
 # D-3 Review — Educator Admin Console (`/ui-ux-pro-max`)
 
-**Reviewer role:** requirement + UX-best-practice + design-token audit
-**Target:** `design/staging/educator-admin-console.html`
+**Wave:** 76
+**Reviewer role:** `/ui-ux-pro-max` — requirement + UX + token + icon audit
+**Artifact reviewed:** `design/staging/educator-admin-console.html` (refined mockup, latest)
 **Brief:** `process/waves/wave-76/stages/D-1-brief/educator-admin-console-brief.md`
 **Design system:** `design/DESIGN-SYSTEM.md`
+**On-set icon inventory checked:** `apps/web/src/shell/icons.tsx`
 
 ---
 
-## VERDICT: **REVISE**
+## VERDICT: APPROVE
 
-The refined mockup is on-concept: layout, calm/academic tone, all four states, gated framing, correct danger-token discipline, Geist font, and full out-of-scope adherence (no charts, no pricing, no mutation surface) are all correct. But it must not be adopted verbatim because it ships icons via the **Phosphor web CDN (`<i class="ph …">`) idiom**, whereas the shipped surface uses the **inline-SVG component set at `apps/web/src/shell/icons.tsx`** that brief §4 explicitly names — and one glyph (`ph-tray`) has **no export in that set**. There is also a **type-scale violation** (24px stat numerals vs the DS §2 scale / brief §4 "Body-m") and a **stray class typo**. Every defect is mechanical and bounded — hence REVISE, not REJECT. No re-architecture is warranted.
-
----
-
-## 1. Brief success-criteria checklist (brief §5 / §6)
-
-| # | Criterion | Result | Note |
-|---|-----------|--------|------|
-| 5.1 | Dark-mode only; consumes DESIGN-SYSTEM tokens exactly, no invented hex | ✓ PASS | `class="dark"`, dark-only. Every `:root` var traces to DESIGN-SYSTEM §1/§5 verbatim (surfaces, text, emerald `#10b981`, amber `#f59e0b`, danger trio, shadow-sm/pop, glow-focus). No stray hex in the markup — all colors reference `var(--…)`. |
-| 5.2 | Scannable 4-group analytics dashboard as stat cards/rows, not a dense table | ✓ PASS | 3-col grid — Module 1 Total Members + educator/student split, Module 2 Messages (7D), Module 3 Assignments + due-soon/overdue — plus Module 4 Recent Activity list. The 4 aggregate groups (members/roles · messages · assignments/submissions · activity) are legible at a glance. |
-| 5.3 | Calm/academic/low-noise — NOT a growth dashboard; stat cards + counts only, no charts | ✓ PASS | No charts, sparklines, or histograms anywhere. Single restrained scalar delta ("+412 versus last week"). Reads calm, quiet, academic. |
-| 5.4 | All 4 states (loading/loaded/empty/forbidden) designed | ✓ PASS | loading = skeleton grid + spinner (mirrors loaded geometry, no jump; DS §8 "never spinners for content lists" honored via skeletons); loaded; empty = "No activity yet" graceful zero-state; forbidden = clean "Access Restricted". |
-| 5.5 | Owner/educator-gated framing visually clear, consistent with ServerPlanPanel tier framing | ✓ PASS | "School Plan" pill (emerald-dotted) in loaded + empty headers; emerald-active "Educator Console" nav item with shield-check glyph; subhead "Read-only aggregate metrics…". Framing legible and on-idiom. |
-| 5.6 | Accessible: WCAG AA contrast; correct `--danger-text`/`--danger-btn`; keyboard-navigable | ⚠️ PARTIAL | Danger tokens correct (see §3). `prefers-reduced-motion` guards present on shimmer + stat-card hover ✓. **But:** stat numerals exceed the §2 type scale (see 5.3-adjacent CONCERN-4), and nav uses native `<a>`/`<button>` (keyboard-reachable) with no explicit `focus-visible` ring token — relies on browser default. Recommend a tokened `--glow-focus` ring at B-3. |
-| 6.1 | NO charts / graphs / time-series viz | ✓ PASS | None present. |
-| 6.2 | NO B2B2C / pricing / success-metric UI | ✓ PASS | "School Plan" is a gating tier *marker*, not a pricing/upsell surface. No partnership UI, no M13 metric surfacing. |
-| 6.3 | Read-only, NO mutation of server data | ✓ PASS | Zero forms/inputs/toggles/mutating buttons. "Back to Server" + a passive "Sync 2m ago" status pill only. Activity footer "Displaying recent ledger" is informational. |
+The refined mockup satisfies every brief §5 success criterion, holds all §6 out-of-scope fences, and consumes DESIGN-SYSTEM tokens exactly (no invented hex). All four states are coherent and strictly read-only. Every icon glyph maps to an on-set inline-SVG equivalent in `icons.tsx` — two are near-synonym port notes for B-3, not blockers, and no exotic/off-set glyph (e.g. `ph-tray`) remains. No demo state-switcher / JS overlay is present. No blocking concerns. Adopt as-is.
 
 ---
 
-## 2. UX flow audit (settings-surface coherence)
+## 1. Brief §5 success-criteria audit
 
-| Aspect | Result | Note |
-|--------|--------|------|
-| Entry / context clear | ✓ PASS | Left rail "Advanced CS 101 → Server Settings" with Overview / Roles / Your Plan / **Educator Console** (active) mirrors the exact ServerPlanPanel sibling surfaces brief §2 names. Console sits where expected. |
-| Gated framing legible | ✓ PASS | Emerald "School Plan" pill + shield-check header glyph + "Read-only aggregate metrics to monitor general server health…" subhead make entitlement posture explicit. |
-| loading → loaded → empty transitions sensible | ✓ PASS | Skeleton mirrors the loaded 3-card + activity geometry, so no layout jump on resolve. Empty is a distinct graceful zero-state (tray icon + "No activity yet"), not an error. |
-| forbidden state | ✓ PASS | Centered lock card, "Access Restricted / strictly reserved for authorized educators on designated School tier servers", danger-text on danger/10 tint, plus a machine code `ERR_INSUFFICIENT_ROLE_ENTITLEMENT`. Reads intentional, not a crash. |
-| Demo overlays / state-switchers | ✓ PASS | No visible switcher UI. State selection is via commented CSS `.console-state-*` display rules (dev-only, invisible in render). B-3 replaces with real conditional rendering. |
+- [x] **Dark-mode only; DS tokens exactly, no invented hex** — `class="dark"`, `--surface-950` body base. Line-by-line hex scan found ZERO literal hex outside the DS token set; every color resolves through a `--surface-*`/`--text-*`/`--accent-*`/`--danger*` token via `var(--…)`. `selection:bg-[var(--accent-emerald)]` uses the token. (§5 line 37, DS §1)
+- [x] **Scannable dashboard, 4 aggregate groups legible at a glance** — Members/roles (Module 1 + educator/student `dl` split), Messages 7D (Module 2, `+412` delta), Assignments + Due-Soon/Overdue rollup (Module 3), Recent Activity ledger (Module 4). 3-col stat grid + activity list; NOT a dense table. (§5 line 38, brief §3)
+- [x] **Calm/academic/low-noise; NOT a growth dashboard** — `panel-container` chrome mirrors ServerPlanPanel (header + section + nested `stat-card` + `dl` rows). No charts, sparklines, or time-series — a single restrained scalar delta only. (§5 line 39, DS §8)
+- [x] **All 4 states designed (loading / loaded / empty / forbidden)** — All present. Loading = skeleton-block shimmer mirroring loaded geometry (DS §8 "never spinners for content lists" honored: content uses skeletons; spinner is header-adjacent only, no layout jump on resolve). Empty = "No activity yet" graceful zero-state. Forbidden = clean "Access Restricted" with lock + `ERR_INSUFFICIENT_ROLE_ENTITLEMENT`. (§5 line 40, brief §3)
+- [x] **Owner/educator gating visually clear** — Emerald-dotted "School Plan" pill in loaded + empty headers; forbidden state names "School tier" explicitly; sidebar "Educator Console" item is active/emerald with shield-check glyph. Mirrors ServerPlanPanel tier framing. (§5 line 41, brief §2/§3)
+- [x] **Accessible: WCAG AA contrast; correct `--danger` trio; keyboard-navigable** — Forbidden icon tint `rgba(239,68,68,0.1)` (=`--danger`/10) carries `--danger-text` `#f87171` (6.30:1 PASS — exactly the DS §1 prescribed on-tint pairing, NOT `#ef4444` which would fail). Overdue chip label + count both `--danger-text`, correct. Every interactive nav item + button carries `.focus-visible-glow` (=`--glow-focus` emerald ring). `prefers-reduced-motion` guards shimmer AND hover transitions. (§5 line 42, DS §1 danger trio, DS §5, DS §6)
 
----
+## 2. Brief §6 out-of-scope audit (fences held)
 
-## 3. DESIGN-SYSTEM.md token audit (§1 color / §2 type / §3 spacing / §4 radius / §5 shadow)
+- [x] **NO charts / graphs / time-series** — none; aggregate counts + one textual delta only. (§6 line 46)
+- [x] **NO B2B2C / pricing / success-metric (M13) surfacing** — none. "School Plan" is a gating tier marker, not a pricing/upsell surface. (§6 line 47)
+- [x] **NO editing / mutation** — read-only throughout: "Read-only aggregate metrics…" subhead, "Displaying recent ledger" footer, passive "Sync 2m ago" metadata (not a button). Zero forms/inputs/toggles/mutating CTAs. (§6 line 48)
 
-**Colors — fully traceable:**
-- Every `:root` primitive matches DESIGN-SYSTEM §1/§5 exactly: `--surface-950…500`, `--border-hairline`/`--border-hover`, `--text-primary/secondary/muted`, `--accent-emerald`, `--accent-amber`, `--danger`/`--danger-btn`/`--danger-text`, `--shadow-sm`/`--shadow-pop`, `--glow-focus`. ✓
-- No hardcoded hex in the body markup — all colors go through `var(--…)`. `selection:bg-[var(--accent-emerald)]` uses the token. ✓
-- **Danger-token correctness (§1):** Overdue chip label + count use `--danger-text` `#f87171` (6.30:1 on tint — PASS). Forbidden icon + heading use `--danger-text` on a `rgba(239,68,68,0.1)` tint — correct on-tint use. **No white text sits on a `--danger` `#ef4444` fill anywhere** → the documented AA-fail trap is avoided. `--danger-btn` correctly not needed (read-only surface, no danger button). ✓
-- **Accent assignment (§1 / brief §4):** emerald = console accent, positive `+412` delta, School-Plan dot, active nav; amber = "Due Soon" chip. Correct academic/alert split. ✓
+## 3. UX flow — 4-state coherence
 
-**Typography:**
-- ✓ Family is **Geist** (Google Fonts wght 400/500/600 = DS §2 weights) with `-apple-system` fallback. On-system.
-- ✓ Label idiom `text-xs font-semibold uppercase tracking` (`.label-text`) matches brief §4 / ServerPlanPanel. Panel title `text-[17px] font-semibold` matches brief §4 exactly.
-- ✗ **Stat numerals exceed the DS §2 scale.** Hero stat values use `text-2xl` (24px) — `342`, `15,289`, `942`. Per §2, `text-2xl` (24px) is reserved for "landing/empty-state headlines"; the largest in-panel data step is `text-xl` (20px). Brief §4 calls stat values "**Body-m**" (i.e. `text-base`/`text-sm`), not a 24px display size. See CONCERN-4.
+- [x] **Loading → loaded** shape-consistent: skeleton grid mirrors the real 3-col stat grid + activity rows → no layout jump on hydration.
+- [x] **Empty** reuses the exact panel header (shield + title + School Plan pill), then centered icon + headline + one-line — matches DS §8 empty-state pattern; correctly omits a CTA (read-only surface, nothing to create).
+- [x] **Forbidden** is a distinct, calm access-denied (lock in danger/10 tint, danger-text headline, mono error code); framed as "normally prevented by hidden entry" per brief §3, no leaky data.
+- [x] All four are mutually exclusive `console-state-*` CSS `display` blocks; a code comment documents flipping `display` for preview. **No JS state-switcher, no onclick, no overlay, no demo toggle chrome** — grep-confirmed clean.
 
-**Spacing / radius / shadow:**
-- ✓ Panel `rounded-lg` (0.5rem = DS §4 `--radius-lg`); nav items `rounded-md` (DS §4). Stat-card `p-6` (24px, DS §3), body `space-y-8` (32px, DS §3), grid `gap-6` (24px, DS §3). All on the 4px scale.
-- ✓ `--shadow-sm: 0 1px 2px rgba(0,0,0,0.4)` matches DS §5 + brief §4 exactly.
-- ✓ Motion: `transition-colors 150ms` on nav/rows (DS §6 default); shimmer + hover both gated behind `prefers-reduced-motion: no-preference` (DS §6 requirement met). No bouncy easing. On-budget.
+## 4. DESIGN-SYSTEM token audit
 
----
+- [x] **Colors** — all trace to tokens (see §1). Emerald = console accent / positive delta / School-Plan dot / active nav; amber = Due-Soon; danger trio applied per contrast rules. Restrained zinc + emerald + amber + red — no gaming-neon. (DS §1)
+- [x] **`--danger` trio correct** — `--danger` (#ef4444) used ONLY as a /10 fill tint (never under white/badge text); `--danger-text` (#f87171) for all danger *text* on tint; `--danger-btn` correctly not needed (read-only surface, no danger button). Textbook-correct. (DS §1 lines 35-37)
+- [x] **Geist (DS §2)** — `font-family: 'Geist'` loaded (weights 400/500/600, matching DS scale) with system fallback.
+- [x] **Type scale / numerals ≤ text-xl** — Primary stat numerals are `text-xl` (20px) — at the DS §2 ceiling, NOT exceeded; sub-stat values `text-[15px]`. Scanned for `text-2xl+`: the only three hits are DECORATIVE ICON glyphs (mobile hamburger line 172, empty-state clipboard line 227, forbidden lock line 241), not numerals. **No oversized display numerals.** Label idiom `text-xs font-semibold uppercase tracking-*` matches ServerPlanPanel; panel title `text-[17px] font-semibold` matches brief §4. (DS §2, brief §4 line 29)
+- [x] **Spacing / radius** — panel `rounded-lg` (0.5rem); card padding `p-4 sm:p-6`; stat grid `gap-6`; body `space-y-8`; nested `stat-card` rounded-lg. On the 4px scale, matches brief §4 line 30 + DS §3/§4.
+- [x] **Shadow / motion** — `--shadow-sm: 0 1px 2px rgba(0,0,0,0.4)` on panel + stat cards (ServerPlanPanel idiom); `--glow-focus` focus ring. `transition-colors 150ms` default; no bouncy easing. (DS §5/§6, brief §4 line 31)
 
-## 4. Icon audit (DESIGN-SYSTEM §7 / `apps/web/src/shell/icons.tsx`)
+## 5. Icon audit (Phosphor → on-set inline-SVG mappability)
 
-**Critical finding — delivery idiom mismatch.** The mockup loads the **Phosphor web CDN** (`<script src="…@phosphor-icons/web">`) and renders every icon as `<i class="ph ph-…">`. The shipped project set is **inline stroke-based SVG React components** (`icons.tsx`: 24×24 viewBox, `stroke="currentColor"`, `aria-hidden="true"` default). B-3 builds `EducatorAdminConsole.tsx` from those components — the `<i class="ph">` markup and the CDN `<script>` will not exist in the real component, so any glyph without an `icons.tsx` export cannot render as-is. Shapes are Phosphor-family (correct per DS §7); the *delivery* is off-idiom. See CONCERN-1.
+Every glyph in the mockup maps to an on-set `icons.tsx` inline-SVG export for the B-3 port. The Phosphor CDN webfont in the mockup is DISPLAY-only — a B-3 port idiom, NOT a mockup blocker (per review-note).
 
-Cross-check of every glyph used (shipped exports confirmed in `icons.tsx`):
-
-| Mockup glyph | Shipped counterpart | Result |
+| Mockup glyph | On-set export (`icons.tsx`) | Status |
 |---|---|---|
-| `ph-shield-check` (nav, headers) | `ShieldCheckIcon` | ✓ |
-| `ph-arrow-left` ("Back to Server") | `ArrowLeftIcon` | ✓ |
-| `ph-arrows-clockwise` (sync pill) | `ArrowsClockwiseIcon` | ✓ |
-| `ph-users` (members) | `UsersIcon` | ✓ |
-| `ph-clipboard-text` (assignments, log row) | `ClipboardTextIcon` | ✓ |
-| `ph-clock` (due soon) | `ClockIcon` | ✓ |
-| `ph-warning-circle` (overdue) | `WarningCircleIcon` | ✓ |
-| `ph-hash` (channel-created log row) | `HashIcon` | ✓ |
-| `ph-lock` (forbidden) | `LockKeyIcon` | ✓ acceptable |
-| `ph-spinner` (loading) | `SpinnerIcon` | ✓ |
-| `ph-list` (mobile header) | `MenuIcon` (equivalent) | ✓ acceptable |
-| `ph-user-plus` (role-modified log row) | `UserAddIcon` (equivalent) | ✓ acceptable |
-| `ph-chat-circle` (Messages 7D) | none exact — set has `ChatsCircleIcon` / `ChatTeardropIcon` | ⚠️ rename to `ChatsCircleIcon` (see CONCERN-3) |
-| `ph-tray` (empty-state icon) | **none** | ✗ **off-set** (see CONCERN-2) |
+| `ph-shield-check` / `ph-fill ph-shield-check` | `ShieldCheckIcon` (filled variant OK per DS §7) | exact |
+| `ph-arrow-left` | `ArrowLeftIcon` | exact |
+| `ph-list` | `MenuIcon` | exact (list/hamburger) |
+| `ph-spinner` | `SpinnerIcon` | exact |
+| `ph-clipboard-text` | `ClipboardTextIcon` | exact |
+| `ph-arrows-clockwise` | `ArrowsClockwiseIcon` | exact |
+| `ph-users` | `UsersIcon` | exact |
+| `ph-clock` | `ClockIcon` | exact |
+| `ph-warning-circle` | `WarningCircleIcon` | exact |
+| `ph-user-plus` | `UserAddIcon` | exact (Phosphor user-plus) |
+| `ph-hash` | `HashIcon` | exact |
+| `ph-lock` | `LockKeyIcon` | near-synonym — only lock glyph on-set; B-3 port note |
+| `ph-chat-circle` | `ChatsCircleIcon` (or `ChatTeardropIcon`) | near-synonym — B-3 port note |
 
-12 of 14 glyphs map cleanly to shipped exports; `ph-chat-circle` needs a rename; `ph-tray` has no counterpart.
+- [x] **No exotic / off-set glyph remains** — no `ph-tray` or any unmappable glyph. All 13 distinct glyphs resolve to on-set SVG exports. (The empty-state icon is `ph-clipboard-text`, fully on-set.)
+- [x] **Phosphor-family, line weight regular, filled only for active** — respected (shield filled in active/loaded header per DS §7).
 
----
-
-## Concerns (actionable, cited)
-
-**CONCERN-1 (BLOCKING — brief §4 "reuse `icons.tsx`" / icon-audit) — icon delivery idiom is wrong.**
-Icons render via the Phosphor web CDN (`@phosphor-icons/web`, `<i class="ph …">`). B-3 must build against the inline-SVG components in `apps/web/src/shell/icons.tsx` (`stroke="currentColor"`, `aria-hidden`), NOT introduce the webfont dependency. *Fix:* annotate the adopted mockup with the glyph→component map (§4 table) so B-3 does not copy the `<i class="ph">` markup or the CDN `<script>`. No visual change — the shipped set is the same Phosphor shapes.
-
-**CONCERN-2 (BLOCKING — brief §4 "no new icons unless unavoidable" / icon-audit "no off-set icons") — `ph-tray` is off-set.**
-The empty-state icon (`ph-tray`) has no export in `icons.tsx`. *Fix:* substitute a shipped glyph — `ClipboardTextIcon` (academic/assignments idiom) reads naturally for "no activity yet"; `UsersIcon` also works. Do not add a Tray icon for a single empty-state.
-
-**CONCERN-3 (MINOR — icon audit) — `ph-chat-circle` rename.**
-Nearest shipped export is `ChatsCircleIcon` (plural). Functionally equivalent; annotate so B-3 uses the correct component name (there is no `ChatCircleIcon`).
-
-**CONCERN-4 (BLOCKING — DESIGN-SYSTEM §2 / brief §4 "Body-m") — stat numerals exceed the type scale.**
-Hero stat values use `text-2xl` (24px), reserved by §2 for landing/empty-state headlines; the largest in-panel data step is `text-xl` (20px), and brief §4 specifies "Body-m" for stat values. A 24px numeral nudges the calm read-only panel toward the "big-number growth-dashboard" look §5 rejects. *Fix:* drop stat values to `text-xl` at most (`text-lg`/`text-base` is more faithful to "Body-m"). Sub-stat values already correctly use `text-[15px]`.
-
-**CONCERN-5 (MINOR — correctness / a11y) — stray class typo on forbidden icon.**
-`<i class="ph ph-lock p text-2xl">` (forbidden state) carries a stray `p` token (no such utility). Harmless in render; clean it so it does not propagate into B-3.
-
-**CONCERN-6 (NON-BLOCKING / note for B-3) — static placeholder strings.**
-"Sync 2m ago" and "142 total events recorded this week" are hardcoded. Fine for a mockup — flagging so B-3 wires them to real aggregates (or omits if outside the read-only aggregate contract) rather than shipping literals.
+**B-3 port notes (non-blocking):** (a) render every glyph from the inline-SVG set in `icons.tsx`, not the CDN webfont / `<i class="ph">` markup, and do not introduce the `@phosphor-icons/web` `<script>` dependency; (b) `ph-lock` → `LockKeyIcon`; (c) `ph-chat-circle` → `ChatsCircleIcon`.
 
 ---
 
-## Required revisions (measurable, actionable)
+## Concerns
 
-1. **Map icons to the shipped SVG set** — B-3 builds `EducatorAdminConsole.tsx` from `icons.tsx` components, not the Phosphor web CDN / `<i class="ph">` markup. Annotate the adopted mockup with the §4 glyph→component map. *[brief §4 — blocking]*
-2. **Substitute `ph-tray`** (empty-state) with a shipped export — `ClipboardTextIcon` or `UsersIcon`. *[brief §4 — blocking]*
-3. **Drop stat-value numerals** from `text-2xl` (24px) to `text-xl` max (prefer `text-lg`/`text-base` per brief §4 "Body-m"). *[DESIGN-SYSTEM §2 / brief §4 — blocking]*
-4. **Rename `ph-chat-circle` → `ChatsCircleIcon`** in the annotation. *[icon audit — minor]*
-5. **Delete the stray `p` class** on the forbidden lock icon. *[correctness — minor]*
-6. **Flag static strings** ("Sync 2m ago", "142 total events") for B-3 wiring. *[non-blocking]*
+None blocking.
 
-Items 1–3 are blocking (brief §4 icon contract + DS §2 type scale). Items 4–6 are should-fix before adoption. Everything else — palette, states, gated framing, danger tokens, Geist, spacing/radius/shadow, out-of-scope adherence — is correct as shipped.
+- **(non-blocking, B-3 port)** Icons use the Phosphor CDN webfont for preview — B-3 must build from the inline-SVG `icons.tsx` components. Glyph→component map is in §5; two near-synonym substitutions (`ph-lock`→`LockKeyIcon`, `ph-chat-circle`→`ChatsCircleIcon`) noted there. Per the review-note this is a port idiom, not a mockup defect.
+- **(non-blocking, B-3 wiring)** Static placeholder strings ("Sync 2m ago", "142 total events recorded this week") are literals — B-3 wires them to real aggregates or omits if outside the read-only aggregate contract.
+- **(optional taste)** Primary stat numerals sit exactly at the DS §2 `text-xl` ceiling (acceptable, not a violation). If a future refinement wants tighter "Body-m" numerals per brief §4 line 29, drop to `text-lg` — optional, not required for adoption.
+
+**Adopt as-is.**
