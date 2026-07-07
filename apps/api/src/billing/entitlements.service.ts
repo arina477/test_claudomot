@@ -17,9 +17,12 @@ import { servers, subscriptions } from '../db/schema/index';
 // already own against the free cap. Once paid owner tiers land, this
 // resolver can be upgraded to read an owner-level subscription row.
 //
-// NON-RESTRICTIVE GUARANTEE: maxServersPerOwner=100 for the free tier is
-// intentionally far above any realistic usage so no existing owner is blocked.
-// Lower this number only after the paid tier upgrade flow ships.
+// NON-RESTRICTIVE GUARANTEE: maxServersPerOwner for the free tier MUST exceed
+// the largest existing per-owner server count so the gate is non-restrictive
+// until the founder assigns real tier limits. As of wave-74 verification, the
+// highest observed owner has 646 servers (a test fixture inflated across e2e
+// runs). The placeholder is set to 100_000 — well above that — so NO existing
+// owner is blocked. Lower this number only after the paid tier upgrade flow ships.
 //
 // The public EntitlementsSchema ({storageMb, callCapacity, educatorAdminTools})
 // is defined in the shared package. maxServersPerOwner is a create-gate-specific
@@ -36,19 +39,19 @@ const TIER_CAPS: Record<Tier, CreateGateCaps> = {
     storageMb: 2_048, // 2 GB — generous for a study platform
     callCapacity: 50, // enough for a standard class
     educatorAdminTools: false,
-    maxServersPerOwner: 100, // NON-RESTRICTIVE: lowers only when upgrade flow ships
+    maxServersPerOwner: 100_000, // NON-RESTRICTIVE PLACEHOLDER: must exceed largest existing owner count (646 as of wave-74); lowers only when upgrade flow ships
   },
   server_pro: {
     storageMb: 20_480, // 20 GB
     callCapacity: 200,
     educatorAdminTools: false,
-    maxServersPerOwner: 500,
+    maxServersPerOwner: 200_000, // PLACEHOLDER: kept >= free tier; founder-tunable at M9 pricing slice
   },
   school: {
     storageMb: 102_400, // 100 GB
     callCapacity: 1_000,
     educatorAdminTools: true,
-    maxServersPerOwner: 2_000,
+    maxServersPerOwner: 500_000, // PLACEHOLDER: kept >= free tier; founder-tunable at M9 pricing slice
   },
 };
 
@@ -101,9 +104,9 @@ export class EntitlementsService {
    *
    * Owner-level tier resolution (this wave):
    *   Owner-level subscriptions are not modelled yet — every owner is treated
-   *   as 'free'-tier. The free cap (maxServersPerOwner=100) is permissive
-   *   enough that no existing owner is blocked. When owner-level tiers ship,
-   *   replace with a subscriptions lookup keyed on owner_id.
+   *   as 'free'-tier. The free cap (maxServersPerOwner=100_000) is permissive
+   *   enough that no existing owner is blocked (max observed: 646 servers).
+   *   When owner-level tiers ship, replace with a subscriptions lookup keyed on owner_id.
    *
    * Returns the resolved caps and the owner's current server count so the
    * caller can compare against caps.maxServersPerOwner.

@@ -18,7 +18,7 @@
  *
  *   B. ServersService.createServer gate (BINDING)
  *      — restrictive cap (maxServersPerOwner=0) + currentServerCount=1 → THROWS ForbiddenException
- *      — permissive cap (maxServersPerOwner=100) + currentServerCount=0 → SUCCEEDS
+ *      — permissive cap (maxServersPerOwner=100_000) + currentServerCount=0 → SUCCEEDS
  */
 
 import { ForbiddenException } from '@nestjs/common';
@@ -187,7 +187,7 @@ describe('ServersService.createServer — entitlement gate (BINDING)', () => {
     );
   });
 
-  it('SUCCEEDS (non-regressive) when free cap (maxServersPerOwner=100) and owner has 0 servers', async () => {
+  it('SUCCEEDS (non-regressive) when free cap (maxServersPerOwner=100_000) and owner has 0 servers', async () => {
     // Stub EntitlementsService to return the real free-tier defaults.
     (entitlementsServiceMock.resolveCreateGateForOwner as MockFn).mockResolvedValue({
       tier: 'free',
@@ -195,7 +195,7 @@ describe('ServersService.createServer — entitlement gate (BINDING)', () => {
         storageMb: 2_048,
         callCapacity: 50,
         educatorAdminTools: false,
-        maxServersPerOwner: 100, // permissive
+        maxServersPerOwner: 100_000, // permissive — matches the TIER_CAPS free placeholder
       },
       currentServerCount: 0, // owner has no servers yet
     });
