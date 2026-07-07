@@ -11,7 +11,7 @@
 ## Plan (file-level, by B-stage)
 **B-0 Schema:** apps/api/src/db/schema/users.ts (add deleted_at) + index.ts + generated migration | postgres-pro | 1st.
 **B-1 Contracts:** packages/shared/src/account-deletion.ts (+index) — DeleteAccountRequest/Response | typescript-pro | after B-0.
-**B-2 Backend:** apps/api/src/privacy/account-deletion.service.ts + privacy.controller.ts (POST /profile/delete) + supertokens.config.ts (signIn/session deleted_at re-auth block) + PrivacyModule wiring + pg-harness integration (no-IDOR own-account; block-if-owner 409; scrub+deleted_at+session-revoke+leave-servers; re-auth-blocked-after-delete) | backend-developer | after B-1.
+**B-2 Backend:** apps/api/src/privacy/account-deletion.service.ts + privacy.controller.ts (POST /profile/delete) + supertokens.config.ts (add BOTH a signIn override AND a session-verify guard — deleted_at re-auth block on both doors; today only signUp is overridden) + PrivacyModule wiring + pg-harness integration (no-IDOR own-account; block-if-owner 409; scrub+deleted_at+session-revoke+leave-servers; re-auth-blocked-after-delete) | backend-developer | after B-1.
 **B-3 Frontend:** apps/web/src/auth/api.ts (deleteAccount fn) + SettingsPrivacyPage Danger-Zone (per settings-privacy.html Panel 5; acknowledgment-gated danger confirm; owner-block 409 surface; logout+redirect on success; copy reconcile) + tests | react-specialist | after B-2.
 (No D-block — design_gap_flag=false, settings-privacy.html Panel 5 covers the UI.)
 ## Specialist routing (AGENTS.md, all present): postgres-pro, typescript-pro, backend-developer, react-specialist.
