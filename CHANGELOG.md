@@ -94,6 +94,7 @@ All notable changes to StudyHall are documented here. Format follows
 - Your privacy activity: a new log in Settings › Privacy shows a plain-language history of your own privacy actions — account deletion, data exports, privacy-setting changes, and blocks or unblocks. The record is append-only and private to you, so no one else can see or alter your history. (#90)
 - Internal groundwork for paid tiers: every study server now sits on a free plan by default, and the app quietly checks that plan when you create a server. There is no visible change and nothing is charged — real billing (Stripe, prices, checkout) is not turned on yet. The free plan's limits are set well above any current usage, so no existing account is affected. (#91, #92)
 - Server owners can now see their server's plan (Free / Server Pro / School) and its storage, call, and educator-tools limits under Settings › Overview, and switch plans through a test-mode checkout — no real charge, since billing is not live yet. Switching takes effect immediately, so a higher plan's limits (and educator admin tools on School) unlock right away. (#93)
+- Educator Admin Console on school-plan servers: owners and members with the "Manage Assignments" permission can now open a read-only analytics console at Settings › Overview to view server member counts, role breakdown, message volume, and assignment and submission totals. The console is hidden for other members. (#95)
 
 ### Changed
 

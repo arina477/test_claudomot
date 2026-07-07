@@ -848,3 +848,9 @@ First per-wave bundle under the freshly-promoted M13. Slice chosen per M13's ## 
 - Estimated size: ~2,500–3,500 net LOC, ≤40 files (backend module + guard + analytics queries + web panel + tests).
 - caller: N-1-next-bundle (automatic mode)
 - decomposed by: milestone-decomposer sub-agent
+
+## 2026-07-07 — Wave-76 L-1 milestone delta: M13 leg-1 shipped; M13 STAYS in_progress (do NOT close)
+**Delta (L-1, head-learn gate, automatic mode):** Wave-76 shipped M13 **leg-1** — the Educator Admin Console + read-only server analytics — LIVE + V-block APPROVED (karen+jenny+head-verifier, 0 blocking; merge d8d4d9e, PR #95). L-2 flips the 4 wave-76 tasks (682e0912, ecf79f4a, 80505bb1, d81e266d) to done, leaving M13 with open_count=0 / total=4.
+**Milestone disposition — M13 remains `in_progress`, NOT closed.** The mechanical open_count=0 → close rule is OVERRIDDEN by M13's own ## Approach prose: leg-1 of THREE autonomous legs shipped. Remaining autonomous legs: **leg-2** (cross-server portable academic identity) + **leg-3** (richer privacy/E2E posture). Still FENCED (founder-reserved): the B2B2C go-to-market business motion + the ## Success metric (_TBD by founder_ — unset, so "done" is undefinable). Closing M13 now would be a premature-milestone-close. This is unambiguous per the milestone's own multi-leg Approach — no BOARD escalation needed (mechanical delta with no genuine ambiguity).
+**N-1 note (backlog-stockout after L-2):** once L-2 sets the 4 tasks to done, M13 has 0 open child tasks while remaining in_progress → N-1 Action 7 should fire milestone-decomposition for **leg-2 (cross-server portable academic identity)** as the next bundle (cheapest autonomous slice per Approach ordering), OR judge the next disposition. Fenced items stay non-blocking.
+- caller: head-learn (L-1 docs, wave-76 closeout, automatic mode)
