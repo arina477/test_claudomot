@@ -2,7 +2,7 @@
 **Block:** B (Build)
 **Wave topic:** M14 Block UI-polish — GET /blocks enrichment + member-row Block↔Unblock toggle
 **Block exit gate:** B-6
-**Status:** in-progress
+**Status:** gate-passed
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
 |---|---|---|---|
@@ -11,8 +11,8 @@
 | B-2 | stages/B-2-backend.md | pending | listBlocks JOIN (reuse getDmCandidates projection) + rowToDto widen |
 | B-3 | stages/B-3-frontend.md | pending | shared getBlocks fetch → BlockedUsersPanel name/avatar + MemberListPanel Block↔Unblock toggle |
 | B-4 | stages/B-4-wiring.md | pending | |
-| B-5 | stages/B-5-verify.md | pending | |
-| B-6 | stages/B-6-review.md | pending | |
+| B-5 | stages/B-5-verify.md | done | lint/units/build green (isolated re-run) |
+| B-6 | stages/B-6-review.md | done | head-builder APPROVED (attempt 2); /review clean after P0 fix |
 ## Block-specific context
 - **Spec:** tasks row 1193aebf (DB). **Branch:** wave-71-block-ui-polish. **wave_type:** multi-spec.
 - **claimed_task_ids:** [1193aebf (member-row toggle PRIMARY), 1c633d2f (GET /blocks enrichment)]
@@ -20,3 +20,13 @@
 - **P-4 carries → B-2:** LEFT JOIN + "removed user" fallback for a JOIN-missing user row; widen rowToDto not just the query. → B-3: member-row block-fetch is net-new (reuse presence/mute PATTERN); loading fail-safe (default Block) is a testable AC. Reuse getDmCandidates innerJoin projection (dm.service.ts:829).
 ## Gate verdict log
 <appended by head-builder at B-6>
+
+```yaml
+build_block_status:    complete
+branch:                wave-71-block-ui-polish
+stages_run:            [B-0, B-1, B-2, B-3, B-4, B-5, B-6]
+stages_skipped:        [B-0 schema (no DB change)]
+review_verdict:        APPROVE
+last_commit_sha:       98c6958
+ready_for_ci:          true
+```
