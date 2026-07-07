@@ -464,8 +464,21 @@ KNOWN findings → V-2 (non-blocking, 0 critical): (medium) `GET /educator-tools
 
 Verified-prod fixtures: studyhall-e2e-fixture (A) + studyhall-e2e-fixture-b (B). Prod left clean: two throwaway servers (0c8192da, 37a55026) reverted to free (no DELETE /servers endpoint exists — rows persist empty, same limitation as prior waves); shared proof server ad62cd12 never mutated.
 
-## [wave-76] Educator Admin Console (M13 leg-1)
-- **Screen:** Educator Admin Console — `apps/web/src/shell/EducatorAdminConsole.tsx` (new), on the per-server Settings surface (alongside Overview / Roles / Your Plan). Canonical design: `design/educator-admin-console.html`.
-- **Access:** owner OR educator member (role with `manage_assignments`) on a school-tier server (educatorAdminTools=true); hidden/blocked otherwise (ServerPlanPanel gating idiom).
-- **Renders:** server analytics aggregates (members + role breakdown; message volume; assignment count + submission rollup; recent activity) — read-only. States: loading / loaded / empty ("No activity yet") / forbidden.
-- **Endpoints:** GET /servers/:serverId/educator-tools/analytics (new) + GET /servers/:serverId/educator-tools/status (wave-75, now owner/educator-gated). Composed authz: AuthGuard + EntitlementGuard(educatorAdminTools) + EducatorAccessGuard (owner OR manage_assignments).
+## Educator Admin Console + server analytics (wave-76, M13 leg-1 — LIVE, T-9-verified in prod)
+
+**Merge d8d4d9e6 (PR #95). Deployed api + web SUCCESS (/health 200). wave_type = backend + ui + auth(authz). Read-only aggregates over already-shipped tables — no schema change, no new telemetry infra. Builds on the M9 (wave-75) educatorAdminTools entitlement substrate.**
+
+- **Screen:** Educator Admin Console — `apps/web/src/shell/EducatorAdminConsole.tsx` (new), mounted inside `ServerOverviewSettings` on the per-server **Settings → Overview** surface (below the "Your plan" panel; NO new page route). Canonical design: `design/educator-admin-console.html`.
+- **Access (client gate + server authz):** owner OR educator member (a role with `manage_assignments`) on a school-tier server (`educatorAdminTools=true`); HIDDEN (component returns null) for non-owner/non-educator OR non-school tier — mirrors the ServerPlanPanel gating idiom. Server is authoritative (403 regardless of client gate).
+- **Renders (loaded dashboard, `educator-console-dashboard`):** 4 groups — Total Members (with Educators/Students split) · Messages (volume) · Assignments Total (graded scope + submissions) · Recent Activity (message_sent / assignment_submitted / session_scheduled counts). Read-only counts/rollups only. States: loading (spinner) / loaded / empty-zero / forbidden (403) / error (retry).
+- **Endpoints:** `GET /servers/:serverId/educator-tools/analytics` (NEW → 200 `ServerAnalytics`) + `GET /servers/:serverId/educator-tools/status` (wave-75, NOW owner/educator-gated — closes the wave-75 T8-F1 leak; boolean `{serverId,enabled}` contract PRESERVED). Composed authz on both: `AuthGuard + EntitlementGuard(educatorAdminTools) + EducatorAccessGuard` (owner OR manage_assignments via `RbacService.can`, default-deny).
+
+**LIVE VERIFICATION (T-3/T-4/T-5/T-8, prod, Fixtures A owner + B verified member):**
+- **Aggregate correctness (T-4):** live /analytics counts match APP_DB ground truth EXACTLY on the rich "Fixture Proof Server" — members 2, messageVolume 482 (soft-delete correctly excludes 275 deleted; not 757), assignmentCount 2 (excludes 5 deleted; not 7), submissions 2, sessions 24, roleBreakdown reconciles to memberCount. Empty school server → all-zero aggregates 200 (not error).
+- **Console UI (T-5):** LOADED (4 groups, data = API) on rich school server · ZERO-state on empty school server · HIDDEN on free-tier server. All three states proven live via Playwright (fresh page load).
+- **Authz (T-8, crown jewel):** owner+school→200 · educator(manage_assignments)+school→200 · non-owner/non-educator member (verified Fixture B, NULL role)+school→**403 with EducatorAccessGuard message** (authz-layer, NOT email-verif — the wave-75 T8-F1 leak is CLOSED) · owner+free→403 (entitlement) · unauthenticated→401 · malformed :serverId→400 (not 500). /analytics response = counts/rollups only, 0 PII.
+- **Layout (T-6):** dark tokens (SURFACE_800 bg rgb(28,28,31), HAIRLINE border), 7 inline-SVG icons, 7 stat cards, no horizontal overflow.
+
+**KNOWN findings → V-2 (non-blocking, 0 critical):** (LOW) unknown serverId → 403 uniformly, not the spec-text's 404 — deny-is-deny / no server-existence enumeration (security-POSITIVE; matches spec block 682e0912's own "non-member → 403"); recommend reconciling /status + /analytics spec text to 403. (LOW) mid-session tier upgrade (free→school) doesn't reveal the console until a page reload — the `educatorToolsEnabled` effect in ServerOverviewSettings doesn't re-run on an external tier change; fresh loads always correct (UX follow-up).
+
+**Prod left CLEAN:** both test servers reverted to free (no school-tier server remains); throwaway T-8 members + the test educator role deleted; throwaway user app-DB rows deleted; Fixture B restored to baseline NULL role. Verified-prod fixtures: studyhall-e2e-fixture (A, owner) + studyhall-e2e-fixture-b (B, verified member of Proof Server).
