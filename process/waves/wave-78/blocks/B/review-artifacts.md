@@ -13,7 +13,7 @@
 | B-1 | process/waves/wave-78/stages/B-1-contracts.md | done | typescript-pro (shared profile contract) |
 | B-2 | process/waves/wave-78/stages/B-2-backend.md | done | backend-developer (users.service undefined-vs-null) |
 | B-3 | process/waves/wave-78/stages/B-3-frontend.md | done | react-specialist (editor + api.ts + card + tests) |
-| B-4 | process/waves/wave-78/stages/B-4-wiring.md | pending | |
+| B-4 | process/waves/wave-78/stages/B-4-wiring.md | done | |
 | B-5 | process/waves/wave-78/stages/B-5-verify.md | pending | |
 | B-6 | process/waves/wave-78/stages/B-6-review.md | pending | |
 
