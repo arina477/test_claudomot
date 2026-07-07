@@ -13,7 +13,7 @@
 | B-2 | process/waves/wave-76/stages/B-2-backend.md | done | 3 commits; 808 API tests green; RbacService.can honored |
 | B-3 | process/waves/wave-76/stages/B-3-frontend.md | done | EducatorAdminConsole (a720dee); 687 web tests green; icons.tsx port |
 | B-4 | process/waves/wave-76/stages/B-4-wiring.md | done | typecheck 4/4 (1 drift fixed f0f555f); routes registered |
-| B-5 | process/waves/wave-76/stages/B-5-verify.md | pending | |
+| B-5 | process/waves/wave-76/stages/B-5-verify.md | done | lint clean; api 808 + web 687 + shared 41 green; build 3/3 |
 | B-6 | process/waves/wave-76/stages/B-6-review.md | pending | |
 
 ## Block-specific context
