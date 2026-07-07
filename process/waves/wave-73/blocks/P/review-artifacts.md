@@ -3,7 +3,7 @@
 **Block:** P (Product)
 **Wave topic:** M10 privacy-events audit log — append-only log of erasure/export/privacy/block events over the shipped surfaces
 **Block exit gate:** P-4
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 
