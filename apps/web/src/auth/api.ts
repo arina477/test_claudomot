@@ -8,6 +8,7 @@ import {
   DeleteAccountBlockedResponseSchema,
   DeleteAccountResponseSchema,
   PrivacyEventListResponseSchema,
+  TierSchema,
 } from '@studyhall/shared';
 import type {
   AccountDataResponse,
@@ -53,11 +54,13 @@ import type {
   SendMessageInput,
   ServerDetail,
   ServerMember,
+  ServerPlan,
   ServerResponse,
   ServerSummary,
   StudyTimer,
   StudyTimerConfig,
   SubmitAssignmentInput,
+  Tier,
   UnreadCountResponse,
   UpdateAssignmentInput,
   UpdatePrivacyInput,
@@ -1062,6 +1065,28 @@ export const api = {
     }
     return parsed.data;
   },
+
+  // ── Billing / plan endpoints (wave-75 M9 — mock freemium upgrade path) ─────
+
+  /**
+   * GET /servers/:serverId/billing/plan → ServerPlan
+   *   {serverId, tier, entitlements: {storageMb, callCapacity, educatorAdminTools}}.
+   * Owner OR member may read. Throws: 401 unauthed, 403 non-member, 404 unknown server.
+   */
+  getServerPlan: (serverId: string): Promise<ServerPlan> =>
+    request<ServerPlan>(`/servers/${serverId}/billing/plan`),
+
+  /**
+   * POST /servers/:serverId/billing/tier {targetTier} → ServerPlan (updated plan).
+   * Owner-only mock checkout (no real charge). targetTier is validated against
+   * TierSchema at the boundary so a bad tier string fails fast client-side.
+   * Throws: 400 invalid tier, 401 unauthed, 403 non-owner, 404 unknown server.
+   */
+  changeServerTier: (serverId: string, targetTier: Tier): Promise<ServerPlan> =>
+    request<ServerPlan>(`/servers/${serverId}/billing/tier`, {
+      method: 'POST',
+      body: JSON.stringify({ targetTier: TierSchema.parse(targetTier) }),
+    }),
 
   exportAccountData: async (): Promise<void> => {
     const res = await fetch(`${BASE}/profile/data/export`, { credentials: 'include' });

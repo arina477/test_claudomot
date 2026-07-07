@@ -34,24 +34,34 @@ export interface CreateGateCaps extends Entitlements {
   maxServersPerOwner: number;
 }
 
+// ---------------------------------------------------------------------------
+// CANONICAL brain-set caps (wave-75 M9). storageMb / callCapacity /
+// educatorAdminTools are now the real freemium values; only maxServersPerOwner
+// remains a non-restrictive create-gate placeholder.
+//
+// HARD NON-REGRESSION: free.maxServersPerOwner stays 100_000 — it MUST exceed
+// the largest existing per-owner server count (646 as of wave-74). Lowering it
+// would recreate the wave-74 free-cap regression. Do NOT lower it here; the
+// lower cap only lands with the paid-tier upgrade flow.
+// ---------------------------------------------------------------------------
 const TIER_CAPS: Record<Tier, CreateGateCaps> = {
   free: {
-    storageMb: 2_048, // 2 GB — generous for a study platform
-    callCapacity: 50, // enough for a standard class
+    storageMb: 2_048, // 2 GB
+    callCapacity: 10, // free-tier concurrent call participants
     educatorAdminTools: false,
-    maxServersPerOwner: 100_000, // NON-RESTRICTIVE PLACEHOLDER: must exceed largest existing owner count (646 as of wave-74); lowers only when upgrade flow ships
+    maxServersPerOwner: 100_000, // NON-REGRESSION: must exceed largest existing owner count (646 as of wave-74); do NOT lower until the upgrade flow ships
   },
   server_pro: {
-    storageMb: 20_480, // 20 GB
-    callCapacity: 200,
+    storageMb: 51_200, // 50 GB
+    callCapacity: 50,
     educatorAdminTools: false,
-    maxServersPerOwner: 200_000, // PLACEHOLDER: kept >= free tier; founder-tunable at M9 pricing slice
+    maxServersPerOwner: 200_000, // kept >= free (non-restrictive); founder-tunable at the pricing slice
   },
   school: {
-    storageMb: 102_400, // 100 GB
-    callCapacity: 1_000,
+    storageMb: 512_000, // 500 GB
+    callCapacity: 100,
     educatorAdminTools: true,
-    maxServersPerOwner: 500_000, // PLACEHOLDER: kept >= free tier; founder-tunable at M9 pricing slice
+    maxServersPerOwner: 500_000, // kept >= free (non-restrictive); founder-tunable at the pricing slice
   },
 };
 

@@ -19,6 +19,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { HttpError, api } from '../auth/api';
+import { ServerPlanPanel } from './ServerPlanPanel';
 import { GearIcon, ShieldCheckIcon, SpinnerIcon, WarningCircleIcon, XIcon } from './icons';
 
 // ---------------------------------------------------------------------------
@@ -668,6 +669,14 @@ export function ServerOverviewSettings({
                   </p>
                 </div>
               </section>
+
+              {/* Your plan panel — wave-75 M9 mock freemium upgrade path.
+                  Mounted once the owner gate resolves so `isOwner` is
+                  authoritative (opaque-id comparison in the parent, not a
+                  loading-flash false). Panel is read-only for non-owners. */}
+              {ownerStatus !== 'loading' && ownerStatus !== 'error' && (
+                <ServerPlanPanel serverId={serverId} isOwner={isOwner} />
+              )}
 
               {/* Fix 1: Save / Discard actions — OWNER-ONLY.
                   Non-owners do not see these buttons at all. */}

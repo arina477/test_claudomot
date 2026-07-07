@@ -35,3 +35,38 @@ export const EntitlementsSchema = z.object({
   educatorAdminTools: z.boolean(),
 });
 export type Entitlements = z.infer<typeof EntitlementsSchema>;
+
+// ---------------------------------------------------------------------------
+// TierChangeRequestSchema — request body for POST /billing/tier.
+//
+// Carries the single field the client must supply when requesting a tier
+// upgrade or downgrade: the desired target tier. Validated at the boundary
+// via TierSchema so invalid tier strings are rejected before they reach the
+// service layer.
+// ---------------------------------------------------------------------------
+
+export const TierChangeRequestSchema = z.object({ targetTier: TierSchema });
+export type TierChangeRequest = z.infer<typeof TierChangeRequestSchema>;
+
+// ---------------------------------------------------------------------------
+// ServerPlanSchema — canonical response shape for both billing endpoints:
+//   • GET  /billing/plan          — returns the server's current plan.
+//   • POST /billing/tier (200)    — returns the updated plan after a tier
+//                                   change succeeds.
+//
+// serverId      — the server whose plan this describes.
+// tier          — the current subscription tier (validated by TierSchema).
+// entitlements  — the resolved capability object for that tier; shape
+//                 defined by EntitlementsSchema.
+//
+// TierChangeResponse is a semantic alias kept for call-site clarity; it
+// resolves to the same runtime schema as ServerPlan.
+// ---------------------------------------------------------------------------
+
+export const ServerPlanSchema = z.object({
+  serverId: z.string(),
+  tier: TierSchema,
+  entitlements: EntitlementsSchema,
+});
+export type ServerPlan = z.infer<typeof ServerPlanSchema>;
+export type TierChangeResponse = ServerPlan;
