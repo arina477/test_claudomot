@@ -21,6 +21,8 @@ import type {
   CreateReport,
   CreateScheduledSessionInput,
   CreateServerInput,
+  DeleteAccountBlockedResponse,
+  DeleteAccountResponse,
   DmCandidate,
   EditMessageInput,
   EffectivePermissions,
@@ -58,6 +60,11 @@ import type {
   ValidatedAttachment,
 } from '@studyhall/shared';
 
+import {
+  DeleteAccountBlockedResponseSchema,
+  DeleteAccountResponseSchema,
+} from '@studyhall/shared';
+
 import { retryOn429 } from './retryOn429';
 
 const BASE = import.meta.env.VITE_API_ORIGIN ?? '';
@@ -76,6 +83,18 @@ export class HttpError extends Error {
   ) {
     super(message);
     this.name = 'HttpError';
+  }
+}
+
+/**
+ * Typed error thrown by deleteAccount when the server returns 409 (owner-blocked).
+ * Carries the parsed DeleteAccountBlockedResponse body so the UI can surface
+ * the blocking server list without parsing the raw message string.
+ */
+export class DeleteAccountBlockedError extends Error {
+  constructor(public readonly blocked: DeleteAccountBlockedResponse) {
+    super(blocked.reason);
+    this.name = 'DeleteAccountBlockedError';
   }
 }
 
@@ -983,6 +1002,53 @@ export const api = {
    */
   getBlocks: (): Promise<BlockListItem[]> =>
     request<{ blocks: BlockListItem[] }>('/blocks').then((res) => res.blocks),
+
+  // ── Account deletion (wave-72 B-3) ─────────────────────────────────────────
+
+  /**
+   * POST /profile/delete {confirm: true} → DeleteAccountResponse.
+   *
+   * On 200: returns parsed DeleteAccountResponse {status: 'deleted'}.
+   *   The server has already revoked all sessions — the caller must clear
+   *   client-side auth state and navigate to /login.
+   *
+   * On 409: the caller owns one or more servers that must be transferred or
+   *   deleted first. Throws DeleteAccountBlockedError carrying reason + servers[]
+   *   so the UI can render the list without redirecting.
+   *
+   * Throws HttpError for any other non-2xx status.
+   */
+  deleteAccount: async (): Promise<DeleteAccountResponse> => {
+    const res = await fetch(`${BASE}/profile/delete`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirm: true }),
+    });
+
+    if (res.status === 409) {
+      // Owner-blocked: parse the blocked response and throw a typed error.
+      const rawBody = await res.json().catch(() => ({}));
+      const parsed = DeleteAccountBlockedResponseSchema.safeParse(rawBody);
+      if (parsed.success) {
+        throw new DeleteAccountBlockedError(parsed.data);
+      }
+      // If parse fails fall through to generic HttpError below.
+      throw new HttpError(409, `409 Conflict: ${JSON.stringify(rawBody)}`);
+    }
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new HttpError(res.status, `${res.status} ${res.statusText}: ${body}`);
+    }
+
+    const rawSuccess = await res.json().catch(() => ({}));
+    const parsed = DeleteAccountResponseSchema.safeParse(rawSuccess);
+    if (!parsed.success) {
+      throw new Error(`Unexpected delete-account response shape: ${JSON.stringify(rawSuccess)}`);
+    }
+    return parsed.data;
+  },
 
   exportAccountData: async (): Promise<void> => {
     const res = await fetch(`${BASE}/profile/data/export`, { credentials: 'include' });

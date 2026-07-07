@@ -29,6 +29,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '../auth/api';
 import { ErrorBanner } from '../components/ErrorBanner';
 import { BlockedUsersPanel } from '../shell/BlockedUsersPanel';
+import { DangerZonePanel } from '../shell/DangerZonePanel';
 
 // ── Static option tables (defined outside component — no deps) ────────────────
 
@@ -448,6 +449,7 @@ export function SettingsPrivacyPage() {
             <BlockedUsersPanel />
 
             {/* ── Panel 4: Account data (sibling a4169fac) ─────────────────── */}
+            {/* (Panel 5: Danger Zone rendered below) */}
             <section
               className="rounded-lg p-6"
               style={{
@@ -592,6 +594,9 @@ export function SettingsPrivacyPage() {
                 </div>
               )}
             </section>
+
+            {/* ── Panel 5: Danger Zone ──────────────────────────────────────── */}
+            <DangerZonePanel />
           </div>
         )}
       </main>
