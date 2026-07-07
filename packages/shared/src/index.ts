@@ -333,5 +333,16 @@ export type {
   TypingActive,
 } from './presence.js';
 
-export { TierSchema, EntitlementsSchema } from './entitlements.js';
-export type { Tier, Entitlements } from './entitlements.js';
+export {
+  TierSchema,
+  EntitlementsSchema,
+  TierChangeRequestSchema,
+  ServerPlanSchema,
+} from './entitlements.js';
+export type {
+  Tier,
+  Entitlements,
+  TierChangeRequest,
+  ServerPlan,
+  TierChangeResponse,
+} from './entitlements.js';
