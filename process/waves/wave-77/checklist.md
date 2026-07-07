@@ -10,7 +10,7 @@
 **Note:** M13 leg-2 (cross-server portable academic identity). UI wave → P-1 likely design_gap (profile card) → D-block. FENCED: B2B2C go-to-market + M13 success metric (founder-reserved). After leg-2: leg-3 (privacy/E2E). todo-milestone queue EMPTY — if M13 closes later, N-1 fires roadmap-planning (stockout).
 
 PRODUCT:
-- [ ] P-0 Frame (discover + reframe)
+- [x] P-0 Frame (discover + reframe)
 - [ ] P-1 Decompose
 - [ ] P-2 Spec
 - [ ] P-3 Plan

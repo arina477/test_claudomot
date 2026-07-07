@@ -1,0 +1,23 @@
+# Wave 77 — P-0 Frame
+
+## Discover section
+- **wave_db_id:** 8288f793-d1e6-4bc7-a677-f5fc4621c0ae (wave_number 77; milestone_id backfilled → M13 b7400254)
+- **Prior-work citation:** the shipped user profile model (users table: display_name/username/avatar_url/accent_color/profile_visibility) + M10 privacy posture (profile_visibility enforcement) + the shipped block/dm/privacy services. This wave extends the profile with academic fields + a cross-server view.
+- **Roadmap milestone:** M13 — Institution partnerships & portable identity (in_progress). Leg-1 (educator admin console) shipped wave-76. This = leg-2 first slice (cross-server portable academic identity).
+- **Spec-contract short-circuit verdict:** `no-prior-spec` (decomposer prose; full P-1..P-3).
+- **Product-decision resolutions:** FENCED — B2B2C go-to-market + M13 success metric (_TBD_, founder-reserved); identity VERIFICATION out of scope for this leg (self-declared only, no trust signal). This wave is autonomous engineering.
+
+## Reframe section
+- **Original framing:** 4-task bundle — academic-identity profile fields + self API (seed 10a68f9e) + shared contract (a51e281d) + cross-server public profile-view endpoint honoring profile_visibility (bf0ad2a8) + academic-identity editor + member profile card web (a98286cb).
+- **problem-framer:** **PROCEED** — cause-level (user-level identity travels into every server by construction; correct reuse of the shipped nullable-no-backfill accent_color/profile_visibility precedent, NOT a parallel store). **KEY RISK (privacy/visibility) — 3 terms MUST be pinned at P-2 or they become V-block REWORK:**
+  1. **`'server-members'` visibility MUST resolve via an EXPLICIT viewer↔target shared-server check** — B-block must NOT copy `servers.service.listServerMembers`'s "co-member ⇒ visible" shortcut (it assumes an ambient membership the new open `GET /profile/:userId` endpoint lacks — copying it would LEAK to any authenticated stranger).
+  2. **Branch on the literal shipped enum `['everyone','server-members','nobody']`** (the seed's "members-who-share-a-server" is a paraphrase of `'server-members'`, not a third value).
+  3. **Fail-closed:** unknown/missing visibility on a cross-user read defaults to **HIDDEN** (contrast the safe self-read `everyone` default). Also reuse the shipped bidirectional block check + deleted_at suppression.
+  No-verification fence honored (academic role = plain z.enum self-label, no authorization semantics; D-block: render educator/staff as plain text, NO verification badge).
+- **ceo-reviewer:** **PROCEED / HOLD-SCOPE** — correct foundation leg (substrate-first, mirrors M9). Honest framing: portable identity is a **moat-builder, not a wedge-sharpener** (deferred optionality; doesn't move the H1 activation wedge/north-star). Cross-server view endpoint (bf0ad2a8) is load-bearing (else a write-only field no one sees). Verification fence correct (an unverified authoritative-looking badge would be worse than none on a privacy-wedge product). No expansion.
+- **mvp-thinner:** **OK** (metric-absence flag) — M13 metric _TBD_/fenced → authoritative thinness blocked (abstention, not affirmation). On merits, the 4 tasks are one irreducible self-edit→cross-server-view loop: seed + shared contract are peer prerequisites; the cross-server view endpoint is the literal leg-2 differentiator (NOT deferrable); the member card is the only consumer making the endpoint non-dead-code. No split.
+- **Mediation outcome:** no expansion-vs-thin conflict (ceo HOLD-SCOPE, mvp-thinner OK). All PROCEED/OK.
+- **Disposition:** **PROCEED** (4 tasks, no change).
+- **Final framing (rest of P-block):** ship M13 leg-2's first slice — self-declared academic-identity profile fields + self API, shared contract, a cross-server public profile-view endpoint that STRICTLY honors profile_visibility, and the academic-identity editor + member profile card. **Carry to P-2/P-3 (LOAD-BEARING):** the 3 privacy-enforcement terms above (explicit shared-server check for 'server-members'; literal enum branch; fail-closed HIDDEN + block + deleted_at); the self-declared/no-verification fence (no badge). **Carry to P-1:** UI wave (editor + member card) → likely design_gap → D-block. **Carry to P-4:** security-scope tightened gate (a cross-user data-exposing endpoint honoring visibility — privacy leak risk) + T-8. **Fenced:** B2B2C + success metric + identity verification — surface non-blocking, do not gate.
+
+**claimed_task_ids:** [10a68f9e-047d-4f1d-b42e-aa5c73996dfe, a51e281d-3c3a-42d0-9e9d-eb4a3eff61cb, bf0ad2a8-93d2-4234-afa5-397fe802af73, a98286cb-7cc9-4381-9c2f-ba5db3723af5]
