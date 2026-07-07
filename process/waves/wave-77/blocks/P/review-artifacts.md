@@ -9,7 +9,7 @@
 | Stage | Deliverable file | Status | Notes |
 |---|---|---|---|
 | P-0 | process/waves/wave-77/stages/P-0-frame.md | done | PROCEED (all 3); KEY carry: cross-server profile-view privacy enforcement (explicit shared-server check, literal enum, fail-closed HIDDEN) |
-| P-1 | process/waves/wave-77/stages/P-1-decompose.md | pending | |
+| P-1 | process/waves/wave-77/stages/P-1-decompose.md | done | PROCEED; multi-spec; design_gap TRUE (member profile card) → D-block |
 | P-2 | process/waves/wave-77/stages/P-2-spec.md | pending | |
 | P-3 | process/waves/wave-77/stages/P-3-plan.md | pending | |
 | P-4 | process/waves/wave-77/stages/P-4-gemini-review.md | pending | |
@@ -18,7 +18,7 @@
 - **Wave topic:** M13 leg-2 cross-server portable academic identity (first slice)
 - **Spec-contract short-circuit verdict:** no-prior-spec (decomposer prose; P-2 authors spec)
 - **Roadmap milestone:** M13 (b7400254), in_progress; wave db 8288f793 / wave_number 77
-- **design_gap_flag:** unset — P-1 (member profile card + academic-identity editor UI likely trips it → D-block)
+- **design_gap_flag:** TRUE (cross-server member profile card new surface) → D-block after P-block
 - **claimed_task_ids:** [10a68f9e (seed), a51e281d, bf0ad2a8, a98286cb]
 - **Autonomous mode active during P-block:** automatic
 - **Schema:** this wave HAS a migration (nullable academic columns on users) — B-0 schema work (postgres-pro).
