@@ -1,7 +1,7 @@
 # Wave 72 — Stage completion ledger (M10 first slice: account self-deletion / right-to-erasure)
 ## P — Product
 - [x] P-0 Frame
-- [ ] P-1 Decompose
+- [x] P-1 Decompose
 - [ ] P-2 Spec
 - [ ] P-3 Plan
 - [ ] P-4 Gate
