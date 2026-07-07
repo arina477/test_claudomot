@@ -346,3 +346,12 @@ export type {
   ServerPlan,
   TierChangeResponse,
 } from './entitlements.js';
+
+export {
+  ServerAnalyticsSchema,
+  EducatorToolsStatusSchema,
+} from './educator-analytics.js';
+export type {
+  ServerAnalytics,
+  EducatorToolsStatus,
+} from './educator-analytics.js';
