@@ -204,6 +204,13 @@
       "when": 1783419195349,
       "tag": "0028_overjoyed_black_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1783426800719,
+      "tag": "0029_clammy_the_fallen",
+      "breakpoints": true
     }
   ]
 }
