@@ -20,7 +20,7 @@
 - **Wave topic:** M10 privacy-events audit log (append-only; over shipped erasure/export/privacy/block surfaces)
 - **Spec-contract short-circuit verdict:** no-prior-spec (full P-1..P-3). P-0 disposition: PROCEED (read-list 5a2521bc committed)
 - **Roadmap milestone:** M10 Compliance & data rights (97d65b49, in_progress); wave row milestone_id backfilled at INSERT
-- **design_gap_flag:** unset — P-1
+- **design_gap_flag:** false (read-list reuses existing DS list/panel patterns; B directly, no D-block)
 - **claimed_task_ids:** [156aa2ee, 03940edd, 5a2521bc] (candidate; confirmed at P-2)
 - **Tier-3 product decisions resolved this wave:** none (regime-independent leg; founder-reserved M10 scope fenced by decomposition)
 - **Autonomous mode active during P-block:** automatic

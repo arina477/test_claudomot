@@ -3,7 +3,7 @@
 # active_milestone: 97d65b49 (M10 Compliance & data rights, in_progress)
 ## P — Product
 - [x] P-0 Frame
-- [ ] P-1 Decompose
+- [x] P-1 Decompose
 - [ ] P-2 Spec
 - [ ] P-3 Plan
 - [ ] P-4 Gate
