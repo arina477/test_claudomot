@@ -140,6 +140,21 @@ function makeEventEmitter() {
 }
 
 // ---------------------------------------------------------------------------
+// Mock BlocksService factory — wave-70 DI addition.
+// Default: isBlockedBetween always returns false (no block) so existing tests
+// are unaffected. Individual tests that need to simulate a block can override.
+// ---------------------------------------------------------------------------
+
+function makeBlocksService(isBlocked = false) {
+  return {
+    isBlockedBetween: vi.fn().mockResolvedValue(isBlocked),
+    createBlock: vi.fn(),
+    removeBlock: vi.fn(),
+    listBlocks: vi.fn().mockResolvedValue([]),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Tests: who_can_dm enforcement
 // ---------------------------------------------------------------------------
 
@@ -151,7 +166,7 @@ describe('DmService — who_can_dm enforcement', () => {
     vi.clearAllMocks();
     emitter = makeEventEmitter();
     // biome-ignore lint/suspicious/noExplicitAny: test mock
-    service = new DmService(emitter as any);
+    service = new DmService(emitter as any, makeBlocksService() as any);
   });
 
   it('allows createConversation when target who_can_dm=everyone', async () => {
@@ -289,7 +304,7 @@ describe('DmService — participant cap', () => {
     vi.clearAllMocks();
     emitter = makeEventEmitter();
     // biome-ignore lint/suspicious/noExplicitAny: test mock
-    service = new DmService(emitter as any);
+    service = new DmService(emitter as any, makeBlocksService() as any);
   });
 
   it('rejects when total participants >10 (400)', async () => {
@@ -394,7 +409,7 @@ describe('DmService — IDOR-safe participant gate', () => {
     vi.clearAllMocks();
     emitter = makeEventEmitter();
     // biome-ignore lint/suspicious/noExplicitAny: test mock
-    service = new DmService(emitter as any);
+    service = new DmService(emitter as any, makeBlocksService() as any);
   });
 
   it('sendMessage: non-participant gets 404 NotFoundException', async () => {
@@ -483,7 +498,7 @@ describe('DmService — sendMessage idempotency', () => {
     vi.clearAllMocks();
     emitter = makeEventEmitter();
     // biome-ignore lint/suspicious/noExplicitAny: test mock
-    service = new DmService(emitter as any);
+    service = new DmService(emitter as any, makeBlocksService() as any);
   });
 
   it('duplicate (conversationId, idempotencyKey) returns same message without re-inserting', async () => {
@@ -526,7 +541,7 @@ describe('DmService — listConversations', () => {
     vi.clearAllMocks();
     emitter = makeEventEmitter();
     // biome-ignore lint/suspicious/noExplicitAny: test mock
-    service = new DmService(emitter as any);
+    service = new DmService(emitter as any, makeBlocksService() as any);
   });
 
   it('returns empty list when caller has no DM conversations', async () => {
@@ -596,7 +611,7 @@ describe('DmService — createConversation find-or-create (1:1)', () => {
     vi.clearAllMocks();
     emitter = makeEventEmitter();
     // biome-ignore lint/suspicious/noExplicitAny: test mock
-    service = new DmService(emitter as any);
+    service = new DmService(emitter as any, makeBlocksService() as any);
   });
 
   it('returns the SAME conversation id on a repeat 1:1 (find-or-create)', async () => {
@@ -759,7 +774,7 @@ describe('DmService — getDmCandidates', () => {
     vi.clearAllMocks();
     emitter = makeEventEmitter();
     // biome-ignore lint/suspicious/noExplicitAny: test mock
-    service = new DmService(emitter as any);
+    service = new DmService(emitter as any, makeBlocksService() as any);
   });
 
   it('returns co-members with displayName and avatarUrl', async () => {

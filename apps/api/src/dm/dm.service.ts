@@ -43,12 +43,15 @@ import type {
   SendDmMessageInput,
 } from '@studyhall/shared';
 import { and, asc, count, desc, eq, getTableColumns, inArray, ne, or, sql } from 'drizzle-orm';
+// biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
+import { BlocksService } from '../blocks/blocks.service';
 import { db } from '../db/index';
 import {
   dm_conversations,
   dm_messages,
   dm_participants,
   server_members,
+  userBlocks,
   users,
 } from '../db/schema/index';
 
@@ -110,7 +113,10 @@ function dmMessageRowToDto(row: {
 export class DmService {
   private readonly logger = new Logger(DmService.name);
 
-  constructor(private readonly eventEmitter: EventEmitter2) {}
+  constructor(
+    private readonly eventEmitter: EventEmitter2,
+    private readonly blocksService: BlocksService,
+  ) {}
 
   // -------------------------------------------------------------------------
   // isParticipant — IDOR gate: checks dm_participants for (conversationId, userId).
@@ -238,6 +244,26 @@ export class DmService {
     // ANY rejection → whole-create fails 403 (no partial conversation).
     for (const targetId of participantIds) {
       await this.enforceWhoCanDm(callerId, targetId);
+    }
+
+    // Block HIDE (seam 1 — createConversation): if the caller is in a block
+    // relation with ANY target participant, reject the whole create (403).
+    // Bidirectional: A blocks B OR B blocks A → both are refused.
+    //
+    // Group-DM note (P-4 spec-gap 5a): For group DMs (>2 participants), a block
+    // between the creator and any invitee prevents creating the conversation.
+    // We do NOT crash existing group DMs that already contain a blocked pair —
+    // the block check here applies only at creation time. Retroactive group-block
+    // enforcement (hiding messages per-participant in an existing group DM) is a
+    // documented follow-on and is out of scope for wave-70. This is the minimal
+    // safe behaviour: no crash, no silent bypass.
+    for (const targetId of participantIds) {
+      const blocked = await this.blocksService.isBlockedBetween(callerId, targetId);
+      if (blocked) {
+        throw new ForbiddenException(
+          'Cannot create a conversation: a block relationship exists between participants',
+        );
+      }
     }
 
     // -----------------------------------------------------------------------
@@ -459,16 +485,72 @@ export class DmService {
       });
     }
 
+    // Block HIDE (seam 4 — listConversations): exclude conversations where ANY
+    // other participant is in a block relation with the caller. Bidirectional.
+    //
+    // Batch strategy: collect all OTHER participant user IDs across all convs,
+    // then fetch all block rows involving the caller in either direction for
+    // those users. No N+1 (single query covers all conversations).
+    //
+    // Group-DM note (P-4 spec-gap 5a): For group DMs, if ANY other participant
+    // has a block relation with the caller, the whole conversation is hidden from
+    // the caller's list. This is the minimal safe behaviour per the wave-70 spec.
+    const otherParticipantUserIds = [
+      ...new Set(participantRows.filter((p) => p.user_id !== callerId).map((p) => p.user_id)),
+    ];
+
+    const blockedConvIds = new Set<string>();
+
+    if (otherParticipantUserIds.length > 0) {
+      // Fetch all bidirectional block rows between the caller and any other participant.
+      const blockRows = await db
+        .select({
+          blocker_id: userBlocks.blocker_id,
+          blocked_id: userBlocks.blocked_id,
+        })
+        .from(userBlocks)
+        .where(
+          or(
+            and(
+              eq(userBlocks.blocker_id, callerId),
+              inArray(userBlocks.blocked_id, otherParticipantUserIds),
+            ),
+            and(
+              inArray(userBlocks.blocker_id, otherParticipantUserIds),
+              eq(userBlocks.blocked_id, callerId),
+            ),
+          ),
+        );
+
+      if (blockRows.length > 0) {
+        // Build a set of blocked user IDs (either direction).
+        const blockedUserIds = new Set<string>();
+        for (const row of blockRows) {
+          // The "other" side of the block relation (not the caller).
+          blockedUserIds.add(row.blocker_id === callerId ? row.blocked_id : row.blocker_id);
+        }
+
+        // Mark conversation IDs that have any blocked participant.
+        for (const p of participantRows) {
+          if (p.user_id !== callerId && blockedUserIds.has(p.user_id)) {
+            blockedConvIds.add(p.conversation_id);
+          }
+        }
+      }
+    }
+
     // Sort conversations by last-message recency (most recent first).
     // Conversations with no messages are sorted by created_at (already in order).
-    const sorted = [...convRows].sort((a, b) => {
-      const aMsg = lastMessageByConv.get(a.id);
-      const bMsg = lastMessageByConv.get(b.id);
-      if (!aMsg && !bMsg) return b.created_at.getTime() - a.created_at.getTime();
-      if (!aMsg) return 1;
-      if (!bMsg) return -1;
-      return new Date(bMsg.createdAt).getTime() - new Date(aMsg.createdAt).getTime();
-    });
+    const sorted = [...convRows]
+      .filter((c) => !blockedConvIds.has(c.id))
+      .sort((a, b) => {
+        const aMsg = lastMessageByConv.get(a.id);
+        const bMsg = lastMessageByConv.get(b.id);
+        if (!aMsg && !bMsg) return b.created_at.getTime() - a.created_at.getTime();
+        if (!aMsg) return 1;
+        if (!bMsg) return -1;
+        return new Date(bMsg.createdAt).getTime() - new Date(aMsg.createdAt).getTime();
+      });
 
     return {
       conversations: sorted.map((c) => ({
@@ -500,6 +582,26 @@ export class DmService {
     const participating = await this.isParticipant(conversationId, callerId);
     if (!participating) {
       throw new NotFoundException('Conversation not found');
+    }
+
+    // Block HIDE (seam 2 — sendMessage): if the sender is in a block relation
+    // with ANY other participant, reject the message (403). Bidirectional.
+    //
+    // Group-DM note (P-4 spec-gap 5a): For group DMs we check all other
+    // participants. If the sender has ANY block relation with any participant,
+    // we refuse the message. This is the minimal safe behaviour — no crash,
+    // no silent delivery. Full per-message-author filtering in group DMs is a
+    // documented follow-on out of scope for wave-70.
+    const otherParticipantIds = (await this.getConversationParticipantIds(conversationId)).filter(
+      (id) => id !== callerId,
+    );
+    for (const otherId of otherParticipantIds) {
+      const blocked = await this.blocksService.isBlockedBetween(callerId, otherId);
+      if (blocked) {
+        throw new ForbiddenException(
+          'Cannot send message: a block relationship exists between participants',
+        );
+      }
     }
 
     // INSERT with ON CONFLICT DO NOTHING for idempotency
@@ -583,6 +685,24 @@ export class DmService {
     const participating = await this.isParticipant(conversationId, callerId);
     if (!participating) {
       throw new NotFoundException('Conversation not found');
+    }
+
+    // Block HIDE (seam 5 — listMessages): if the caller is in a block relation
+    // with ANY other participant, return 403 (can't read messages in a hidden
+    // conversation). Consistent with seam 4 (listConversations hides blocked
+    // convs from the list; listMessages must not allow a direct-URL bypass).
+    //
+    // Group-DM note (P-4 spec-gap 5a): same as seam 4 — if any other participant
+    // has a block relation with the caller, the whole message list is refused.
+    const allParticipantIds = await this.getConversationParticipantIds(conversationId);
+    const otherIds = allParticipantIds.filter((id) => id !== callerId);
+    for (const otherId of otherIds) {
+      const blocked = await this.blocksService.isBlockedBetween(callerId, otherId);
+      if (blocked) {
+        throw new ForbiddenException(
+          'Cannot read messages: a block relationship exists between participants',
+        );
+      }
     }
 
     const safeLimit = Math.min(Math.max(1, limit), 100);
@@ -699,6 +819,11 @@ export class DmService {
     // Step 2: fetch co-members (mirrors presence.getCoMemberUserIds) joined to
     // users for DTO fields + who_can_dm filter.
     // DISTINCT ON (users.id) dedups users shared across multiple servers.
+    //
+    // Block HIDE (seam 3 — getDmCandidates): exclude users in an either-direction
+    // block relation with the caller. Uses NOT EXISTS subquery against user_blocks
+    // so no additional round-trip is needed. Bidirectional: exclude if
+    // (caller blocks user) OR (user blocks caller).
     const alias = server_members;
     const rows = await db
       .selectDistinctOn([users.id], {
@@ -715,6 +840,12 @@ export class DmService {
           inArray(alias.server_id, callerServerIds),
           ne(alias.user_id, callerId),
           ne(users.who_can_dm, 'nobody'),
+          // Bidirectional block exclusion: exclude if either direction is blocked.
+          sql`NOT EXISTS (
+            SELECT 1 FROM user_blocks ub
+            WHERE (ub.blocker_id = ${callerId} AND ub.blocked_id = ${alias.user_id})
+               OR (ub.blocker_id = ${alias.user_id} AND ub.blocked_id = ${callerId})
+          )`,
         ),
       )
       .orderBy(users.id, asc(users.display_name))
