@@ -3,7 +3,7 @@
 **Block:** P (Product)
 **Wave topic:** M9 entitlements substrate — plans/subscriptions model + EntitlementsService + gate wiring (free-default; Stripe/pricing fenced)
 **Block exit gate:** P-4
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
