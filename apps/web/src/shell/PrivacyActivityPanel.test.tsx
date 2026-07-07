@@ -250,6 +250,53 @@ describe('PrivacyActivityPanel — privacy_settings_changed with context', () =>
     expect(label.textContent).toContain('Visible to classmates');
     expect(label.textContent).toContain('Hidden');
   });
+
+  it('suppresses the parenthetical when everyone→server-members both collapse to the same display label', async () => {
+    // 'everyone' and 'server-members' both map to "Visible to classmates" via
+    // visibilityLabel — the parenthetical must NOT appear to avoid nonsensical
+    // "Visible to classmates → Visible to classmates" output.
+    const events: PrivacyEvent[] = [
+      makeEvent({
+        id: 'collapsed-evt',
+        eventType: 'privacy_settings_changed',
+        context: { visibilityFrom: 'everyone', visibilityTo: 'server-members' },
+      }),
+    ];
+    mockGetPrivacyEvents.mockResolvedValue({ events });
+
+    renderPanel();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('privacy-event-label-collapsed-evt')).toBeInTheDocument();
+    });
+
+    const label = screen.getByTestId('privacy-event-label-collapsed-evt');
+    expect(label).toHaveTextContent('You changed your privacy settings');
+    expect(label.textContent).not.toContain('→');
+    expect(label.textContent).not.toContain('visibility');
+  });
+
+  it('suppresses the parenthetical for a no-op from===to event', async () => {
+    const events: PrivacyEvent[] = [
+      makeEvent({
+        id: 'noop-evt',
+        eventType: 'privacy_settings_changed',
+        context: { visibilityFrom: 'nobody', visibilityTo: 'nobody' },
+      }),
+    ];
+    mockGetPrivacyEvents.mockResolvedValue({ events });
+
+    renderPanel();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('privacy-event-label-noop-evt')).toBeInTheDocument();
+    });
+
+    const label = screen.getByTestId('privacy-event-label-noop-evt');
+    expect(label).toHaveTextContent('You changed your privacy settings');
+    expect(label.textContent).not.toContain('→');
+    expect(label.textContent).not.toContain('visibility');
+  });
 });
 
 // ===========================================================================

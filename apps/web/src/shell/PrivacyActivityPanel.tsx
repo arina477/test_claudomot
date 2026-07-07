@@ -73,7 +73,9 @@ function buildLabel(eventType: PrivacyEventType, context: Record<string, unknown
       if (context != null && 'visibilityFrom' in context && 'visibilityTo' in context) {
         const from = visibilityLabel(context.visibilityFrom);
         const to = visibilityLabel(context.visibilityTo);
-        return `${base} (profile visibility ${from} → ${to})`;
+        if (from !== to) {
+          return `${base} (profile visibility ${from} → ${to})`;
+        }
       }
       return base;
     }
