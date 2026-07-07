@@ -4,6 +4,7 @@
  * sessions work across origins.
  */
 
+import * as _shared from '@studyhall/shared';
 import type {
   AccountDataResponse,
   Assignment,
@@ -60,10 +61,7 @@ import type {
   ValidatedAttachment,
 } from '@studyhall/shared';
 
-import {
-  DeleteAccountBlockedResponseSchema,
-  DeleteAccountResponseSchema,
-} from '@studyhall/shared';
+const { DeleteAccountBlockedResponseSchema, DeleteAccountResponseSchema } = _shared;
 
 import { retryOn429 } from './retryOn429';
 

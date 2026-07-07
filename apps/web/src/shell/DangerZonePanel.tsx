@@ -33,7 +33,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import Session from 'supertokens-auth-react/recipe/session';
-import { api, DeleteAccountBlockedError } from '../auth/api';
+import { DeleteAccountBlockedError, api } from '../auth/api';
 import { SpinnerIcon, WarningCircleIcon, XIcon } from './icons';
 
 // ---------------------------------------------------------------------------
@@ -77,10 +77,7 @@ export function DangerZonePanel() {
 
           <div className="relative z-10 flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex-1">
-              <h3
-                className="mb-1 text-[17px] font-semibold"
-                style={{ color: '#f87171' }}
-              >
+              <h3 className="mb-1 text-[17px] font-semibold" style={{ color: '#f87171' }}>
                 Delete your account
               </h3>
               <p className="text-[13px]" style={{ color: 'rgba(255,255,255,0.60)' }}>
@@ -119,9 +116,7 @@ export function DangerZonePanel() {
       </section>
 
       {/* Dialog — portaled to document.body per BUILD-PRINCIPLES rule 14 */}
-      {dialogOpen && (
-        <DeleteAccountDialog onClose={() => setDialogOpen(false)} />
-      )}
+      {dialogOpen && <DeleteAccountDialog onClose={() => setDialogOpen(false)} />}
     </>
   );
 }
@@ -151,7 +146,9 @@ function DeleteAccountDialog({ onClose }: DeleteAccountDialogProps) {
       // Focus the close/cancel button initially since confirm starts disabled
       const panel = dialogRef.current;
       if (!panel) return;
-      const cancelBtn = panel.querySelector<HTMLButtonElement>('[data-testid="delete-dialog-cancel"]');
+      const cancelBtn = panel.querySelector<HTMLButtonElement>(
+        '[data-testid="delete-dialog-cancel"]',
+      );
       cancelBtn?.focus();
     }, 50);
     return () => clearTimeout(t);
@@ -193,8 +190,7 @@ function DeleteAccountDialog({ onClose }: DeleteAccountDialogProps) {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSubmitting]);
+  }, [isSubmitting, onClose]);
 
   async function handleConfirm() {
     if (isSubmitting || !acknowledged) return;
@@ -307,10 +303,7 @@ function DeleteAccountDialog({ onClose }: DeleteAccountDialogProps) {
           {/* Body */}
           <div className="overflow-y-auto p-5 sm:p-6">
             {/* Consequence list */}
-            <p
-              className="mb-2 text-sm font-medium"
-              style={{ color: 'rgba(255,255,255,0.92)' }}
-            >
+            <p className="mb-2 text-sm font-medium" style={{ color: 'rgba(255,255,255,0.92)' }}>
               Deleting your account will:
             </p>
             <ul
@@ -318,19 +311,27 @@ function DeleteAccountDialog({ onClose }: DeleteAccountDialogProps) {
               style={{ color: 'rgba(255,255,255,0.60)' }}
             >
               <li className="flex items-start gap-2">
-                <span aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }}>·</span>
+                <span aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }}>
+                  ·
+                </span>
                 Deactivate your account and remove access immediately
               </li>
               <li className="flex items-start gap-2">
-                <span aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }}>·</span>
+                <span aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }}>
+                  ·
+                </span>
                 Remove your personal data and profile information
               </li>
               <li className="flex items-start gap-2">
-                <span aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }}>·</span>
+                <span aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }}>
+                  ·
+                </span>
                 Remove you from all study servers you have joined
               </li>
               <li className="flex items-start gap-2">
-                <span aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }}>·</span>
+                <span aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }}>
+                  ·
+                </span>
                 Display your name as &ldquo;Deleted user&rdquo; on past messages (to preserve
                 academic context for your peers)
               </li>
@@ -346,10 +347,7 @@ function DeleteAccountDialog({ onClose }: DeleteAccountDialogProps) {
                   border: '1px solid rgba(239,68,68,0.20)',
                 }}
               >
-                <p
-                  className="mb-2 text-[13px] font-medium"
-                  style={{ color: '#f87171' }}
-                >
+                <p className="mb-2 text-[13px] font-medium" style={{ color: '#f87171' }}>
                   {blocked.reason}
                 </p>
                 <ul
@@ -488,11 +486,7 @@ function DeleteAccountDialog({ onClose }: DeleteAccountDialogProps) {
             >
               <span style={{ opacity: isSubmitting ? 0 : 1 }}>Delete my account</span>
               {isSubmitting && (
-                <SpinnerIcon
-                  size={18}
-                  className="animate-spin"
-                  style={{ position: 'absolute' }}
-                />
+                <SpinnerIcon size={18} className="animate-spin" style={{ position: 'absolute' }} />
               )}
             </button>
           </div>
