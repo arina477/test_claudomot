@@ -273,6 +273,17 @@ export type {
 } from './account-deletion.js';
 
 export {
+  PrivacyEventTypeSchema,
+  PrivacyEventSchema,
+  PrivacyEventListResponseSchema,
+} from './privacy-events.js';
+export type {
+  PrivacyEventType,
+  PrivacyEvent,
+  PrivacyEventListResponse,
+} from './privacy-events.js';
+
+export {
   CreateBlockSchema,
   BlockSchema,
   BlockedUserDisplaySchema,
