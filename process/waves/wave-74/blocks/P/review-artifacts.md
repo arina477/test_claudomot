@@ -18,7 +18,7 @@
 - **Wave topic:** M9 entitlements substrate (first M9 slice)
 - **Spec-contract short-circuit verdict:** no-prior-spec (full P-1..P-3). P-0: PROCEED. Founder-reserved asks (Stripe keys + pricing/metric) deferred non-blocking to checkpoint.
 - **Roadmap milestone:** M9 Monetization (3e507bc0, in_progress; promoted at resume from the M10-good-enough founder pivot); wave row milestone_id set at INSERT
-- **design_gap_flag:** unset — P-1
+- **design_gap_flag:** false (backend-heavy + thin "Your plan" read display reuses existing patterns; B directly)
 - **claimed_task_ids:** [53d18d7f, e34642ef, 2f61a317] (candidate; confirmed P-2)
 - **Autonomous mode active during P-block:** automatic
 
