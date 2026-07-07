@@ -9,7 +9,7 @@
 | Stage | Deliverable file | Status | Notes |
 |---|---|---|---|
 | B-0 | process/waves/wave-75/stages/B-0-branch-and-schema.md | done | branch wave-75-mock-billing; schema SKIPPED (reuse subscriptions) |
-| B-1 | process/waves/wave-75/stages/B-1-contracts.md | pending | shared TierChange/ServerPlan DTOs |
+| B-1 | process/waves/wave-75/stages/B-1-contracts.md | done | TierChangeRequest/ServerPlan DTOs (2a8c224) |
 | B-2 | process/waves/wave-75/stages/B-2-backend.md | pending | BillingProvider+mock+controller+guard+TIER_CAPS |
 | B-3 | process/waves/wave-75/stages/B-3-frontend.md | pending | "Your plan" panel + api client |
 | B-4 | process/waves/wave-75/stages/B-4-wiring.md | pending | |

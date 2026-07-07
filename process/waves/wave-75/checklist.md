@@ -23,7 +23,7 @@ DESIGN (skipped — design_gap_flag:false, thin panel reuses shipped DS patterns
 
 BUILD:
 - [x] B-0 Branch & schema
-- [ ] B-1 Contracts
+- [x] B-1 Contracts
 - [ ] B-2 Backend
 - [ ] B-3 Frontend
 - [ ] B-4 Wiring
