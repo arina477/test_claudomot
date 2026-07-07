@@ -76,8 +76,9 @@ export class ServersService {
   async createServer(ownerId: string, name: string): Promise<ServerResponse> {
     // ── Entitlement gate (read-only, pre-insert) ────────────────────────────
     // Resolve the owner's create-gate caps and count their existing servers.
-    // Under the free-tier placeholder (maxServersPerOwner=100) this check is
-    // non-restrictive: no existing owner is blocked (NON-REGRESSIVE guarantee).
+    // Under the free-tier placeholder (maxServersPerOwner=100_000, defined in
+    // EntitlementsService.CAPS.free) this check is non-restrictive: no existing
+    // owner is blocked (NON-REGRESSIVE guarantee).
     // Once paid owner tiers and lower caps ship, the same code path enforces them.
     const { caps, currentServerCount } =
       await this.entitlementsService.resolveCreateGateForOwner(ownerId);

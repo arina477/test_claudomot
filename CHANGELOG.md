@@ -92,6 +92,7 @@ All notable changes to StudyHall are documented here. Format follows
 - Blocked-user names + one-click Block/Unblock: the member menu's Block button now shows Block or Unblock depending on whether you've already blocked someone (and flips instantly), and your Settings › Privacy blocked list shows real names and avatars instead of ids. (#87)
 - Delete your own account: a Danger Zone in Settings › Privacy lets you permanently close your account after an explicit confirmation. Deleting scrubs your personal details (name, username, email, avatar), removes you from every study server, signs you out, and blocks any future sign-in. If you still own study servers, you're asked to transfer or delete those first. (#88, #89)
 - Your privacy activity: a new log in Settings › Privacy shows a plain-language history of your own privacy actions — account deletion, data exports, privacy-setting changes, and blocks or unblocks. The record is append-only and private to you, so no one else can see or alter your history. (#90)
+- Internal groundwork for paid tiers: every study server now sits on a free plan by default, and the app quietly checks that plan when you create a server. There is no visible change and nothing is charged — real billing (Stripe, prices, checkout) is not turned on yet. The free plan's limits are set well above any current usage, so no existing account is affected. (#91, #92)
 
 ### Changed
 
