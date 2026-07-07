@@ -10,7 +10,7 @@
 | Stage | Deliverable file | Status | Notes |
 |---|---|---|---|
 | B-0 | process/waves/wave-73/stages/B-0-branch-and-schema.md | done | privacy_events (migration 0028) |
-| B-1 | process/waves/wave-73/stages/B-1-contracts.md | pending | shared privacy-event Zod DTO (task 03940edd) |
+| B-1 | process/waves/wave-73/stages/B-1-contracts.md | done | privacy-event DTO (task 03940edd) |
 | B-2 | process/waves/wave-73/stages/B-2-backend.md | pending | AppendPrivacyEvent service + 4 hooks + read endpoint + live-DB test (task 156aa2ee) |
 | B-3 | process/waves/wave-73/stages/B-3-frontend.md | pending | "Your privacy activity" panel (task 5a2521bc) |
 | B-4 | process/waves/wave-73/stages/B-4-wiring.md | pending | |
