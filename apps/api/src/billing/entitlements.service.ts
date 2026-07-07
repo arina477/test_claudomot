@@ -1,0 +1,128 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { type Entitlements, type Tier, TierSchema } from '@studyhall/shared';
+import { eq, sql } from 'drizzle-orm';
+import { db } from '../db/index';
+import { servers, subscriptions } from '../db/schema/index';
+
+// ---------------------------------------------------------------------------
+// FOUNDER-TUNABLE PLACEHOLDER caps — capability limits only, NOT prices.
+// Founder sets real numbers at the M9 pricing slice.
+//
+// Gate dimension chosen: servers-per-owner.
+//
+// Rationale: the subscriptions table records a tier per-server. At create
+// time there is no server yet, so there is no server-level subscription to
+// read. Owner-level tier is not modelled this wave. We therefore treat every
+// creating owner as implicitly 'free'-tier and gate on how many servers they
+// already own against the free cap. Once paid owner tiers land, this
+// resolver can be upgraded to read an owner-level subscription row.
+//
+// NON-RESTRICTIVE GUARANTEE: maxServersPerOwner=100 for the free tier is
+// intentionally far above any realistic usage so no existing owner is blocked.
+// Lower this number only after the paid tier upgrade flow ships.
+//
+// The public EntitlementsSchema ({storageMb, callCapacity, educatorAdminTools})
+// is defined in the shared package. maxServersPerOwner is a create-gate-specific
+// cap that does not belong in the public shape — it is kept internal here.
+// ---------------------------------------------------------------------------
+
+/** Internal-only create-gate cap; not part of the shared EntitlementsSchema. */
+export interface CreateGateCaps extends Entitlements {
+  maxServersPerOwner: number;
+}
+
+const TIER_CAPS: Record<Tier, CreateGateCaps> = {
+  free: {
+    storageMb: 2_048, // 2 GB — generous for a study platform
+    callCapacity: 50, // enough for a standard class
+    educatorAdminTools: false,
+    maxServersPerOwner: 100, // NON-RESTRICTIVE: lowers only when upgrade flow ships
+  },
+  server_pro: {
+    storageMb: 20_480, // 20 GB
+    callCapacity: 200,
+    educatorAdminTools: false,
+    maxServersPerOwner: 500,
+  },
+  school: {
+    storageMb: 102_400, // 100 GB
+    callCapacity: 1_000,
+    educatorAdminTools: true,
+    maxServersPerOwner: 2_000,
+  },
+};
+
+@Injectable()
+export class EntitlementsService {
+  private readonly logger = new Logger(EntitlementsService.name);
+
+  /**
+   * Resolve the tier and entitlements for an existing server.
+   *
+   * Tier-resolution semantics:
+   *   1. SELECT from subscriptions WHERE server_id = serverId.
+   *   2. No row → tier 'free' (default-when-absent per schema comment).
+   *   3. Row present → validate against TierSchema.
+   *      Out-of-enum value → safe-default to 'free', logged as warning.
+   *   4. Return {tier, entitlements} from the placeholder caps config.
+   */
+  async resolveForServer(serverId: string): Promise<{ tier: Tier; entitlements: Entitlements }> {
+    const rows = await db
+      .select({ tier: subscriptions.tier })
+      .from(subscriptions)
+      .where(eq(subscriptions.server_id, serverId))
+      .limit(1);
+
+    const raw = rows[0]?.tier ?? 'free';
+
+    const parsed = TierSchema.safeParse(raw);
+    let tier: Tier;
+    if (parsed.success) {
+      tier = parsed.data;
+    } else {
+      this.logger.warn(
+        `EntitlementsService.resolveForServer: server ${serverId} has unrecognised tier '${raw}'; safe-defaulting to 'free'`,
+      );
+      tier = 'free';
+    }
+
+    const caps = TIER_CAPS[tier];
+    const entitlements: Entitlements = {
+      storageMb: caps.storageMb,
+      callCapacity: caps.callCapacity,
+      educatorAdminTools: caps.educatorAdminTools,
+    };
+
+    return { tier, entitlements };
+  }
+
+  /**
+   * Resolve create-gate caps for an owner about to create a new server.
+   *
+   * Owner-level tier resolution (this wave):
+   *   Owner-level subscriptions are not modelled yet — every owner is treated
+   *   as 'free'-tier. The free cap (maxServersPerOwner=100) is permissive
+   *   enough that no existing owner is blocked. When owner-level tiers ship,
+   *   replace with a subscriptions lookup keyed on owner_id.
+   *
+   * Returns the resolved caps and the owner's current server count so the
+   * caller can compare against caps.maxServersPerOwner.
+   */
+  async resolveCreateGateForOwner(
+    ownerId: string,
+  ): Promise<{ tier: Tier; caps: CreateGateCaps; currentServerCount: number }> {
+    // Owner treated as free-tier at create-gate (documented above).
+    const tier: Tier = 'free';
+    const caps = TIER_CAPS[tier];
+
+    // Count how many servers this owner already has.
+    const countRows = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(servers)
+      .where(eq(servers.owner_id, ownerId));
+
+    const currentServerCount = countRows[0]?.count ?? 0;
+
+    return { tier, caps, currentServerCount };
+  }
+}
