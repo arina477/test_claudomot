@@ -3,7 +3,7 @@
 **Block:** P (Product)
 **Wave topic:** M13 educator admin console + analytics (first autonomous slice) — real educator-tools admin API (entitlement + owner/educator gate) + analytics aggregates API + console web UI
 **Block exit gate:** P-4
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
@@ -12,7 +12,7 @@
 | P-1 | process/waves/wave-76/stages/P-1-decompose.md | done | PROCEED; multi-spec; design_gap_flag TRUE (new console+analytics) → D-block |
 | P-2 | process/waves/wave-76/stages/P-2-spec.md | done | multi-spec 4 blocks → primary 682e0912; educator predicate + /status disposition resolved |
 | P-3 | process/waves/wave-76/stages/P-3-plan.md | done | no migration/deps; EducatorAccessGuard + analytics service + console (D-block) |
-| P-4 | process/waves/wave-76/stages/P-4-gemini-review.md | pending | |
+| P-4 | process/waves/wave-76/blocks/P/gate-verdict.md | done | APPROVED (karen+jenny APPROVE; Gemini 429). karen HIGH: reuse RbacService.can → B-2 |
 
 ## Block-specific context
 - **Wave topic:** M13 educator admin console + analytics (first M13 slice)
