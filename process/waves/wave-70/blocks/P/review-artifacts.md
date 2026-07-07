@@ -3,7 +3,7 @@
 **Block:** P (Product)
 **Wave topic:** M14 next bundle (seed: suppress Report affordance on viewer's own member row) — expect P-1 RESCOPE-AUTO-MERGE
 **Block exit gate:** P-4
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
