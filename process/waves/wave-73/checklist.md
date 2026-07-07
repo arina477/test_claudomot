@@ -14,7 +14,7 @@
 ## B — Build
 - [x] B-0 Branch & schema
 - [x] B-1 Contracts
-- [ ] B-2 Backend
+- [x] B-2 Backend
 - [ ] B-3 Frontend
 - [ ] B-4 Wiring
 - [ ] B-5 Verify
