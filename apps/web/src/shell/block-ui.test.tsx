@@ -17,7 +17,7 @@
  *     which buttons appear on which rows.
  */
 
-import type { Block, BlockListItem, ServerMember } from '@studyhall/shared';
+import type { BlockListItem, ServerMember } from '@studyhall/shared';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -103,16 +103,6 @@ function makeSelfMember(overrides: Partial<ServerMember> = {}): ServerMember {
     avatarUrl: null,
     username: 'memyself',
     mutedUntil: null,
-    ...overrides,
-  };
-}
-
-function makeBlock(overrides: Partial<Block> = {}): Block {
-  return {
-    id: 'blk-1',
-    blocker_id: SELF_USER_ID,
-    blocked_id: BLOCKED_USER_ID,
-    created_at: new Date().toISOString(),
     ...overrides,
   };
 }
@@ -206,7 +196,9 @@ describe('Block affordance + BlockConfirmDialog via MemberListPanel', () => {
   });
 
   it('calls blockUser with correct userId after confirming', async () => {
-    mockApi.blockUser.mockResolvedValue(makeBlock());
+    // Dialog now calls useBlocks().blockUser (the store), not api.blockUser directly.
+    const blockUserFn = vi.fn().mockResolvedValue(undefined);
+    mockUseBlocks.mockReturnValue({ ...makeEmptyBlocksHook(), blockUser: blockUserFn });
     renderMemberPanel([makeMember()], SELF_USER_ID);
     await screen.findByText('Alice Doe');
 
@@ -217,7 +209,7 @@ describe('Block affordance + BlockConfirmDialog via MemberListPanel', () => {
       fireEvent.click(screen.getByTestId('block-dialog-confirm'));
     });
 
-    expect(mockApi.blockUser).toHaveBeenCalledWith(OTHER_USER_ID);
+    expect(blockUserFn).toHaveBeenCalledWith(OTHER_USER_ID);
 
     // Success toast shown
     await waitFor(() => {
@@ -226,7 +218,9 @@ describe('Block affordance + BlockConfirmDialog via MemberListPanel', () => {
   });
 
   it('keeps dialog open and shows error toast when blockUser fails', async () => {
-    mockApi.blockUser.mockRejectedValue(new Error('500 error'));
+    // Dialog now calls useBlocks().blockUser (the store), not api.blockUser directly.
+    const blockUserFn = vi.fn().mockRejectedValue(new Error('500 error'));
+    mockUseBlocks.mockReturnValue({ ...makeEmptyBlocksHook(), blockUser: blockUserFn });
     renderMemberPanel([makeMember()], SELF_USER_ID);
     await screen.findByText('Alice Doe');
 
@@ -252,7 +246,9 @@ describe('Block affordance + BlockConfirmDialog via MemberListPanel', () => {
 
 describe('BlockConfirmDialog — double-submit prevention', () => {
   it('disables confirm button while submitting', async () => {
-    mockApi.blockUser.mockReturnValue(new Promise(() => {})); // never resolves
+    // Dialog now calls useBlocks().blockUser (the store), not api.blockUser directly.
+    const blockUserFn = vi.fn().mockReturnValue(new Promise(() => {})); // never resolves
+    mockUseBlocks.mockReturnValue({ ...makeEmptyBlocksHook(), blockUser: blockUserFn });
     renderMemberPanel([makeMember()], SELF_USER_ID);
     await screen.findByText('Alice Doe');
 

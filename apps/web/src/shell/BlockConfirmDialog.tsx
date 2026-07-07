@@ -33,8 +33,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { api } from '../auth/api';
 import { ProhibitIcon, SpinnerIcon, WarningCircleIcon } from './icons';
+import { useBlocks } from './useBlocks';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -105,6 +105,7 @@ export function BlockConfirmDialog({
   onClose,
   triggerRef,
 }: BlockConfirmDialogProps) {
+  const { blockUser } = useBlocks();
   const [submitState, setSubmitState] = useState<SubmitState>('idle');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
@@ -177,7 +178,7 @@ export function BlockConfirmDialog({
     setSubmitState('submitting');
 
     try {
-      await api.blockUser(targetUserId);
+      await blockUser(targetUserId);
       addToast(`${displayName} has been blocked.`, 'success');
       setTimeout(() => handleClose(true), 400);
     } catch {
