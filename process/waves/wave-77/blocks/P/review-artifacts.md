@@ -11,7 +11,7 @@
 | P-0 | process/waves/wave-77/stages/P-0-frame.md | done | PROCEED (all 3); KEY carry: cross-server profile-view privacy enforcement (explicit shared-server check, literal enum, fail-closed HIDDEN) |
 | P-1 | process/waves/wave-77/stages/P-1-decompose.md | done | PROCEED; multi-spec; design_gap TRUE (member profile card) → D-block |
 | P-2 | process/waves/wave-77/stages/P-2-spec.md | done | 4-block multi-spec → primary 10a68f9e; privacy enforcement baked into block-3 |
-| P-3 | process/waves/wave-77/stages/P-3-plan.md | pending | |
+| P-3 | process/waves/wave-77/stages/P-3-plan.md | done | migration + shared contract + visibility resolver (dm.service idiom, fail-closed) + editor/card |
 | P-4 | process/waves/wave-77/stages/P-4-gemini-review.md | pending | |
 
 ## Block-specific context
