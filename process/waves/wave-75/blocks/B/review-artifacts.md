@@ -3,7 +3,7 @@
 **Block:** B (Build)
 **Wave topic:** M9 mock-payment freemium upgrade path — BillingProvider seam + mock tier endpoint + real TIER_CAPS + educator-tools enforcement + "Your plan" panel
 **Block exit gate:** B-6
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
@@ -14,7 +14,7 @@
 | B-3 | process/waves/wave-75/stages/B-3-frontend.md | done | ServerPlanPanel + api client (ddc9b14); 679 web tests green |
 | B-4 | process/waves/wave-75/stages/B-4-wiring.md | done | repo typecheck 4/4; routes registered both sides |
 | B-5 | process/waves/wave-75/stages/B-5-verify.md | done | lint clean; api 795 + web 679 green; build 3/3 |
-| B-6 | process/waves/wave-75/stages/B-6-review.md | pending | |
+| B-6 | process/waves/wave-75/stages/B-6-review.md | done | APPROVED (Phase1 + /review clean; 1 low accepted; commit-discipline PASS) |
 
 ## Block-specific context
 - **Spec contract:** tasks row 4bc40741-146a-4f05-8970-1614eb6b2b43 (DB); spec at process/waves/wave-75/stages/P-2-spec.md
@@ -36,3 +36,17 @@
 
 ## Gate verdict log
 <appended by head-builder at B-6>
+
+
+## Block-exit handoff
+```yaml
+build_block_status:    complete
+branch:                wave-75-mock-billing
+stages_run:            [B-0, B-1, B-2, B-3, B-4, B-5, B-6]
+stages_skipped:        [B-0 schema sub-actions (no migration — reuse subscriptions)]
+review_verdict:        APPROVE
+deviations_logged:     [shared/dist build ordering (turbo resolves), pre-existing spec assertion callCapacity>50->>10, integration test in standard suite (T-4 real-DB gap carried), act() warnings on 19 parent tests (accepted-debt)]
+last_commit_sha:       <set after B-6 push>
+ready_for_ci:          true
+carry_to_T:            [T-4 pg-harness upsert test for subscriptions (BUILD-9); T-8 payments-surface owner-check + educator-gate negative paths]
+```
