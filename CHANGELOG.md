@@ -87,6 +87,7 @@ All notable changes to StudyHall are documented here. Format follows
 - Open the workspace offline on a cold start: your server list and each server's channels now load from a local cache even on a fresh launch with no connection, so previously-viewed servers, channels, and messages stay reachable instead of a blank screen — and refresh once you reconnect. (#80)
 - Discover public study communities: browse a searchable directory of study servers that owners have opted to make public, then join one in a single click, so joining a community no longer requires an invite link. Private servers stay invite-only and never appear in the directory. (#82)
 - Publish your study server to the public directory: from server settings, an owner can now switch their server between private and public and add a short description and topic, so the community shows up in discovery with a clear summary — and can be pulled back to private at any time. (#83)
+- Report abuse in public communities: a Report control on public server listings, on members, and on messages opens a quick dialog to flag what's wrong. Server owners and moderators get a Reports inbox to review open reports and act — time out a member, delete a message, or dismiss the report. (#84)
 
 ### Changed
 
