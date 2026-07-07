@@ -8,8 +8,8 @@
 |---|---|---|---|
 | P-0 | stages/P-0-frame.md | done | reframe CONVERGED → M14 Block UI-polish bundle (2 tasks, one-fetch); M14 closes next → founder launch-GO |
 | P-1 | stages/P-1-decompose.md | done | RESCOPE-AUTO-MERGE (2-task multi-spec); below-floor override-ship-by-rule; design_gap_flag=false → B |
-| P-2 | stages/P-2-spec.md | pending | |
-| P-3 | stages/P-3-plan.md | pending | |
+| P-2 | stages/P-2-spec.md | done | 2-block spec (enrichment + toggle, one fetch) to 1193aebf |
+| P-3 | stages/P-3-plan.md | done | listBlocks JOIN + shared fetch + toggle; no B-0/D |
 | P-4 | blocks/P/gate-verdict.md | pending | |
 ## Block-specific context
 - **Wave topic:** M14 Block UI-polish (member-row state toggle + GET /blocks enrichment)
