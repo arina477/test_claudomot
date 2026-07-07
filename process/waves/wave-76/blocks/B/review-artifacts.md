@@ -9,7 +9,7 @@
 | Stage | Deliverable file | Status | Notes |
 |---|---|---|---|
 | B-0 | process/waves/wave-76/stages/B-0-branch-and-schema.md | done | branch wave-76-educator-admin-console; schema SKIPPED (read-only aggregates, no migration) |
-| B-1 | process/waves/wave-76/stages/B-1-contracts.md | pending | ServerAnalytics + educator DTOs |
+| B-1 | process/waves/wave-76/stages/B-1-contracts.md | done | ServerAnalytics + EducatorToolsStatus DTOs (1b230d0) |
 | B-2 | process/waves/wave-76/stages/B-2-backend.md | pending | EducatorAccessGuard (RbacService.can) + analytics service + controller |
 | B-3 | process/waves/wave-76/stages/B-3-frontend.md | pending | EducatorAdminConsole per design/educator-admin-console.html |
 | B-4 | process/waves/wave-76/stages/B-4-wiring.md | pending | |
