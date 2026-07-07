@@ -10,7 +10,7 @@
 |---|---|---|---|
 | P-0 | process/waves/wave-74/stages/P-0-frame.md | in-progress | discovery + reframe |
 | P-1 | process/waves/wave-74/stages/P-1-decompose.md | pending | |
-| P-2 | process/waves/wave-74/stages/P-2-spec.md | pending | |
+| P-2 | process/waves/wave-74/stages/P-2-spec.md | done | multi-spec contract in task 53d18d7f |
 | P-3 | process/waves/wave-74/stages/P-3-plan.md | pending | |
 | P-4 | process/waves/wave-74/stages/P-4-gemini-review.md | pending | |
 
