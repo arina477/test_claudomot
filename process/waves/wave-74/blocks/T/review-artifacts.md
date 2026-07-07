@@ -18,3 +18,14 @@
 - **Cumulative findings:** carries the B-6 boundary-TOCTOU note (V-2, unreachable at cap=100)
 ## Gate verdict log
 <appended by head-tester at T-9>
+
+## Block-exit handoff
+```yaml
+test_block_status: complete
+stages_run: [T-1, T-2, T-3, T-4, T-5, T-8, T-9]
+stages_skipped: [T-6 layout (no new UI), T-7 perf (not heavy)]
+findings_total: 2
+findings_critical: 0
+note: "free-cap regression caught+fixed+re-verified WITHIN the block (d79dd18)"
+ready_for_verify: true
+```
