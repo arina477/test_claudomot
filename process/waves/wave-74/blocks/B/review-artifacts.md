@@ -3,7 +3,7 @@
 **Block:** B (Build)
 **Wave topic:** M9 entitlements substrate — subscriptions tier model + EntitlementsService + createServer gate wiring (free-default; Stripe/pricing fenced)
 **Block exit gate:** B-6
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
@@ -14,7 +14,7 @@
 | B-3 | process/waves/wave-74/stages/B-3-frontend.md | skipped | optional display deferred (low-value until upgrade path) |
 | B-4 | process/waves/wave-74/stages/B-4-wiring.md | done | repo typecheck 4/4 |
 | B-5 | process/waves/wave-74/stages/B-5-verify.md | done | lint/tests/build green |
-| B-6 | process/waves/wave-74/stages/B-6-review.md | pending | |
+| B-6 | process/waves/wave-74/stages/B-6-review.md | done | Phase1 APPROVED + /review ship-as-is |
 
 ## Block-specific context
 - **Spec contract:** tasks row 53d18d7f (DB)
@@ -34,3 +34,14 @@ none
 
 ## Gate verdict log
 <appended by head-builder at B-6>
+
+## Block-exit handoff
+```yaml
+build_block_status: complete
+branch: wave-74-entitlements-substrate
+stages_run: [B-0, B-1, B-2, B-4, B-5, B-6]
+stages_skipped: [B-3 (optional display deferred — low-value until upgrade path)]
+review_verdict: APPROVE
+last_commit_sha: 6a5161c
+ready_for_ci: true
+```
