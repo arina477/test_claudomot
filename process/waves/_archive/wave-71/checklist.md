@@ -53,6 +53,6 @@ LEARN:
 - [x] L-2 Distill
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers
+- [x] N-2 Seed (queue-exhausted-pending-founder — no seed; founder-reserved fork)
+- [x] N-3 Handoff (loop PAUSED — M14 closed; awaiting founder: public-launch GO + next theme)
