@@ -11,7 +11,7 @@
 | B-0 | process/waves/wave-75/stages/B-0-branch-and-schema.md | done | branch wave-75-mock-billing; schema SKIPPED (reuse subscriptions) |
 | B-1 | process/waves/wave-75/stages/B-1-contracts.md | done | TierChangeRequest/ServerPlan DTOs (2a8c224) |
 | B-2 | process/waves/wave-75/stages/B-2-backend.md | done | 2 commits a63264c+9b9ec24; 795 api tests green |
-| B-3 | process/waves/wave-75/stages/B-3-frontend.md | pending | "Your plan" panel + api client |
+| B-3 | process/waves/wave-75/stages/B-3-frontend.md | done | ServerPlanPanel + api client (ddc9b14); 679 web tests green |
 | B-4 | process/waves/wave-75/stages/B-4-wiring.md | pending | |
 | B-5 | process/waves/wave-75/stages/B-5-verify.md | pending | |
 | B-6 | process/waves/wave-75/stages/B-6-review.md | pending | |
@@ -32,6 +32,7 @@
 ## Open escalations carried into gate
 - CI build ordering: packages/shared must build before apps/api (B-2 hit a stale dist). Verify at B-5 (exact CI commands) + C-1.
 - T-4 gap: mock-billing upsert against a REAL Postgres not yet integration-tested (B-2 stubbed db). T-4 must add a pg-harness upsert test (BUILD-9).
+- B-6 flag: benign act() warnings on 19 pre-existing server-overview-settings tests (panel async load). No failures; head-builder adjudicates (latent flake — wave-72 act() lesson).
 
 ## Gate verdict log
 <appended by head-builder at B-6>
