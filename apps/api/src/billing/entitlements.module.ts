@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
+import { RbacModule } from '../rbac/rbac.module';
 import { BILLING_PROVIDER } from './billing-provider.interface';
 import { BillingController } from './billing.controller';
+import { EducatorAccessGuard } from './educator-access.guard';
 import { EducatorToolsController } from './educator-tools.controller';
 import { EntitlementGuard } from './entitlement.guard';
 import { EntitlementsService } from './entitlements.service';
@@ -26,14 +28,19 @@ import { MockBillingProvider } from './mock-billing.provider';
 //
 // Exports EntitlementsService so any module that imports EntitlementsModule
 // can inject it (currently ServersModule).
+//
+// Imports RbacModule (wave-76) so EducatorAccessGuard can inject RbacService —
+// the guard resolves the owner/educator predicate via RbacService.can() rather
+// than hand-rolling owner/role resolution. RbacModule exports RbacService.
 // ---------------------------------------------------------------------------
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, RbacModule],
   controllers: [BillingController, EducatorToolsController],
   providers: [
     EntitlementsService,
     EntitlementGuard,
+    EducatorAccessGuard,
     { provide: BILLING_PROVIDER, useClass: MockBillingProvider },
   ],
   exports: [EntitlementsService],
