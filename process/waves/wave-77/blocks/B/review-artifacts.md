@@ -13,7 +13,7 @@
 | B-2 | process/waves/wave-77/stages/B-2-backend.md | done | 2 commits; 811 unit green; fail-closed resolver + no-email PublicProfile |
 | B-3 | process/waves/wave-77/stages/B-3-frontend.md | done | MemberProfileCard + editor (26fc38d); 696 web tests green; portal/Esc/no-badge |
 | B-4 | process/waves/wave-77/stages/B-4-wiring.md | done | typecheck 4/4 (1 drift fixed 4e616f8); routes registered |
-| B-5 | process/waves/wave-77/stages/B-5-verify.md | pending | |
+| B-5 | process/waves/wave-77/stages/B-5-verify.md | done | lint clean; api 811 + web 696 + shared 41 green; build 3/3 |
 | B-6 | process/waves/wave-77/stages/B-6-review.md | pending | |
 
 ## Block-specific context
