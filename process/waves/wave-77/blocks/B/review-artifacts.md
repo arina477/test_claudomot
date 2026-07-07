@@ -11,7 +11,7 @@
 | B-0 | process/waves/wave-77/stages/B-0-branch-and-schema.md | done | branch + migration 0030 (262ecdb); C-2 applies to prod |
 | B-1 | process/waves/wave-77/stages/B-1-contracts.md | done | PublicProfileSchema (no email) + academic fields (f9ee379) |
 | B-2 | process/waves/wave-77/stages/B-2-backend.md | done | 2 commits; 811 unit green; fail-closed resolver + no-email PublicProfile |
-| B-3 | process/waves/wave-77/stages/B-3-frontend.md | pending | editor + member card per design/member-profile-card.html |
+| B-3 | process/waves/wave-77/stages/B-3-frontend.md | done | MemberProfileCard + editor (26fc38d); 696 web tests green; portal/Esc/no-badge |
 | B-4 | process/waves/wave-77/stages/B-4-wiring.md | pending | |
 | B-5 | process/waves/wave-77/stages/B-5-verify.md | pending | |
 | B-6 | process/waves/wave-77/stages/B-6-review.md | pending | |
