@@ -35,7 +35,7 @@
 ## V — Verify
 - [x] V-1 Reviews
 - [x] V-2 Triage
-- [ ] V-3 Fast-fix
+- [x] V-3 Fast-fix
 ## L — Learn
 - [ ] L-1 Docs
 - [ ] L-2 Distill
