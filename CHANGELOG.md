@@ -90,6 +90,7 @@ All notable changes to StudyHall are documented here. Format follows
 - Report abuse in public communities: a Report control on public server listings, on members, and on messages opens a quick dialog to flag what's wrong. Server owners and moderators get a Reports inbox to review open reports and act — time out a member, delete a message, or dismiss the report. (#84)
 - Block a user: from a member's menu you can block someone, and they can no longer send you direct messages or see your content — the block works both ways and across every server. Manage everyone you've blocked from Settings › Privacy, and unblock anytime. (#86)
 - Blocked-user names + one-click Block/Unblock: the member menu's Block button now shows Block or Unblock depending on whether you've already blocked someone (and flips instantly), and your Settings › Privacy blocked list shows real names and avatars instead of ids. (#87)
+- Delete your own account: a Danger Zone in Settings › Privacy lets you permanently close your account after an explicit confirmation. Deleting scrubs your personal details (name, username, email, avatar), removes you from every study server, signs you out, and blocks any future sign-in. If you still own study servers, you're asked to transfer or delete those first. (#88, #89)
 
 ### Changed
 
@@ -124,6 +125,7 @@ All notable changes to StudyHall are documented here. Format follows
 - When an organizer or teaching assistant deletes someone else's message, it now disappears in real time for everyone viewing the channel — including the message's own author, who previously kept seeing their deleted message until a refresh. (#73)
 - Opening your direct messages no longer trips a "too many requests" error during normal use, and if a request is briefly rate-limited it now recovers on its own instead of leaving a gap until you refresh. (#76)
 - Discovery cards now show each community's real member count instead of always reading zero, so you can tell how active a study server is before joining. (#83)
+- The live app no longer white-screens on load: a shared-code packaging regression left browser-only build output that never ran, blanking every page — the shared package now ships in the right format so the app boots and mounts again. (#89)
 
 ### Security
 
