@@ -248,6 +248,16 @@ export type {
   StudyRoomTimerUpdateEvent,
 } from './study-room.js';
 
+export {
+  ReportTargetType,
+  ReportStatus,
+  ResolveReportAction,
+  CreateReportSchema,
+  ReportSchema,
+  ResolveReportSchema,
+} from './reports.js';
+export type { CreateReport, Report, ResolveReport } from './reports.js';
+
 export { AccountDataResponseSchema } from './account-data.js';
 export type { AccountDataResponse } from './account-data.js';
 

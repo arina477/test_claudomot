@@ -14,6 +14,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { PresenceModule } from './presence/presence.module';
 import { PrivacyModule } from './privacy/privacy.module';
 import { ProfileModule } from './profile/profile.module';
+import { ReportsModule } from './reports/reports.module';
 import { SchedulingModule } from './scheduling/scheduling.module';
 import { ServersModule } from './servers/servers.module';
 import { StudyRoomModule } from './study-room/study-room.module';
@@ -52,6 +53,7 @@ import { VoiceModule } from './voice/voice.module';
     VoiceModule,
     PrivacyModule,
     StudyTimerModule,
+    ReportsModule,
     StudyRoomModule,
   ],
   providers: [

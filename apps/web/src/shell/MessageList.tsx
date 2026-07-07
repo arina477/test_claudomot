@@ -29,12 +29,14 @@ import type {
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { ErrorState } from '../components/states/ErrorState';
 import { PresenceDot } from './PresenceDot';
+import { ReportDialog } from './ReportDialog';
 import {
   ArrowsOutIcon,
   ChatsCircleIcon,
   ClockIcon,
   DownloadSimpleIcon,
   FileIcon,
+  FlagIcon,
   ImageBrokenIcon,
   PencilSimpleIcon,
   ProhibitIcon,
@@ -772,9 +774,10 @@ type RowActionsProps = {
   onEdit: (() => void) | null;
   onDelete: (() => void) | null;
   onReact: () => void;
+  onReport: (() => void) | null;
 };
 
-function RowActions({ isOwn, onEdit, onDelete, onReact }: RowActionsProps) {
+function RowActions({ isOwn, onEdit, onDelete, onReact, onReport }: RowActionsProps) {
   return (
     <div
       className="row-actions absolute -top-3 right-3 z-10 flex items-center overflow-hidden rounded-md border shadow-lg"
@@ -844,6 +847,28 @@ function RowActions({ isOwn, onEdit, onDelete, onReact }: RowActionsProps) {
           }}
         >
           <TrashIcon size={16} />
+        </button>
+      )}
+
+      {/* Report message — shown to non-owners (don't report your own messages) */}
+      {onReport !== null && (
+        <button
+          type="button"
+          aria-label="Report message"
+          data-testid="report-message-btn"
+          onClick={onReport}
+          className="flex h-8 w-8 items-center justify-center transition-colors focus:outline-none focus-visible:ring-2"
+          style={{ color: 'rgba(255,255,255,0.40)' }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#3f3f46';
+            (e.currentTarget as HTMLButtonElement).style.color = '#f87171';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = '';
+            (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.40)';
+          }}
+        >
+          <FlagIcon size={16} />
         </button>
       )}
     </div>
@@ -1035,6 +1060,7 @@ function SentRow({
   const isOwn = !!currentUserId && msg.authorId === currentUserId;
   const [rowState, setRowState] = useState<'normal' | 'editing' | 'deleting'>('normal');
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const reactBtnRef = useRef<HTMLButtonElement>(null);
   // Ref forwarded to ThreadPanel triggerRef so Esc restores focus here (D-carry 2)
   const threadBtnRef = useRef<HTMLButtonElement>(null);
@@ -1283,6 +1309,17 @@ function SentRow({
               ? () => setRowState('deleting')
               : null
           }
+          onReport={!isOwn ? () => setReportDialogOpen(true) : null}
+        />
+      )}
+
+      {/* Report message dialog */}
+      {reportDialogOpen && (
+        <ReportDialog
+          targetType="message"
+          targetId={msg.id}
+          displayLabel={`message by ${msg.authorId}`}
+          onClose={() => setReportDialogOpen(false)}
         />
       )}
 

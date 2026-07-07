@@ -24,6 +24,7 @@ import type { DiscoverServer } from '@studyhall/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../auth/api';
+import { ReportDialog } from './ReportDialog';
 import { useServers } from './ServerContext';
 
 // ── Request sequencing ────────────────────────────────────────────────────────
@@ -33,6 +34,7 @@ import { useServers } from './ServerContext';
 let _fetchSeq = 0;
 import {
   CompassIcon,
+  FlagIcon,
   MagnifyingGlassIcon,
   SpinnerIcon,
   UsersIcon,
@@ -126,10 +128,11 @@ type ServerCardProps = {
   cardState: CardState;
   onJoin: (id: string) => void;
   onOpen: (id: string) => void;
+  onReport: (id: string, name: string) => void;
   staggerIdx: number;
 };
 
-function ServerCard({ server, cardState, onJoin, onOpen, staggerIdx }: ServerCardProps) {
+function ServerCard({ server, cardState, onJoin, onOpen, onReport, staggerIdx }: ServerCardProps) {
   const avatarStyle = AVATAR_STYLES[avatarSlot(server.id)];
   const isJoined = cardState === 'joined';
   const isJoining = cardState === 'joining';
@@ -153,13 +156,43 @@ function ServerCard({ server, cardState, onJoin, onOpen, staggerIdx }: ServerCar
             {serverInitials(server.name)}
           </div>
           <div className="flex-1 min-w-0 pt-1">
-            <h3
-              className="font-semibold text-base truncate"
-              style={{ color: 'rgba(255,255,255,0.92)' }}
-              title={server.name}
-            >
-              {server.name}
-            </h3>
+            <div className="flex items-start justify-between gap-2">
+              <h3
+                className="font-semibold text-base truncate"
+                style={{ color: 'rgba(255,255,255,0.92)' }}
+                title={server.name}
+              >
+                {server.name}
+              </h3>
+              {/* Report affordance — opacity-0 on default, visible on group hover / focus-visible */}
+              <button
+                type="button"
+                aria-label={`Report ${server.name}`}
+                data-testid={`report-server-btn-${server.id}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onReport(server.id, server.name);
+                }}
+                className="flex h-8 w-8 items-center justify-center rounded-md transition-colors focus-visible:outline-none opacity-0 group-hover:opacity-100 focus-visible:opacity-100 shrink-0"
+                style={{ color: 'rgba(255,255,255,0.40)', backgroundColor: 'transparent' }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#27272a';
+                  (e.currentTarget as HTMLButtonElement).style.color = '#f87171';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+                  (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.40)';
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 0 2px rgba(16,185,129,0.4)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                <FlagIcon size={14} />
+              </button>
+            </div>
             <div className="flex items-center gap-1.5 mt-0.5">
               <UsersIcon size={12} style={{ color: 'rgba(255,255,255,0.60)', flexShrink: 0 }} />
               <span className="text-xs" style={{ color: 'rgba(255,255,255,0.60)' }}>
@@ -301,6 +334,9 @@ export function ServerDiscoverPage() {
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resultsCountId = 'discover-results-count';
+
+  // Report dialog state
+  const [reportTarget, setReportTarget] = useState<{ id: string; name: string } | null>(null);
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
 
@@ -735,6 +771,7 @@ export function ServerDiscoverPage() {
                     cardState={cardStates[srv.id] ?? 'default'}
                     onJoin={(id) => void handleJoin(id)}
                     onOpen={handleOpen}
+                    onReport={(id, name) => setReportTarget({ id, name })}
                     staggerIdx={idx}
                   />
                   {cardErrors[srv.id] && (
@@ -781,6 +818,17 @@ export function ServerDiscoverPage() {
           </>
         )}
       </div>
+
+      {/* Report dialog — server target */}
+      {reportTarget && (
+        <ReportDialog
+          targetType="server"
+          targetId={reportTarget.id}
+          serverId={reportTarget.id}
+          displayLabel={reportTarget.name}
+          onClose={() => setReportTarget(null)}
+        />
+      )}
     </div>
   );
 }

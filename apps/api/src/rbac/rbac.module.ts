@@ -29,6 +29,12 @@ import { RbacService } from './rbac.service';
     OwnerLockoutService,
     ModerationService,
   ],
-  exports: [RbacService, ChannelPermissionGuard, ChannelMessageGuard, OwnerLockoutService],
+  exports: [
+    RbacService,
+    ChannelPermissionGuard,
+    ChannelMessageGuard,
+    OwnerLockoutService,
+    ModerationService,
+  ],
 })
 export class RbacModule {}

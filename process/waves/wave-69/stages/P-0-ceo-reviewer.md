@@ -1,0 +1,22 @@
+verdict: PROCEED
+verdict_source: ceo-reviewer
+mode_applied: HOLD-SCOPE
+mode_rationale: |
+  Not SCOPE-EXPANSION: the milestone's deferred scope (user-block, admin review queue, appeals, auto-detection, rate-limits, platform-admin unlist role) is real but genuinely later-bundle work — user-block in particular is a separate cross-server surface (DMs/content hiding) with its own data model, not a cheap add to a directory-report loop; pulling it forward bloats WIP against the founder's documented "smallest viable next seed" discipline and delays a shippable loop.
+  Not SELECTIVE-EXPANSION: no single cheap-but-disproportionate addition exists — the one candidate (block) is neither cheap nor part of the report->action->unlist loop this bundle proves.
+  Not SCOPE-REDUCTION: the three tasks are the minimum coherent slice. Dropping the UI (96d5ed58) ships an unreachable feature; dropping the action loop (d7250881) ships inert reports; dropping the seed is incoherent. This is a real-and-load-bearing loop, not a real-but-trivial bug.
+  HOLD-SCOPE because scope is exactly right, BOARD-mandated, traces cleanly to bet + milestone, has a measurable success metric, and reuses existing primitives — the bar here is execution quality, not scope re-cutting.
+bet_traced_to: Academic tools + offline-first win students from Discord (status=live) — public discovery serves the network-effect leg; moderation protects that surface so it can be safely launched. M14 Bet source = Differentiation.
+milestone_traced_to: 6a9424fe-c943-4b26-9110-6915661a6fb9 — M14 — Trust & Safety: moderation for public discovery (in_progress, Class product-feature, Tier T1, mvp-critical). Depends on M11 (done).
+proposed_scope_change: |
+  None. Scope held as authored: seed 9f2bb017 (reports table + POST /reports + directory-level unlist) + sibling d7250881 (owner/mod report-action loop reusing wave-41 ModerationService + moderate_members RBAC + MessagesService soft-delete) + sibling 96d5ed58 (student report UI + owner report inbox). This is the core report->action->unlist loop; block + completeness/coverage are correctly deferred to later M14 bundles.
+strategic_flags: |
+  1. PRIORITY IS CORRECT. Moderation is the right next work after M11 (discovery) closed, ahead of the founder-reserved todos M9 (Monetization), M10 (Compliance), M13 (Partnerships): all three are status=todo and correctly gated behind launch / paying-school triggers, whereas M14 is the standing BOARD 7/7-mandated pre-launch dependency that directly unblocks the founder-reserved public-launch-go. Building monetization/partnerships on top of an un-moderated public surface would be strategically inverted. Monetization/pricing remain founder-reserved and untouched by this wave.
+  2. LAUNCH-GATE SEQUENCING IS CORRECT AND MUST STAY EXPLICIT. This bundle moves M14 to "reportable + actionable + unlistable" for the in-server + directory path — it does NOT complete the launch gate. The full gate (100% of public listings reportable + report->action->resolution verified end-to-end + user-block) requires at least one more bundle (block + coverage/completeness). PROCEED is on the bundle, NOT on marking M14 done. Do not close M14 or imply launch-readiness at this wave's N-1. FOUNDER SHOULD KNOW: public-launch-go stays founder-reserved and blocked on M14 completion; nothing this wave ships should be read as "we can launch the directory now."
+  3. NO FOUNDER-RESERVED POLICY DECISION IS TRIGGERED. The mechanism (report -> owner/mod action -> unlist) is a standard, industry-solved moderation primitive reusing existing RBAC — not a platform-policy call. WHAT gets taken down is owner/moderator discretion at the server level, not a platform content-policy this wave authors. A platform-level content policy / platform-admin (non-owner) takedown role IS a future founder-reserved product-values decision, but it is correctly deferred and not in this bundle — flag it for the founder as a known future decision, not a blocker now.
+  4. REALIST CAVEAT (carried, not blocking): as with M11's close, this certifies the moderation loop is functional/reachable — it does not validate real-world abuse volume or that the loop is tuned for actual bad actors (zero real users / self-seeded test data). That is inherent to pre-validation and not a reason to hold; T-9 must prove the loop end-to-end on the verified prod fixture.
+drop_rationale: |
+  N/A
+escalation_reason: |
+  N/A
+sibling_visible: false

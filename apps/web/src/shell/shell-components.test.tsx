@@ -30,6 +30,13 @@ vi.mock('../auth/api', () => ({
     // Required by ServerOverviewSettings (owner gate)
     getMe: vi.fn(),
     updateServer: vi.fn(),
+    // Required by ChannelSidebar (moderator gate — wave-69)
+    getMyPermissions: vi.fn().mockResolvedValue({
+      owner: false,
+      moderate_members: false,
+      manage_channels: false,
+      manage_assignments: false,
+    }),
   },
 }));
 
