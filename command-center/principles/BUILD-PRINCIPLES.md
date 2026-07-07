@@ -105,3 +105,6 @@ Promoted at L-2 Distill from `process/waves/wave-<N>/blocks/L/observations.md` b
 
 13. Pass the opaque user id, not the display username, to any prop compared for identity such as isOwn or isSelf.
    Why: A username-vs-id mismatch makes the identity check always-false, hiding owner affordances.
+
+14. Render a fixed or full-screen overlay through a portal to document.body so a transformed ancestor cannot move it.
+   Why: A transformed ancestor is the containing block for position:fixed, hiding it off-screen.
