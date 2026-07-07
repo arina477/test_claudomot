@@ -10,7 +10,7 @@
 |---|---|---|---|
 | B-0 | process/waves/wave-75/stages/B-0-branch-and-schema.md | done | branch wave-75-mock-billing; schema SKIPPED (reuse subscriptions) |
 | B-1 | process/waves/wave-75/stages/B-1-contracts.md | done | TierChangeRequest/ServerPlan DTOs (2a8c224) |
-| B-2 | process/waves/wave-75/stages/B-2-backend.md | pending | BillingProvider+mock+controller+guard+TIER_CAPS |
+| B-2 | process/waves/wave-75/stages/B-2-backend.md | done | 2 commits a63264c+9b9ec24; 795 api tests green |
 | B-3 | process/waves/wave-75/stages/B-3-frontend.md | pending | "Your plan" panel + api client |
 | B-4 | process/waves/wave-75/stages/B-4-wiring.md | pending | |
 | B-5 | process/waves/wave-75/stages/B-5-verify.md | pending | |
@@ -30,7 +30,8 @@
 - **BUILD-PRINCIPLES carried:** rule 2 (push branch after every stage); rule 13 (opaque userId not username for owner/isOwn); rule 15 (multi-step mutation in a transaction); rule 4 (B-6 reproduce a negative authz path — payments surface); AuthGuard (verification-required) on all 3 billing endpoints (P-4 security fix).
 
 ## Open escalations carried into gate
-none
+- CI build ordering: packages/shared must build before apps/api (B-2 hit a stale dist). Verify at B-5 (exact CI commands) + C-1.
+- T-4 gap: mock-billing upsert against a REAL Postgres not yet integration-tested (B-2 stubbed db). T-4 must add a pg-harness upsert test (BUILD-9).
 
 ## Gate verdict log
 <appended by head-builder at B-6>
