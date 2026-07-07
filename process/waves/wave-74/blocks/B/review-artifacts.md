@@ -12,8 +12,8 @@
 | B-1 | process/waves/wave-74/stages/B-1-contracts.md | done | Tier/Entitlements DTO (task e34642ef) |
 | B-2 | process/waves/wave-74/stages/B-2-backend.md | done | service + gate + verify-reads THROWS test |
 | B-3 | process/waves/wave-74/stages/B-3-frontend.md | skipped | optional display deferred (low-value until upgrade path) |
-| B-4 | process/waves/wave-74/stages/B-4-wiring.md | pending | |
-| B-5 | process/waves/wave-74/stages/B-5-verify.md | pending | |
+| B-4 | process/waves/wave-74/stages/B-4-wiring.md | done | repo typecheck 4/4 |
+| B-5 | process/waves/wave-74/stages/B-5-verify.md | done | lint/tests/build green |
 | B-6 | process/waves/wave-74/stages/B-6-review.md | pending | |
 
 ## Block-specific context

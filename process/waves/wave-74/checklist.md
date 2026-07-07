@@ -16,8 +16,8 @@
 - [x] B-1 Contracts
 - [x] B-2 Backend
 - [x] B-3 (skipped — optional display deferred) Frontend
-- [ ] B-4 Wiring
-- [ ] B-5 Verify
+- [x] B-4 Wiring
+- [x] B-5 Verify
 - [ ] B-6 Review
 ## C — CI/CD
 - [ ] C-1 PR, CI & merge
