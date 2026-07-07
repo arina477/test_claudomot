@@ -19,6 +19,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { HttpError, api } from '../auth/api';
+import { EducatorAdminConsole } from './EducatorAdminConsole';
 import { ServerPlanPanel } from './ServerPlanPanel';
 import { GearIcon, ShieldCheckIcon, SpinnerIcon, WarningCircleIcon, XIcon } from './icons';
 
@@ -151,6 +152,30 @@ export function ServerOverviewSettings({
   }, [ownerId]);
 
   const isOwner = ownerStatus === 'owner';
+
+  // ── Educator-tools entitlement (wave-76 M13) ─────────────────────────────
+  // Read the server plan to know whether the educatorAdminTools entitlement is
+  // enabled for this server's tier. Best-effort — a load failure simply leaves
+  // the console entry hidden (the server is authoritative and 403s regardless).
+  const [educatorToolsEnabled, setEducatorToolsEnabled] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setEducatorToolsEnabled(false);
+    api
+      .getServerPlan(serverId)
+      .then((plan) => {
+        if (cancelled) return;
+        setEducatorToolsEnabled(plan.entitlements.educatorAdminTools);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setEducatorToolsEnabled(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [serverId]);
 
   // ── Save / error state ───────────────────────────────────────────────────
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
@@ -676,6 +701,22 @@ export function ServerOverviewSettings({
                   loading-flash false). Panel is read-only for non-owners. */}
               {ownerStatus !== 'loading' && ownerStatus !== 'error' && (
                 <ServerPlanPanel serverId={serverId} isOwner={isOwner} />
+              )}
+
+              {/* Educator Admin Console — wave-76 M13.
+                  Surfaced only once the owner gate resolves AND the server tier
+                  enables educatorAdminTools AND the caller is owner/educator.
+                  Gate is best-effort UX (opaque-id owner comparison in the
+                  parent — BUILD-13); the SERVER is authoritative and the console
+                  handles a 403 by rendering its forbidden state. Non-entitled /
+                  non-authorized callers render nothing (the component returns
+                  null). Owner counts as an educator for the client gate. */}
+              {ownerStatus !== 'loading' && ownerStatus !== 'error' && (
+                <EducatorAdminConsole
+                  serverId={serverId}
+                  canAccess={isOwner}
+                  educatorToolsEnabled={educatorToolsEnabled}
+                />
               )}
 
               {/* Fix 1: Save / Discard actions — OWNER-ONLY.

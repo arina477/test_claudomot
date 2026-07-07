@@ -30,6 +30,10 @@ vi.mock('../auth/api', async (importOriginal) => {
       updateServer: vi.fn(),
       getServerPlan: vi.fn(),
       changeServerTier: vi.fn(),
+      // EducatorAdminConsole is mounted inside ServerOverviewSettings (wave-76).
+      // The FREE_PLAN fixture has educatorAdminTools=false so the console renders
+      // nothing; this mock only guards against an undefined api method.
+      getServerEducatorAnalytics: vi.fn(),
     },
   };
 });

@@ -40,6 +40,18 @@ vi.mock('../auth/api', async (importOriginal) => {
         entitlements: { storageMb: 2048, callCapacity: 5, educatorAdminTools: false },
       }),
       changeServerTier: vi.fn(),
+      // EducatorAdminConsole is mounted inside ServerOverviewSettings (wave-76).
+      // Default plan mock has educatorAdminTools=false so the console renders
+      // nothing (gate not met) — this mock is here so a school-tier plan mock
+      // doesn't hit an undefined api method.
+      getServerEducatorAnalytics: vi.fn().mockResolvedValue({
+        memberCount: 0,
+        roleBreakdown: [],
+        messageVolume: 0,
+        assignmentCount: 0,
+        submissionRollup: { assignmentCount: 0, submissionCount: 0 },
+        recentActivity: [],
+      }),
     },
   };
 });
