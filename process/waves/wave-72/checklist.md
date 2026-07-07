@@ -32,7 +32,7 @@
 - [x] T-9 Journey
 ## V — Verify
 - [x] V-1 Reviews
-- [ ] V-2 Triage
+- [x] V-2 Triage
 - [ ] V-3 Fast-fix
 ## L — Learn
 - [ ] L-1 Docs
