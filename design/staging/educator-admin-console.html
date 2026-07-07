@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Educator Admin Console — StudyHall</title>
+    
+    <!-- Typography: Outfit for a premium, clean, structural sans-serif -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Tailwind Configuration Engine & Deep CSS Properties -->
+    <style>
+        :root {
+            /* StudyHall Primitive Surface Tokens */
+            --surface-950: #0a0a0b;
+            --surface-900: #121214;
+            --surface-800: #1c1c1f;
+            --surface-700: #27272a;
+            --surface-600: #3f3f46;
+            --surface-500: #52525b;
+            
+            /* Border Tokens */
+            --border-hairline: rgba(255, 255, 255, 0.06);
+            --border-hover: rgba(255, 255, 255, 0.10);
+            
+            /* Text Tokens */
+            --text-primary: rgba(255, 255, 255, 0.92);
+            --text-secondary: rgba(255, 255, 255, 0.60);
+            --text-muted: rgba(255, 255, 255, 0.40);
+            
+            /* Semantic Tokens */
+            --accent-emerald: #10b981;
+            --accent-amber: #f59e0b;
+            --danger: #ef4444;
+            --danger-btn: #b91c1c;
+            --danger-text: #f87171;
+            
+            /* Elevation & Glow */
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+            --shadow-pop: 0 8px 24px rgba(0,0,0,0.5);
+            --glow-focus: 0 0 0 2px rgba(16,185,129,0.4);
+            --glow-subtle: 0 0 15px rgba(255,255,255,0.05);
+
+            /* Timing/Physics */
+            --spring-bounce: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
+        }
+
+        body {
+            font-family: 'Outfit', -apple-system, sans-serif;
+            background-color: var(--surface-950);
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Custom minimal scrollbar for all scrollable containers */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--surface-600);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--surface-500);
+        }
+
+        /* Core Component Classes applied via CSS for strictness & reuse */
+        .panel-container {
+            background-color: var(--surface-800);
+            border-radius: 0.5rem; /* rounded-lg */
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-hairline);
+            overflow: hidden;
+        }
+
+        .stat-card {
+            background-color: var(--surface-900);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            border: 1px solid var(--border-hairline);
+            box-shadow: var(--shadow-sm);
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            border-color: var(--border-hover);
+            transform: translateY(-1px);
+        }
+
+        /* Glass internal refraction effect on stat cards */
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+            pointer-events: none;
+        }
+
+        .label-text {
+            font-size: 0.75rem; /* text-xs */
+            font-weight: 600; /* font-semibold */
+            text-transform: uppercase;
+            letter-spacing: 0.1em; /* tracking-widest */
+            color: var(--text-secondary);
+        }
+
+        /* 
+          State Management Rules 
+          Only one state container should be display:block at a time.
+        */
+        .console-state { display: none; }
+        .console-state.active { display: block; }
+        
+        /* Loading Skeleton Shorthands */
+        @keyframes subtle-shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+        
+        .skeleton-block {
+            background: linear-gradient(90deg, var(--surface-800) 25%, var(--surface-700) 50%, var(--surface-800) 75%);
+            background-size: 1000px 100%;
+            animation: subtle-shimmer 2.5s infinite linear;
+            border-radius: 0.25rem;
+        }
+
+        /* Cinematic Appearance Animation */
+        @keyframes clipReveal {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+                clip-path: inset(100% 0 0 0);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+                clip-path: inset(0 0 0 0);
+            }
+        }
+
+        .animate-reveal {
+            animation: clipReveal 0.8s var(--ease-out-expo) forwards;
+            opacity: 0;
+        }
+    </style>
+</head>
+<body class="h-screen w-full flex overflow-hidden selection:bg-[#10b981]/30 selection:text-white">
+
+    <!-- DEMO OVERLAY: State Switcher (Not part of the actual component, injected for reviewer evaluation) -->
+    <div class="fixed bottom-6 right-6 z-[100] flex gap-2 p-2 rounded-full border" style="background: var(--surface-900); border-color: var(--border-hairline); box-shadow: var(--shadow-pop);">
+        <button onclick="switchState('loading')" class="px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-colors state-btn" data-target="loading" style="color: var(--text-secondary);">Loading</button>
+        <button onclick="switchState('empty')" class="px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-colors state-btn" data-target="empty" style="color: var(--text-secondary);">Empty</button>
+        <button onclick="switchState('loaded')" class="px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-colors state-btn outline-none ring-2" data-target="loaded" style="color: var(--surface-950); background: var(--accent-emerald); ring-color: var(--glow-focus);">Loaded</button>
+        <button onclick="switchState('forbidden')" class="px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-colors state-btn" data-target="forbidden" style="color: var(--danger-text);">Forbidden</button>
+    </div>
+
+    <!-- MACRO ARCHITECTURE: Server Settings Shell -->
+    <!-- Left Sidebar Rail (Simulated Server Settings Nav) -->
+    <nav class="hidden md:flex flex-col w-[260px] h-full flex-shrink-0 border-r" style="background-color: var(--surface-900); border-color: var(--border-hairline);">
+        <div class="p-6 pb-2">
+            <h2 class="text-sm font-semibold tracking-tight uppercase" style="color: var(--text-secondary);">Advanced CS 101</h2>
+            <div class="mt-1 text-xs" style="color: var(--text-muted);">Server Settings</div>
+        </div>
+        <div class="px-3 py-2 space-y-0.5">
+            <a href="#" class="block px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-[var(--surface-800)]" style="color: var(--text-secondary);">Overview</a>
+            <a href="#" class="block px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-[var(--surface-800)]" style="color: var(--text-secondary);">Roles</a>
+            <a href="#" class="block px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-[var(--surface-800)]" style="color: var(--text-secondary);">Your Plan</a>
+            <!-- Active Gated Navigation Item -->
+            <a href="#" class="flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium transition-colors" style="background-color: var(--surface-700); color: var(--accent-emerald);">
+                <span class="flex items-center gap-2">
+                    <i class="ph ph-shield-check text-lg"></i>
+                    Educator Console
+                </span>
+            </a>
+        </div>
+        <div class="mt-auto p-4">
+            <div class="h-[1px] w-full mb-4" style="background: var(--border-hairline);"></div>
+            <button class="flex items-center gap-2 px-3 py-2 w-full rounded-md text-sm font-medium transition-colors hover:bg-[var(--surface-800)]" style="color: var(--text-muted);">
+                <i class="ph ph-arrow-circle-left text-lg"></i>
+                Back to Server
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content Canvas (The actual routing surface) -->
+    <main class="flex-1 h-full overflow-y-auto relative" style="background-color: var(--surface-800);">
+        <!-- Top Nav (Mobile Fallback) -->
+        <header class="md:hidden flex items-center h-14 px-4 border-b sticky top-0 z-50 backdrop-blur-md" style="border-color: var(--border-hairline); background-color: rgba(28, 28, 31, 0.8);">
+            <button class="mr-4" style="color: var(--text-secondary);"><i class="ph ph-list text-2xl"></i></button>
+            <h1 class="text-sm font-semibold" style="color: var(--text-primary);">Educator Console</h1>
+        </header>
+
+        <!-- Dynamic Payload Container for the Console -->
+        <div class="w-full max-w-5xl mx-auto px-4 sm:px-8 max-h-min py-8 md:py-16 pb-32">
+            
+            <!-- STATE: LOADING -->
+            <div id="state-loading" class="console-state">
+                <!-- Header Skeleton -->
+                <div class="mb-10">
+                    <div class="flex items-center gap-3 mb-2">
+                        <i class="ph ph-spinner animate-spin text-3xl" style="color: var(--text-muted);"></i>
+                        <h2 class="text-2xl font-semibold text-transparent bg-clip-text skeleton-block w-48 h-8"></h2>
+                        <div class="skeleton-block w-20 h-5 rounded-full ml-2"></div>
+                    </div>
+                    <div class="skeleton-block w-72 h-4 mt-2"></div>
+                </div>
+
+                <!-- Bento Grid Skeletons -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div class="stat-card md:col-span-1 h-36 flex flex-col items-center justify-center space-y-4">
+                        <div class="skeleton-block w-full h-full absolute inset-0 opacity-20 hover:opacity-20"></div>
+                        <div class="skeleton-block w-16 h-12"></div>
+                        <div class="skeleton-block w-24 h-3"></div>
+                    </div>
+                    <div class="stat-card md:col-span-2 h-36 flex flex-col justify-center px-8 relative overflow-hidden">
+                        <div class="skeleton-block w-full h-full absolute inset-0 opacity-20"></div>
+                        <div class="skeleton-block w-32 h-10 mb-4"></div>
+                        <div class="skeleton-block w-48 h-4"></div>
+                    </div>
+                </div>
+                
+                <div class="panel-container">
+                    <div class="p-6 border-b" style="border-color: var(--border-hairline);">
+                        <div class="skeleton-block w-40 h-6"></div>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <div class="skeleton-block w-full h-12 rounded-lg"></div>
+                        <div class="skeleton-block w-[90%] h-12 rounded-lg"></div>
+                        <div class="skeleton-block w-[95%] h-12 rounded-lg"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STATE: EMPTY -->
+            <div id="state-empty" class="console-state">
+                <div class="mb-10 animate-reveal" style="animation-delay: 50ms;">
+                    <div class="flex flex-wrap items-center gap-3 mb-2">
+                        <i class="ph-fill ph-shield-check text-3xl" style="color: var(--text-secondary);"></i>
+                        <h2 class="text-2xl font-semibold tracking-tight" style="color: var(--text-primary);">Educator Console</h2>
+                        <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide border flex items-center gap-1.5" style="border-color: var(--border-hairline); color: var(--text-secondary); background: var(--surface-900);">
+                            School Plan
+                        </span>
+                    </div>
+                    <p class="text-sm mt-1 max-w-xl leading-relaxed" style="color: var(--text-secondary);">
+                        Aggregate analytics and structural overviews for this server. 
+                    </p>
+                </div>
+                
+                <div class="panel-container flex flex-col items-center justify-center py-32 px-6 text-center animate-reveal" style="animation-delay: 150ms;">
+                    <div class="mb-6 relative">
+                        <div class="absolute inset-0 blur-2xl opacity-10 rounded-full" style="background: var(--text-primary);"></div>
+                        <div class="w-16 h-16 rounded-full flex items-center justify-center border" style="background: var(--surface-900); border-color: var(--surface-600);">
+                            <i class="ph ph-chart-line-down text-2xl" style="color: var(--text-muted);"></i>
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2" style="color: var(--text-primary);">No activity globally recorded</h3>
+                    <p class="text-sm max-w-md mx-auto leading-relaxed" style="color: var(--text-secondary);">
+                        This server is currently pristine. Once members join, send messages, or complete assignments, aggregate analytics will begin compiling here safely.
+                    </p>
+                    <button class="mt-8 px-4 py-2 rounded-md font-semibold text-sm transition-all focus:outline-none focus:ring-2" 
+                            style="background: var(--surface-700); color: var(--text-primary); border: 1px solid var(--border-hairline); ring-color: var(--glow-focus);">
+                        Return to Settings
+                    </button>
+                </div>
+            </div>
+
+            <!-- STATE: FORBIDDEN -->
+            <div id="state-forbidden" class="console-state">
+                <div class="panel-container flex flex-col items-center justify-center py-32 px-6 text-center shadow-lg transform translate-y-4">
+                    <div class="mb-6 relative">
+                        <div class="absolute inset-0 blur-xl opacity-20 rounded-full" style="background: var(--danger);"></div>
+                        <div class="w-16 h-16 rounded-full flex items-center justify-center border" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2);">
+                            <i class="ph ph-lock-key text-2xl drop-shadow-md" style="color: var(--danger-text);"></i>
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2" style="color: var(--danger-text);">Access Restricted</h3>
+                    <p class="text-sm max-w-sm mx-auto leading-relaxed" style="color: var(--text-secondary);">
+                        The Educator Console is reserved strictly for owners and authorized educators on a designated <strong style="color: var(--text-primary); font-weight: 500;">School tier plan</strong>.
+                    </p>
+                    <div class="mt-8 w-12 h-[1px]" style="background: var(--surface-600);"></div>
+                    <p class="mt-8 text-xs font-mono" style="color: var(--text-muted);">ERR_INSUFFICIENT_ROLE_ENTITLEMENT</p>
+                </div>
+            </div>
+
+            <!-- STATE: LOADED (THE DASHBOARD) -->
+            <div id="state-loaded" class="console-state active">
+                
+                <!-- Macro Header Frame -->
+                <div class="mb-8 md:mb-12 animate-reveal flex flex-col md:flex-row md:items-end justify-between gap-4" style="animation-delay: 50ms;">
+                    <div>
+                        <div class="flex flex-wrap items-center gap-3 mb-2">
+                            <div class="w-10 h-10 rounded-lg flex items-center justify-center shadow-inner relative overflow-hidden" 
+                                 style="background: linear-gradient(145deg, var(--surface-700), var(--surface-900)); border: 1px solid var(--surface-600);">
+                                <i class="ph-fill ph-crown text-xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" style="color: var(--accent-emerald);"></i>
+                            </div>
+                            <h2 class="text-3xl font-semibold tracking-tight" style="color: var(--text-primary);">Educator Console</h2>
+                            <span class="px-2.5 py-0.5 mt-1 md:mt-0 rounded-full text-[11px] font-semibold tracking-wide border flex items-center gap-1.5 shadow-sm" 
+                                  style="border-color: rgba(16, 185, 129, 0.2); color: var(--accent-emerald); background: rgba(16, 185, 129, 0.05);">
+                                <span class="w-1.5 h-1.5 rounded-full bg-[var(--accent-emerald)] shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+                                School Plan
+                            </span>
+                        </div>
+                        <p class="text-sm mt-3 max-w-2xl leading-relaxed" style="color: var(--text-secondary);">
+                            Read-only aggregate metrics for <strong style="color: var(--text-primary); font-weight: 500;">Advanced CS 101</strong>. Individual student message content is sequestered. Data reflects current platform snapshot.
+                        </p>
+                    </div>
+                    <!-- Utility / Last Refreshed -->
+                    <div class="flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-md border" style="background: var(--surface-900); border-color: var(--border-hairline); color: var(--text-muted);">
+                        <i class="ph ph-arrows-clockwise"></i> Synchronized 2 mins ago
+                    </div>
+                </div>
+
+                <!-- The Asymmetric Meso-Architecture Data Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-5 w-full">
+                    
+                    <!-- MODULE 1: Members/Role Density (Col span 5/12) -->
+                    <div class="stat-card md:col-span-5 flex flex-col justify-between animate-reveal" style="animation-delay: 150ms;">
+                        <div class="flex justify-between items-start mb-6">
+                            <span class="label-text">Total Populated Roster</span>
+                            <i class="ph ph-users text-lg" style="color: var(--text-secondary);"></i>
+                        </div>
+                        <div class="flex items-baseline gap-3 mb-6">
+                            <span class="text-6xl font-light tracking-tighter tabular-nums counter-anim" style="color: var(--text-primary);" data-target="342">0</span>
+                            <span class="text-sm font-medium" style="color: var(--accent-emerald);">+12 this week</span>
+                        </div>
+                        
+                        <!-- Role Breakdown Sub-grid -->
+                        <div class="grid grid-cols-2 gap-px mt-auto pt-4 border-t" style="border-color: var(--border-hairline);">
+                            <div class="pr-4 border-r" style="border-color: var(--border-hairline);">
+                                <span class="block text-[10px] uppercase font-bold tracking-wider mb-1" style="color: var(--text-muted);">Educators</span>
+                                <span class="text-xl font-medium tabular-nums" style="color: var(--text-primary);">4</span>
+                            </div>
+                            <div class="pl-4">
+                                <span class="block text-[10px] uppercase font-bold tracking-wider mb-1" style="color: var(--text-muted);">Students</span>
+                                <span class="text-xl font-medium tabular-nums" style="color: var(--text-primary);">338</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MODULE 2: Message Volume & Density (Col span 7/12) -->
+                    <div class="stat-card md:col-span-7 flex flex-col relative animate-reveal" style="animation-delay: 200ms; background-image: radial-gradient(circle at 100% 0%, rgba(16,185,129,0.03) 0%, transparent 70%);">
+                        <div class="flex justify-between items-start mb-8">
+                            <span class="label-text">Communication Volume (7D)</span>
+                            <i class="ph ph-chat-centered-text text-lg" style="color: var(--text-secondary);"></i>
+                        </div>
+                        
+                        <div class="flex flex-col md:flex-row gap-8 items-start md:items-end w-full">
+                            <div class="flex-1">
+                                <span class="text-6xl font-light tracking-tighter tabular-nums counter-anim block leading-none" style="color: var(--text-primary);" data-target="15289">0</span>
+                                <span class="text-sm mt-3 block" style="color: var(--text-secondary);">Messages processed</span>
+                            </div>
+                            
+                            <div class="flex-shrink-0 w-full md:w-auto h-[60px] flex items-end gap-1.5" title="Simulated 7-day volume histogram">
+                                <!-- Minimal CSS-only chart representation (abstract) -->
+                                <div class="w-4 bg-[var(--surface-700)] rounded-t-sm" style="height: 30%"></div>
+                                <div class="w-4 bg-[var(--surface-700)] rounded-t-sm" style="height: 45%"></div>
+                                <div class="w-4 bg-[var(--surface-700)] rounded-t-sm" style="height: 60%"></div>
+                                <div class="w-4 bg-[var(--surface-600)] rounded-t-sm" style="height: 85%"></div>
+                                <div class="w-4 bg-[var(--surface-700)] rounded-t-sm" style="height: 50%"></div>
+                                <div class="w-4 bg-[var(--surface-700)] rounded-t-sm" style="height: 70%"></div>
+                                <div class="w-4 bg-[var(--accent-emerald)] rounded-t-sm shadow-[0_0_12px_rgba(16,185,129,0.4)]" style="height: 100%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-8 pt-4 flex gap-6 text-sm border-t" style="border-color: var(--border-hairline);">
+                            <div><strong style="color: var(--text-primary);"># general</strong> is highly active</div>
+                            <div style="color: var(--text-muted);">Avg. length: 34 words</div>
+                        </div>
+                    </div>
+
+                    <!-- MODULE 3: Assignment Flow (Full Width Bento Slice, split interior) -->
+                    <div class="stat-card md:col-span-12 p-0 flex flex-col md:flex-row animate-reveal" style="animation-delay: 250ms;">
+                        <!-- Left Block: Success/Flow -->
+                        <div class="flex-1 p-6 md:p-8 flex flex-col justify-center relative">
+                            <div class="flex justify-between items-start mb-6 w-full">
+                                <div class="flex items-center gap-2">
+                                    <i class="ph ph-clipboard-text mt-0.5" style="color: var(--text-secondary);"></i>
+                                    <span class="label-text mb-0">Assignment Submissions</span>
+                                </div>
+                            </div>
+                            <div class="flex items-baseline gap-4 mt-2">
+                                <span class="text-5xl font-light tracking-tighter tabular-nums counter-anim" style="color: var(--text-primary);" data-target="942">0</span>
+                                <span class="text-lg" style="color: var(--text-secondary);">/ 1,014 <span class="text-sm font-normal">expected</span></span>
+                            </div>
+                            <div class="w-full bg-[var(--surface-700)] h-1.5 rounded-full mt-6 overflow-hidden">
+                                <div class="bg-[var(--accent-emerald)] h-full rounded-full w-0 transition-[width] duration-1000 ease-out" style="width: 92.8%"></div>
+                            </div>
+                            <span class="text-xs font-semibold mt-3 block" style="color: var(--accent-emerald);">92.8% Completion Rate</span>
+                        </div>
+                        
+                        <!-- Right Block (The Tension/Warning Zone) -->
+                        <div class="flex-1 p-6 md:p-8 border-t md:border-t-0 md:border-l flex flex-col justify-center" style="border-color: var(--border-hairline); background-color: rgba(245, 158, 11, 0.02);">
+                            <span class="label-text text-[var(--accent-amber)] flex items-center gap-1.5 mb-6">
+                                <span class="w-2 h-2 rounded-full bg-[var(--accent-amber)] shadow-[0_0_6px_rgba(245,158,11,0.6)]"></span> Focus Areas
+                            </span>
+                            
+                            <div class="flex flex-col gap-5">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded shrink-0 flex items-center justify-center border" style="background: var(--surface-800); border-color: var(--surface-600);">
+                                            <i class="ph ph-clock-countdown" style="color: var(--accent-amber);"></i>
+                                        </div>
+                                        <div>
+                                            <div class="font-medium text-sm leading-tight" style="color: var(--text-primary);">Due Soon</div>
+                                            <div class="text-xs mt-0.5" style="color: var(--text-secondary);">Next 48 hours</div>
+                                        </div>
+                                    </div>
+                                    <span class="text-xl font-medium tabular-nums" style="color: var(--text-primary);">3</span>
+                                </div>
+                                
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded shrink-0 flex items-center justify-center border" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2);">
+                                            <i class="ph ph-warning-circle" style="color: var(--danger-text);"></i>
+                                        </div>
+                                        <div>
+                                            <div class="font-medium text-sm leading-tight" style="color: var(--danger-text);">Overdue Submissions</div>
+                                            <div class="text-xs mt-0.5" style="color: var(--text-secondary);">Past deadline</div>
+                                        </div>
+                                    </div>
+                                    <span class="text-xl font-medium tabular-nums" style="color: var(--danger-text);">27</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MODULE 4: Micro-Architecture Log (System Events) -->
+                    <div class="panel-container md:col-span-12 mt-4 animate-reveal" style="animation-delay: 300ms;">
+                        <div class="p-5 border-b flex justify-between items-center" style="border-color: var(--border-hairline); background: var(--surface-900);">
+                            <h3 class="text-[15px] font-semibold tracking-tight text-[var(--text-primary)]">System Audit Log</h3>
+                            <button class="text-xs font-medium hover:underline focus:outline-none" style="color: var(--text-secondary);">View All Logs</button>
+                        </div>
+                        
+                        <ul class="divide-y" style="border-color: var(--border-hairline);">
+                            <!-- Log Entry 1 -->
+                            <li class="p-4 flex items-start sm:items-center gap-4 hover:bg-[var(--surface-700)] transition-colors group cursor-default">
+                                <div class="w-7 h-7 rounded-full flex shrink-0 items-center justify-center border bg-[var(--surface-900)] border-[var(--surface-600)] group-hover:border-[var(--accent-emerald)] transition-colors">
+                                    <i class="ph ph-clipboard-text text-[var(--accent-emerald)] text-sm"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium truncate" style="color: var(--text-primary);">
+                                        Assignment Published <span class="font-normal" style="color: var(--text-secondary);">in #cs-101-announcements</span>
+                                    </p>
+                                    <p class="text-xs mt-0.5" style="color: var(--text-secondary);">"Week 4: Data Structures Intro" assigned to 338 students.</p>
+                                </div>
+                                <div class="text-xs whitespace-nowrap hidden sm:block" style="color: var(--text-muted);">14 mins ago</div>
+                            </li>
+
+                            <!-- Log Entry 2 -->
+                            <li class="p-4 flex items-start sm:items-center gap-4 hover:bg-[var(--surface-700)] transition-colors group cursor-default">
+                                <div class="w-7 h-7 rounded-full flex shrink-0 items-center justify-center border bg-[var(--surface-900)] border-[var(--surface-600)]">
+                                    <i class="ph ph-user-plus text-[var(--text-secondary)] text-sm"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium truncate" style="color: var(--text-primary);">
+                                        Role Entitlement Modified <span class="font-normal" style="color: var(--text-secondary);">by Prof. A. Turing</span>
+                                    </p>
+                                    <p class="text-xs mt-0.5" style="color: var(--text-secondary);">Added the "manage_assignments" capability to role "Teaching Assistant".</p>
+                                </div>
+                                <div class="text-xs whitespace-nowrap hidden sm:block" style="color: var(--text-muted);">2 hours ago</div>
+                            </li>
+
+                            <!-- Log Entry 3 -->
+                            <li class="p-4 flex items-start sm:items-center gap-4 hover:bg-[var(--surface-700)] transition-colors group cursor-default">
+                                <div class="w-7 h-7 rounded-full flex shrink-0 items-center justify-center border bg-[var(--surface-900)] border-[var(--surface-600)]">
+                                    <i class="ph ph-tag text-[var(--text-secondary)] text-sm"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium truncate" style="color: var(--text-primary);">
+                                        Channel Created <span class="font-normal" style="color: var(--text-secondary);">by Owner</span>
+                                    </p>
+                                    <p class="text-xs mt-0.5" style="color: var(--text-secondary);">New generic channel `#project-group-08` initiated.</p>
+                                </div>
+                                <div class="text-xs whitespace-nowrap hidden sm:block" style="color: var(--text-muted);">1 day ago</div>
+                            </li>
+                        </ul>
+                        
+                        <div class="p-3 text-center border-t border-[var(--border-hairline)]" style="background: var(--surface-800);">
+                            <span class="text-xs" style="color: var(--text-muted);">End of recent activity. 142 total events recorded this week.</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Custom Interaction Engine -->
+    <script>
+        // State Management Logic (For Demo Purposes)
+        function switchState(stateId) {
+            // Update active state class
+            document.querySelectorAll('.console-state').forEach(el => {
+                el.classList.remove('active');
+            });
+            document.getElementById('state-' + stateId).classList.add('active');
+
+            // Update demo button UI styles
+            document.querySelectorAll('.state-btn').forEach(btn => {
+                const isTarget = btn.getAttribute('data-target') === stateId;
+                const isForbidden = btn.getAttribute('data-target') === 'forbidden';
+                
+                // Reset all
+                btn.classList.remove('ring-2', 'outline-none');
+                btn.style.background = 'transparent';
+                btn.style.color = isForbidden ? 'var(--danger-text)' : 'var(--text-secondary)';
+                
+                // Style active target
+                if (isTarget) {
+                    btn.classList.add('ring-2', 'outline-none');
+                    if (isForbidden) {
+                        btn.style.background = 'var(--danger-btn)';
+                        btn.style.color = '#fff'; // Pass WCAG for button fill
+                        btn.style.ringColor = 'var(--danger-text)';
+                    } else if (stateId === 'loaded') {
+                        btn.style.background = 'var(--accent-emerald)';
+                        btn.style.color = 'var(--surface-950)';
+                        btn.style.ringColor = 'var(--accent-emerald)';
+                    } else {
+                        btn.style.background = 'var(--surface-700)';
+                        btn.style.color = 'var(--text-primary)';
+                        btn.style.ringColor = 'var(--surface-600)';
+                    }
+                }
+            });
+
+            // Re-trigger counter animation if loaded state is entered
+            if (stateId === 'loaded') {
+                animateCounters();
+            }
+        }
+
+        // Kinetic Number Counting Simulation 
+        // Ensures numbers don't just appear, providing physical data-mounting feel
+        function animateCounters() {
+            const counters = document.querySelectorAll('.counter-anim');
+            const easeOutExpo = (x) => {
+                return x === 1 ? 1 : 1 - Math.pow(2, -10 * x);
+            };
+
+            counters.forEach(counter => {
+                const target = parseInt(counter.getAttribute('data-target'), 10);
+                const duration = 2000; // ms
+                let startTimestamp = null;
+                
+                // Format with commas
+                const formatNum = (num) => new Intl.NumberFormat().format(Math.floor(num));
+
+                const step = (timestamp) => {
+                    if (!startTimestamp) startTimestamp = timestamp;
+                    const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                    
+                    // Apply easing
+                    const easedProgress = easeOutExpo(progress);
+                    const currentVal = easedProgress * target;
+                    
+                    counter.innerText = formatNum(currentVal);
+                    
+                    if (progress < 1) {
+                        window.requestAnimationFrame(step);
+                    } else {
+                        counter.innerText = formatNum(target); // Final hard snap
+                    }
+                };
+                
+                window.requestAnimationFrame(step);
+            });
+        }
+
+        // Initialize script logic on mount
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initiate the number incrementation for the default state
+            animateCounters();
+        });
+    </script>
+</body>
+</html>
