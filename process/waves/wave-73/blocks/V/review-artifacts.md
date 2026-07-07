@@ -3,7 +3,7 @@
 **Block:** V (Verify)
 **Wave topic:** M10 privacy-events audit log (LIVE on 29a140d)
 **Block exit gate:** V-3
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file(s) | Status | Notes |
@@ -20,3 +20,16 @@
 
 ## Gate verdict log
 <appended by head-verifier at V-3>
+
+## Block-exit handoff
+```yaml
+verify_block_status: complete
+karen_verdict: APPROVE
+jenny_verdict: APPROVE
+triaged_findings:
+  blocking_resolved: []
+  non_blocking_task_ids: [ed34c749-f2cd-4e09-a6d3-8e4125e01e42]
+  noise_suppressed: 2
+fast_fix_cycles: 0
+ready_for_learn: true
+```
