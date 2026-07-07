@@ -28,6 +28,8 @@ vi.mock('../db/index', () => ({
 }));
 
 import { db } from '../db/index';
+import type { RbacService } from '../rbac/rbac.service';
+import { EducatorAccessGuard } from './educator-access.guard';
 import { EducatorToolsController } from './educator-tools.controller';
 import { EntitlementGuard, REQUIRE_ENTITLEMENT_KEY } from './entitlement.guard';
 import { EntitlementsService } from './entitlements.service';
@@ -99,5 +101,59 @@ describe('EducatorTools entitlement enforcement — free→school unlock', () =>
   it('server_pro tier → still 403 (only school unlocks educator tools)', async () => {
     mockSelect.mockReturnValue(makeSelectChain([{ tier: 'server_pro' }]));
     await expect(guard.canActivate(makeCtx(SERVER_ID))).rejects.toThrow(ForbiddenException);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// wave-76 M13: EducatorAccessGuard composed onto /status.
+//
+// Closes the wave-75 T8-F1 leak — a non-owner / non-educator member of a
+// school-tier server used to pass on the entitlement (tier) gate alone. The
+// EducatorAccessGuard now gates on the CALLER's authority via RbacService.can.
+//
+// These tests exercise the guard through a real ExecutionContext carrying the
+// verified session's userId; RbacService.can is stubbed with pure return values
+// (per the block-682e0912 test contract — not a real RbacService instance).
+// ---------------------------------------------------------------------------
+
+const EDU_USER_ID = 'user-edu';
+
+function makeEduCtx(serverId: string, userId: string) {
+  const handler = EducatorToolsController.prototype.getStatus;
+  return {
+    getHandler: () => handler,
+    getClass: () => EducatorToolsController,
+    switchToHttp: () => ({
+      getRequest: () => ({ params: { serverId }, session: { getUserId: () => userId } }),
+    }),
+  } as unknown as ExecutionContext;
+}
+
+function makeAccessGuard(canReturn: boolean) {
+  const can = vi.fn().mockResolvedValue(canReturn);
+  const rbac = { can } as unknown as RbacService;
+  return { guard: new EducatorAccessGuard(rbac), can };
+}
+
+describe('EducatorTools /status — educator-access gate (wave-76 T8-F1 fix)', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('owner / educator (can=true) → guard allows and handler returns { serverId, enabled: true }', async () => {
+    const { guard: accessGuard, can } = makeAccessGuard(true);
+    const controller = new EducatorToolsController();
+
+    const allowed = await accessGuard.canActivate(makeEduCtx(SERVER_ID, EDU_USER_ID));
+    expect(allowed).toBe(true);
+    expect(can).toHaveBeenCalledWith(EDU_USER_ID, SERVER_ID, 'manage_assignments');
+
+    // Contract preserved: /status still returns { serverId, enabled: true }.
+    expect(controller.getStatus(SERVER_ID)).toEqual({ serverId: SERVER_ID, enabled: true });
+  });
+
+  it('non-owner / non-educator (can=false) → guard throws 403 even on a school-tier server', async () => {
+    const { guard: accessGuard } = makeAccessGuard(false);
+    await expect(accessGuard.canActivate(makeEduCtx(SERVER_ID, EDU_USER_ID))).rejects.toThrow(
+      ForbiddenException,
+    );
   });
 });

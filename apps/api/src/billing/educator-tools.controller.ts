@@ -1,5 +1,6 @@
 import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '../auth/auth.guard';
+import { EducatorAccessGuard } from './educator-access.guard';
 import { EntitlementGuard, RequireEntitlement } from './entitlement.guard';
 
 // ---------------------------------------------------------------------------
@@ -10,22 +11,28 @@ import { EntitlementGuard, RequireEntitlement } from './entitlement.guard';
 //
 // GET /servers/:serverId/educator-tools/status
 //   AuthGuard (verification-REQUIRED) + EntitlementGuard requiring the
-//   'educatorAdminTools' flag:
-//     • 200 { enabled: true } when the server tier is 'school'.
-//     • 403 when the tier is 'free' / 'server_pro' (flag false).
+//   'educatorAdminTools' flag + EducatorAccessGuard (owner/educator predicate):
+//     • 200 { enabled: true } when the server tier is 'school' AND the caller is
+//       the owner or a member with manage_assignments.
+//     • 403 when the tier is 'free' / 'server_pro' (entitlement flag false), OR
+//       when the caller is neither owner nor educator (wave-76: closes the
+//       wave-75 T8-F1 leak — a non-owner/non-educator school-tier caller used to
+//       pass on the tier gate alone).
 //
 // Guard order matters: AuthGuard first (authenticate), then EntitlementGuard
-// (resolve the server's tier and gate on the flag).
+// (resolve the server's tier and gate on the flag), then EducatorAccessGuard
+// (gate on the CALLER's authority within the server via RbacService.can).
 // ---------------------------------------------------------------------------
 
 @Controller('servers/:serverId/educator-tools')
 export class EducatorToolsController {
   @Get('status')
-  @UseGuards(AuthGuard, EntitlementGuard)
+  @UseGuards(AuthGuard, EntitlementGuard, EducatorAccessGuard)
   @RequireEntitlement('educatorAdminTools')
   getStatus(@Param('serverId') serverId: string): { serverId: string; enabled: true } {
-    // Reaching this handler means EntitlementGuard already confirmed the flag is
-    // enabled for this server (tier === 'school'); otherwise it threw 403.
+    // Reaching this handler means EntitlementGuard confirmed the flag is enabled
+    // for this server (tier === 'school') AND EducatorAccessGuard confirmed the
+    // caller is the owner or an educator; otherwise one threw 403.
     return { serverId, enabled: true };
   }
 }
