@@ -10,7 +10,7 @@
 **Note:** M13 autonomous engineering core (educator admin console + analytics), builds on M9 substrate. B2B2C go-to-market + success metric FENCED (founder-reserved). UI-bearing (console) → P-1 likely flags design_gap → D-block.
 
 PRODUCT:
-- [ ] P-0 Frame (discover + reframe)
+- [x] P-0 Frame (discover + reframe)
 - [ ] P-1 Decompose
 - [ ] P-2 Spec
 - [ ] P-3 Plan
