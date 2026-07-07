@@ -23,6 +23,7 @@ import {
 import type { PoolClient } from 'pg';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import * as dbModule from '../../src/db/index';
+import { EntitlementsService } from '../../src/billing/entitlements.service';
 import { ServersService } from '../../src/servers/servers.service';
 
 // Skip-with-reason when DATABASE_URL_TEST is absent (local dev without PG).
@@ -122,9 +123,11 @@ describe.skipIf(SKIP)('createServer — real-Postgres transaction (rollback + co
   // we only call createServer which only uses db, not rbacService).
   // -----------------------------------------------------------------------
   function makeSut(): ServersService {
-    // ServersService constructor requires rbacService but createServer does
-    // not call it; pass a stub so NestJS DI is not needed.
-    return new ServersService({} as never);
+    // ServersService constructor requires rbacService + entitlementsService.
+    // createServer does not use rbacService; pass a stub.
+    // Use the real EntitlementsService so the create-gate resolves correctly
+    // against the test DB (owner has 0 servers → permissive free cap passes).
+    return new ServersService({} as never, new EntitlementsService());
   }
 
   // -----------------------------------------------------------------------

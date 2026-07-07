@@ -23,6 +23,7 @@ import {
 // SUT import AFTER harness so the lazy db proxy resolves to the test DB.
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { EntitlementsService } from '../../src/billing/entitlements.service';
 import { ServersService } from '../../src/servers/servers.service';
 
 const SKIP = !process.env.DATABASE_URL_TEST;
@@ -42,8 +43,8 @@ describe.skipIf(SKIP)('ServersService.rotateInviteCode — real-Postgres (task d
 
   beforeAll(async () => {
     await setupHarness();
-    // rotateInviteCode does not call rbacService — pass empty stub.
-    sut = new ServersService({} as never);
+    // rotateInviteCode does not call rbacService or entitlementsService — pass stubs.
+    sut = new ServersService({} as never, {} as never);
   });
 
   afterAll(async () => {

@@ -52,8 +52,8 @@ describe.skipIf(SKIP)('ServersService.updateServer — real-Postgres (task 2bd37
 
   beforeAll(async () => {
     await setupHarness();
-    // updateServer does not call rbacService — pass empty stub.
-    sut = new ServersService({} as never);
+    // updateServer does not call rbacService or entitlementsService — pass stubs.
+    sut = new ServersService({} as never, {} as never);
   });
 
   afterAll(async () => {
@@ -182,7 +182,7 @@ describe.skipIf(SKIP)(
 
     beforeAll(async () => {
       await setupHarness();
-      sut = new ServersService({} as never);
+      sut = new ServersService({} as never, {} as never);
     });
 
     afterAll(async () => {

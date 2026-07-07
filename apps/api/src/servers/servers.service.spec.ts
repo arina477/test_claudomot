@@ -113,6 +113,7 @@ const mockUpdate = db.update as unknown as MockFn;
 // ---------------------------------------------------------------------------
 
 import type { RbacService } from '../rbac/rbac.service';
+import type { EntitlementsService } from '../billing/entitlements.service';
 
 function makeRbacServiceMock(getVisibleChannelIdsReturn: Set<string> | null = null): RbacService {
   return {
@@ -128,6 +129,25 @@ function makeRbacServiceMock(getVisibleChannelIdsReturn: Set<string> | null = nu
     upsertChannelOverride: vi.fn(),
     deleteChannelOverride: vi.fn(),
   } as unknown as RbacService;
+}
+
+/**
+ * Permissive EntitlementsService stub — resolveCreateGateForOwner always
+ * returns free-tier caps with maxServersPerOwner=100 and currentServerCount=0,
+ * so no existing createServer test is blocked by the entitlement gate.
+ */
+function makeEntitlementsServiceMock(): EntitlementsService {
+  return {
+    resolveForServer: vi.fn().mockResolvedValue({
+      tier: 'free',
+      entitlements: { storageMb: 2048, callCapacity: 50, educatorAdminTools: false },
+    }),
+    resolveCreateGateForOwner: vi.fn().mockResolvedValue({
+      tier: 'free',
+      caps: { storageMb: 2048, callCapacity: 50, educatorAdminTools: false, maxServersPerOwner: 100 },
+      currentServerCount: 0,
+    }),
+  } as unknown as EntitlementsService;
 }
 
 // ---------------------------------------------------------------------------
@@ -172,7 +192,7 @@ describe('ServersService.createServer', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new ServersService(makeRbacServiceMock());
+    service = new ServersService(makeRbacServiceMock(), makeEntitlementsServiceMock());
   });
 
   /** Build a spied transaction mock that tracks per-insert values. */
@@ -273,7 +293,7 @@ describe('ServersService.findMyServers', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new ServersService(makeRbacServiceMock());
+    service = new ServersService(makeRbacServiceMock(), makeEntitlementsServiceMock());
   });
 
   it('returns servers mapped to ServerSummary', async () => {
@@ -314,7 +334,7 @@ describe('ServersService.findServerDetail', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new ServersService(makeRbacServiceMock());
+    service = new ServersService(makeRbacServiceMock(), makeEntitlementsServiceMock());
   });
 
   it('throws NotFoundException (404) when server does not exist', async () => {
@@ -473,7 +493,7 @@ describe('ServersService.findServerDetail — server-side channel filtering', ()
     };
     const visibleSet = new Set(['ch-1']); // ch-2 hidden
     const rbacMock = makeRbacServiceMock(visibleSet);
-    const svc = new ServersService(rbacMock);
+    const svc = new ServersService(rbacMock, makeEntitlementsServiceMock());
 
     let callCount = 0;
     mockSelect.mockImplementation(() => {
@@ -506,7 +526,7 @@ describe('ServersService.findServerDetail — server-side channel filtering', ()
     };
     // Empty visible set — private channel hidden by default-deny
     const emptySet = new Set<string>();
-    const svc = new ServersService(makeRbacServiceMock(emptySet));
+    const svc = new ServersService(makeRbacServiceMock(emptySet), makeEntitlementsServiceMock());
 
     let callCount = 0;
     mockSelect.mockImplementation(() => {
@@ -536,7 +556,7 @@ describe('ServersService.findServerDetail — server-side channel filtering', ()
       is_private: true,
     };
     // null = all visible (owner path)
-    const svc = new ServersService(makeRbacServiceMock(null));
+    const svc = new ServersService(makeRbacServiceMock(null), makeEntitlementsServiceMock());
 
     let callCount = 0;
     mockSelect.mockImplementation(() => {
@@ -561,7 +581,7 @@ describe('ServersService.findServerDetail — server-side channel filtering', ()
 
   it('getVisibleChannelIds is called with correct serverId and channelIds', async () => {
     const rbacMock = makeRbacServiceMock(null);
-    const svc = new ServersService(rbacMock);
+    const svc = new ServersService(rbacMock, makeEntitlementsServiceMock());
 
     let callCount = 0;
     mockSelect.mockImplementation(() => {
@@ -609,7 +629,7 @@ describe('ServersService.createInvite', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new ServersService(makeRbacServiceMock());
+    service = new ServersService(makeRbacServiceMock(), makeEntitlementsServiceMock());
   });
 
   it('throws ForbiddenException (403) when caller is not a member', async () => {
@@ -720,7 +740,7 @@ describe('ServersService.getInvitePreview', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new ServersService(makeRbacServiceMock());
+    service = new ServersService(makeRbacServiceMock(), makeEntitlementsServiceMock());
   });
 
   it('returns minimal preview (id, name, memberCount) for a valid ad-hoc invite', async () => {
@@ -820,7 +840,7 @@ describe('ServersService.joinViaInvite', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new ServersService(makeRbacServiceMock());
+    service = new ServersService(makeRbacServiceMock(), makeEntitlementsServiceMock());
   });
 
   /**
@@ -1046,7 +1066,7 @@ describe('ServersService.revokeInvite', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new ServersService(makeRbacServiceMock());
+    service = new ServersService(makeRbacServiceMock(), makeEntitlementsServiceMock());
   });
 
   it('returns void (200) when owner revokes their own invite', async () => {
@@ -1134,7 +1154,7 @@ describe('ServersService.rotateInviteCode', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new ServersService(makeRbacServiceMock());
+    service = new ServersService(makeRbacServiceMock(), makeEntitlementsServiceMock());
   });
 
   it('returns an invite_code with base64url shape (~22 chars)', async () => {
@@ -1219,7 +1239,7 @@ describe('ServersService.listServerMembers', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new ServersService(makeRbacServiceMock());
+    service = new ServersService(makeRbacServiceMock(), makeEntitlementsServiceMock());
   });
 
   it('throws ForbiddenException (403) when caller is not a member of the server', async () => {
@@ -1333,7 +1353,7 @@ describe('ServersService.listServerMembers — displayName empty-fallback guard 
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new ServersService(makeRbacServiceMock());
+    service = new ServersService(makeRbacServiceMock(), makeEntitlementsServiceMock());
   });
 
   function setupMembersQuery(rosterRow: unknown) {
@@ -1431,7 +1451,7 @@ describe('ServersService.discoverServers', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new ServersService(makeRbacServiceMock());
+    service = new ServersService(makeRbacServiceMock(), makeEntitlementsServiceMock());
   });
 
   it('returns only rows from the query (public filtering delegated to DB layer)', async () => {
@@ -1536,7 +1556,7 @@ describe('ServersService.joinPublicServer', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new ServersService(makeRbacServiceMock());
+    service = new ServersService(makeRbacServiceMock(), makeEntitlementsServiceMock());
   });
 
   /**
@@ -1619,7 +1639,7 @@ describe('ServersService.updateServer', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new ServersService(makeRbacServiceMock());
+    service = new ServersService(makeRbacServiceMock(), makeEntitlementsServiceMock());
   });
 
   const updatedServer = {

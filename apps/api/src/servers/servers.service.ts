@@ -19,6 +19,8 @@ import type {
   UpdateServer,
 } from '@studyhall/shared';
 import { and, asc, desc, eq, ilike, or, sql } from 'drizzle-orm';
+// biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
+import { EntitlementsService } from '../billing/entitlements.service';
 import { db } from '../db/index';
 import {
   categories,
@@ -63,12 +65,29 @@ function validateInviteActive(invite: {
 
 @Injectable()
 export class ServersService {
-  constructor(private readonly rbacService: RbacService) {}
+  constructor(
+    private readonly rbacService: RbacService,
+    private readonly entitlementsService: EntitlementsService,
+  ) {}
   /**
    * Create a server in a single atomic transaction:
    * server (with CSPRNG invite_code) → owner server_member → 'General' category → #general channel.
    */
   async createServer(ownerId: string, name: string): Promise<ServerResponse> {
+    // ── Entitlement gate (read-only, pre-insert) ────────────────────────────
+    // Resolve the owner's create-gate caps and count their existing servers.
+    // Under the free-tier placeholder (maxServersPerOwner=100) this check is
+    // non-restrictive: no existing owner is blocked (NON-REGRESSIVE guarantee).
+    // Once paid owner tiers and lower caps ship, the same code path enforces them.
+    const { caps, currentServerCount } =
+      await this.entitlementsService.resolveCreateGateForOwner(ownerId);
+    if (currentServerCount >= caps.maxServersPerOwner) {
+      throw new ForbiddenException(
+        `Server limit reached for your plan (${caps.maxServersPerOwner} servers max). Upgrade to create more servers.`,
+      );
+    }
+    // ── end entitlement gate ────────────────────────────────────────────────
+
     return await db.transaction(async (tx) => {
       const inviteCode = generateCode();
 
