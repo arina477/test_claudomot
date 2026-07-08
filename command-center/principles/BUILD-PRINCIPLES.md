@@ -117,3 +117,6 @@ Promoted at L-2 Distill from `process/waves/wave-<N>/blocks/L/observations.md` b
 
 17. Default a hidden-vs-error UI branch to hidden with an explicit error-allowlist, never a not-equal-status default.
    Why: A not-equal default lets a new status reach the error state, leaking why content is hidden.
+
+18. Confirm a reused authz or visibility seam gates the exact setting the new surface needs, not a sibling setting.
+   Why: A seam gating a sibling setting silently under-gates the new surface and leaks.
