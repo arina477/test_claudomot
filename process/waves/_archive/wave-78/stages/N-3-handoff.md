@@ -5,7 +5,7 @@ n_stage_verdict: COMPLETE
 verdict_evidence:
   - "next wave: 79"
   - "next wave checklist: process/waves/wave-79/checklist.md"
-  - "archive commit: TBD (Action 4 git mv commit follows this file's write)"
+  - "archive commit: fb15a7c"
 prev_wave: 78
 next_wave: 79
 loop_state: ready
