@@ -40,7 +40,12 @@ type StatePresentation = {
 const PRESENTATION: Record<DmEncryptionState, StatePresentation> = {
   encrypted: {
     label: 'End-to-end encrypted',
-    description: 'Messages in this conversation are end-to-end encrypted.',
+    // F1 (wave-79 B-6): honestly bound the claim. Keys are distributed via the
+    // server in v1 (no safety-number verification yet), so the tooltip does NOT
+    // imply protection against a malicious server — it states only what is true:
+    // content is encrypted on this device to the other person's device.
+    description:
+      'Messages are encrypted on your device and decrypted on theirs. Keys are exchanged through StudyHall’s server.',
     icon: 'shield-check',
     isLock: true,
   },

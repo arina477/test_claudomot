@@ -159,16 +159,38 @@ export type DecryptResult =
  * Any failure (wrong key / lost private key / corrupt payload / unknown
  * version) resolves to { ok: false }, which the indicator honestly renders
  * as "cannot decrypt on this device" rather than crashing or faking success.
+ *
+ * SENDER-AUTHENTICATION (wave-79 B-6 F2): the shared secret is derived against
+ * `authorPublicKeyBase64` — the sender's SERVER-REGISTERED public key, resolved
+ * from `message.authorId` by the caller — NOT against a key the envelope carries.
+ * The envelope-embedded `envelopeSenderKeyRef` is TRUSTED ONLY as an assertion
+ * that must MATCH the author's registered key: a present-but-mismatched
+ * senderKeyRef is a spoof attempt and fails closed (never a false padlock).
+ * This binds the decrypting key to the displayed sender so a crafted envelope
+ * with an attacker-chosen senderKeyRef cannot decrypt-and-attribute.
  */
 export async function decryptMessage(
   ciphertextBase64: string,
-  senderKeyRefBase64: string,
+  authorPublicKeyBase64: string,
+  envelopeSenderKeyRef: string | null | undefined,
   envelopeVersion: number | null | undefined,
   myPrivateKey: CryptoKey,
 ): Promise<DecryptResult> {
   try {
     if (envelopeVersion !== ENVELOPE_VERSION) return { ok: false };
-    const senderPublicKey = await importPeerPublicKey(senderKeyRefBase64);
+    // Author binding: we decrypt with the AUTHOR's server-registered key only.
+    if (!authorPublicKeyBase64) return { ok: false };
+    // Sender-authentication: if the envelope asserts a senderKeyRef, it MUST
+    // equal the author's registered key. A mismatch is a spoofed-sender attempt
+    // → fail closed (cannot-decrypt), never trust the envelope's key.
+    if (
+      typeof envelopeSenderKeyRef === 'string' &&
+      envelopeSenderKeyRef.length > 0 &&
+      envelopeSenderKeyRef !== authorPublicKeyBase64
+    ) {
+      return { ok: false };
+    }
+    const senderPublicKey = await importPeerPublicKey(authorPublicKeyBase64);
     const sharedKey = await deriveSharedKey(myPrivateKey, senderPublicKey);
     const payloadJson = new TextDecoder().decode(base64ToBytes(ciphertextBase64));
     const parsed = JSON.parse(payloadJson) as { iv?: unknown; ct?: unknown };

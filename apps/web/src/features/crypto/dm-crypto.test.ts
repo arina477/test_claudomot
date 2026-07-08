@@ -55,9 +55,12 @@ describe('dm-crypto — encrypt/decrypt round-trip', () => {
     expect(env.senderKeyRef).toBe(alice.publicKeyBase64);
     expect(env.envelopeVersion).toBe(ENVELOPE_VERSION);
 
-    // Bob derives the SAME shared secret (his private + Alice's public) → decrypts.
+    // Bob derives the SAME shared secret (his private + Alice's REGISTERED
+    // public key, passed as the author key) → decrypts. The envelope's
+    // senderKeyRef matches the author key, so sender-auth passes.
     const result = await decryptMessage(
       env.ciphertext,
+      alice.publicKeyBase64,
       env.senderKeyRef,
       env.envelopeVersion,
       bob.privateKey,
@@ -83,9 +86,10 @@ describe('dm-crypto — fail-closed decrypt (key-loss / wrong key)', () => {
     const bobPub = await importPeerPublicKey(bob.publicKeyBase64);
 
     const env = await encryptMessage('secret', alice.privateKey, alice.publicKeyBase64, bobPub);
-    // Eve tries to decrypt Bob's message → fails closed, no throw.
+    // Eve tries to decrypt Bob's message (author = Alice) → fails closed, no throw.
     const result = await decryptMessage(
       env.ciphertext,
+      alice.publicKeyBase64,
       env.senderKeyRef,
       env.envelopeVersion,
       eve.privateKey,
@@ -95,7 +99,37 @@ describe('dm-crypto — fail-closed decrypt (key-loss / wrong key)', () => {
 
   it('a corrupt/garbage ciphertext resolves { ok:false } rather than throwing', async () => {
     const bob = await generateKeypair();
-    const result = await decryptMessage('not-valid-base64-@@@', 'also-bad', 1, bob.privateKey);
+    // author key is a valid public key; the ciphertext itself is garbage.
+    const alice = await generateKeypair();
+    const result = await decryptMessage(
+      'not-valid-base64-@@@',
+      alice.publicKeyBase64,
+      alice.publicKeyBase64,
+      1,
+      bob.privateKey,
+    );
+    expect(result).toEqual({ ok: false });
+  });
+
+  it('F2: an envelope senderKeyRef that does NOT match the author key fails closed (no decrypt)', async () => {
+    const alice = await generateKeypair(); // real author
+    const bob = await generateKeypair(); // recipient
+    const mallory = await generateKeypair(); // attacker-chosen sender key
+    const bobPub = await importPeerPublicKey(bob.publicKeyBase64);
+
+    // Alice legitimately encrypts to Bob; the true author key is alice's.
+    const env = await encryptMessage('audit me', alice.privateKey, alice.publicKeyBase64, bobPub);
+
+    // A crafted envelope claims Mallory's senderKeyRef while attributed to Alice.
+    // Decrypting binds to the AUTHOR's registered key (alice) but the envelope
+    // asserts a MISMATCHED senderKeyRef → sender-auth rejects → { ok:false }.
+    const result = await decryptMessage(
+      env.ciphertext,
+      alice.publicKeyBase64, // author's server-registered key
+      mallory.publicKeyBase64, // spoofed senderKeyRef in the envelope
+      env.envelopeVersion,
+      bob.privateKey,
+    );
     expect(result).toEqual({ ok: false });
   });
 
@@ -104,7 +138,13 @@ describe('dm-crypto — fail-closed decrypt (key-loss / wrong key)', () => {
     const bob = await generateKeypair();
     const bobPub = await importPeerPublicKey(bob.publicKeyBase64);
     const env = await encryptMessage('x', alice.privateKey, alice.publicKeyBase64, bobPub);
-    const result = await decryptMessage(env.ciphertext, env.senderKeyRef, 999, bob.privateKey);
+    const result = await decryptMessage(
+      env.ciphertext,
+      alice.publicKeyBase64,
+      env.senderKeyRef,
+      999,
+      bob.privateKey,
+    );
     expect(result).toEqual({ ok: false });
   });
 });
@@ -148,6 +188,7 @@ describe('keystore — device-local persistence (private key stays in dexie)', (
     // Bob's NEW private key can't decrypt the message sent to his OLD key.
     const result = await decryptMessage(
       env.ciphertext,
+      alice.publicKeyBase64,
       env.senderKeyRef,
       env.envelopeVersion,
       rotated.privateKey,

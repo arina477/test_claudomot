@@ -30,7 +30,6 @@ import { db } from '../features/sync/db';
 import { drain, enqueue, loadPending, retryOutboxItem } from '../features/sync/outbox';
 import type { OutboxTarget } from '../features/sync/types';
 import type { ConversationCryptoCapability, DmEncryptionState } from './dmEncryptionState';
-import { headerStateFor } from './dmEncryptionState';
 import { getMessagingSocket, onDmMessage } from './messagingSocket';
 import { useDmEncryption } from './useDmEncryption';
 
@@ -138,6 +137,17 @@ export function useDm(currentUserId: string | null, currentUserDisplay: string):
   const openIsGroupRef = useRef(false);
 
   /**
+   * F7 — proof-based delivered-row labeling. Records the ACTUAL send outcome
+   * (encrypted vs plaintext, from what encryptOutgoing REALLY returned) keyed by
+   * idempotencyKey, so buildDeliveredRow labels a delivered row from the real
+   * send mode rather than from live capability (which can race). Entries are
+   * written in makeSendFn at the moment of send and consumed (deleted) at
+   * delivery. A plaintext-sent row can therefore NEVER show the lock even if
+   * capability flips to 'encrypted' in the race window.
+   */
+  const sentModeRef = useRef<Map<string, 'encrypted' | 'plaintext'>>(new Map());
+
+  /**
    * Decorate a raw DmMessage with its honest per-message encryption state.
    * - Plaintext row (content set, no ciphertext) → not-encrypted (group vs 1:1).
    * - Encrypted envelope → attempt decrypt; success → 'encrypted' with plaintext,
@@ -155,9 +165,13 @@ export function useDm(currentUserId: string | null, currentUserDisplay: string):
       };
     }
     // Real ciphertext envelope — only proof of encryption grants the lock.
+    // F2: bind the decrypting key to the message's AUTHOR (server-registered
+    // key for m.authorId), NOT the envelope's self-asserted senderKeyRef. A
+    // spoofed senderKeyRef → cannot-decrypt (no lock for a key-mismatch).
     const result = await encryptionRef.current.decryptEnvelope(
       m.ciphertext as string,
-      m.senderKeyRef ?? '',
+      m.authorId,
+      m.senderKeyRef,
       m.envelopeVersion,
     );
     if (result.ok) {
@@ -183,6 +197,10 @@ export function useDm(currentUserId: string | null, currentUserDisplay: string):
       ): Promise<{ id: string; [key: string]: unknown }> => {
         if (target.kind === 'dm') {
           const crypto = await encryptionRef.current.encryptOutgoing(body.content);
+          // F7: record the REAL send outcome keyed by idempotencyKey so the
+          // delivered row is labeled from what actually went on the wire, not
+          // from live capability at delivery time.
+          sentModeRef.current.set(body.idempotencyKey, crypto.mode);
           const dmBody: SendDmMessageInput =
             crypto.mode === 'encrypted'
               ? {
@@ -208,18 +226,33 @@ export function useDm(currentUserId: string | null, currentUserDisplay: string):
   /**
    * Build the confirmed 'real' row when an optimistic DM send is delivered.
    * We keep the sender's plaintext for local display; the honest per-message
-   * encryption state comes from the resolved conversation capability (a lock
-   * is shown ONLY when the send actually went out as a real envelope).
+   * encryption state is derived from the ACTUAL send outcome (F7) — what
+   * encryptOutgoing really returned, recorded in sentModeRef keyed by
+   * idempotencyKey — NOT from live capability at delivery time. A plaintext
+   * send therefore NEVER shows the lock even if capability races to 'encrypted'.
    */
   const buildDeliveredRow = useCallback(
     (
-      optimistic: { content: string; conversationId: string; createdAt: string },
+      optimistic: {
+        content: string;
+        conversationId: string;
+        createdAt: string;
+        idempotencyKey: string;
+      },
       confirmedId: string,
       authorId: string,
     ): DisplayDmMessage => {
-      // The delivered row's honest state mirrors the resolved conversation
-      // capability (a lock ONLY when the send went out as a real envelope).
-      const encryptionState: DmEncryptionState = headerStateFor(encryptionRef.current.capability);
+      // Proof-based: read the real send mode for THIS send. Consume it so the
+      // map doesn't grow unbounded. Absent (should not happen for a delivered
+      // DM) → fail closed to not-encrypted, never a false padlock.
+      const mode = sentModeRef.current.get(optimistic.idempotencyKey);
+      sentModeRef.current.delete(optimistic.idempotencyKey);
+      const encryptionState: DmEncryptionState =
+        mode === 'encrypted'
+          ? 'encrypted'
+          : openIsGroupRef.current
+            ? 'not-encrypted-group'
+            : 'not-encrypted-plaintext';
       return {
         kind: 'real',
         id: confirmedId,

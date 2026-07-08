@@ -59,7 +59,9 @@ vi.mock('../auth/api', () => ({
 }));
 
 import React from 'react';
+import * as dmCrypto from '../features/crypto/dm-crypto';
 import { generateKeypair } from '../features/crypto/dm-crypto';
+import type { DisplayDmMessage } from './useDm';
 import { useDm } from './useDm';
 
 const CONV: DmConversation = {
@@ -197,5 +199,92 @@ describe('E2E flow — plaintext fallback for a keyless peer (fail-closed, hones
     ];
     expect(body.content).toBe('plain hello');
     expect(body.ciphertext).toBeUndefined();
+  });
+});
+
+// F7 — a delivered row's lock derives from the ACTUAL send outcome, never from
+// live capability. Harness that exposes the reconciled messages + capability.
+function MsgHarness({
+  onReady,
+}: {
+  onReady: (ctx: {
+    send: (c: string) => void;
+    messages: DisplayDmMessage[];
+    capability: string;
+  }) => void;
+}) {
+  const {
+    sendDmMessage: send,
+    selectConversation,
+    conversations,
+    messages,
+    encryptionCapability,
+  } = useDm('me', 'Me');
+  const [selected, setSelected] = React.useState(false);
+  React.useEffect(() => {
+    if (!selected && conversations.length > 0) {
+      setSelected(true);
+      selectConversation('conv-1');
+    }
+  }, [selected, conversations, selectConversation]);
+  onReady({ send, messages, capability: encryptionCapability });
+  return <div data-testid="harness" />;
+}
+
+describe('E2E flow — F7 proof-based delivered-row indicator (actual send outcome, not capability)', () => {
+  it('a PLAINTEXT send never shows the lock even when capability resolves to encrypted', async () => {
+    // Keyed peer → capability resolves to 'encrypted'. But we force the actual
+    // encrypt to FAIL, so the real send outcome is PLAINTEXT. The delivered row
+    // MUST be labeled from the real outcome (not-encrypted), NEVER the lock.
+    const peer = await generateKeypair();
+    getPeerEncryptionKey.mockResolvedValue({
+      userId: 'peer',
+      publicKey: peer.publicKeyBase64,
+      algorithm: 'ECDH-P256-AES-GCM',
+      createdAt: new Date().toISOString(),
+    });
+    // Force encryptMessage to throw → makeSendFn falls back to plaintext (mode
+    // 'plaintext') while capability is still 'encrypted' — the exact race.
+    const encryptSpy = vi
+      .spyOn(dmCrypto, 'encryptMessage')
+      .mockRejectedValue(new Error('transient crypto failure'));
+
+    let ctx!: { send: (c: string) => void; messages: DisplayDmMessage[]; capability: string };
+    render(
+      <MsgHarness
+        onReady={(c) => {
+          ctx = c;
+        }}
+      />,
+    );
+    // Capability resolves to 'encrypted' (peer key present).
+    await waitFor(() => expect(ctx.capability).toBe('encrypted'));
+
+    await act(async () => {
+      ctx.send('race window message');
+      await Promise.resolve();
+    });
+
+    // The send went out as PLAINTEXT (encrypt threw → plaintext fallback).
+    await waitFor(() => expect(sendDmMessage).toHaveBeenCalled());
+    const [, body] = sendDmMessage.mock.calls[0] as [
+      string,
+      { content?: string; ciphertext?: string },
+    ];
+    expect(body.content).toBe('race window message');
+    expect(body.ciphertext).toBeUndefined();
+
+    // The reconciled delivered row must NOT claim the lock, even though
+    // capability === 'encrypted'. Proof-based: derived from the real send mode.
+    await waitFor(() => {
+      const real = ctx.messages.find((m) => m.kind === 'real');
+      expect(real).toBeTruthy();
+      if (real && real.kind === 'real') {
+        expect(real.encryptionState).not.toBe('encrypted');
+      }
+    });
+    expect(ctx.capability).toBe('encrypted');
+
+    encryptSpy.mockRestore();
   });
 });
