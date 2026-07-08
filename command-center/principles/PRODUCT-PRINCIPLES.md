@@ -81,3 +81,6 @@ Promoted at L-2 Distill from `process/waves/wave-<N>/blocks/L/observations.md` b
 
 5. When mvp-thinner returns floor_constraint_active with zero split candidates, waive the floor; no BOARD is required.
    Why: The floor targets wasteful greenfield micro-waves; a feature with no valid split is exempt.
+
+6. A privacy or security control ships disabled or deferred until its enforcement exists, never as a live no-op toggle.
+   Why: A toggle gating a nonexistent feature misleads users about their privacy, worse than absent.
