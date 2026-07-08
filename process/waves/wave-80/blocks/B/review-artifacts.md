@@ -3,7 +3,7 @@
 **Block:** B (Build)
 **Wave topic:** presence (online-status) privacy toggle — show_presence, honored server-side in the presence broadcast (proactive toggle-time emit)
 **Block exit gate:** B-6
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
@@ -14,7 +14,7 @@
 | B-3 | stages/B-3-frontend.md | done | react-specialist (SettingsPrivacyPage real toggle) |
 | B-4 | stages/B-4-wiring.md | done | |
 | B-5 | stages/B-5-verify.md | done | |
-| B-6 | stages/B-6-review.md | pending | |
+| B-6 | stages/B-6-review.md | done | |
 
 ## Block-specific context
 - **Spec contract:** tasks row 3038a4bc (DB); spec at process/waves/wave-80/stages/P-2-spec.md (+ P-4 BINDING CORRECTIONS)
