@@ -3,14 +3,14 @@
 **Block:** V (Verify)
 **Wave topic:** presence (online-status) privacy toggle — show_presence honored server-side (3 emit paths + proactive toggle emit), partial-PUT. LIVE on 4795638.
 **Block exit gate:** V-3
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file(s) | Status | Notes |
 |---|---|---|---|
 | V-1 | stages/V-1-karen.md + V-1-jenny.md + V-1-summary.md | done | Karen APPROVE, jenny APPROVE |
 | V-2 | stages/V-2-triage.md | done | |
-| V-3 | stages/V-3-fast-fix.md | pending | |
+| V-3 | stages/V-3-fast-fix.md | done | |
 
 ## Block-specific context
 - **Wave topic:** presence privacy toggle (LIVE 4795638)
