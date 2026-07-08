@@ -173,12 +173,18 @@ export {
   WHO_CAN_DM,
   PrivacySettingsResponseSchema,
   UpdatePrivacySchema,
+  ENCRYPTION_ALGORITHMS,
+  EncryptionKeySchema,
+  PublicKeyResponseSchema,
 } from './privacy.js';
 export type {
   ProfileVisibility,
   WhoCanDm,
   PrivacySettingsResponse,
   UpdatePrivacyInput,
+  EncryptionAlgorithm,
+  EncryptionKeyInput,
+  PublicKeyResponse,
 } from './privacy.js';
 
 export {

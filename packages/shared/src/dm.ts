@@ -51,13 +51,29 @@ export type DmConversation = z.infer<typeof DmConversationSchema>;
 //
 // Timestamps are ISO 8601 strings, matching the channel-message DTO convention
 // (createdAt: z.string() — see MessageResponseSchema in messaging.ts).
+//
+// wave-79 E2E encryption envelope (server-blind):
+//   content is NULLABLE — a plaintext message sets content (ciphertext null);
+//     an encrypted message sets ciphertext (content null). The gateway passes
+//     the envelope through without reading it; the client decrypts locally.
+//   ciphertext      — base64 AES-GCM envelope (iv + ct + tag); null for plaintext.
+//   senderKeyRef    — opaque ref to the sender public key the recipient needs to
+//                     derive the shared secret; null for plaintext.
+//   envelopeVersion — envelope-format version for forward-compatible decryption;
+//                     null for plaintext.
+// Backward-compatible: pre-encryption rows are { content set, ciphertext null }.
+// The three envelope fields are .nullable() (always present, may be null) so the
+// contract is explicit rather than sometimes-absent.
 // ---------------------------------------------------------------------------
 
 export const DmMessageSchema = z.object({
   id: z.string(),
   conversationId: z.string(),
   authorId: z.string(),
-  content: z.string(),
+  content: z.string().nullable(),
+  ciphertext: z.string().nullable().optional(),
+  senderKeyRef: z.string().nullable().optional(),
+  envelopeVersion: z.number().int().nullable().optional(),
   createdAt: z.string(), // ISO 8601
 });
 export type DmMessage = z.infer<typeof DmMessageSchema>;
