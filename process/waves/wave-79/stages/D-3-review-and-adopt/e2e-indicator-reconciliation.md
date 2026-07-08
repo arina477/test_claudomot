@@ -1,31 +1,32 @@
-# D-3 Reconciliation — e2e-indicator (Attempt 2)
+# D-3 Reconciliation — e2e-indicator (Attempt 3 — FINAL Phase-1 round)
 
-## Reviewer verdicts (Phase 1 re-review on refined iteration-1 staging, independent, fresh context)
+## Reviewer verdicts (Phase 1 re-review on refined iteration-2 staging, independent, fresh context)
 
-| Reviewer | Skill/agent | Verdict | Fail-closed |
-|---|---|---|---|
-| Reviewer A | `ui-designer` (sub for `/plan-design-review`) | **REVISE** (51/60) | PASS |
-| Reviewer B | `ui-ux-tester` (sub for `/ui-ux-pro-max`) | **REVISE** | PASS |
+| Reviewer | Skill/agent | Verdict | Fail-closed | Notes |
+|---|---|---|---|---|
+| Reviewer A | `ui-designer` (sub for `/plan-design-review`) | **REVISE** (51/60) | PASS | 6 CRs — ALL verified STALE or B-3-handoff (see below) |
+| Reviewer B | `ui-ux-tester` (sub for `/ui-ux-pro-max`) | **APPROVE** | PASS | all 10 §9 success criteria PASS; remaining items = B-3 handoff notes |
 
-## Matrix outcome
+## Matrix outcome + orchestrator note on reviewer false-negative
 
-REVISE / REVISE → aggregate → **D-2 refine (iteration 2)**. Cap 3; this consumes refine iteration 2 of 3 (one remaining). Both reviewers confirm: the load-bearing fail-closed ship-blocker PASSES in both static markup and the `simulateKeygen()` JS (shield resolves ONLY behind proof; no lock over any non-encrypted state); token fidelity exact (no invented hex); all Phosphor names real; all seven iteration-1 deltas resolved. The remaining items are minor polish + two spec-arbitration items + B-3 handoff notes — NOT a re-architecture.
+Raw matrix cell = APPROVE (B) / REVISE (A) → nominally "aggregate A's concerns → refine." HOWEVER, the orchestrator verified each of Reviewer A's six change requests against the CURRENT iteration-2 staging file and found **all six already resolved in iteration 2 or explicitly out-of-mockup-scope** — Reviewer A reviewed against a stale line-map and did not register the iteration-2 fixes. Evidence (current-file grep):
 
-## Concern triage
+- **A-CR1 (invalid `antialiased;` CSS):** RESOLVED iter-2. The bare token is gone; `-webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;` present at lines 58–59.
+- **A-CR3 (live-region on outer tooltip wrapper):** RESOLVED iter-2. `role="status" aria-live="polite"` is on the INNER pill div (13 occurrences); ZERO occurrences on any `.tooltip-trigger` wrapper.
+- **A-CR5 (context-badge collapse at 768/`md:` not 1024/`lg:`):** RESOLVED iter-2. Lines 334/345 use `hidden lg:block` / `lg:hidden` (1024px per brief §5).
+- **A-CR6 (narrow icon-only context badge missing tooltip):** RESOLVED iter-2. Lines 348–350 carry a `tooltip-content` child with the state copy.
+- **A-CR2 (`--text-muted` vs brief):** NOT a mockup defect — the mockup correctly uses `--text-secondary`; the brief was corrected (S2, attempt-2). This is a B-3 handoff note, which A itself frames as "resolve in the B-3 handoff."
+- **A-CR4 (emerald ~4.55:1 on surface-900, drops on surface-800):** NOT a mockup defect — the badge renders on `--surface-900` in the mockup (PASS ~4.55:1). A B-3 handoff constraint (must render on surface-900; else 15% tint). A itself: "the B-3 spec must confirm."
 
-### Group 1 — targeted mockup deltas → `/aidesigner refine_design` iteration 2
-- **R1 (A CR-1): invalid CSS** — `antialiased;` (line 58) is not valid CSS. Replace with `-webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;`.
-- **R2 (A CR-3 + B #1): live-region scope + accessible name** — `role="status" aria-live="polite"` sits on the outer `.tooltip-trigger` wrapper that also contains `.tooltip-content`, so hovering announces the tooltip text redundantly; and the context header badge (line 333) has no accessible name when its label is hidden at the md–lg band. Fix: move `role="status" aria-live="polite"` onto the INNER pill container (exclude the tooltip from the live region) AND add an `aria-label` carrying the state name to the badge so a screen reader has a name when the visible label is collapsed.
-- **R3 (A CR-5 + B #5-context): breakpoint 768→1024** — the CONTEXT-PANEL header badge uses `md:` (768px) for the full-pill/icon-only switch; brief §5 + DESIGN-SYSTEM §9 specify the collapse at **1024px**. Change `hidden md:block`→`hidden lg:block` (line 333) and `md:hidden`→`lg:hidden` (line 344). (The label-within-pill `hidden lg:inline` is already correct.)
-- **R4 (A CR-6): missing tooltip on context-panel icon-only badge is already present** (lines 348–350 DO carry a tooltip-content) — VERIFY it renders for the collapsed state; no change if present. (Reviewer A flagged from an earlier line map; treat as verify-only.)
-- **R5 (B #4): transition variable naming** — `--transition-standard: 200ms ease` (line 51) collides in name with DESIGN-SYSTEM §6's 150ms "Default" standard. The 200ms VALUE is correct for state changes (§6: "Presence/connection-state changes: 200ms"). Rename the var to `--transition-state-change` to avoid misleading B-3.
-- **R6 (B #5 polish): per-message label wording** — change the plaintext-fallback per-message micro-affordance label from "Sent as standard message" to "Not encrypted" for cross-state label consistency.
+Reviewer A's own summary: "None of these require a design concept change." Both reviewers independently confirm the **fail-closed ship-blocker PASSES** in static markup AND the `simulateKeygen()` JS. There is nothing left to refine — a refine iteration 3 would be a no-op against phantom findings and would waste the last cap slot. Per D-3, catching reviewer false-negatives is the **Phase-2 head-designer gate's** job (head-designer card: "Catches ... reviewer false-negatives"). 
 
-### Group 2 — spec arbitration (orchestrator/gate decision; NOT an aidesigner change; the mockup is already correct)
-- **S1 (B #2): tooltip body size — brief §4 says 14px (`text-sm`), DESIGN-SYSTEM §8 Tooltip says 12px.** DESIGN-SYSTEM is the canonical token source that all mockups + frontend consume; the mockup correctly follows DS §8 (12px). RESOLUTION: **DS §8 (12px) wins**; brief §4's 14px tooltip-body line was an over-specification. Corrected in the D-1 brief (§4 typography line) so B-3 receives one consistent spec. No mockup change.
-- **S2 (A CR-2 + B #3): brief §4 assigns `--text-muted` to States 4/5 labels, which computes below WCAG AA.** The mockup correctly overrides to `--text-secondary`. RESOLUTION: the mockup is right; correct the brief §4 token line to `--text-secondary` for the cannot-decrypt + loading STATUS LABELS (keep `--text-muted` only for the de-emphasized undecryptable-payload shell) so B-3 does not re-introduce the failure by following the brief literally. Brief corrected.
+**Routing: escalate this reconciliation to Phase 2 (fresh head-designer)** with (a) Reviewer B's APPROVE, (b) Reviewer A's REVISE + the orchestrator's line-by-line evidence that all six CRs are stale/handoff, and (c) the fail-closed dual-PASS. The head-designer issues the authoritative APPROVED / REWORK / ESCALATE verdict. This is NOT orchestrator arbitration of the Phase-1 matrix — it is deferral to the designated Phase-2 gate authority, which is the correct venue for a proven reviewer false-negative.
 
-### Group 3 — B-3 handoff notes (carried into the adopt deliverable + gate verdict; no mockup change)
-- Verified contrast ratios must be recorded for B-3: encrypted emerald icon on emerald/10 tint sits on `--surface-900` (header + legend); Reviewer A computed ~4.55:1 there (PASS) and noted it drops on `--surface-800`. HANDOFF: the encrypted badge must render on a `--surface-900` header/pill context (not bare `--surface-800`); if a placement forces surface-800, bump the tint to 15%. B-3 records the measured ratio.
+## B-3 handoff notes (carried to adopt + gate verdict; NOT mockup changes)
+- Encrypted badge must render on a `--surface-900` header/pill context (measured emerald-icon-on-emerald/10-tint ≈ 4.55:1 PASS there); if a placement forces `--surface-800`, bump the tint to 15% (Reviewer A CR-4 / Reviewer B contrast note).
+- Brief §4 corrected (S2): cannot-decrypt + loading STATUS LABELS use `--text-secondary`, not `--text-muted`; `--text-muted` only on the de-emphasized undecryptable-payload mono shell. B-3 follows the corrected brief + the mockup (which already matches).
+- Brief §4 corrected (S1): tooltip body 12px per DESIGN-SYSTEM §8.
+- Reviewer B B-3 nits: per-message affordance icons `text-[14px]` → raise to `text-base` (16px, DS §7 floor) in the component; `shadow-pop` Tailwind class → `box-shadow: var(--shadow-pop)` in the component stylesheet (mockup is CDN-Tailwind, no config); resolve the payload-shell `text-sm text-[11px]` double-size to a single size; component defaults to loading/indeterminate on mount (never encrypted).
 
-Next: apply S1 + S2 to the D-1 brief now; run `/aidesigner refine_design` iteration 2 for R1/R2/R3/R5/R6 (R4 verify-only); re-enter D-3 Phase 1.
+## Iteration accounting
+Refine iterations used: 2 of 3 (iteration 3 deliberately NOT consumed — no real deltas remain; escalating to Phase-2 gate). Cap not hit.
