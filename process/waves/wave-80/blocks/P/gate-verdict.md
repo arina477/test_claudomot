@@ -68,3 +68,19 @@ security_tightened_gate: not-warranted
 load_bearing_verified: [server-side-honor, two-client-proof, own-visibility-only, real-toggle-not-beta, audit-event]
 carry_forward: [wire-level-two-client-assertion, N-1-M13-disposition]
 ```
+
+---
+
+## Phase 2 — Karen + jenny + Gemini (appended)
+
+**Phase 2 verdict: PASS** (Karen APPROVE + jenny APPROVE, both with corrections FOLDED into spec+plan+decisions; Gemini UNAVAILABLE → degraded, non-blocking). No BLOCK.
+
+| Reviewer | Status | Key findings (all folded) |
+|---|---|---|
+| **Karen** | APPROVE (7/7 verified) | All claims true: presence.gateway emit sites :163/:174/:221 (ungated); read_at is notifications-only (descope correct); whoCanDm-Beta precedent confirmed (SettingsPrivacyPage:378-447, pointerEvents:none); privacy.service+AppendPrivacyEventService+PUT /profile/privacy all real; no show_presence yet. Build risks: (a) snapshot :163 needs co-members BATCH flags; (b) mid-session toggle doesn't live-propagate (privacy.service DB-only); (c) "last-seen" aspirational — binary online/offline only. |
+| **jenny** | APPROVE (0 drift, 2 GAP) | No presence consumer breaks (all tri-state graceful-degrade: author dots, member-list→offline, DM dots deferred; study-timer/focus-room are a distinct activity module). Descope matches 2026-07-08 decision + whoCanDm-Beta precedent. **GAP-1 (load-bearing):** mid-session toggle must PROACTIVELY emit presence:offline/online (active cache invalidation), not passive gating — else two-client AC2 fails without reconnect. GAP-2: presence-hidden ≠ activity-roster hidden (truthfulness note). T-9: add toggle to page-16 map. |
+| **Gemini** | UNAVAILABLE | exit=3 HTTP 429; degraded per Action 3, no block, not retried. |
+
+**Corrections folded (binding, in DB spec + P-3 plan + product-decisions):** (1) proactive toggle-time presence emit (privacy→presence, the real AC-2 mechanism); (2) snapshot batch co-member flags; (3) cache show_presence on socket.data at connect; (4) binary online/offline (drop last-seen); (5) truthfulness note (online-broadcast only, not activity rosters); (6) T-9 journey-map add.
+
+## Gate result: APPROVED — P-block exits → B-0 (design_gap_flag false, D skipped).

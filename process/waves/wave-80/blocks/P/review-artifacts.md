@@ -3,7 +3,7 @@
 **Block:** P (Product)
 **Wave topic:** M13 leg-3b — read-receipt & presence privacy toggles in settings. SCOPE HOLE (carried from wave-79 P-0): sendReadReceipts gates a message read-receipt feature that does NOT exist (no "seen-by" on messages; `read_at` in schema is notification-read, not message-receipt). showPresence gates the EXISTING presence service.
 **Block exit gate:** P-4
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
@@ -12,7 +12,7 @@
 | P-1 | process/waves/wave-80/stages/P-1-decompose.md | done | |
 | P-2 | process/waves/wave-80/stages/P-2-spec.md | done | |
 | P-3 | process/waves/wave-80/stages/P-3-plan.md | done | |
-| P-4 | process/waves/wave-80/stages/P-4-gemini-review.md | pending | |
+| P-4 | process/waves/wave-80/stages/P-4-gemini-review.md | done | |
 
 ## Block-specific context
 - **Wave topic:** M13 leg-3b privacy toggles (read-receipt + presence)
