@@ -97,6 +97,10 @@ All notable changes to StudyHall are documented here. Format follows
 - Educator Admin Console on school-plan servers: owners and members with the "Manage Assignments" permission can now open a read-only analytics console at Settings › Overview to view server member counts, role breakdown, message volume, and assignment and submission totals. The console is hidden for other members. (#95)
 - A portable academic identity you carry across every study server: your profile now holds pronouns, a short bio, your institution, program, academic role, and academic year, all editable from your profile page. Open any fellow member's profile card to see the academic details they've shared. These are self-declared — StudyHall doesn't verify them, so there's no badge or trust mark implying it did. (#96)
 - Profiles honor your visibility setting everywhere: what a member's card shows follows the "who can see my profile" rule you already set. If your profile is hidden, others get the same blank result whether you exist or not — nothing leaks to strangers, people you've blocked, or anyone who doesn't share a server with you, and a deleted account is never shown. (#96)
+- Appear offline: a new toggle in Settings › Privacy lets you hide your online status and appear offline to everyone else. (#99)
+  - Turn it on and peers see you go offline immediately — no need to close tabs, sign out, or reconnect.
+  - It's honored server-side, so no one can see through it: the change is enforced by StudyHall, not just hidden in your own view.
+  - This governs your online-status dot only — it does not hide activity like being in a voice or focus study room.
 
 ### Changed
 
