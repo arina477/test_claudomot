@@ -44,10 +44,27 @@ function makeController() {
   const profileVisibility = {
     resolve: vi.fn(),
   };
-  // ProfileController constructor accepts (UsersService, ProfileVisibilityService).
-  // biome-ignore lint/suspicious/noExplicitAny: test mock — full types not needed
-  const controller = new ProfileController(usersService as any, profileVisibility as any);
-  return { controller, usersService, profileVisibility };
+  // wave-79: EncryptionKeyService + DmService (used only by the encryption-key
+  // endpoints — not exercised in these self-endpoint / academic-field specs).
+  const encryptionKeys = {
+    upsertKey: vi.fn().mockResolvedValue(undefined),
+    getKeyFor: vi.fn(),
+  };
+  const dmService = {
+    canDm: vi.fn(),
+  };
+  // ProfileController ctor: (UsersService, ProfileVisibilityService, EncryptionKeyService, DmService).
+  const controller = new ProfileController(
+    // biome-ignore lint/suspicious/noExplicitAny: test mock — full types not needed
+    usersService as any,
+    // biome-ignore lint/suspicious/noExplicitAny: test mock — full types not needed
+    profileVisibility as any,
+    // biome-ignore lint/suspicious/noExplicitAny: test mock — full types not needed
+    encryptionKeys as any,
+    // biome-ignore lint/suspicious/noExplicitAny: test mock — full types not needed
+    dmService as any,
+  );
+  return { controller, usersService, profileVisibility, encryptionKeys, dmService };
 }
 
 describe('ProfileController', () => {

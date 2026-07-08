@@ -42,6 +42,7 @@ export function DmHome() {
     messagesError,
     hasOlderMessages,
     loadOlderMessages,
+    encryptionCapability,
     sendDmMessage,
     retryDmMessage,
     createConversation,
@@ -102,6 +103,7 @@ export function DmHome() {
         onSend={sendDmMessage}
         currentUserId={currentUserId}
         onToggleDrawer={() => setDrawerOpen((v) => !v)}
+        encryptionCapability={encryptionCapability}
       />
 
       {/* StartDmPicker modal */}

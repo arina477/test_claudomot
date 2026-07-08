@@ -32,6 +32,8 @@ import type {
   DmCandidate,
   EditMessageInput,
   EffectivePermissions,
+  EncryptionAlgorithm,
+  EncryptionKeyInput,
   InvitePreview,
   InviteResponse,
   JoinResult,
@@ -44,6 +46,7 @@ import type {
   PrivacyEventListResponse,
   PrivacySettingsResponse,
   ProfileResponse,
+  PublicKeyResponse,
   PublicProfile,
   ReactionToggleInput,
   ReactionToggleResponse,
@@ -211,6 +214,34 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ key }),
     }),
+
+  // ── E2E DM encryption key registry (wave-79 M13 leg-3a) ───────────────────
+
+  /**
+   * PUT /profile/encryption-key {publicKey, algorithm} → PublicKeyResponse.
+   * Registers the caller's PUBLIC key so peers can encrypt envelopes to them.
+   * The PRIVATE key NEVER crosses this boundary — it lives only in dexie
+   * (IndexedDB) on the device that generated it. publicKey is exported public
+   * material (base64 SPKI); algorithm must be a supported ENCRYPTION_ALGORITHMS.
+   * Throws: 400 (unsupported algorithm / oversized key), 401 unauthed.
+   */
+  putEncryptionKey: (publicKey: string, algorithm: EncryptionAlgorithm) =>
+    request<PublicKeyResponse>('/profile/encryption-key', {
+      method: 'PUT',
+      body: JSON.stringify({ publicKey, algorithm } satisfies EncryptionKeyInput),
+    }),
+
+  /**
+   * GET /profile/:userId/encryption-key → PublicKeyResponse.
+   * Fetches a peer's registered PUBLIC key to encrypt an envelope only they can
+   * read. The backend responds with a UNIFORM 404 for every not-permitted /
+   * no-key case (who_can_dm block, missing key, hidden profile) — a probing
+   * viewer cannot learn WHY. Callers MUST treat an HttpError with status 404 as
+   * "peer has no usable key" → fall back to PLAINTEXT (honest Not-encrypted),
+   * NEVER a false padlock. userId is the opaque target UUID.
+   */
+  getPeerEncryptionKey: (userId: string): Promise<PublicKeyResponse> =>
+    request<PublicKeyResponse>(`/profile/${encodeURIComponent(userId)}/encryption-key`),
 
   /** POST /servers {name} → 201 {id,name,ownerId,createdAt}. Throws on 400/401. */
   createServer: (data: CreateServerInput) =>

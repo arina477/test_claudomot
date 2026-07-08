@@ -16,6 +16,7 @@
  */
 
 import type { DmConversation, DmMessage } from '@studyhall/shared';
+import type { SendDmMessageInput } from '@studyhall/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../auth/api';
 import {
@@ -28,7 +29,9 @@ import {
 import { db } from '../features/sync/db';
 import { drain, enqueue, loadPending, retryOutboxItem } from '../features/sync/outbox';
 import type { OutboxTarget } from '../features/sync/types';
+import type { ConversationCryptoCapability, DmEncryptionState } from './dmEncryptionState';
 import { getMessagingSocket, onDmMessage } from './messagingSocket';
+import { useDmEncryption } from './useDmEncryption';
 
 // ---------------------------------------------------------------------------
 // Optimistic DM message state
@@ -46,7 +49,19 @@ export type OptimisticDmMessage = {
 };
 
 export type DisplayDmMessage =
-  | ({ kind: 'real' } & DmMessage)
+  | ({
+      kind: 'real';
+      /**
+       * Per-message honest encryption state (wave-79). Only 'encrypted' shows a
+       * lock/shield; it is set ONLY when the row was a real ciphertext envelope
+       * that decrypted successfully. A plaintext row → 'not-encrypted-plaintext'
+       * (or 'not-encrypted-group' in a group DM); an envelope we cannot decrypt
+       * → 'cannot-decrypt'. Absent proof of encryption → never a padlock.
+       */
+      encryptionState: DmEncryptionState;
+      /** Decrypted (or plaintext) text to render. Null while a decrypt is pending. */
+      displayContent: string | null;
+    } & DmMessage)
   | ({ kind: 'optimistic' } & OptimisticDmMessage);
 
 // ---------------------------------------------------------------------------
@@ -68,6 +83,14 @@ export type UseDmResult = {
   messagesError: boolean;
   hasOlderMessages: boolean;
   loadOlderMessages: () => void;
+
+  // ── E2E encryption (wave-79) ────────────────────────────────────────────────
+  /**
+   * Conversation-level crypto capability of the open thread, driving the header
+   * badge. 'loading' on mount (never a lock); 'encrypted' only when a peer key
+   * was provably resolved; 'plaintext'/'group' otherwise.
+   */
+  encryptionCapability: ConversationCryptoCapability;
 
   // ── Send / retry ──────────────────────────────────────────────────────────
   sendDmMessage: (content: string) => void;
@@ -104,6 +127,156 @@ export function useDm(currentUserId: string | null, currentUserDisplay: string):
   // Ref to currentUserId so the socket handler can identify own-sender echoes
   const currentUserIdRef = useRef<string | null>(null);
   currentUserIdRef.current = currentUserId;
+
+  // ── E2E encryption (wave-79) ────────────────────────────────────────────────
+  const encryption = useDmEncryption();
+  const encryptionRef = useRef(encryption);
+  encryptionRef.current = encryption;
+
+  // Whether the open conversation is a group DM — group rows never show a lock.
+  const openIsGroupRef = useRef(false);
+
+  /**
+   * F7 — proof-based delivered-row labeling. Records the ACTUAL send outcome
+   * (encrypted vs plaintext, from what encryptOutgoing REALLY returned) keyed by
+   * idempotencyKey, so buildDeliveredRow labels a delivered row from the real
+   * send mode rather than from live capability (which can race). Entries are
+   * written in makeSendFn at the moment of send and consumed (deleted) at
+   * delivery. A plaintext-sent row can therefore NEVER show the lock even if
+   * capability flips to 'encrypted' in the race window.
+   */
+  const sentModeRef = useRef<Map<string, 'encrypted' | 'plaintext'>>(new Map());
+
+  /**
+   * Decorate a raw DmMessage with its honest per-message encryption state.
+   * - Plaintext row (content set, no ciphertext) → not-encrypted (group vs 1:1).
+   * - Encrypted envelope → attempt decrypt; success → 'encrypted' with plaintext,
+   *   failure → 'cannot-decrypt' (no plaintext). NEVER a false padlock.
+   */
+  const decorateRow = useCallback(async (m: DmMessage): Promise<DisplayDmMessage> => {
+    const isEnvelope = typeof m.ciphertext === 'string' && m.ciphertext.length > 0;
+    if (!isEnvelope) {
+      // Plaintext message — honest Not-encrypted.
+      return {
+        kind: 'real',
+        ...m,
+        encryptionState: openIsGroupRef.current ? 'not-encrypted-group' : 'not-encrypted-plaintext',
+        displayContent: m.content,
+      };
+    }
+    // Real ciphertext envelope — only proof of encryption grants the lock.
+    // F2: bind the decrypting key to the message's AUTHOR (server-registered
+    // key for m.authorId), NOT the envelope's self-asserted senderKeyRef. A
+    // spoofed senderKeyRef → cannot-decrypt (no lock for a key-mismatch).
+    const result = await encryptionRef.current.decryptEnvelope(
+      m.ciphertext as string,
+      m.authorId,
+      m.senderKeyRef,
+      m.envelopeVersion,
+    );
+    if (result.ok) {
+      return { kind: 'real', ...m, encryptionState: 'encrypted', displayContent: result.plaintext };
+    }
+    return { kind: 'real', ...m, encryptionState: 'cannot-decrypt', displayContent: null };
+  }, []);
+
+  /**
+   * Build a SendFn that ENCRYPTS DM sends when the conversation resolved to
+   * 'encrypted'. The outbox stores plaintext locally (device-local IDB, same
+   * trust boundary as the private key) and hands us plaintext at drain time;
+   * we transform it to a server-blind envelope here, at the wire boundary, so
+   * only ciphertext + senderKeyRef + envelopeVersion ever leave the device.
+   * Keyless-peer / group / any crypto failure → plaintext send (honest).
+   * Channel sends are unchanged.
+   */
+  const makeSendFn = useCallback(
+    () =>
+      async (
+        target: OutboxTarget,
+        body: { content: string; idempotencyKey: string },
+      ): Promise<{ id: string; [key: string]: unknown }> => {
+        if (target.kind === 'dm') {
+          const crypto = await encryptionRef.current.encryptOutgoing(body.content);
+          // F7: record the REAL send outcome keyed by idempotencyKey so the
+          // delivered row is labeled from what actually went on the wire, not
+          // from live capability at delivery time.
+          sentModeRef.current.set(body.idempotencyKey, crypto.mode);
+          const dmBody: SendDmMessageInput =
+            crypto.mode === 'encrypted'
+              ? {
+                  ciphertext: crypto.envelope.ciphertext,
+                  senderKeyRef: crypto.envelope.senderKeyRef,
+                  envelopeVersion: crypto.envelope.envelopeVersion,
+                  idempotencyKey: body.idempotencyKey,
+                }
+              : { content: body.content, idempotencyKey: body.idempotencyKey };
+          return api.sendDmMessage(target.conversationId, dmBody) as Promise<{
+            id: string;
+            [key: string]: unknown;
+          }>;
+        }
+        return api.sendMessage(target.channelId, body) as Promise<{
+          id: string;
+          [key: string]: unknown;
+        }>;
+      },
+    [],
+  );
+
+  /**
+   * Build the confirmed 'real' row when an optimistic DM send is delivered.
+   * We keep the sender's plaintext for local display; the honest per-message
+   * encryption state is derived from the ACTUAL send outcome (F7) — what
+   * encryptOutgoing really returned, recorded in sentModeRef keyed by
+   * idempotencyKey — NOT from live capability at delivery time. A plaintext
+   * send therefore NEVER shows the lock even if capability races to 'encrypted'.
+   */
+  const buildDeliveredRow = useCallback(
+    (
+      optimistic: {
+        content: string;
+        conversationId: string;
+        createdAt: string;
+        idempotencyKey: string;
+      },
+      confirmedId: string,
+      authorId: string,
+    ): DisplayDmMessage => {
+      // Proof-based: read the real send mode for THIS send. Consume it so the
+      // map doesn't grow unbounded. Absent (should not happen for a delivered
+      // DM) → fail closed to not-encrypted, never a false padlock.
+      const mode = sentModeRef.current.get(optimistic.idempotencyKey);
+      sentModeRef.current.delete(optimistic.idempotencyKey);
+      const encryptionState: DmEncryptionState =
+        mode === 'encrypted'
+          ? 'encrypted'
+          : openIsGroupRef.current
+            ? 'not-encrypted-group'
+            : 'not-encrypted-plaintext';
+      return {
+        kind: 'real',
+        id: confirmedId,
+        conversationId: optimistic.conversationId,
+        authorId,
+        content: optimistic.content,
+        createdAt: optimistic.createdAt,
+        encryptionState,
+        displayContent: optimistic.content,
+      };
+    },
+    [],
+  );
+
+  // Flip the matching optimistic row to 'failed' — shared drain onFailed handler.
+  const markFailed = useCallback((idempotencyKey: string) => {
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.kind === 'optimistic' && m.idempotencyKey === idempotencyKey
+          ? { ...m, state: 'failed' as const }
+          : m,
+      ),
+    );
+  }, []);
 
   // ── Fetch conversation list ────────────────────────────────────────────────
 
@@ -144,56 +317,53 @@ export function useDm(currentUserId: string | null, currentUserDisplay: string):
 
   // ── Fetch messages for open conversation ──────────────────────────────────
 
-  const fetchMessages = useCallback(async (conversationId: string, cursor?: string) => {
-    if (!cursor) {
-      setMessagesLoading(true);
-      setMessagesError(false);
-      setMessages([]);
-    }
-    try {
-      const res = await api.listDmMessages(conversationId, cursor);
-      const realMsgs: DisplayDmMessage[] = res.messages.map((m) => ({
-        kind: 'real' as const,
-        ...m,
-      }));
-      if (cursor) {
-        // Prepend older messages
-        setMessages((prev) => [...realMsgs, ...prev]);
-      } else {
-        setMessages(realMsgs);
-      }
-      setNextCursor(res.nextCursor);
-      setHasOlderMessages(res.nextCursor !== null);
-      // Write-through: persist fetched messages to offline cache.
-      if (db && res.messages.length > 0) {
-        const cachedAt = new Date().toISOString();
-        void putCachedDmMessages(
-          db,
-          res.messages.map((m) => ({ ...m, cachedAt })),
-        );
-      }
-    } catch {
+  const fetchMessages = useCallback(
+    async (conversationId: string, cursor?: string) => {
       if (!cursor) {
-        // Offline fallback — serve the last-known thread history from cache.
-        if (db) {
-          try {
-            const cached = await getCachedDmMessages(db, conversationId);
-            const cachedMsgs: DisplayDmMessage[] = cached.map((m) => ({
-              kind: 'real' as const,
-              ...m,
-            }));
-            setMessages(cachedMsgs);
-          } catch {
+        setMessagesLoading(true);
+        setMessagesError(false);
+        setMessages([]);
+      }
+      try {
+        const res = await api.listDmMessages(conversationId, cursor);
+        const realMsgs: DisplayDmMessage[] = await Promise.all(res.messages.map(decorateRow));
+        if (cursor) {
+          // Prepend older messages
+          setMessages((prev) => [...realMsgs, ...prev]);
+        } else {
+          setMessages(realMsgs);
+        }
+        setNextCursor(res.nextCursor);
+        setHasOlderMessages(res.nextCursor !== null);
+        // Write-through: persist fetched messages to offline cache.
+        if (db && res.messages.length > 0) {
+          const cachedAt = new Date().toISOString();
+          void putCachedDmMessages(
+            db,
+            res.messages.map((m) => ({ ...m, cachedAt })),
+          );
+        }
+      } catch {
+        if (!cursor) {
+          // Offline fallback — serve the last-known thread history from cache.
+          if (db) {
+            try {
+              const cached = await getCachedDmMessages(db, conversationId);
+              const cachedMsgs: DisplayDmMessage[] = await Promise.all(cached.map(decorateRow));
+              setMessages(cachedMsgs);
+            } catch {
+              setMessagesError(true);
+            }
+          } else {
             setMessagesError(true);
           }
-        } else {
-          setMessagesError(true);
         }
+      } finally {
+        if (!cursor) setMessagesLoading(false);
       }
-    } finally {
-      if (!cursor) setMessagesLoading(false);
-    }
-  }, []);
+    },
+    [decorateRow],
+  );
 
   // Load pending outbox items for cold-start hydration on mount.
   // currentUserDisplay is intentionally excluded: this effect is a one-shot
@@ -230,9 +400,22 @@ export function useDm(currentUserId: string | null, currentUserDisplay: string):
     });
   }, []);
 
+  // Ref to the conversations list so selectConversation resolves the target
+  // conversation for encryption WITHOUT re-creating the callback on every list
+  // change (which would churn the DmThread on every incoming message).
+  const conversationsRef = useRef<DmConversation[]>([]);
+  conversationsRef.current = conversations;
+
   const selectConversation = useCallback(
     (id: string) => {
       setOpenConversationId(id);
+      // Resolve E2E capability BEFORE fetching so decorateRow tags rows with the
+      // correct group-vs-1:1 not-encrypted state and the peer key is warming.
+      const conv = conversationsRef.current.find((c) => c.id === id) ?? null;
+      openIsGroupRef.current = conv ? conv.isGroup || conv.participants.length > 2 : false;
+      if (conv) {
+        encryptionRef.current.resolveConversation(conv, currentUserIdRef.current);
+      }
       void fetchMessages(id);
     },
     [fetchMessages],
@@ -251,29 +434,52 @@ export function useDm(currentUserId: string | null, currentUserDisplay: string):
 
       // If this is the open conversation, append to thread (dedup by id).
       if (openConvIdRef.current === conversationId) {
-        setMessages((prev) => {
-          // Dedup real-id: ignore if a confirmed row with this id is already present.
-          if (prev.some((m) => m.kind === 'real' && m.id === message.id)) return prev;
-          // Socket write-through: keep the offline cache fresh on live messages
-          // (parity with useMessages.ts:381-383 channel write-through).
-          if (db) {
-            void putCachedDmMessage(db, { ...message, cachedAt: new Date().toISOString() });
-          }
-          // Reconcile own-sender echo: if the echo is from the current user and a
-          // pending optimistic row with matching content exists, promote it in-place
-          // instead of appending a duplicate. The echo DTO carries no idempotencyKey,
-          // so we match by (authorId === self) + content against the first pending row.
-          if (message.authorId === currentUserIdRef.current) {
-            const idx = prev.findIndex(
-              (m) =>
-                m.kind === 'optimistic' && m.state === 'pending' && m.content === message.content,
-            );
-            if (idx !== -1) {
-              const promoted: DisplayDmMessage = { kind: 'real' as const, ...message };
-              return [...prev.slice(0, idx), promoted, ...prev.slice(idx + 1)];
+        // Decrypt/decorate off the setState path (async), then reconcile.
+        void decorateRow(message).then((decorated) => {
+          const isOwnEnvelope =
+            message.authorId === currentUserIdRef.current &&
+            typeof message.ciphertext === 'string' &&
+            message.ciphertext.length > 0;
+
+          setMessages((prev) => {
+            // Dedup real-id: ignore if a confirmed row with this id is already present.
+            if (prev.some((m) => m.kind === 'real' && m.id === message.id)) return prev;
+            // Socket write-through: keep the offline cache fresh on live messages
+            // (parity with useMessages.ts channel write-through).
+            if (db) {
+              void putCachedDmMessage(db, { ...message, cachedAt: new Date().toISOString() });
             }
-          }
-          return [...prev, { kind: 'real' as const, ...message }];
+            // Reconcile own-sender echo → promote the matching pending optimistic
+            // row in-place instead of appending a duplicate. Match by (authorId ===
+            // self) + content for plaintext; for an ENCRYPTED own echo the echo
+            // carries ciphertext (content null) so it cannot be content-matched —
+            // the sender cannot decrypt their own envelope (ECDH is directional),
+            // so we promote the FIRST pending row and keep its optimistic plaintext
+            // for local display while honestly tagging it 'encrypted'.
+            if (message.authorId === currentUserIdRef.current) {
+              const idx = prev.findIndex(
+                (m) =>
+                  m.kind === 'optimistic' &&
+                  m.state === 'pending' &&
+                  (isOwnEnvelope || m.content === message.content),
+              );
+              if (idx !== -1) {
+                const opt = prev[idx];
+                const optContent = opt && opt.kind === 'optimistic' ? opt.content : null;
+                const promoted: DisplayDmMessage = isOwnEnvelope
+                  ? {
+                      kind: 'real' as const,
+                      ...message,
+                      encryptionState: 'encrypted',
+                      // Keep the sender's own plaintext locally (can't self-decrypt).
+                      displayContent: optContent,
+                    }
+                  : decorated;
+                return [...prev.slice(0, idx), promoted, ...prev.slice(idx + 1)];
+              }
+            }
+            return [...prev, decorated];
+          });
         });
       }
 
@@ -289,7 +495,9 @@ export function useDm(currentUserId: string | null, currentUserDisplay: string):
         const updated: DmConversation = {
           ...(prev[idx] as DmConversation),
           lastMessage: {
-            content: message.content,
+            // Encrypted messages have content=null server-side — show a neutral
+            // preview rather than leaking "null" (the gateway never sees plaintext).
+            content: message.content ?? 'Encrypted message',
             createdAt: message.createdAt,
             authorId: message.authorId,
           },
@@ -300,26 +508,12 @@ export function useDm(currentUserId: string | null, currentUserDisplay: string):
     });
 
     return unsub;
-  }, [fetchConversations]);
+  }, [fetchConversations, decorateRow]);
 
   // ── Drain outbox on reconnect / online ────────────────────────────────────
 
   useEffect(() => {
     if (!db || !currentUserId) return;
-
-    const makeSendFn =
-      () => (target: OutboxTarget, body: { content: string; idempotencyKey: string }) => {
-        if (target.kind === 'dm') {
-          return api.sendDmMessage(target.conversationId, body) as Promise<{
-            id: string;
-            [key: string]: unknown;
-          }>;
-        }
-        return api.sendMessage(target.channelId, body) as Promise<{
-          id: string;
-          [key: string]: unknown;
-        }>;
-      };
 
     const doDrain = () => {
       if (!db) return;
@@ -331,29 +525,11 @@ export function useDm(currentUserId: string | null, currentUserDisplay: string):
           setMessages((prev) =>
             prev.map((m) => {
               if (m.kind !== 'optimistic' || m.idempotencyKey !== idempotencyKey) return m;
-              // Replace optimistic with confirmed real message
-              const real: DisplayDmMessage = {
-                kind: 'real',
-                id: confirmedId,
-                conversationId: m.conversationId,
-                authorId: currentUserId,
-                content: m.content,
-                createdAt: m.createdAt,
-              };
-              return real;
+              return buildDeliveredRow(m, confirmedId, currentUserId);
             }),
           );
         },
-        // onFailed: flip to failed state
-        (idempotencyKey) => {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.kind === 'optimistic' && m.idempotencyKey === idempotencyKey
-                ? { ...m, state: 'failed' as const }
-                : m,
-            ),
-          );
-        },
+        markFailed,
       );
     };
 
@@ -365,7 +541,7 @@ export function useDm(currentUserId: string | null, currentUserDisplay: string):
       socket.off('connect', doDrain);
       window.removeEventListener('online', doDrain);
     };
-  }, [currentUserId]);
+  }, [currentUserId, makeSendFn, buildDeliveredRow, markFailed]);
 
   // ── Send a DM message ──────────────────────────────────────────────────────
 
@@ -400,34 +576,17 @@ export function useDm(currentUserId: string | null, currentUserDisplay: string):
 
           // Trigger drain — the outbox handles the actual POST. drain() is
           // re-entrant-safe (module-level guard): concurrent calls are de-duped.
-          // If offline, the row stays pending until next reconnect.
+          // If offline, the row stays pending until next reconnect. The send-fn
+          // ENCRYPTS DM sends into a server-blind envelope (see makeSendFn).
           void drain(
             store,
-            (drainTarget, body) => {
-              if (drainTarget.kind === 'dm') {
-                return api.sendDmMessage(drainTarget.conversationId, body) as Promise<{
-                  id: string;
-                  [key: string]: unknown;
-                }>;
-              }
-              return api.sendMessage(drainTarget.channelId, body) as Promise<{
-                id: string;
-                [key: string]: unknown;
-              }>;
-            },
-            // onDelivered: reconcile optimistic → real
+            makeSendFn(),
+            // onDelivered: reconcile optimistic → real (honest per-message state).
             (deliveredKey, confirmedId) => {
               setMessages((prev) =>
                 prev.map((m) => {
                   if (m.kind !== 'optimistic' || m.idempotencyKey !== deliveredKey) return m;
-                  return {
-                    kind: 'real' as const,
-                    id: confirmedId,
-                    conversationId: openConversationId,
-                    authorId: currentUserId,
-                    content: m.content,
-                    createdAt: m.createdAt,
-                  };
+                  return buildDeliveredRow(m, confirmedId, currentUserId);
                 }),
               );
               // Update conversation list preview on delivery.
@@ -445,16 +604,7 @@ export function useDm(currentUserId: string | null, currentUserDisplay: string):
                 return [updated, ...prev.filter((_, i) => i !== idx)];
               });
             },
-            // onFailed: flip optimistic row to 'failed'
-            (failedKey) => {
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.kind === 'optimistic' && m.idempotencyKey === failedKey
-                    ? { ...m, state: 'failed' as const }
-                    : m,
-                ),
-              );
-            },
+            markFailed,
           );
         })
         .catch(() => {
@@ -463,7 +613,14 @@ export function useDm(currentUserId: string | null, currentUserDisplay: string):
           // and the user can retry).
         });
     },
-    [openConversationId, currentUserId, currentUserDisplay],
+    [
+      openConversationId,
+      currentUserId,
+      currentUserDisplay,
+      makeSendFn,
+      buildDeliveredRow,
+      markFailed,
+    ],
   );
 
   // ── Retry a failed optimistic message ─────────────────────────────────────
@@ -480,55 +637,25 @@ export function useDm(currentUserId: string | null, currentUserDisplay: string):
                 : m,
             ),
           );
-          // Trigger immediate drain
+          // Trigger immediate drain (encrypting send-fn — see makeSendFn).
           if (!db || !currentUserId) return;
-          const sendFn = (
-            target: OutboxTarget,
-            body: { content: string; idempotencyKey: string },
-          ) => {
-            if (target.kind === 'dm') {
-              return api.sendDmMessage(target.conversationId, body) as Promise<{
-                id: string;
-                [key: string]: unknown;
-              }>;
-            }
-            return api.sendMessage(target.channelId, body) as Promise<{
-              id: string;
-              [key: string]: unknown;
-            }>;
-          };
           void drain(
             db,
-            sendFn,
+            makeSendFn(),
             (key, confirmedId) => {
               setMessages((prev) =>
                 prev.map((m) => {
                   if (m.kind !== 'optimistic' || m.idempotencyKey !== key) return m;
-                  return {
-                    kind: 'real' as const,
-                    id: confirmedId,
-                    conversationId: m.conversationId,
-                    authorId: currentUserId ?? '',
-                    content: m.content,
-                    createdAt: m.createdAt,
-                  };
+                  return buildDeliveredRow(m, confirmedId, currentUserId ?? '');
                 }),
               );
             },
-            (key) => {
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.kind === 'optimistic' && m.idempotencyKey === key
-                    ? { ...m, state: 'failed' as const }
-                    : m,
-                ),
-              );
-            },
+            markFailed,
           );
         })
         .catch(() => {});
     },
-    [currentUserId],
+    [currentUserId, makeSendFn, buildDeliveredRow, markFailed],
   );
 
   // ── Create a new conversation ──────────────────────────────────────────────
@@ -573,6 +700,8 @@ export function useDm(currentUserId: string | null, currentUserDisplay: string):
     messagesError,
     hasOlderMessages,
     loadOlderMessages,
+
+    encryptionCapability: encryption.capability,
 
     sendDmMessage,
     retryDmMessage,
