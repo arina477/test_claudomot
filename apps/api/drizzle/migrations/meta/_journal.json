@@ -218,6 +218,20 @@
       "when": 1783458768795,
       "tag": "0030_funny_tarantula",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1783472982376,
+      "tag": "0031_wave79_user_encryption_keys",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1783472991040,
+      "tag": "0032_wave79_dm_envelope",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,5 @@
 import type { InferInsertModel, InferSelectModel } from 'drizzle-orm';
-import { boolean, index, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
+import { boolean, index, integer, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
 import { users } from './users';
 
 // ---------------------------------------------------------------------------
@@ -61,6 +61,15 @@ export type NewDmParticipant = InferInsertModel<typeof dm_participants>;
 //   INDEX(conversation_id, created_at) — efficient cursor pagination
 // author_id uses opaque text (SuperTokens) matching messages.author_id.
 // Cascade-deleted when the parent conversation is deleted.
+//
+// wave-79 E2E encryption (task 491cb85d):
+//   content is relaxed to NULLABLE — E2E-encrypted messages carry no server-
+//     readable plaintext; legacy/plaintext rows still populate it.
+//   ciphertext / sender_key_ref / envelope_version (all nullable) hold the
+//     server-blind encrypted envelope. Exactly one of {content, ciphertext}
+//     is populated per row (enforced at the app/Zod boundary, not the DB).
+//   deleted_at (nullable timestamptz) — soft-delete tombstone, mirroring
+//     messages.ts's deleted_at column (the plaintext-channel analog).
 // ---------------------------------------------------------------------------
 
 export const dm_messages = pgTable(
@@ -73,9 +82,16 @@ export const dm_messages = pgTable(
     author_id: text('author_id')
       .notNull()
       .references(() => users.id),
-    content: text('content').notNull(),
+    // wave-79: nullable — NULL for E2E-encrypted rows (envelope carries the payload)
+    content: text('content'),
+    // wave-79 E2E envelope (server-blind): opaque ciphertext + key ref + version
+    ciphertext: text('ciphertext'),
+    sender_key_ref: text('sender_key_ref'),
+    envelope_version: integer('envelope_version'),
     idempotency_key: text('idempotency_key').notNull(),
     created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    // wave-79: soft-delete tombstone (mirrors messages.deleted_at)
+    deleted_at: timestamp('deleted_at', { withTimezone: true }),
   },
   (table) => [
     // UNIQUE(conversation_id, idempotency_key) — deduplication constraint
