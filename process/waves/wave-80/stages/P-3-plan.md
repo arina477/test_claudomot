@@ -43,3 +43,10 @@ postgres-pro · typescript-pro · backend-developer · react-specialist. All pre
 2. Every step has a specialist. ✓ 3. No file in two batches. ✓ 4. design_gap false referenced. ✓ 5. Deltas + alternatives (separate-table rejected; client-filter rejected). ✓ 6. Contracts concrete. ✓ 7. No new deps. ✓ 8. No new SDK. ✓
 
 **Binding refinements carried:** showPresence-only (no sendReadReceipts, anti-theater); server-side presence honor gate (not client filter); DEFAULT true no backfill; two-client honor test (single-client = coverage theater); privacy-audit event; own-visibility-only semantics.
+
+## P-4 Phase-2 binding corrections (fold into B — override conflicting wording above)
+- **B-2 (LOAD-BEARING):** the toggle path proactively emits presence:offline (on→hidden) / presence:online (hidden→on) to co-member rooms — a privacy→presence cross-module emit — so a mid-session toggle updates peers WITHOUT a reconnect (the real AC-2 mechanism; passive gating alone fails the two-client test). Wire the presence gateway/emitter into the privacy update path (or a subscribed event).
+- **B-2 snapshot honor:** the snapshot-on-join path (presence.gateway ~:163) needs co-members' BATCH show_presence (subject-set = co-members), not just the connecting user's flag.
+- **B-2 disconnect gate:** cache show_presence on socket.data at connect (mirror displayName/serverIds) — no disconnect-time query.
+- **Copy:** binary online/offline only (no last-seen timestamp exists) — presence/online-status toggle, not "last-seen".
+- **T-9:** add the toggle to journey-map page-16. **product-decisions:** note presence-hidden governs online broadcast only, not study-timer/focus-room activity rosters.
