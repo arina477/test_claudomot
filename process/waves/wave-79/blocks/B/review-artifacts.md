@@ -3,7 +3,7 @@
 **Block:** B (Build)
 **Wave topic:** server-blind E2E DM encryption — key registry + encrypted envelope + client Web-Crypto + honest fail-closed indicator
 **Block exit gate:** B-6
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
@@ -14,7 +14,7 @@
 | B-3 | stages/B-3-frontend.md | done | react-specialist (Web Crypto + DM view + indicator, after D-3) |
 | B-4 | stages/B-4-wiring.md | done | |
 | B-5 | stages/B-5-verify.md | done | |
-| B-6 | stages/B-6-review.md | pending | |
+| B-6 | stages/B-6-review.md | done | |
 
 ## Block-specific context
 - **Spec contract:** tasks row 60bda5be (DB); spec at process/waves/wave-79/stages/P-2-spec.md
@@ -32,4 +32,4 @@
 - SERVER-BLIND invariant (T-8 non-happy proof) + honest fail-closed indicator (ship-blocker).
 
 ## Gate verdict log
-<appended by fresh head-builder spawn at B-6 Action 1>
+**B-6 Attempt 1 — APPROVED** (head-builder, agentId head-builder-1783475554-136039, 2026-07-08). Crypto core + server-blind write boundary + who_can_dm authz gate + private-key confinement (extractable=false) + honest fail-closed indicator all hold under independent review. All 5 P-4 BINDING corrections honored; every load-bearing AC carries a non-happy proof (separate-connection content-NULL SELECT, byte-identical-404 matrix, no-private-column, export-rejection, lock-absent-in-all-non-encrypted-states). 3 deviations sound (wire-boundary encryption / senderKeyRef=own-pubkey / biome format). 3 non-blocking observations logged (putEncryptionKey return-type mismatch; best-effort key registration; deleted_at read-filtering not wired — T-block/follow-up). Verdict + rationale + handoff: blocks/B/gate-verdict.md.
