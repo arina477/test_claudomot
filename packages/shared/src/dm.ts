@@ -106,22 +106,71 @@ export type CreateConversationInput = z.infer<typeof CreateConversationSchema>;
 
 // ---------------------------------------------------------------------------
 // SendDmMessageSchema — POST /dm/conversations/:id/messages request body
-// wave-46 M8 task a48f1910
+// wave-46 M8 task a48f1910; wave-79 E2E envelope (task 491cb85d)
 //
-// content: 1–4000 chars (trimmed), matching channel SendMessageSchema limits.
+// A DM send carries EITHER a plaintext body OR a server-blind encrypted
+// envelope — the two are MUTUALLY EXCLUSIVE (enforced here at the write
+// boundary so server-blindness cannot be violated by sending both):
+//
+//   plaintext path — content set (1–4000 trimmed), envelope fields absent.
+//     Backward-compatible: pre-encryption clients / keyless-peer fallback.
+//   envelope path  — ciphertext + senderKeyRef + envelopeVersion set,
+//     content absent. The server persists the ciphertext and leaves the
+//     plaintext content column NULL (it stores no readable plaintext).
+//
 // idempotencyKey: required (not optional unlike channel send) — the server
 //   enforces UNIQUE(conversation_id, idempotency_key) for exactly-once delivery
-//   and the offline outbox always supplies one.
+//   and the offline outbox always supplies one. Applies to both paths.
 // ---------------------------------------------------------------------------
 
-export const SendDmMessageSchema = z.object({
-  content: z
-    .string()
-    .trim()
-    .min(1, 'Message content must not be empty')
-    .max(4000, 'Message content must not exceed 4000 characters'),
-  idempotencyKey: z.string().min(1, 'idempotencyKey must not be empty'),
-});
+export const SendDmMessageSchema = z
+  .object({
+    content: z
+      .string()
+      .trim()
+      .min(1, 'Message content must not be empty')
+      .max(4000, 'Message content must not exceed 4000 characters')
+      .optional(),
+    // wave-79 encrypted envelope (server-blind). base64 AES-GCM envelope,
+    // bounded to keep an oversized ciphertext from being persisted.
+    ciphertext: z
+      .string()
+      .min(1, 'ciphertext must not be empty')
+      .max(20000, 'ciphertext must not exceed 20000 characters')
+      .optional(),
+    senderKeyRef: z.string().min(1).max(2000).optional(),
+    envelopeVersion: z.number().int().positive().optional(),
+    idempotencyKey: z.string().min(1, 'idempotencyKey must not be empty'),
+  })
+  .refine(
+    (data) => {
+      const hasContent = data.content !== undefined;
+      const hasCiphertext = data.ciphertext !== undefined;
+      // Exactly one payload path: plaintext XOR encrypted envelope.
+      // Rejecting BOTH preserves server-blindness at the write boundary
+      // (an encrypted send must never also carry readable plaintext).
+      return hasContent !== hasCiphertext;
+    },
+    {
+      message:
+        'A DM must carry either plaintext content OR an encrypted envelope (ciphertext), never both and never neither',
+      path: ['content'],
+    },
+  )
+  .refine(
+    (data) => {
+      // Envelope integrity: if a ciphertext is present, the full envelope
+      // (senderKeyRef + envelopeVersion) MUST accompany it. A partial
+      // envelope is rejected rather than silently persisted.
+      if (data.ciphertext === undefined) return true;
+      return data.senderKeyRef !== undefined && data.envelopeVersion !== undefined;
+    },
+    {
+      message:
+        'An encrypted envelope requires ciphertext, senderKeyRef, and envelopeVersion together',
+      path: ['ciphertext'],
+    },
+  );
 export type SendDmMessageInput = z.infer<typeof SendDmMessageSchema>;
 
 // ---------------------------------------------------------------------------
