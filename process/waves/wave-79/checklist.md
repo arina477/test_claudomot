@@ -10,7 +10,7 @@
 **Note:** M13 leg-3 — richer privacy/E2E posture vs Discord/Telegram (encrypted DMs + presence/read-receipt privacy controls). This is the LAST autonomous leg of M13; after it ships, only the founder-fenced items (B2B2C go-to-market + _TBD_ success metric) remain, so expect a milestone-disposition decision at N-1 next cycle. Wave touches auth/crypto/message-content → expect T-8 security-scope tightened gate at P-4, and likely a small D-block gap for an encrypted-conversation indicator. todo-milestone queue EMPTY — if M13 closes after this leg, N-1 fires roadmap-planning (stockout).
 
 PRODUCT:
-- [ ] P-0 Frame (discover + reframe)
+- [x] P-0 Frame (discover + reframe)
 - [ ] P-1 Decompose
 - [ ] P-2 Spec
 - [ ] P-3 Plan
