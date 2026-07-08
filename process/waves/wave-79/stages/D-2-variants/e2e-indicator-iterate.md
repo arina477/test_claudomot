@@ -1,6 +1,6 @@
 # D-2 Iteration log — e2e-indicator
 
-iteration_counter: 1
+iteration_counter: 2
 
 ## Iteration 0 (first pass)
 - **Refine prompt sent:** (none — first-pass generation)
@@ -13,3 +13,10 @@ iteration_counter: 1
 - **Resulting staging path:** `design/staging/e2e-indicator.html` (31,064 bytes, overwrote iteration 0).
 - **Orchestrator re-audit:** no unapproved hex; all Phosphor names real; fail-closed intact (shield only in encrypted markup + JS resolve branch; no bare closed ph-lock; --danger unused on elements); all 7 deltas verified in situ.
 - **Checkpoint outcome:** `skipped-mode-automatic` (re-review is a D-3 backedge; no first-pass checkpoint). Re-entering D-3 Phase 1 dual review.
+
+## Iteration 2 (refine — D-3 backedge attempt 2, REVISE/REVISE)
+- **Refine prompt sent:** 6 targeted polish deltas (R1 invalid-CSS antialiased fix; R2 live-region moved to inner pill + aria-label on badges; R3 context-badge breakpoint 768->1024 per brief §5; R5 rename --transition-standard -> --transition-state-change; R6 label "Sent as standard message" -> "Not encrypted"; R4 verify-only). Spec-arbitration items S1 (tooltip 12px per DS §8) + S2 (text-secondary not text-muted on status labels) folded into the D-1 brief, NOT aidesigner. B-3 handoff note (encrypted badge on surface-900; measured ~4.55:1) carried to adopt/gate. Full triage in reconciliation attempt 2.
+- **Generator:** `/aidesigner refine_design` (messages[] continuation), HTTP 200.
+- **Resulting staging path:** `design/staging/e2e-indicator.html` (31,494 bytes).
+- **Orchestrator re-audit:** no unapproved hex; all Phosphor names real; fail-closed intact (shield only in encrypted markup + JS resolve; not-encrypted uses ph-lock-open; no bare ph-lock; --danger unused on elements); all 6 deltas verified in situ.
+- **Checkpoint outcome:** `skipped-mode-automatic`. Re-entering D-3 Phase 1 dual review (attempt 3).
