@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyHall — E2E DM Encryption Status Indicator</title>
+    
+    <!-- 
+    aesthetic_dna: calm, academic, focused, low-noise
+    ui_paradigm: component_audit_and_context_split (Left: State Matrix, Right: Spatial Context)
+    palette: layered zinc (surface 950-700), strict emerald accent, muted grays, explicit dark-only
+    -->
+
+    <!-- Dependencies -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            /* Canonical StudyHall Tokens */
+            --surface-950: #0a0a0b;
+            --surface-900: #121214;
+            --surface-800: #1c1c1f;
+            --surface-700: #27272a;
+            --surface-600: #3f3f46;
+            --surface-500: #52525b;
+            
+            --border-hairline: rgba(255, 255, 255, 0.06);
+            --border-hover: rgba(255, 255, 255, 0.10);
+            
+            --text-primary: rgba(255, 255, 255, 0.92);
+            --text-secondary: rgba(255, 255, 255, 0.60);
+            --text-muted: rgba(255, 255, 255, 0.40);
+            
+            /* Using RGB variables for opacity injection in Tailwind */
+            --rgb-accent-emerald: 16, 185, 129;
+            --accent-emerald: rgb(var(--rgb-accent-emerald));
+            --accent-amber: #f59e0b;
+            --danger: #ef4444; 
+            
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+            --shadow-pop: 0 8px 24px rgba(0,0,0,0.5);
+            --glow-focus: 0 0 0 2px rgba(16,185,129,0.4);
+            
+            --radius-sm: 2px;
+            --radius-md: 6px;
+            --radius-lg: 8px;
+            --radius-full: 9999px;
+            
+            --transition-standard: 200ms ease;
+        }
+
+        body {
+            font-family: 'Geist', -apple-system, sans-serif;
+            background-color: var(--surface-950);
+            color: var(--text-primary);
+            antialiased;
+            min-height: 100dvh;
+        }
+
+        /* Tooltip Mechanics */
+        .tooltip-trigger {
+            position: relative;
+        }
+        
+        .tooltip-content {
+            visibility: hidden;
+            opacity: 0;
+            position: absolute;
+            top: 100%;
+            right: 0; /* Align right for header placement */
+            margin-top: 8px;
+            width: 280px;
+            background-color: var(--surface-700);
+            border: 1px solid var(--border-hairline);
+            border-radius: var(--radius-md);
+            padding: 12px;
+            box-shadow: var(--shadow-pop);
+            z-index: 50;
+            font-size: 12px;
+            line-height: 1.5;
+            color: var(--text-primary);
+            text-align: left;
+            transition: opacity var(--transition-standard), visibility var(--transition-standard);
+            transition-delay: 0s;
+        }
+
+        /* Enforce 400ms delay on hover per design system, instant on focus */
+        .tooltip-trigger:hover .tooltip-content {
+            visibility: visible;
+            opacity: 1;
+            transition-delay: 400ms;
+        }
+        
+        .tooltip-trigger:focus-visible .tooltip-content,
+        .tooltip-trigger:focus-within .tooltip-content {
+            visibility: visible;
+            opacity: 1;
+            transition-delay: 0s;
+        }
+
+        /* Reduced Motion Guard */
+        @media (prefers-reduced-motion: reduce) {
+            *, ::before, ::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+            .ph-circle-notch {
+                animation: none !important;
+            }
+        }
+
+        /* Custom Scrollbar for realism */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--surface-600); border-radius: var(--radius-full); }
+        ::-webkit-scrollbar-thumb:hover { background: var(--surface-500); }
+
+        /* Fail-Closed & State Transitions */
+        .state-fade {
+            transition: background-color var(--transition-standard), 
+                        border-color var(--transition-standard), 
+                        color var(--transition-standard);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 flex items-center justify-center">
+
+    <!-- Outermost App Container -->
+    <main class="w-full max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8 lg:gap-12 pl-0 items-start">
+
+        <!-- LEFT COLUMN: Engineering Audit & State Matrix (Proof of all 6 states) -->
+        <section class="flex flex-col gap-6" aria-label="Component State Audit">
+            
+            <header>
+                <h1 class="text-xl font-semibold tracking-tight text-[var(--text-primary)]">E2E Indicator Audit</h1>
+                <p class="text-sm text-[var(--text-secondary)] mt-1">Wave 79 • D-3 Frontend Review Gate</p>
+                <p class="text-xs text-[var(--text-muted)] mt-2">All 6 states required by the brief. Hover/focus badges to trigger state 6 (Tooltip).</p>
+            </header>
+
+            <div class="flex flex-col gap-3">
+                <!-- State 1: Provably Encrypted -->
+                <div class="flex items-center justify-between p-4 rounded-lg bg-[var(--surface-900)] border border-[var(--border-hairline)]">
+                    <div class="flex flex-col">
+                        <span class="text-sm font-medium">State 1</span>
+                        <span class="text-xs text-[var(--text-muted)]">Encrypted</span>
+                    </div>
+                    <div class="tooltip-trigger" tabindex="0" role="status" aria-live="polite">
+                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium state-fade focus-visible:outline-none focus-visible:ring-2 bg-[rgba(var(--rgb-accent-emerald),0.1)] border border-[rgba(var(--rgb-accent-emerald),0.2)] text-[var(--accent-emerald)] ring-[rgba(var(--rgb-accent-emerald),0.4)]">
+                            <i class="ph-fill ph-shield-check text-base"></i>
+                            <span>End-to-end encrypted</span>
+                        </div>
+                        <div class="tooltip-content" role="tooltip">
+                            Messages in this conversation are end-to-end encrypted — only you and Dr. Aris Thorne can read them.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- State 2: Not-encrypted (Plaintext Fallback) -->
+                <div class="flex items-center justify-between p-4 rounded-lg bg-[var(--surface-900)] border border-[var(--border-hairline)]">
+                    <div class="flex flex-col">
+                        <span class="text-sm font-medium">State 2</span>
+                        <span class="text-xs text-[var(--text-muted)]">Plaintext Fallback</span>
+                    </div>
+                    <div class="tooltip-trigger" tabindex="0" role="status" aria-live="polite">
+                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium state-fade focus-visible:outline-none focus-visible:ring-2 bg-[var(--surface-700)] border border-[var(--border-hairline)] text-[var(--text-secondary)] focus-visible:ring-[var(--accent-emerald)]">
+                            <i class="ph ph-lock-open text-base"></i>
+                            <span>Not encrypted</span>
+                        </div>
+                        <div class="tooltip-content" role="tooltip">
+                            Not end-to-end encrypted — Dr. Aris Thorne hasn't set up secure messaging yet.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- State 3: Not-encrypted (Group DM) -->
+                <div class="flex items-center justify-between p-4 rounded-lg bg-[var(--surface-900)] border border-[var(--border-hairline)]">
+                    <div class="flex flex-col">
+                        <span class="text-sm font-medium">State 3</span>
+                        <span class="text-xs text-[var(--text-muted)]">Group DM</span>
+                    </div>
+                    <div class="tooltip-trigger" tabindex="0" role="status" aria-live="polite">
+                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium state-fade focus-visible:outline-none focus-visible:ring-2 bg-[var(--surface-700)] border border-[var(--border-hairline)] text-[var(--text-secondary)] focus-visible:ring-[var(--accent-emerald)]">
+                            <i class="ph ph-shield-slash text-base"></i>
+                            <span>Not encrypted</span>
+                        </div>
+                        <div class="tooltip-content" role="tooltip">
+                            Group conversations are not end-to-end encrypted yet. Messages are secured in transit.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- State 4: Cannot Decrypt (Usually per-message, shown as badge here for completeness) -->
+                <div class="flex items-center justify-between p-4 rounded-lg bg-[var(--surface-900)] border border-[var(--border-hairline)]">
+                    <div class="flex flex-col">
+                        <span class="text-sm font-medium">State 4</span>
+                        <span class="text-xs text-[var(--text-muted)]">Cannot Decrypt</span>
+                    </div>
+                    <div class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-transparent border border-transparent text-[var(--text-muted)]">
+                        <i class="ph ph-key text-base"></i>
+                        <span>No key on this device</span>
+                    </div>
+                </div>
+
+                <!-- State 5: Loading / Indeterminate -->
+                <div class="flex items-center justify-between p-4 rounded-lg bg-[var(--surface-900)] border border-[var(--border-hairline)]">
+                    <div class="flex flex-col">
+                        <span class="text-sm font-medium">State 5</span>
+                        <span class="text-xs text-[var(--text-muted)]">Loading / Establishing</span>
+                    </div>
+                    <div class="tooltip-trigger" tabindex="0" role="status" aria-live="polite" id="demo-loading-badge">
+                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium state-fade focus-visible:outline-none focus-visible:ring-2 bg-[var(--surface-700)] border border-[var(--border-hairline)] text-[var(--text-muted)] focus-visible:ring-[var(--accent-emerald)]">
+                            <i class="ph ph-circle-notch animate-spin text-base"></i>
+                            <span>Establishing secure connection...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <button onclick="simulateKeygen()" class="mt-2 text-sm bg-[var(--surface-700)] hover:bg-[var(--surface-600)] transition-colors border border-[var(--border-hairline)] px-4 py-2 rounded-md self-start text-[var(--text-primary)] font-medium flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-emerald)]">
+                <i class="ph ph-arrows-clockwise"></i> Replay State 5 → 1 Transition
+            </button>
+
+        </section>
+
+        <!-- RIGHT COLUMN: Spatial Context (DM Canvas) -->
+        <section class="border border-[var(--border-hairline)] rounded-xl bg-[var(--surface-800)] flex flex-col h-[600px] overflow-hidden shadow-pop" aria-label="Direct Messages Panel">
+            
+            <!-- DM Thread Header -->
+            <header class="flex items-center justify-between px-4 py-3 bg-[var(--surface-900)] border-b border-[var(--border-hairline)] shrink-0 z-10">
+                
+                <!-- Participant Info -->
+                <div class="flex items-center gap-3">
+                    <div class="relative">
+                        <img src="https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&w=80&q=80" alt="Dr. Aris Thorne" class="w-10 h-10 rounded-full object-cover bg-[var(--surface-600)]">
+                        <!-- Presence Dot -->
+                        <div class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-[var(--accent-emerald)] border-2 border-[var(--surface-900)] rounded-full"></div>
+                    </div>
+                    <div class="flex flex-col">
+                        <h2 class="text-sm font-medium leading-tight">Dr. Aris Thorne</h2>
+                        <span class="text-xs text-[var(--text-secondary)]">Educator • Quantitative Analysis</span>
+                    </div>
+                </div>
+
+                <!-- Action & Connection Wedge -->
+                <div class="flex items-center gap-4">
+                    
+                    <!-- Placement 1: Header Badge (State 1 shown contextually) -->
+                    <div class="tooltip-trigger hidden md:block" tabindex="0" role="status" aria-live="polite" id="context-header-badge">
+                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium state-fade focus-visible:outline-none focus-visible:ring-2 bg-[rgba(var(--rgb-accent-emerald),0.1)] border border-[rgba(var(--rgb-accent-emerald),0.2)] text-[var(--accent-emerald)] ring-[rgba(var(--rgb-accent-emerald),0.4)] cursor-default">
+                            <i class="ph-fill ph-shield-check text-base"></i>
+                            <span class="hidden lg:inline">End-to-end encrypted</span>
+                            <!-- Responsive collapse logic implies text is hidden < 1024px, icon remains. Here mimicked via hiding text entirely on mid-breakpoints to show structural flex -->
+                        </div>
+                        <div class="tooltip-content right-0" role="tooltip">
+                            Messages in this conversation are end-to-end encrypted — only you and Dr. Aris Thorne can read them.
+                        </div>
+                    </div>
+
+                    <!-- Narrow Viewport Badge Fallback (Icon Only) -->
+                    <div class="tooltip-trigger md:hidden" tabindex="0">
+                        <div class="flex items-center justify-center w-8 h-8 rounded-full bg-[rgba(var(--rgb-accent-emerald),0.1)] border border-[rgba(var(--rgb-accent-emerald),0.2)] text-[var(--accent-emerald)]">
+                             <i class="ph-fill ph-shield-check"></i>
+                        </div>
+                    </div>
+
+                    <!-- Divider -->
+                    <div class="w-px h-6 bg-[var(--border-hairline)]"></div>
+
+                    <!-- Search / Member list toggles -->
+                    <div class="flex items-center gap-1 text-[var(--text-secondary)]">
+                        <button class="p-2 rounded-md hover:bg-[var(--surface-700)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-emerald)]" aria-label="Search conversation">
+                            <i class="ph ph-magnifying-glass text-lg"></i>
+                        </button>
+                        <button class="p-2 rounded-md hover:bg-[var(--surface-700)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-emerald)]" aria-label="Conversation details">
+                            <i class="ph ph-sidebar text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- DM Canvas (Messages viewport) -->
+            <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-6">
+                
+                <!-- Date Divider -->
+                <div class="flex items-center w-full my-2">
+                    <div class="flex-1 h-px bg-[var(--border-hairline)]"></div>
+                    <span class="px-3 text-xs font-medium text-[var(--text-muted)] cursor-default">Today</span>
+                    <div class="flex-1 h-px bg-[var(--border-hairline)]"></div>
+                </div>
+
+                <!-- Message Row: Standard Encrypted (No sub-badge needed, header provides coverage) -->
+                <div class="flex gap-3 group" role="article">
+                    <img src="https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&w=80&q=80" alt="Dr. Aris Thorne" class="w-10 h-10 rounded-full object-cover bg-[var(--surface-600)] mt-0.5">
+                    <div class="flex flex-col">
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-sm font-medium">Dr. Aris Thorne</span>
+                            <span class="text-xs text-[var(--text-secondary)]">10:42 AM</span>
+                        </div>
+                        <p class="text-sm text-[var(--text-primary)] mt-1">Hello! Confirming I received your dataset for the linear regression project. The variance in column C looks slightly anomalous, might want to check the parsing script.</p>
+                    </div>
+                </div>
+
+                <!-- Message Row: Fallback / Not-Encrypted (Placement 2 - State 2) -->
+                <!-- Scenario: Student replies from a new unlinked device before key sync, dropping to fallback -->
+                <div class="flex gap-3 group" role="article">
+                     <div class="w-10 h-10 rounded-full bg-[var(--surface-600)] mt-0.5 flex items-center justify-center text-sm font-medium text-[var(--text-primary)]">You</div>
+                    <div class="flex flex-col">
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-sm font-medium">You</span>
+                            <span class="text-xs text-[var(--text-secondary)]">10:45 AM</span>
+                        </div>
+                        <p class="text-sm text-[var(--text-primary)] mt-1">Thanks Professor. I'm actually logging in from a library computer right now, let me pull down the script and take a look.</p>
+                        
+                        <!-- Per-message micro-affordance slot -->
+                        <div class="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)] select-none">
+                            <i class="ph ph-lock-open text-[14px]"></i>
+                            <span>Sent as standard message</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Message Row: Cannot Decrypt (Placement 2 - State 4) -->
+                <!-- Scenario: Educator replies with an E2E payload, but student's library computer lacks the private key -->
+                <div class="flex gap-3 group" role="article">
+                    <img src="https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&w=80&q=80" alt="Dr. Aris Thorne" class="w-10 h-10 rounded-full object-cover bg-[var(--surface-600)] mt-0.5 opacity-60">
+                    <div class="flex flex-col">
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-sm font-medium opacity-60">Dr. Aris Thorne</span>
+                            <span class="text-xs text-[var(--text-secondary)]">10:48 AM</span>
+                        </div>
+                        
+                        <!-- Undecryptable Payload Shell -->
+                        <div class="mt-1 px-3 py-2 rounded-md bg-[var(--surface-700)] border border-[var(--border-hairline)] max-w-sm">
+                            <span class="text-sm text-[var(--text-muted)] italic font-mono text-[11px] break-all leading-tight">
+                                wjH2+...[encrypted payload unavailable]
+                            </span>
+                        </div>
+
+                        <!-- Per-message micro-affordance slot: Cannot Decrypt -->
+                        <div class="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)] select-none">
+                            <i class="ph ph-key text-[14px]"></i>
+                            <span>Message cannot be decrypted on this device</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Composer (Visual Complete) -->
+            <div class="p-4 bg-[var(--surface-900)] border-t border-[var(--border-hairline)] shrink-0">
+                <div class="relative flex items-center bg-[var(--surface-800)] border border-[var(--border-hairline)] rounded-md focus-within:ring-2 focus-within:ring-[var(--accent-emerald)] focus-within:border-transparent transition-all px-3 py-2">
+                    <button class="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors shrink-0 outline-none focus-visible:bg-[var(--surface-700)]" aria-label="Add attachment">
+                        <i class="ph ph-plus-circle text-lg"></i>
+                    </button>
+                    <input type="text" placeholder="Message Dr. Aris Thorne..." class="w-full bg-transparent text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] border-none outline-none px-3 py-1 font-sans">
+                    <button class="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors shrink-0 outline-none focus-visible:bg-[var(--surface-700)]" aria-label="Add emoji">
+                        <i class="ph ph-smiley text-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- JS for orchestrating the Loading -> Success simulation -->
+    <script>
+        function simulateKeygen() {
+            const badge = document.getElementById('demo-loading-badge');
+            if (!badge) return;
+
+            const innerContainer = badge.firstElementChild;
+            const icon = innerContainer.querySelector('i');
+            const label = innerContainer.querySelector('span');
+
+            // 1. Force Loading State
+            innerContainer.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium state-fade focus-visible:outline-none focus-visible:ring-2 bg-[var(--surface-700)] border border-[var(--border-hairline)] text-[var(--text-muted)] focus-visible:ring-[var(--accent-emerald)]";
+            icon.className = "ph ph-circle-notch animate-spin text-base";
+            label.textContent = "Establishing secure connection...";
+
+            // 2. Resolve to Encrypted (Fail-closed resolution path) after 2 seconds
+            setTimeout(() => {
+                // Apply strict token classes for Encrypted state
+                innerContainer.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium state-fade focus-visible:outline-none focus-visible:ring-2 bg-[rgba(var(--rgb-accent-emerald),0.1)] border border-[rgba(var(--rgb-accent-emerald),0.2)] text-[var(--accent-emerald)] ring-[rgba(var(--rgb-accent-emerald),0.4)]";
+                icon.className = "ph-fill ph-shield-check text-base";
+                label.textContent = "End-to-end encrypted";
+                
+                // Note: The `state-fade` class coordinates the 200ms background/text/border shift natively.
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

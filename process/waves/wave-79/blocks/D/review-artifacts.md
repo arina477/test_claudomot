@@ -10,7 +10,7 @@
 | Stage | Deliverable file(s) | Status | Notes |
 |---|---|---|---|
 | D-1 | stages/D-1-brief/e2e-indicator-brief.md | done | mask_mode_signoff PASS; 10+ §4 primitives; 3 prior-art mockups; 10 §9 checks incl. fail-closed |
-| D-2 | stages/D-2-variants/e2e-indicator-variants.md (+ design/staging/e2e-indicator.html) | pending | aidesigner |
+| D-2 | stages/D-2-variants/e2e-indicator-variants.md (+ design/staging/e2e-indicator.html) | done | aidesigner HTTP 200; 6 states rendered; token+fail-closed audit PASS; checkpoint skipped-mode-automatic; iter 0 |
 | D-3 | stages/D-3-review-and-adopt/e2e-indicator-{plan-design-review,ui-ux-pro-max,reconciliation,adopt}.md | pending | dual-review + head-designer gate + canonicalize |
 
 ## Block-specific context
