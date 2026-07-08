@@ -12,8 +12,8 @@
 | B-1 | stages/B-1-contracts.md | done | typescript-pro (privacy.ts +showPresence) |
 | B-2 | stages/B-2-backend.md | done | backend-developer (persist+audit; presence honor + PROACTIVE toggle-time emit + batch snapshot) |
 | B-3 | stages/B-3-frontend.md | done | react-specialist (SettingsPrivacyPage real toggle) |
-| B-4 | stages/B-4-wiring.md | pending | |
-| B-5 | stages/B-5-verify.md | pending | |
+| B-4 | stages/B-4-wiring.md | done | |
+| B-5 | stages/B-5-verify.md | done | |
 | B-6 | stages/B-6-review.md | pending | |
 
 ## Block-specific context
