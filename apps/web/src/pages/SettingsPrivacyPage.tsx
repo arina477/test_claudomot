@@ -165,6 +165,10 @@ export function SettingsPrivacyPage() {
   async function handleVisibilityChange(value: 'everyone' | 'nobody') {
     if (visibilitySaving) return;
 
+    // Capture the pre-change UI value LOCALLY so a concurrent presence save that
+    // replaces `privacy` can't corrupt our revert target (F4).
+    const prevUiVisibility = uiVisibility;
+
     // Optimistic UI update
     setUiVisibility(value);
     setVisibilityError('');
@@ -172,13 +176,10 @@ export function SettingsPrivacyPage() {
     setVisibilitySaving(true);
 
     try {
-      // UpdatePrivacySchema is full-replace: send ALL three fields. Preserve the
-      // other two from current settings state, changing only profileVisibility.
-      const updated = await api.putPrivacy({
-        profileVisibility: value,
-        whoCanDm: privacy?.whoCanDm ?? 'everyone',
-        showPresence: privacy?.showPresence ?? showPresence,
-      });
+      // Partial-body PUT (F1): send ONLY the changed field. The service merges it
+      // onto current DB state, so we never re-send another setting's (possibly
+      // stale) value — this is what closes the cross-tab clobber.
+      const updated = await api.putPrivacy({ profileVisibility: value });
       setPrivacy(updated);
       setUiVisibility(toUiVisibility(updated.profileVisibility));
       setShowPresence(updated.showPresence);
@@ -186,8 +187,8 @@ export function SettingsPrivacyPage() {
       setTimeout(() => setVisibilitySaveSuccess(false), 3000);
     } catch {
       setVisibilityError('Could not save visibility setting. Please try again.');
-      // Revert optimistic update to the last known server value
-      if (privacy) setUiVisibility(toUiVisibility(privacy.profileVisibility));
+      // Revert optimistic update to the pre-change LOCAL value (F4).
+      setUiVisibility(prevUiVisibility);
     } finally {
       setVisibilitySaving(false);
     }
@@ -197,6 +198,10 @@ export function SettingsPrivacyPage() {
   async function handlePresenceChange(value: boolean) {
     if (presenceSaving) return;
 
+    // Capture the pre-change presence value LOCALLY so a concurrent visibility
+    // save that replaces `privacy` can't corrupt our revert target (F4).
+    const prevShowPresence = showPresence;
+
     // Optimistic UI update
     setShowPresence(value);
     setPresenceError('');
@@ -204,13 +209,10 @@ export function SettingsPrivacyPage() {
     setPresenceSaving(true);
 
     try {
-      // Full-replace PUT: send ALL three fields. Preserve the other two from
-      // current settings state, changing only showPresence.
-      const updated = await api.putPrivacy({
-        profileVisibility: privacy?.profileVisibility ?? 'everyone',
-        whoCanDm: privacy?.whoCanDm ?? 'everyone',
-        showPresence: value,
-      });
+      // Partial-body PUT (F1): send ONLY the changed field. The service merges it
+      // onto current DB state, so we never re-send another setting's (possibly
+      // stale) value — this is what closes the cross-tab clobber.
+      const updated = await api.putPrivacy({ showPresence: value });
       setPrivacy(updated);
       setShowPresence(updated.showPresence);
       setUiVisibility(toUiVisibility(updated.profileVisibility));
@@ -218,8 +220,8 @@ export function SettingsPrivacyPage() {
       setTimeout(() => setPresenceSaveSuccess(false), 3000);
     } catch {
       setPresenceError('Could not save your online status setting. Please try again.');
-      // Revert optimistic update to the last known server value
-      if (privacy) setShowPresence(privacy.showPresence);
+      // Revert optimistic update to the pre-change LOCAL value (F4).
+      setShowPresence(prevShowPresence);
     } finally {
       setPresenceSaving(false);
     }
