@@ -8,7 +8,7 @@
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |
 |---|---|---|---|
-| P-0 | process/waves/wave-80/stages/P-0-frame.md | in-progress | discovery + reframe (resolve scope hole) |
+| P-0 | process/waves/wave-80/stages/P-0-frame.md | done | discovery + reframe (resolve scope hole) |
 | P-1 | process/waves/wave-80/stages/P-1-decompose.md | pending | |
 | P-2 | process/waves/wave-80/stages/P-2-spec.md | pending | |
 | P-3 | process/waves/wave-80/stages/P-3-plan.md | pending | |

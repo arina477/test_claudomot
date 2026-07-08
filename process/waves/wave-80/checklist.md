@@ -7,7 +7,7 @@
 **Note:** M13 leg-3b — read-receipt & presence privacy controls in settings (split out at wave-79 P-0). SCOPE HOLE to resolve at P-0: `sendReadReceipts` gates a read-receipt feature that does not exist yet — either build the read-receipt primitive first, or narrow the AC to presence-only + a deferred read-receipt sibling. This is M13's LAST autonomous leg: after it ships, M13 hits open=0 with only founder-reserved scope remaining (B2B2C go-to-market, _TBD_ success metric, identity verification) → expect a milestone-disposition JUDGMENT CALL at next N-1 (routes to BOARD under automatic mode) + roadmap-planning stockout cascade (todo-milestone queue is EMPTY). Wave touches settings/message-privacy — assess T-8 security-scope tightened gate at P-4.
 
 PRODUCT:
-- [ ] P-0 Frame (discover + reframe)
+- [x] P-0 Frame (discover + reframe)
 - [ ] P-1 Decompose
 - [ ] P-2 Spec
 - [ ] P-3 Plan
