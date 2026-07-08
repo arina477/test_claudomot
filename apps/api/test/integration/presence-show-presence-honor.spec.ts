@@ -37,10 +37,10 @@ import {
 } from './pg-harness';
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AppendPrivacyEventService } from '../../src/privacy/append-privacy-event.service';
-import { PrivacyService } from '../../src/privacy/privacy.service';
 import { PresenceGateway } from '../../src/presence/presence.gateway';
 import { PresenceService } from '../../src/presence/presence.service';
+import { AppendPrivacyEventService } from '../../src/privacy/append-privacy-event.service';
+import { PrivacyService } from '../../src/privacy/privacy.service';
 
 const SKIP = !process.env.DATABASE_URL_TEST;
 

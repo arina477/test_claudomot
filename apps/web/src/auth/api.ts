@@ -724,15 +724,16 @@ export const api = {
   // ── Privacy endpoints (wave-35 M7) ──────────────────────────────────────
 
   /**
-   * GET /profile/privacy → PrivacySettingsResponse {profileVisibility, whoCanDm}.
+   * GET /profile/privacy → PrivacySettingsResponse {profileVisibility, whoCanDm, showPresence}.
    * Throws: 401 unauthed.
    */
   getPrivacy: (): Promise<PrivacySettingsResponse> =>
     request<PrivacySettingsResponse>('/profile/privacy'),
 
   /**
-   * PUT /profile/privacy {profileVisibility, whoCanDm} → updated PrivacySettingsResponse.
-   * Full-replace semantics (PUT, not PATCH). Throws: 401 unauthed, 400 bad input.
+   * PUT /profile/privacy {profileVisibility, whoCanDm, showPresence} → updated
+   * PrivacySettingsResponse. Full-replace semantics (PUT, not PATCH) — all three
+   * fields required. Throws: 401 unauthed, 400 bad input.
    */
   putPrivacy: (body: UpdatePrivacyInput): Promise<PrivacySettingsResponse> =>
     request<PrivacySettingsResponse>('/profile/privacy', {

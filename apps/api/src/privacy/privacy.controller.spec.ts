@@ -152,7 +152,11 @@ describe('PrivacyController.updatePrivacy — PUT /profile/privacy', () => {
   });
 
   it('returns 200 PrivacySettingsResponse for valid body and delegates to privacyService.updatePrivacy', async () => {
-    const validBody = { profileVisibility: 'nobody', whoCanDm: 'server-members', showPresence: false };
+    const validBody = {
+      profileVisibility: 'nobody',
+      whoCanDm: 'server-members',
+      showPresence: false,
+    };
 
     // biome-ignore lint/suspicious/noExplicitAny: test cast
     const result = await controller.updatePrivacy(makeReq() as any, validBody);

@@ -131,6 +131,12 @@ export function SettingsPrivacyPage() {
   const [visibilityError, setVisibilityError] = useState('');
   const [visibilitySaveSuccess, setVisibilitySaveSuccess] = useState(false);
 
+  // ── Presence save state (LIVE feature — real working toggle) ───────────────
+  const [showPresence, setShowPresence] = useState(true);
+  const [presenceSaving, setPresenceSaving] = useState(false);
+  const [presenceError, setPresenceError] = useState('');
+  const [presenceSaveSuccess, setPresenceSaveSuccess] = useState(false);
+
   // ── Export state ──────────────────────────────────────────────────────────
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState('');
@@ -144,6 +150,7 @@ export function SettingsPrivacyPage() {
       .then(([priv, data]) => {
         setPrivacy(priv);
         setUiVisibility(toUiVisibility(priv.profileVisibility));
+        setShowPresence(priv.showPresence);
         setAccountData(data);
       })
       .catch(() => setLoadError('Could not load your privacy settings. Please try again.'))
@@ -165,13 +172,16 @@ export function SettingsPrivacyPage() {
     setVisibilitySaving(true);
 
     try {
+      // UpdatePrivacySchema is full-replace: send ALL three fields. Preserve the
+      // other two from current settings state, changing only profileVisibility.
       const updated = await api.putPrivacy({
         profileVisibility: value,
-        // Preserve the existing whoCanDm — this PUT updates both fields
         whoCanDm: privacy?.whoCanDm ?? 'everyone',
+        showPresence: privacy?.showPresence ?? showPresence,
       });
       setPrivacy(updated);
       setUiVisibility(toUiVisibility(updated.profileVisibility));
+      setShowPresence(updated.showPresence);
       setVisibilitySaveSuccess(true);
       setTimeout(() => setVisibilitySaveSuccess(false), 3000);
     } catch {
@@ -180,6 +190,38 @@ export function SettingsPrivacyPage() {
       if (privacy) setUiVisibility(toUiVisibility(privacy.profileVisibility));
     } finally {
       setVisibilitySaving(false);
+    }
+  }
+
+  // ── Presence change (auto-saves on toggle, mirrors visibility save) ────────
+  async function handlePresenceChange(value: boolean) {
+    if (presenceSaving) return;
+
+    // Optimistic UI update
+    setShowPresence(value);
+    setPresenceError('');
+    setPresenceSaveSuccess(false);
+    setPresenceSaving(true);
+
+    try {
+      // Full-replace PUT: send ALL three fields. Preserve the other two from
+      // current settings state, changing only showPresence.
+      const updated = await api.putPrivacy({
+        profileVisibility: privacy?.profileVisibility ?? 'everyone',
+        whoCanDm: privacy?.whoCanDm ?? 'everyone',
+        showPresence: value,
+      });
+      setPrivacy(updated);
+      setShowPresence(updated.showPresence);
+      setUiVisibility(toUiVisibility(updated.profileVisibility));
+      setPresenceSaveSuccess(true);
+      setTimeout(() => setPresenceSaveSuccess(false), 3000);
+    } catch {
+      setPresenceError('Could not save your online status setting. Please try again.');
+      // Revert optimistic update to the last known server value
+      if (privacy) setShowPresence(privacy.showPresence);
+    } finally {
+      setPresenceSaving(false);
     }
   }
 
@@ -368,7 +410,102 @@ export function SettingsPrivacyPage() {
               </p>
             </section>
 
-            {/* ── Panel 2: Who can message you — DISABLED affordance ────────── */}
+            {/* ── Panel 2: Online status — LIVE working toggle ──────────────── */}
+            {/*
+              Presence is a live feature (honored server-side). This is a REAL
+              working control — enabled, auto-saved, PUT→GET round-trip — modelled
+              on the profileVisibility panel above, NOT the disabled DM affordance.
+            */}
+            <section
+              className="rounded-lg p-6"
+              style={{
+                backgroundColor: '#1c1c1f',
+                border: '1px solid rgba(255,255,255,0.06)',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.4)',
+              }}
+            >
+              <h3 id="presence-heading" className="mb-1 text-[17px] font-semibold text-white">
+                Show my online status
+              </h3>
+              <p className="mb-5 text-[13px]" style={{ color: 'rgba(255,255,255,0.60)' }}>
+                When on, classmates can see when you&apos;re online. Turn it off to appear offline
+                to everyone.
+              </p>
+
+              {presenceError && (
+                <div className="mb-4">
+                  <ErrorBanner message={presenceError} />
+                </div>
+              )}
+
+              {presenceSaveSuccess && (
+                <p
+                  role="status"
+                  className="mb-4 rounded-md px-3 py-2 text-sm"
+                  style={{
+                    backgroundColor: 'rgba(16,185,129,0.10)',
+                    border: '1px solid rgba(16,185,129,0.20)',
+                    color: '#10b981',
+                  }}
+                >
+                  ✓ Online status saved.
+                </p>
+              )}
+
+              <div
+                className="flex items-center justify-between gap-4 rounded-md p-4"
+                style={{
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  backgroundColor: '#121214',
+                }}
+              >
+                <div className="flex-1">
+                  <div
+                    className="mb-0.5 text-sm font-semibold"
+                    style={{ color: 'rgba(255,255,255,0.92)' }}
+                  >
+                    Show when I&apos;m online to others
+                  </div>
+                  <div
+                    className="text-[13px] leading-snug"
+                    style={{ color: 'rgba(255,255,255,0.40)' }}
+                  >
+                    {showPresence
+                      ? 'Classmates can see when you’re online.'
+                      : 'You’ll appear offline to everyone.'}
+                  </div>
+                </div>
+
+                {/* Real switch — accessible, enabled, emerald when on (DESIGN-SYSTEM) */}
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={showPresence}
+                  aria-labelledby="presence-heading"
+                  disabled={presenceSaving}
+                  onClick={() => handlePresenceChange(!showPresence)}
+                  className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none"
+                  style={{
+                    backgroundColor: showPresence ? '#10b981' : '#52525b',
+                    opacity: presenceSaving ? 0.65 : 1,
+                    cursor: presenceSaving ? 'default' : 'pointer',
+                    transition: 'background-color 150ms ease',
+                  }}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="inline-block h-5 w-5 rounded-full"
+                    style={{
+                      backgroundColor: '#fff',
+                      transform: showPresence ? 'translateX(22px)' : 'translateX(2px)',
+                      transition: 'transform 150ms ease',
+                    }}
+                  />
+                </button>
+              </div>
+            </section>
+
+            {/* ── Panel 3: Who can message you — DISABLED affordance ────────── */}
             {/*
               BOARD binding: NOT an active control. whoCanDm is persisted server-side
               but there is no DM enforcement surface today. This panel must look
