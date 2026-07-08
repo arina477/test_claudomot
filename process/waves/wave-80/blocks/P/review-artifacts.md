@@ -11,7 +11,7 @@
 | P-0 | process/waves/wave-80/stages/P-0-frame.md | done | discovery + reframe (resolve scope hole) |
 | P-1 | process/waves/wave-80/stages/P-1-decompose.md | done | |
 | P-2 | process/waves/wave-80/stages/P-2-spec.md | done | |
-| P-3 | process/waves/wave-80/stages/P-3-plan.md | pending | |
+| P-3 | process/waves/wave-80/stages/P-3-plan.md | done | |
 | P-4 | process/waves/wave-80/stages/P-4-gemini-review.md | pending | |
 
 ## Block-specific context
