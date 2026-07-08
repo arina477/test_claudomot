@@ -86,6 +86,13 @@
             transition-delay: 0s;
         }
 
+        /* Center alignment override for standard utility icons */
+        .tooltip-center {
+            right: auto;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
         /* Enforce 400ms delay on hover per design system, instant on focus */
         .tooltip-trigger:hover .tooltip-content {
             visibility: visible;
@@ -132,13 +139,13 @@
     <!-- Outermost App Container -->
     <main class="w-full max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8 lg:gap-12 pl-0 items-start">
 
-        <!-- LEFT COLUMN: Engineering Audit & State Matrix (Proof of all 6 states) -->
+        <!-- LEFT COLUMN: Engineering Audit & State Matrix (Proof of all states + variants) -->
         <section class="flex flex-col gap-6" aria-label="Component State Audit">
             
             <header>
                 <h1 class="text-xl font-semibold tracking-tight text-[var(--text-primary)]">E2E Indicator Audit</h1>
-                <p class="text-sm text-[var(--text-secondary)] mt-1">Wave 79 • D-3 Frontend Review Gate</p>
-                <p class="text-xs text-[var(--text-muted)] mt-2">All 6 states required by the brief. Hover/focus badges to trigger state 6 (Tooltip).</p>
+                <p class="text-sm text-[var(--text-secondary)] mt-1">Wave 79 • D-3 Frontend Review Gate (Iteration 2)</p>
+                <p class="text-xs text-[var(--text-muted)] mt-2">All required states. Strict WCAG contrast fixes applied. Hover/focus badges to trigger Tooltips.</p>
             </header>
 
             <div class="flex flex-col gap-3">
@@ -149,9 +156,9 @@
                         <span class="text-xs text-[var(--text-muted)]">Encrypted</span>
                     </div>
                     <div class="tooltip-trigger" tabindex="0" role="status" aria-live="polite">
-                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium state-fade focus-visible:outline-none focus-visible:ring-2 bg-[rgba(var(--rgb-accent-emerald),0.1)] border border-[rgba(var(--rgb-accent-emerald),0.2)] text-[var(--accent-emerald)] ring-[rgba(var(--rgb-accent-emerald),0.4)]">
-                            <i class="ph-fill ph-shield-check text-base"></i>
-                            <span>End-to-end encrypted</span>
+                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium state-fade focus-visible:outline-none focus-visible:ring-2 bg-[rgba(var(--rgb-accent-emerald),0.1)] border border-[rgba(var(--rgb-accent-emerald),0.2)] focus-visible:ring-[var(--accent-emerald)]">
+                            <i class="ph-fill ph-shield-check text-base text-[var(--accent-emerald)]"></i>
+                            <span class="text-[var(--text-primary)]">End-to-end encrypted</span>
                         </div>
                         <div class="tooltip-content" role="tooltip">
                             Messages in this conversation are end-to-end encrypted — only you and Dr. Aris Thorne can read them.
@@ -193,15 +200,38 @@
                     </div>
                 </div>
 
-                <!-- State 4: Cannot Decrypt (Usually per-message, shown as badge here for completeness) -->
+                <!-- Error Alias (Fails Closed to Not Encrypted) -->
+                <div class="flex items-center justify-between p-4 rounded-lg bg-[var(--surface-900)] border border-[var(--border-hairline)]">
+                    <div class="flex flex-col max-w-[150px]">
+                        <span class="text-sm font-medium">Key fetch error</span>
+                        <span class="text-xs text-[var(--text-muted)]">(renders as: Not encrypted)</span>
+                    </div>
+                    <div class="tooltip-trigger" tabindex="0" role="status" aria-live="polite">
+                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium state-fade focus-visible:outline-none focus-visible:ring-2 bg-[var(--surface-700)] border border-[var(--border-hairline)] text-[var(--text-secondary)] focus-visible:ring-[var(--accent-emerald)]">
+                            <i class="ph ph-lock-open text-base"></i>
+                            <span>Not encrypted</span>
+                        </div>
+                        <div class="tooltip-content" role="tooltip">
+                            Not end-to-end encrypted — we were unable to retrieve a secure key.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- State 4: Cannot Decrypt -->
                 <div class="flex items-center justify-between p-4 rounded-lg bg-[var(--surface-900)] border border-[var(--border-hairline)]">
                     <div class="flex flex-col">
                         <span class="text-sm font-medium">State 4</span>
                         <span class="text-xs text-[var(--text-muted)]">Cannot Decrypt</span>
                     </div>
-                    <div class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-transparent border border-transparent text-[var(--text-muted)]">
-                        <i class="ph ph-key text-base"></i>
-                        <span>No key on this device</span>
+                    <!-- Formally wrapped in standard a11y tooltip shell -->
+                    <div class="tooltip-trigger" tabindex="0" role="status" aria-live="polite">
+                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium state-fade focus-visible:outline-none focus-visible:ring-2 bg-[var(--surface-700)] border border-[var(--border-hairline)] text-[var(--text-secondary)] focus-visible:ring-[var(--accent-emerald)]">
+                            <i class="ph ph-key text-base"></i>
+                            <span>No key on this device</span>
+                        </div>
+                        <div class="tooltip-content" role="tooltip">
+                            Message cannot be decrypted on this device. No valid key is present.
+                        </div>
                     </div>
                 </div>
 
@@ -212,22 +242,73 @@
                         <span class="text-xs text-[var(--text-muted)]">Loading / Establishing</span>
                     </div>
                     <div class="tooltip-trigger" tabindex="0" role="status" aria-live="polite" id="demo-loading-badge">
-                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium state-fade focus-visible:outline-none focus-visible:ring-2 bg-[var(--surface-700)] border border-[var(--border-hairline)] text-[var(--text-muted)] focus-visible:ring-[var(--accent-emerald)]">
+                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium state-fade focus-visible:outline-none focus-visible:ring-2 bg-[var(--surface-700)] border border-[var(--border-hairline)] text-[var(--text-secondary)] focus-visible:ring-[var(--accent-emerald)]">
                             <i class="ph ph-circle-notch animate-spin text-base"></i>
-                            <span>Establishing secure connection...</span>
+                            <span>Establishing...</span>
+                        </div>
+                        <div class="tooltip-content" role="tooltip">
+                            Setting up secure messaging — this takes a moment the first time.
                         </div>
                     </div>
                 </div>
             </div>
             
-            <button onclick="simulateKeygen()" class="mt-2 text-sm bg-[var(--surface-700)] hover:bg-[var(--surface-600)] transition-colors border border-[var(--border-hairline)] px-4 py-2 rounded-md self-start text-[var(--text-primary)] font-medium flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-emerald)]">
+            <button onclick="simulateKeygen()" class="text-sm bg-[var(--surface-700)] hover:bg-[var(--surface-600)] transition-colors border border-[var(--border-hairline)] px-4 py-2 rounded-md self-start text-[var(--text-primary)] font-medium flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-emerald)]">
                 <i class="ph ph-arrows-clockwise"></i> Replay State 5 → 1 Transition
             </button>
+
+            <!-- C6: Narrow <1024px Viewport Icon-Only Breakdowns -->
+            <div class="flex flex-col mt-4 border-t border-[var(--border-hairline)] pt-5">
+                <h3 class="text-sm font-semibold tracking-tight text-[var(--text-primary)] mb-4">Narrow Viewport Fallback (Icon-Only, 44px)</h3>
+                <div class="flex flex-wrap gap-4 items-center">
+                    
+                    <!-- State 1 Icon Only -->
+                    <div class="tooltip-trigger" tabindex="0" role="status" aria-live="polite" aria-label="End-to-end encrypted">
+                         <div class="flex items-center justify-center w-11 h-11 rounded-full state-fade focus-visible:outline-none focus-visible:ring-2 bg-[rgba(var(--rgb-accent-emerald),0.1)] border border-[rgba(var(--rgb-accent-emerald),0.2)] focus-visible:ring-[var(--accent-emerald)]">
+                              <i class="ph-fill ph-shield-check text-[var(--accent-emerald)] text-lg"></i>
+                         </div>
+                         <div class="tooltip-content tooltip-center" role="tooltip">End-to-end encrypted</div>
+                    </div>
+
+                    <!-- State 2 Icon Only -->
+                    <div class="tooltip-trigger" tabindex="0" role="status" aria-live="polite" aria-label="Not encrypted (fallback)">
+                         <div class="flex items-center justify-center w-11 h-11 rounded-full state-fade focus-visible:outline-none focus-visible:ring-2 bg-[var(--surface-700)] border border-[var(--border-hairline)] text-[var(--text-secondary)] focus-visible:ring-[var(--accent-emerald)]">
+                              <i class="ph ph-lock-open text-lg"></i>
+                         </div>
+                         <div class="tooltip-content tooltip-center" role="tooltip">Not encrypted (Plaintext Fallback)</div>
+                    </div>
+
+                    <!-- State 3 Icon Only -->
+                    <div class="tooltip-trigger" tabindex="0" role="status" aria-live="polite" aria-label="Not encrypted (group)">
+                         <div class="flex items-center justify-center w-11 h-11 rounded-full state-fade focus-visible:outline-none focus-visible:ring-2 bg-[var(--surface-700)] border border-[var(--border-hairline)] text-[var(--text-secondary)] focus-visible:ring-[var(--accent-emerald)]">
+                              <i class="ph ph-shield-slash text-lg"></i>
+                         </div>
+                         <div class="tooltip-content tooltip-center" role="tooltip">Not encrypted (Group DM)</div>
+                    </div>
+
+                    <!-- State 4 Icon Only -->
+                    <div class="tooltip-trigger" tabindex="0" role="status" aria-live="polite" aria-label="Cannot decrypt on this device">
+                         <div class="flex items-center justify-center w-11 h-11 rounded-full state-fade focus-visible:outline-none focus-visible:ring-2 bg-[var(--surface-700)] border border-[var(--border-hairline)] text-[var(--text-secondary)] focus-visible:ring-[var(--accent-emerald)]">
+                              <i class="ph ph-key text-lg"></i>
+                         </div>
+                         <div class="tooltip-content tooltip-center" role="tooltip">Cannot decrypt on this device</div>
+                    </div>
+
+                    <!-- State 5 Icon Only -->
+                    <div class="tooltip-trigger" tabindex="0" role="status" aria-live="polite" aria-label="Establishing secure messaging">
+                         <div class="flex items-center justify-center w-11 h-11 rounded-full state-fade focus-visible:outline-none focus-visible:ring-2 bg-[var(--surface-700)] border border-[var(--border-hairline)] text-[var(--text-secondary)] focus-visible:ring-[var(--accent-emerald)]">
+                              <i class="ph ph-circle-notch animate-spin text-lg"></i>
+                         </div>
+                         <div class="tooltip-content tooltip-center" role="tooltip">Establishing secure messaging...</div>
+                    </div>
+
+                </div>
+            </div>
 
         </section>
 
         <!-- RIGHT COLUMN: Spatial Context (DM Canvas) -->
-        <section class="border border-[var(--border-hairline)] rounded-xl bg-[var(--surface-800)] flex flex-col h-[600px] overflow-hidden shadow-pop" aria-label="Direct Messages Panel">
+        <section class="border border-[var(--border-hairline)] rounded-xl bg-[var(--surface-800)] flex flex-col h-[600px] lg:h-[650px] overflow-hidden shadow-pop" aria-label="Direct Messages Panel">
             
             <!-- DM Thread Header -->
             <header class="flex items-center justify-between px-4 py-3 bg-[var(--surface-900)] border-b border-[var(--border-hairline)] shrink-0 z-10">
@@ -248,22 +329,24 @@
                 <!-- Action & Connection Wedge -->
                 <div class="flex items-center gap-4">
                     
-                    <!-- Placement 1: Header Badge (State 1 shown contextually) -->
+                    <!-- Placement 1: Header Badge (State 1 shown contextually, desktop + tablet default) -->
                     <div class="tooltip-trigger hidden md:block" tabindex="0" role="status" aria-live="polite" id="context-header-badge">
-                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium state-fade focus-visible:outline-none focus-visible:ring-2 bg-[rgba(var(--rgb-accent-emerald),0.1)] border border-[rgba(var(--rgb-accent-emerald),0.2)] text-[var(--accent-emerald)] ring-[rgba(var(--rgb-accent-emerald),0.4)] cursor-default">
-                            <i class="ph-fill ph-shield-check text-base"></i>
-                            <span class="hidden lg:inline">End-to-end encrypted</span>
-                            <!-- Responsive collapse logic implies text is hidden < 1024px, icon remains. Here mimicked via hiding text entirely on mid-breakpoints to show structural flex -->
+                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium state-fade focus-visible:outline-none focus-visible:ring-2 bg-[rgba(var(--rgb-accent-emerald),0.1)] border border-[rgba(var(--rgb-accent-emerald),0.2)] focus-visible:ring-[var(--accent-emerald)] cursor-default">
+                            <i class="ph-fill ph-shield-check text-base text-[var(--accent-emerald)]"></i>
+                            <span class="hidden lg:inline text-[var(--text-primary)]">End-to-end encrypted</span>
                         </div>
                         <div class="tooltip-content right-0" role="tooltip">
                             Messages in this conversation are end-to-end encrypted — only you and Dr. Aris Thorne can read them.
                         </div>
                     </div>
 
-                    <!-- Narrow Viewport Badge Fallback (Icon Only) -->
-                    <div class="tooltip-trigger md:hidden" tabindex="0">
-                        <div class="flex items-center justify-center w-8 h-8 rounded-full bg-[rgba(var(--rgb-accent-emerald),0.1)] border border-[rgba(var(--rgb-accent-emerald),0.2)] text-[var(--accent-emerald)]">
-                             <i class="ph-fill ph-shield-check"></i>
+                    <!-- Narrow Viewport Badge Fallback (Icon Only, 44px touch target) -->
+                    <div class="tooltip-trigger md:hidden" tabindex="0" role="status" aria-live="polite">
+                        <div class="flex items-center justify-center w-11 h-11 rounded-full state-fade focus-visible:outline-none focus-visible:ring-2 bg-[rgba(var(--rgb-accent-emerald),0.1)] border border-[rgba(var(--rgb-accent-emerald),0.2)] focus-visible:ring-[var(--accent-emerald)] cursor-default">
+                             <i class="ph-fill ph-shield-check text-[var(--accent-emerald)] text-lg"></i>
+                        </div>
+                        <div class="tooltip-content right-0" role="tooltip">
+                            Messages in this conversation are end-to-end encrypted — only you and Dr. Aris Thorne can read them.
                         </div>
                     </div>
 
@@ -340,8 +423,8 @@
                             </span>
                         </div>
 
-                        <!-- Per-message micro-affordance slot: Cannot Decrypt -->
-                        <div class="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)] select-none">
+                        <!-- Per-message micro-affordance slot: Cannot Decrypt - updated from muted to secondary per contrast guideline -->
+                        <div class="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)] select-none">
                             <i class="ph ph-key text-[14px]"></i>
                             <span>Message cannot be decrypted on this device</span>
                         </div>
@@ -353,11 +436,11 @@
             <!-- Composer (Visual Complete) -->
             <div class="p-4 bg-[var(--surface-900)] border-t border-[var(--border-hairline)] shrink-0">
                 <div class="relative flex items-center bg-[var(--surface-800)] border border-[var(--border-hairline)] rounded-md focus-within:ring-2 focus-within:ring-[var(--accent-emerald)] focus-within:border-transparent transition-all px-3 py-2">
-                    <button class="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors shrink-0 outline-none focus-visible:bg-[var(--surface-700)]" aria-label="Add attachment">
+                    <button class="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors shrink-0 outline-none focus-visible:bg-[var(--surface-700)] focus-visible:ring-2 focus-visible:ring-[var(--accent-emerald)]" aria-label="Add attachment">
                         <i class="ph ph-plus-circle text-lg"></i>
                     </button>
                     <input type="text" placeholder="Message Dr. Aris Thorne..." class="w-full bg-transparent text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] border-none outline-none px-3 py-1 font-sans">
-                    <button class="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors shrink-0 outline-none focus-visible:bg-[var(--surface-700)]" aria-label="Add emoji">
+                    <button class="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors shrink-0 outline-none focus-visible:bg-[var(--surface-700)] focus-visible:ring-2 focus-visible:ring-[var(--accent-emerald)]" aria-label="Add emoji">
                         <i class="ph ph-smiley text-lg"></i>
                     </button>
                 </div>
@@ -376,20 +459,24 @@
             const innerContainer = badge.firstElementChild;
             const icon = innerContainer.querySelector('i');
             const label = innerContainer.querySelector('span');
+            // Tooltip text update simulation
+            const tooltip = badge.querySelector('.tooltip-content');
 
-            // 1. Force Loading State
-            innerContainer.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium state-fade focus-visible:outline-none focus-visible:ring-2 bg-[var(--surface-700)] border border-[var(--border-hairline)] text-[var(--text-muted)] focus-visible:ring-[var(--accent-emerald)]";
+            // 1. Force Loading State using exact validated DOM classes
+            innerContainer.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium state-fade focus-visible:outline-none focus-visible:ring-2 bg-[var(--surface-700)] border border-[var(--border-hairline)] text-[var(--text-secondary)] focus-visible:ring-[var(--accent-emerald)]";
             icon.className = "ph ph-circle-notch animate-spin text-base";
-            label.textContent = "Establishing secure connection...";
+            label.className = ""; // clears explicit text overrides
+            label.textContent = "Establishing...";
+            if (tooltip) tooltip.textContent = "Setting up secure messaging — this takes a moment the first time.";
 
             // 2. Resolve to Encrypted (Fail-closed resolution path) after 2 seconds
             setTimeout(() => {
-                // Apply strict token classes for Encrypted state
-                innerContainer.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium state-fade focus-visible:outline-none focus-visible:ring-2 bg-[rgba(var(--rgb-accent-emerald),0.1)] border border-[rgba(var(--rgb-accent-emerald),0.2)] text-[var(--accent-emerald)] ring-[rgba(var(--rgb-accent-emerald),0.4)]";
-                icon.className = "ph-fill ph-shield-check text-base";
+                // Apply strict token classes for Encrypted state (including discrete icon/label colors for contrast compliance)
+                innerContainer.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium state-fade focus-visible:outline-none focus-visible:ring-2 bg-[rgba(var(--rgb-accent-emerald),0.1)] border border-[rgba(var(--rgb-accent-emerald),0.2)] focus-visible:ring-[var(--accent-emerald)]";
+                icon.className = "ph-fill ph-shield-check text-base text-[var(--accent-emerald)]";
+                label.className = "text-[var(--text-primary)]";
                 label.textContent = "End-to-end encrypted";
-                
-                // Note: The `state-fade` class coordinates the 200ms background/text/border shift natively.
+                if (tooltip) tooltip.textContent = "Messages in this conversation are end-to-end encrypted — only you and Dr. Aris Thorne can read them.";
             }, 2000);
         }
     </script>
