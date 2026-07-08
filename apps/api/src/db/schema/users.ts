@@ -1,6 +1,6 @@
 import type { InferInsertModel, InferSelectModel } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
-import { pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { boolean, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 export const users = pgTable(
   'users',
@@ -14,6 +14,7 @@ export const users = pgTable(
     accent_color: text('accent_color'),
     profile_visibility: text('profile_visibility').notNull().default('everyone'),
     who_can_dm: text('who_can_dm').notNull().default('everyone'),
+    show_presence: boolean('show_presence').notNull().default(true),
     created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
     deleted_at: timestamp('deleted_at', { withTimezone: true }),
