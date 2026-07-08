@@ -17,3 +17,10 @@
 - Web Crypto keygen, private key browser-only (never sent), register public key. Encrypt outgoing to peer key / decrypt incoming; cache peer keys. HONEST INDICATOR (ship-blocker, fails closed): lock ONLY when provably encrypted; plaintext-fallback → not-encrypted, never a false padlock. Key-loss/no-multi-device v1 (honest degrade, no crash). B-3 pins the algorithm.
 
 ## LOAD-BEARING (T-8 + P-4 security-scope gate): server-blind invariant; honest fail-closed indicator; visibility-gated key fetch; migration builds tombstone/nullable.
+
+## P-4 corrections (binding, folded into the DB spec)
+1. Peer-key GET gates on **who_can_dm** (not profile_visibility) — uniform 404 preserved.
+2. user_encryption_keys.user_id = **text** FK to users.id (not uuid).
+3. listConversations preview → "Encrypted message" placeholder on NULL content.
+4. Group DMs out of scope for encryption in leg-3a (plaintext-fallback + honest not-encrypted).
+5. algorithm bounded z.enum (400); reject encrypted+plaintext-both; T-8 no-key→404 no-oracle row; reuse dexie for key store.

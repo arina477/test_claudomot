@@ -47,3 +47,10 @@ postgres-pro (migrations) · typescript-pro (contracts) · backend-developer (ke
 2. Every step has a specialist. ✓ 3. No file in two parallel batches. ✓ 4. design_gap true → D-block before B-3. ✓ 5. Architecture deltas + alternatives (dedicated-table vs users-column; extend-row vs parallel-table; v1-vs-Signal-grade). ✓ 6. Contracts concrete (endpoints + migration cols pinned; algorithm B-3-pinned with recommendation). ✓ 7. No new deps (Web Crypto native). ✓ 8. No new SDK (native API). ✓
 
 **Binding refinements carried (LOAD-BEARING):** server-blind invariant (T-8 non-happy proof); migration builds tombstone + relaxes content NOT NULL; honest fail-closed indicator (no false padlock — ship-blocker); key-loss/no-multi-device/plaintext-fallback v1 (honest degrade); peer-key GET through fail-closed visibility gates (uniform 404). P-4 security-scope tightened gate + T-8 mandatory.
+
+## P-4 Phase-2 binding corrections (fold into B-block — override conflicting wording above)
+- **B-2 authz:** peer-key GET gates on **who_can_dm** (dm.service.enforceWhoCanDm), NOT ProfileVisibilityService (profile_visibility only). karen: a user can be profile_visibility=everyone + who_can_dm=nobody; the key encrypts a DM → who_can_dm governs. Factor enforceWhoCanDm into a reusable seam; keep uniform-404.
+- **B-0 schema:** user_encryption_keys.user_id is **text** FK to users.id (opaque SuperTokens id), NOT uuid (would fail FK).
+- **B-2 preview:** listConversations last-message preview handles NULL content (encrypted rows → "Encrypted message" placeholder; no crash/leak).
+- **Scope:** group DMs (≤10) OUT OF SCOPE for encryption in leg-3a → plaintext-fallback + honest not-encrypted indicator (deferred). Makes the fail-closed indicator provably correct on group threads.
+- **B-1/B-2/B-3 notes:** algorithm = bounded z.enum (400 on unsupported); B-2 rejects encrypted-send-with-plaintext-also-set (server-blindness at write boundary); T-8 adds visible-but-no-key→byte-identical-404 no-oracle row; B-3 reuses shipped `dexie` for the private-key IndexedDB store.

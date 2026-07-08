@@ -3,7 +3,7 @@
 **Block:** P (Product)
 **Wave topic:** M13 leg-3 — richer privacy/E2E posture: per-user public-key registry + server-blind encrypted DM envelope + client-side (Web Crypto) DM encryption + read-receipt/presence privacy toggles.
 **Block exit gate:** P-4
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 
@@ -13,7 +13,7 @@
 | P-1 | process/waves/wave-79/stages/P-1-decompose.md | done | |
 | P-2 | process/waves/wave-79/stages/P-2-spec.md | done | |
 | P-3 | process/waves/wave-79/stages/P-3-plan.md | done | |
-| P-4 | process/waves/wave-79/stages/P-4-gemini-review.md | pending | |
+| P-4 | process/waves/wave-79/stages/P-4-gemini-review.md | done | |
 
 ## Block-specific context
 
