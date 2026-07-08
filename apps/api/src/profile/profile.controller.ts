@@ -3,17 +3,25 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   NotFoundException,
   Param,
   Patch,
+  Put,
   Req,
   UseGuards,
 } from '@nestjs/common';
-import type { ProfileResponse, PublicProfile } from '@studyhall/shared';
-import { UpdateProfileSchema } from '@studyhall/shared';
+import type { ProfileResponse, PublicKeyResponse, PublicProfile } from '@studyhall/shared';
+import { EncryptionKeySchema, UpdateProfileSchema } from '@studyhall/shared';
+import { AuthGuard } from '../auth/auth.guard';
 import { SessionNoVerifyGuard } from '../auth/session-no-verify.guard';
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
+import { DmService } from '../dm/dm.service';
+// biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
 import { UsersService } from '../users/users.service';
+// biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
+import { EncryptionKeyService } from './encryption-key.service';
 // biome-ignore lint/style/useImportType: NestJS DI requires value import for emitDecoratorMetadata
 import { ProfileVisibilityService } from './profile-visibility.service';
 
@@ -29,6 +37,8 @@ export class ProfileController {
   constructor(
     private readonly usersService: UsersService,
     private readonly profileVisibility: ProfileVisibilityService,
+    private readonly encryptionKeys: EncryptionKeyService,
+    private readonly dmService: DmService,
   ) {}
 
   @Get()
@@ -67,6 +77,97 @@ export class ProfileController {
     }
 
     return toProfileResponse(userId, updated);
+  }
+
+  /**
+   * PUT /profile/encryption-key — wave-79 E2E DM encryption (task 60bda5be).
+   *
+   * Self-mutation: stores or ROTATES the caller's PUBLIC key material in
+   * user_encryption_keys (one row per user; rotation replaces the row).
+   *
+   * Guard: AuthGuard (email-verification REQUIRED) — same posture as other
+   * self-mutations, stricter than the SessionNoVerifyGuard used on the read
+   * self-profile routes. callerId is session-derived, never from body/param.
+   *
+   * SECURITY: EncryptionKeySchema is the write boundary — an oversized /
+   * malformed public key or unsupported algorithm is a 400 here and is never
+   * persisted. No private material ever crosses this boundary.
+   *
+   * 200 stored/rotated | 400 invalid | 401 unauth.
+   */
+  @Put('encryption-key')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async putEncryptionKey(
+    @Req() req: SessionAugmentedRequest,
+    @Body() body: unknown,
+  ): Promise<{ ok: true }> {
+    const parsed = EncryptionKeySchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.flatten());
+    }
+
+    const userId = req.session.getUserId();
+    await this.encryptionKeys.upsertKey(userId, parsed.data);
+    return { ok: true };
+  }
+
+  /**
+   * GET /profile/:userId/encryption-key — wave-79 E2E DM encryption (task 60bda5be).
+   *
+   * Returns the target user's PUBLIC key so a peer can encrypt a DM envelope
+   * only that user can decrypt — but ONLY when the viewer is permitted to DM
+   * the target.
+   *
+   * VISIBILITY GATE (P-4 karen correction 1, LOAD-BEARING): the gate is
+   * `who_can_dm` (via DmService.canDm — the shared enforceWhoCanDm seam), NOT
+   * profile_visibility. A user can be profile_visibility='everyone' yet
+   * who_can_dm='nobody'; the key exists solely to encrypt a DM, so who_can_dm
+   * governs. A key-fetch leak would be a who_can_dm-visibility leak.
+   *
+   * UNIFORM 404 (no oracle): every not-permitted case — who_can_dm blocks the
+   * viewer, target does not exist, or the target has registered no key —
+   * returns the byte-identical NotFoundException. A probing viewer cannot
+   * distinguish "not allowed" from "no key" from "no such user" (mirrors the
+   * GET /profile/:userId uniform-404 pattern).
+   *
+   * Self-fetch: a viewer fetching their OWN key is always permitted (bypasses
+   * the who_can_dm gate) so a client can confirm which key the server holds.
+   *
+   * Guard: SessionNoVerifyGuard — viewer id from session, target from param.
+   *
+   * 200 PublicKeyResponse | 404 uniform | 401 unauth.
+   */
+  @Get(':userId/encryption-key')
+  @UseGuards(SessionNoVerifyGuard)
+  async getEncryptionKey(
+    @Req() req: SessionAugmentedRequest,
+    @Param('userId') targetUserId: string,
+  ): Promise<PublicKeyResponse> {
+    const viewerUserId = req.session.getUserId();
+
+    // who_can_dm gate — self always permitted; otherwise the shared seam.
+    // FAIL-CLOSED: any not-permitted result funnels to the SAME 404 as no-key.
+    const permitted =
+      viewerUserId === targetUserId || (await this.dmService.canDm(viewerUserId, targetUserId));
+    if (!permitted) {
+      throw new NotFoundException('Encryption key not found');
+    }
+
+    const key = await this.encryptionKeys.getKeyFor(targetUserId);
+    if (!key) {
+      // No key registered — uniform 404, byte-identical to the not-permitted
+      // case (no "user exists but has no key" oracle).
+      throw new NotFoundException('Encryption key not found');
+    }
+
+    // PublicKeyResponse carries public material only — no email, no private key.
+    return {
+      userId: key.userId,
+      publicKey: key.publicKey,
+      algorithm: key.algorithm as PublicKeyResponse['algorithm'],
+      createdAt: key.createdAt.toISOString(),
+    };
   }
 
   /**

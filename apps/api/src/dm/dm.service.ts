@@ -93,14 +93,22 @@ function dmMessageRowToDto(row: {
   id: string;
   conversation_id: string;
   author_id: string;
-  content: string;
+  content: string | null;
+  ciphertext: string | null;
+  sender_key_ref: string | null;
+  envelope_version: number | null;
   created_at: Date;
 }): DmMessageDto {
   return {
     id: row.id,
     conversationId: row.conversation_id,
     authorId: row.author_id,
+    // wave-79: content is NULL for an encrypted row (envelope carries payload).
     content: row.content,
+    // wave-79 server-blind envelope — passed through verbatim, never decrypted.
+    ciphertext: row.ciphertext,
+    senderKeyRef: row.sender_key_ref,
+    envelopeVersion: row.envelope_version,
     createdAt: row.created_at.toISOString(),
   };
 }
@@ -138,16 +146,24 @@ export class DmService {
   }
 
   // -------------------------------------------------------------------------
-  // enforceWhoCanDm — who_can_dm enforcement for a single target user.
+  // canDm — REUSABLE who_can_dm seam (wave-79 task 60bda5be).
   //
-  // everyone      → ok
-  // server-members → ok only if creatorId and targetId share ≥1 server
-  // nobody        → reject (403)
+  // Non-throwing boolean check of whether `viewerId` is permitted to DM
+  // `targetId` under the target's who_can_dm policy:
   //
-  // Throws ForbiddenException when the target's policy blocks the creator.
+  //   everyone       → true
+  //   server-members → true only if viewerId and targetId share ≥1 server
+  //   nobody         → false
+  //   target missing → false (fail-closed: cannot DM a user that isn't there)
+  //
+  // This is the single source of truth for the DM-ability decision. Both
+  // enforceWhoCanDm (create/send path, throws) and the peer-key-fetch gate in
+  // ProfileController (GET /profile/:userId/encryption-key, uniform-404)
+  // delegate to it — a key-fetch leak would be a who_can_dm-visibility leak,
+  // so both surfaces MUST enforce the identical rule. (P-4 karen correction 1.)
   // -------------------------------------------------------------------------
 
-  private async enforceWhoCanDm(creatorId: string, targetId: string): Promise<void> {
+  async canDm(viewerId: string, targetId: string): Promise<boolean> {
     // Fetch target's who_can_dm setting
     const [target] = await db
       .select({ who_can_dm: users.who_can_dm })
@@ -156,28 +172,25 @@ export class DmService {
       .limit(1);
 
     if (!target) {
-      // Target user not found — treat as nobody (refuse)
-      throw new ForbiddenException(`User ${targetId} not found or cannot receive direct messages`);
+      // Target user not found — fail closed (cannot DM / cannot fetch key).
+      return false;
     }
 
     const policy = target.who_can_dm;
 
     if (policy === 'nobody') {
-      throw new ForbiddenException(
-        'Cannot start a direct message: user has restricted direct messages (policy: nobody)',
-      );
+      return false;
     }
 
     if (policy === 'server-members') {
-      // Check whether creator and target share at least one server.
-      // Strategy: find server_id rows where BOTH users are members.
-      // We use a raw SQL EXISTS check to keep it a single round-trip.
+      // Permitted only if viewer and target share at least one server.
+      // Single round-trip EXISTS check against server_members.
       const sharedResult = await db
         .select({ server_id: server_members.server_id })
         .from(server_members)
         .where(
           and(
-            eq(server_members.user_id, creatorId),
+            eq(server_members.user_id, viewerId),
             sql`${server_members.server_id} IN (
               SELECT server_id FROM server_members WHERE user_id = ${targetId}
             )`,
@@ -185,13 +198,28 @@ export class DmService {
         )
         .limit(1);
 
-      if (sharedResult.length === 0) {
-        throw new ForbiddenException(
-          'Cannot start a direct message: user requires a shared server membership (policy: server-members)',
-        );
-      }
+      return sharedResult.length > 0;
     }
-    // policy === 'everyone' → no restriction
+
+    // policy === 'everyone' → permitted
+    return true;
+  }
+
+  // -------------------------------------------------------------------------
+  // enforceWhoCanDm — who_can_dm enforcement for a single target user.
+  //
+  // Delegates to canDm() (the shared seam) and throws ForbiddenException when
+  // the target's policy blocks the creator, preserving the previous 403
+  // behaviour of the create/send paths.
+  // -------------------------------------------------------------------------
+
+  private async enforceWhoCanDm(creatorId: string, targetId: string): Promise<void> {
+    const allowed = await this.canDm(creatorId, targetId);
+    if (!allowed) {
+      throw new ForbiddenException(
+        'Cannot start a direct message: recipient does not allow direct messages from you',
+      );
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -451,6 +479,7 @@ export class DmService {
         conversation_id: dm_messages.conversation_id,
         id: dm_messages.id,
         content: dm_messages.content,
+        ciphertext: dm_messages.ciphertext,
         created_at: dm_messages.created_at,
         author_id: dm_messages.author_id,
       })
@@ -478,8 +507,13 @@ export class DmService {
       { content: string; createdAt: string; authorId: string }
     >();
     for (const m of lastMessageRows) {
+      // wave-79 (P-4 correction 3): an encrypted last message has content NULL
+      // and ciphertext present. The preview MUST NOT crash on NULL and MUST NOT
+      // surface blank — show a fixed "Encrypted message" placeholder. There is
+      // no plaintext to leak (server-blind), so the placeholder leaks nothing.
+      const preview = m.content ?? 'Encrypted message';
       lastMessageByConv.set(m.conversation_id, {
-        content: m.content,
+        content: preview,
         createdAt: m.created_at.toISOString(),
         authorId: m.author_id,
       });
@@ -604,15 +638,36 @@ export class DmService {
       }
     }
 
-    // INSERT with ON CONFLICT DO NOTHING for idempotency
+    // wave-79 server-blind envelope: a send carries EITHER plaintext content
+    // OR an encrypted envelope, never both (SendDmMessageSchema enforces the
+    // XOR at the request boundary). For the envelope path we persist the
+    // ciphertext + key ref + version and leave content NULL — the server
+    // stores NO readable plaintext for an encrypted DM. For the plaintext
+    // path (backward-compatible / keyless-peer fallback) content is stored and
+    // the three envelope columns stay NULL.
+    const isEncrypted = input.ciphertext !== undefined;
+    const insertValues = isEncrypted
+      ? {
+          conversation_id: conversationId,
+          author_id: callerId,
+          content: null,
+          ciphertext: input.ciphertext,
+          sender_key_ref: input.senderKeyRef,
+          envelope_version: input.envelopeVersion,
+          idempotency_key: input.idempotencyKey,
+        }
+      : {
+          conversation_id: conversationId,
+          author_id: callerId,
+          content: input.content,
+          idempotency_key: input.idempotencyKey,
+        };
+
+    // INSERT with ON CONFLICT DO NOTHING for idempotency — applies identically
+    // to plaintext and ciphertext rows (UNIQUE(conversation_id, idempotency_key)).
     const insertReturning = await db
       .insert(dm_messages)
-      .values({
-        conversation_id: conversationId,
-        author_id: callerId,
-        content: input.content,
-        idempotency_key: input.idempotencyKey,
-      })
+      .values(insertValues)
       .onConflictDoNothing({
         target: [dm_messages.conversation_id, dm_messages.idempotency_key],
       })
