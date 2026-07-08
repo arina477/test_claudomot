@@ -3,14 +3,14 @@
 **Block:** V (Verify)
 **Wave topic:** server-blind E2E DM encryption (key registry + encrypted envelope + client Web-Crypto + honest fail-closed indicator). LIVE on 0fa0f5f.
 **Block exit gate:** V-3
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file(s) | Status | Notes |
 |---|---|---|---|
 | V-1 | stages/V-1-karen.md + V-1-jenny.md + V-1-summary.md | done | Karen APPROVE, jenny APPROVE |
 | V-2 | stages/V-2-triage.md | done | |
-| V-3 | stages/V-3-fast-fix.md | pending | |
+| V-3 | stages/V-3-fast-fix.md | done | |
 
 ## Block-specific context
 - **Wave topic:** server-blind E2E DM encryption (LIVE 0fa0f5f)
