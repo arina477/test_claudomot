@@ -32,6 +32,7 @@ import type {
   CachedServer,
   CachedServerDetail,
   OutboxItem,
+  StoredKeypair,
 } from './types';
 
 export class StudyHallDB extends Dexie {
@@ -45,6 +46,7 @@ export class StudyHallDB extends Dexie {
   cachedAttachmentBlobs!: EntityTable<CachedAttachmentBlob, 'id'>;
   cachedServers!: EntityTable<CachedServer, 'id'>;
   cachedServerDetails!: EntityTable<CachedServerDetail, 'id'>;
+  encryptionKeys!: EntityTable<StoredKeypair, 'id'>;
 
   constructor(
     idbFactory?: IDBFactory,
@@ -191,6 +193,36 @@ export class StudyHallDB extends Dexie {
       cachedAttachmentBlobs: 'id, cachedAt',
       cachedServers: 'id',
       cachedServerDetails: 'id',
+    });
+
+    /**
+     * v6 schema — wave-79 E2E DM encryption keypair store.
+     *
+     * CRITICAL: ALL TEN v1..v5 tables are re-stated VERBATIM below.
+     * (Dexie cumulative-declarative — omitting ANY table in a later version
+     * deletes it and ALL its data on upgrade. Zero tolerance for omissions.
+     * BUILD-PRINCIPLES rule 11 is MANDATORY AND LOAD-BEARING.)
+     *
+     * encryptionKeys:
+     *   id — primary key. Singleton store: the row is keyed by the constant
+     *        'self' so exactly one active keypair exists per device/origin.
+     *        The CryptoKey pair is stored directly; IndexedDB structured-clone
+     *        supports non-extractable CryptoKey values natively — so the PRIVATE
+     *        key material is NEVER serialized to bytes and NEVER leaves the
+     *        browser. Only the PUBLIC key is exported (base64 SPKI) for registry.
+     */
+    this.version(6).stores({
+      messages: 'id, channelId, [channelId+createdAt], createdAt',
+      channels: 'id, serverId',
+      outbox: '++id, channelId, idempotencyKey, state, [state+createdAt]',
+      dmConversations: 'id, createdAt',
+      dmMessages: 'id, conversationId, [conversationId+createdAt], createdAt',
+      cachedAssignments: 'id, serverId',
+      cachedScheduledSessions: 'id, serverId, windowKey',
+      cachedAttachmentBlobs: 'id, cachedAt',
+      cachedServers: 'id',
+      cachedServerDetails: 'id',
+      encryptionKeys: 'id',
     });
   }
 }

@@ -16,6 +16,9 @@
 
 import type { DmConversation } from '@studyhall/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { DmEncryptionIndicator } from './DmEncryptionIndicator';
+import type { ConversationCryptoCapability } from './dmEncryptionState';
+import { headerStateFor } from './dmEncryptionState';
 import { ClockIcon, RetryIcon, SpinnerIcon, WarningCircleIcon } from './icons';
 import type { DisplayDmMessage, OptimisticDmMessage } from './useDm';
 
@@ -43,20 +46,27 @@ function initials(name: string): string {
 // Message row variants
 // ---------------------------------------------------------------------------
 
+type RealDmMessage = Extract<DisplayDmMessage, { kind: 'real' }>;
+
 function RealRow({
   msg,
   participantMap,
 }: {
-  msg: { kind: 'real' } & import('@studyhall/shared').DmMessage;
+  msg: RealDmMessage;
   /** Map from userId → displayName, built from conversation.participants. */
   participantMap: Map<string, string>;
 }) {
   const displayName = participantMap.get(msg.authorId) ?? 'Unknown user';
   const abbr = initials(displayName);
+  const cannotDecrypt = msg.encryptionState === 'cannot-decrypt';
+  // Encrypted rows carry no sub-badge (the header badge covers the whole thread);
+  // every non-encrypted / cannot-decrypt row shows an HONEST per-message affordance.
+  const showMsgIndicator = msg.encryptionState !== 'encrypted';
 
   return (
     <article
       data-testid={`dm-message-row-${msg.id}`}
+      data-encryption-state={msg.encryptionState}
       className="group flex gap-4 py-1 rounded-md -mx-2 px-2 transition-colors"
       onMouseEnter={(e) => {
         (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.03)';
@@ -67,23 +77,48 @@ function RealRow({
     >
       <div
         className="w-[40px] h-[40px] shrink-0 mt-1 rounded-full flex items-center justify-center text-xs font-semibold"
-        style={{ backgroundColor: '#3f3f46', color: 'rgba(255,255,255,0.92)' }}
+        style={{
+          backgroundColor: '#3f3f46',
+          color: 'rgba(255,255,255,0.92)',
+          opacity: cannotDecrypt ? 0.6 : 1,
+        }}
         aria-hidden="true"
       >
         {abbr}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-2 mb-0.5">
-          <span className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.92)' }}>
+          <span
+            className="text-sm font-medium"
+            style={{ color: 'rgba(255,255,255,0.92)', opacity: cannotDecrypt ? 0.6 : 1 }}
+          >
             {displayName}
           </span>
           <time className="text-xs" style={{ color: 'rgba(255,255,255,0.40)' }}>
             {formatTime(msg.createdAt)}
           </time>
         </div>
-        <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.80)' }}>
-          {msg.content}
-        </p>
+        {cannotDecrypt ? (
+          // Undecryptable payload shell — calm, no crash, no plaintext leaked.
+          <div
+            className="mt-1 px-3 py-2 rounded-md max-w-sm"
+            style={{ backgroundColor: '#27272a', border: '1px solid rgba(255,255,255,0.06)' }}
+          >
+            <span
+              className="italic font-mono text-[11px] break-all leading-tight"
+              style={{ color: 'rgba(255,255,255,0.40)' }}
+            >
+              [encrypted payload unavailable]
+            </span>
+          </div>
+        ) : (
+          <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.80)' }}>
+            {msg.displayContent ?? msg.content}
+          </p>
+        )}
+        {showMsgIndicator && (
+          <DmEncryptionIndicator state={msg.encryptionState} placement="message" />
+        )}
       </div>
     </article>
   );
@@ -206,6 +241,8 @@ type ThreadHeaderProps = {
   onToggleDrawer?: () => void;
   /** Number of pending outbox messages (shows offline indicator). */
   pendingCount: number;
+  /** E2E capability of this conversation — drives the honest header badge. */
+  encryptionCapability: ConversationCryptoCapability;
 };
 
 function ThreadHeader({
@@ -213,6 +250,7 @@ function ThreadHeader({
   currentUserId,
   onToggleDrawer,
   pendingCount,
+  encryptionCapability,
 }: ThreadHeaderProps) {
   const others = conversation.participants.filter((p) => p.userId !== currentUserId);
   const displayName = conversation.isGroup
@@ -285,27 +323,33 @@ function ThreadHeader({
         </div>
       </div>
 
-      {/* Connection/pending wedge */}
-      {pendingCount > 0 && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="flex items-center gap-2 px-3 py-1.5 rounded-full"
-          style={{
-            backgroundColor: 'rgba(239,68,68,0.10)',
-            border: '1px solid rgba(239,68,68,0.20)',
-          }}
-        >
+      {/* Right side: honest E2E badge + connection/pending wedge */}
+      <div className="flex items-center gap-3">
+        {/* E2E encryption status — placement 1 (header badge). Defaults to the
+            loading/indeterminate state on mount; NEVER a lock without proof. */}
+        <DmEncryptionIndicator state={headerStateFor(encryptionCapability)} placement="header" />
+
+        {pendingCount > 0 && (
           <div
-            className="w-2 h-2 rounded-full animate-pulse"
-            style={{ backgroundColor: '#ef4444' }}
-            aria-hidden="true"
-          />
-          <span className="text-xs font-medium" style={{ color: '#f87171' }}>
-            Offline — {pendingCount} pending
-          </span>
-        </div>
-      )}
+            role="status"
+            aria-live="polite"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full"
+            style={{
+              backgroundColor: 'rgba(239,68,68,0.10)',
+              border: '1px solid rgba(239,68,68,0.20)',
+            }}
+          >
+            <div
+              className="w-2 h-2 rounded-full animate-pulse"
+              style={{ backgroundColor: '#ef4444' }}
+              aria-hidden="true"
+            />
+            <span className="text-xs font-medium" style={{ color: '#f87171' }}>
+              Offline — {pendingCount} pending
+            </span>
+          </div>
+        )}
+      </div>
     </header>
   );
 }
@@ -325,6 +369,8 @@ type Props = {
   onSend: (content: string) => void;
   currentUserId: string | null;
   onToggleDrawer?: () => void;
+  /** E2E capability of the open conversation — drives the honest header badge. */
+  encryptionCapability: ConversationCryptoCapability;
 };
 
 export function DmThread({
@@ -338,6 +384,7 @@ export function DmThread({
   onSend,
   currentUserId,
   onToggleDrawer,
+  encryptionCapability,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -440,6 +487,7 @@ export function DmThread({
         currentUserId={currentUserId}
         {...(onToggleDrawer !== undefined ? { onToggleDrawer } : {})}
         pendingCount={pendingCount}
+        encryptionCapability={encryptionCapability}
       />
 
       {/* Message area */}

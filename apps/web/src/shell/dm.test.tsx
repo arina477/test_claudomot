@@ -79,6 +79,15 @@ vi.mock('../auth/api', () => ({
     listDmMessages: vi.fn(),
     createDmConversation: vi.fn(),
     getDmCandidates: vi.fn().mockResolvedValue([]),
+    // wave-79 E2E encryption. Default: peer has no key (404-style reject) so
+    // existing DM tests stay on the plaintext path.
+    putEncryptionKey: vi.fn().mockResolvedValue({
+      userId: 'self',
+      publicKey: 'pub',
+      algorithm: 'ECDH-P256-AES-GCM',
+      createdAt: new Date().toISOString(),
+    }),
+    getPeerEncryptionKey: vi.fn().mockRejectedValue(new Error('404')),
   },
 }));
 
@@ -153,6 +162,11 @@ vi.mock('../features/sync/db', () => ({
       })),
       bulkPut: vi.fn().mockResolvedValue(undefined),
       put: vi.fn().mockResolvedValue(undefined),
+    },
+    // wave-79 E2E keypair store — singleton; no key registered by default.
+    encryptionKeys: {
+      get: vi.fn().mockResolvedValue(undefined),
+      put: vi.fn().mockResolvedValue('self'),
     },
   },
 }));

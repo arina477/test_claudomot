@@ -152,6 +152,30 @@ export type CachedAttachmentBlob = {
   cachedAt: string;
 };
 
+// ── E2E DM encryption keypair store (wave-79) ─────────────────────────────────
+
+/**
+ * StoredKeypair — the device-local ECDH-P256 keypair for E2E DM encryption.
+ *
+ * Singleton store keyed by the constant id 'self'. The PRIVATE key is a
+ * non-extractable CryptoKey held directly in IndexedDB (structured-clone
+ * supports CryptoKey) so its raw bytes NEVER leave the browser and can never
+ * be serialized into a network request. Only `publicKeyBase64` (the exported
+ * SPKI public material) is ever transmitted — via PUT /profile/encryption-key.
+ */
+export type StoredKeypair = {
+  /** Singleton primary key — always the literal 'self'. */
+  id: 'self';
+  /** Non-extractable ECDH-P256 private key — device-local, never exported. */
+  privateKey: CryptoKey;
+  /** ECDH-P256 public key handle (kept for local re-derivation convenience). */
+  publicKey: CryptoKey;
+  /** Base64 SPKI export of the public key — the value registered server-side. */
+  publicKeyBase64: string;
+  /** ISO timestamp of keypair generation. */
+  createdAt: string;
+};
+
 // ── Outbox table ──────────────────────────────────────────────────────────────
 
 // ── Outbox routing key (wave-46 M8) ──────────────────────────────────────────

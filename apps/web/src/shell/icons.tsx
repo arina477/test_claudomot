@@ -506,6 +506,93 @@ export function ShieldCheckIcon({ size = 16, className, style }: IconProps) {
   );
 }
 
+/**
+ * Filled shield-check — the ONLY lock/shield affordance for the E2E indicator's
+ * "encrypted" state (wave-79). Filled variant per the adopted design
+ * (ph-fill ph-shield-check); distinct from the stroke ShieldCheckIcon above.
+ */
+export function ShieldCheckFillIcon({ size = 16, className, style }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      style={style}
+      aria-hidden="true"
+    >
+      <path d="M12 2 4 5v7c0 6 8 10 8 10s8-4 8-10V5l-8-3zm-1.2 13.4-3-3 1.4-1.4 1.6 1.6 3.6-3.6 1.4 1.4-5 5z" />
+    </svg>
+  );
+}
+
+/** ph-lock-open — Not-encrypted (plaintext fallback / key-fetch error). No lock semantics. */
+export function LockOpenIcon({ size = 16, className, style }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      style={style}
+      aria-hidden="true"
+    >
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+    </svg>
+  );
+}
+
+/** ph-shield-slash — Not-encrypted (group DM, out of scope for encryption). */
+export function ShieldSlashIcon({ size = 16, className, style }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      style={style}
+      aria-hidden="true"
+    >
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <line x1="4" y1="3" x2="20" y2="21" />
+    </svg>
+  );
+}
+
+/** ph-key — Cannot decrypt on this device (no valid key). */
+export function KeyIcon({ size = 16, className, style }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      style={style}
+      aria-hidden="true"
+    >
+      <circle cx="7.5" cy="15.5" r="4.5" />
+      <path d="M10.7 12.3 20 3m-3 3 2.5 2.5M14.5 8.5 17 11" />
+    </svg>
+  );
+}
+
 export function CrownIcon({ size = 16, className, style }: IconProps) {
   return (
     <svg
