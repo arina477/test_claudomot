@@ -9,6 +9,7 @@ export type WhoCanDm = (typeof WHO_CAN_DM)[number];
 export const PrivacySettingsResponseSchema = z.object({
   profileVisibility: z.enum(PROFILE_VISIBILITY),
   whoCanDm: z.enum(WHO_CAN_DM),
+  showPresence: z.boolean(),
 });
 
 export type PrivacySettingsResponse = z.infer<typeof PrivacySettingsResponseSchema>;
@@ -16,6 +17,7 @@ export type PrivacySettingsResponse = z.infer<typeof PrivacySettingsResponseSche
 export const UpdatePrivacySchema = z.object({
   profileVisibility: z.enum(PROFILE_VISIBILITY),
   whoCanDm: z.enum(WHO_CAN_DM),
+  showPresence: z.boolean(),
 });
 
 export type UpdatePrivacyInput = z.infer<typeof UpdatePrivacySchema>;
