@@ -96,17 +96,25 @@ describe('PrivacyService.getPrivacy', () => {
 
   it('returns mapped PrivacySettingsResponse for a real user row', async () => {
     mockSelect.mockReturnValue(
-      makeSelectChain([{ profile_visibility: 'server-members', who_can_dm: 'nobody' }]),
+      makeSelectChain([
+        { profile_visibility: 'server-members', who_can_dm: 'nobody', show_presence: false },
+      ]),
     );
 
     const result = await sut.getPrivacy('user-get-1');
 
-    expect(result).toEqual({ profileVisibility: 'server-members', whoCanDm: 'nobody' });
+    expect(result).toEqual({
+      profileVisibility: 'server-members',
+      whoCanDm: 'nobody',
+      showPresence: false,
+    });
   });
 
-  it('maps profile_visibility and who_can_dm columns to camelCase response keys', async () => {
+  it('maps profile_visibility, who_can_dm, and show_presence columns to camelCase response keys', async () => {
     mockSelect.mockReturnValue(
-      makeSelectChain([{ profile_visibility: 'nobody', who_can_dm: 'server-members' }]),
+      makeSelectChain([
+        { profile_visibility: 'nobody', who_can_dm: 'server-members', show_presence: true },
+      ]),
     );
 
     const result = await sut.getPrivacy('user-get-2');
@@ -114,15 +122,20 @@ describe('PrivacyService.getPrivacy', () => {
     // Confirm camelCase mapping (NOT the raw snake_case column names)
     expect(result).toHaveProperty('profileVisibility', 'nobody');
     expect(result).toHaveProperty('whoCanDm', 'server-members');
+    expect(result).toHaveProperty('showPresence', true);
   });
 
-  it('returns everyone/everyone defaults defensively when user row is absent', async () => {
+  it('returns everyone/everyone/true defaults defensively when user row is absent', async () => {
     mockSelect.mockReturnValue(makeSelectChain([]));
 
     const result = await sut.getPrivacy('non-existent-user');
 
-    // Default path (columns are NOT NULL DEFAULT 'everyone') — defensive fallback
-    expect(result).toEqual({ profileVisibility: 'everyone', whoCanDm: 'everyone' });
+    // Default path (columns are NOT NULL DEFAULT 'everyone'/true) — defensive fallback
+    expect(result).toEqual({
+      profileVisibility: 'everyone',
+      whoCanDm: 'everyone',
+      showPresence: true,
+    });
   });
 });
 
@@ -140,23 +153,27 @@ describe('PrivacyService.updatePrivacy', () => {
     } as unknown as AppendPrivacyEventService);
   });
 
-  it('persists BOTH profile_visibility AND who_can_dm columns in a single UPDATE call', async () => {
+  it('persists profile_visibility, who_can_dm, AND show_presence columns in a single UPDATE call', async () => {
     const captured: { value: Record<string, unknown> } = { value: {} };
     mockUpdate.mockReturnValue(makeUpdateChain(captured));
     // getPrivacy is called after the UPDATE — return a post-write row
     mockSelect.mockReturnValue(
-      makeSelectChain([{ profile_visibility: 'nobody', who_can_dm: 'server-members' }]),
+      makeSelectChain([
+        { profile_visibility: 'nobody', who_can_dm: 'server-members', show_presence: false },
+      ]),
     );
 
     await sut.updatePrivacy('user-upd-1', {
       profileVisibility: 'nobody',
       whoCanDm: 'server-members',
+      showPresence: false,
     });
 
-    // Both columns must be present in the .set() payload — not just one
+    // All three columns must be present in the .set() payload — full replace
     expect(captured.value).toMatchObject({
       profile_visibility: 'nobody',
       who_can_dm: 'server-members',
+      show_presence: false,
     });
   });
 
@@ -164,11 +181,17 @@ describe('PrivacyService.updatePrivacy', () => {
     const captured: { value: Record<string, unknown> } = { value: {} };
     mockUpdate.mockReturnValue(makeUpdateChain(captured));
     mockSelect.mockReturnValue(
-      makeSelectChain([{ profile_visibility: 'everyone', who_can_dm: 'everyone' }]),
+      makeSelectChain([
+        { profile_visibility: 'everyone', who_can_dm: 'everyone', show_presence: true },
+      ]),
     );
 
     const before = Date.now();
-    await sut.updatePrivacy('user-upd-2', { profileVisibility: 'everyone', whoCanDm: 'everyone' });
+    await sut.updatePrivacy('user-upd-2', {
+      profileVisibility: 'everyone',
+      whoCanDm: 'everyone',
+      showPresence: true,
+    });
     const after = Date.now();
 
     const updatedAt = captured.value?.updated_at;
@@ -182,25 +205,38 @@ describe('PrivacyService.updatePrivacy', () => {
   it('returns the result of getPrivacy (re-reads persisted state after write)', async () => {
     mockUpdate.mockReturnValue(makeUpdateChain());
     mockSelect.mockReturnValue(
-      makeSelectChain([{ profile_visibility: 'nobody', who_can_dm: 'server-members' }]),
+      makeSelectChain([
+        { profile_visibility: 'nobody', who_can_dm: 'server-members', show_presence: false },
+      ]),
     );
 
     const result = await sut.updatePrivacy('user-upd-3', {
       profileVisibility: 'nobody',
       whoCanDm: 'server-members',
+      showPresence: false,
     });
 
     // Return value reflects the post-write DB read, not the DTO directly
-    expect(result).toEqual({ profileVisibility: 'nobody', whoCanDm: 'server-members' });
+    expect(result).toEqual({
+      profileVisibility: 'nobody',
+      whoCanDm: 'server-members',
+      showPresence: false,
+    });
   });
 
   it('calls db.update exactly once per updatePrivacy invocation', async () => {
     mockUpdate.mockReturnValue(makeUpdateChain());
     mockSelect.mockReturnValue(
-      makeSelectChain([{ profile_visibility: 'everyone', who_can_dm: 'everyone' }]),
+      makeSelectChain([
+        { profile_visibility: 'everyone', who_can_dm: 'everyone', show_presence: true },
+      ]),
     );
 
-    await sut.updatePrivacy('user-upd-4', { profileVisibility: 'everyone', whoCanDm: 'everyone' });
+    await sut.updatePrivacy('user-upd-4', {
+      profileVisibility: 'everyone',
+      whoCanDm: 'everyone',
+      showPresence: true,
+    });
 
     expect(mockUpdate).toHaveBeenCalledTimes(1);
   });

@@ -24,7 +24,7 @@
 import { Injectable } from '@nestjs/common';
 import { eq, inArray } from 'drizzle-orm';
 import { db } from '../db/index';
-import { server_members } from '../db/schema/index';
+import { server_members, users } from '../db/schema/index';
 
 /** How long a typing indicator persists without renewal (ms). */
 const TYPING_TTL_MS = 5_000;
@@ -130,6 +130,57 @@ export class PresenceService {
       if (r.user_id !== userId) seen.add(r.user_id);
     }
     return Array.from(seen);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Presence-visibility honor (wave-80 — show_presence gate)
+  //
+  // show_presence governs whether the user's own online/offline status is
+  // broadcast to co-members. It is OUTBOUND only: a hidden user still receives
+  // co-members' presence (the inbound view is unaffected).
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Return the user's show_presence flag (users.show_presence, NOT NULL DEFAULT true).
+   * Used at connect to cache the flag on socket.data and to gate the online emit.
+   * Defensive default true if the row is somehow absent (matches column default).
+   */
+  async getShowPresence(userId: string): Promise<boolean> {
+    const rows = await db
+      .select({ show_presence: users.show_presence })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    return rows[0]?.show_presence ?? true;
+  }
+
+  /**
+   * Batch-resolve show_presence for a set of co-member userIds.
+   * Used by the snapshot-on-join path to EXCLUDE co-members whose show_presence
+   * is false from the snapshot sent to a connecting peer (honor requires the
+   * CO-MEMBERS' flags, not the connecting user's flag).
+   *
+   * @returns Map<userId, show_presence>. userIds absent from the DB default to
+   *          true (matches the column default), so the caller can look up safely.
+   */
+  async getShowPresenceBatch(userIds: string[]): Promise<Map<string, boolean>> {
+    const result = new Map<string, boolean>();
+    if (userIds.length === 0) return result;
+
+    const rows = await db
+      .select({ id: users.id, show_presence: users.show_presence })
+      .from(users)
+      .where(inArray(users.id, userIds));
+
+    for (const r of rows) {
+      result.set(r.id, r.show_presence);
+    }
+    // Any userId not returned defaults to visible (true).
+    for (const uid of userIds) {
+      if (!result.has(uid)) result.set(uid, true);
+    }
+    return result;
   }
 
   // ---------------------------------------------------------------------------

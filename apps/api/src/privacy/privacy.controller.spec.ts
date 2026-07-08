@@ -34,11 +34,13 @@ function makeReq(userId = 'ctrl-user-1') {
 const mockPrivacyResult: PrivacySettingsResponse = {
   profileVisibility: 'everyone',
   whoCanDm: 'everyone',
+  showPresence: true,
 };
 
 const mockPrivacyUpdated: PrivacySettingsResponse = {
   profileVisibility: 'nobody',
   whoCanDm: 'server-members',
+  showPresence: false,
 };
 
 function makeController() {
@@ -150,7 +152,7 @@ describe('PrivacyController.updatePrivacy — PUT /profile/privacy', () => {
   });
 
   it('returns 200 PrivacySettingsResponse for valid body and delegates to privacyService.updatePrivacy', async () => {
-    const validBody = { profileVisibility: 'nobody', whoCanDm: 'server-members' };
+    const validBody = { profileVisibility: 'nobody', whoCanDm: 'server-members', showPresence: false };
 
     // biome-ignore lint/suspicious/noExplicitAny: test cast
     const result = await controller.updatePrivacy(makeReq() as any, validBody);
@@ -159,12 +161,13 @@ describe('PrivacyController.updatePrivacy — PUT /profile/privacy', () => {
     expect(privacyService.updatePrivacy).toHaveBeenCalledWith('ctrl-user-1', {
       profileVisibility: 'nobody',
       whoCanDm: 'server-members',
+      showPresence: false,
     });
   });
 
   it('accepts all three valid profileVisibility enum values', async () => {
     for (const v of ['everyone', 'server-members', 'nobody'] as const) {
-      const body = { profileVisibility: v, whoCanDm: 'everyone' as const };
+      const body = { profileVisibility: v, whoCanDm: 'everyone' as const, showPresence: true };
       await expect(
         // biome-ignore lint/suspicious/noExplicitAny: test cast
         controller.updatePrivacy(makeReq() as any, body),
@@ -174,7 +177,7 @@ describe('PrivacyController.updatePrivacy — PUT /profile/privacy', () => {
 
   it('accepts all three valid whoCanDm enum values', async () => {
     for (const v of ['everyone', 'server-members', 'nobody'] as const) {
-      const body = { profileVisibility: 'everyone' as const, whoCanDm: v };
+      const body = { profileVisibility: 'everyone' as const, whoCanDm: v, showPresence: true };
       await expect(
         // biome-ignore lint/suspicious/noExplicitAny: test cast
         controller.updatePrivacy(makeReq() as any, body),
@@ -182,8 +185,44 @@ describe('PrivacyController.updatePrivacy — PUT /profile/privacy', () => {
     }
   });
 
+  it('accepts both showPresence boolean values (true and false)', async () => {
+    for (const v of [true, false] as const) {
+      const body = {
+        profileVisibility: 'everyone' as const,
+        whoCanDm: 'everyone' as const,
+        showPresence: v,
+      };
+      await expect(
+        // biome-ignore lint/suspicious/noExplicitAny: test cast
+        controller.updatePrivacy(makeReq() as any, body),
+      ).resolves.toBeDefined();
+    }
+  });
+
+  it('throws BadRequestException (400) for non-boolean showPresence — no service call', async () => {
+    await expect(
+      controller.updatePrivacy(
+        // biome-ignore lint/suspicious/noExplicitAny: test cast
+        makeReq() as any,
+        { profileVisibility: 'everyone', whoCanDm: 'everyone', showPresence: 'yes' },
+      ),
+    ).rejects.toThrow(BadRequestException);
+    expect(privacyService.updatePrivacy).not.toHaveBeenCalled();
+  });
+
+  it('throws BadRequestException (400) when showPresence is missing (full-replace schema)', async () => {
+    await expect(
+      // biome-ignore lint/suspicious/noExplicitAny: test cast
+      controller.updatePrivacy(makeReq() as any, {
+        profileVisibility: 'everyone',
+        whoCanDm: 'everyone',
+      }),
+    ).rejects.toThrow(BadRequestException);
+    expect(privacyService.updatePrivacy).not.toHaveBeenCalled();
+  });
+
   it('derives userId from session (not from body) — structural session-scoping proof', async () => {
-    const validBody = { profileVisibility: 'everyone', whoCanDm: 'everyone' };
+    const validBody = { profileVisibility: 'everyone', whoCanDm: 'everyone', showPresence: true };
 
     // biome-ignore lint/suspicious/noExplicitAny: test cast
     await controller.updatePrivacy(makeReq('session-scoped-id-99') as any, validBody);

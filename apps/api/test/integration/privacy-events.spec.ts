@@ -169,6 +169,7 @@ describe.skipIf(SKIP)('AppendPrivacyEventService + hook seams (wave-73 B-2)', ()
     await privacyService.updatePrivacy(USER_A, {
       profileVisibility: 'server-members',
       whoCanDm: 'server-members',
+      showPresence: true,
     });
 
     const events = await fetchPrivacyEvents(USER_A);
@@ -184,18 +185,71 @@ describe.skipIf(SKIP)('AppendPrivacyEventService + hook seams (wave-73 B-2)', ()
     await privacyService.updatePrivacy(USER_A, {
       profileVisibility: 'nobody',
       whoCanDm: 'nobody',
+      showPresence: true,
     });
 
     // Second call — identical values → must NOT write another event.
     await privacyService.updatePrivacy(USER_A, {
       profileVisibility: 'nobody',
       whoCanDm: 'nobody',
+      showPresence: true,
     });
 
     const events = await fetchPrivacyEvents(USER_A);
     const changedEvents = events.filter((e) => e.event_type === 'privacy_settings_changed');
     // Only the first (genuine) change should have produced an event.
     expect(changedEvents).toHaveLength(1);
+  });
+
+  it('3c. updatePrivacy show_presence round-trip: GET returns the persisted value', async () => {
+    // Default is true. Flip to false and confirm the re-read reflects it.
+    const after = await privacyService.updatePrivacy(USER_A, {
+      profileVisibility: 'everyone',
+      whoCanDm: 'everyone',
+      showPresence: false,
+    });
+    expect(after.showPresence).toBe(false);
+
+    const readBack = await privacyService.getPrivacy(USER_A);
+    expect(readBack.showPresence).toBe(false);
+
+    // Flip back on → true.
+    const afterOn = await privacyService.updatePrivacy(USER_A, {
+      profileVisibility: 'everyone',
+      whoCanDm: 'everyone',
+      showPresence: true,
+    });
+    expect(afterOn.showPresence).toBe(true);
+  });
+
+  it('3d. updatePrivacy show_presence change: audit event carries showPresenceFrom/To', async () => {
+    // USER_A starts at default show_presence=true → flip to false is a genuine change.
+    await privacyService.updatePrivacy(USER_A, {
+      profileVisibility: 'everyone',
+      whoCanDm: 'everyone',
+      showPresence: false,
+    });
+
+    const events = await fetchPrivacyEvents(USER_A);
+    const evt = events.find((e) => e.event_type === 'privacy_settings_changed');
+    expect(evt).toBeDefined();
+    const ctx = evt?.context as Record<string, unknown> | null;
+    expect(ctx).toHaveProperty('showPresenceFrom', true);
+    expect(ctx).toHaveProperty('showPresenceTo', false);
+  });
+
+  it('3e. updatePrivacy show_presence UNCHANGED (with other fields unchanged): ZERO events', async () => {
+    // Default state is everyone/everyone/true. Re-save the identical default →
+    // no change at all → no audit event (no-op gate covers show_presence too).
+    await privacyService.updatePrivacy(USER_A, {
+      profileVisibility: 'everyone',
+      whoCanDm: 'everyone',
+      showPresence: true,
+    });
+
+    const events = await fetchPrivacyEvents(USER_A);
+    const changedEvents = events.filter((e) => e.event_type === 'privacy_settings_changed');
+    expect(changedEvents).toHaveLength(0);
   });
 
   it('8. no-PII: privacy_settings_changed context has ONLY visibility/whoCanDm values — no email/display_name', async () => {
@@ -208,6 +262,7 @@ describe.skipIf(SKIP)('AppendPrivacyEventService + hook seams (wave-73 B-2)', ()
     await privacyService.updatePrivacy(USER_A, {
       profileVisibility: 'nobody',
       whoCanDm: 'nobody',
+      showPresence: false,
     });
 
     const events = await fetchPrivacyEvents(USER_A);
@@ -217,15 +272,18 @@ describe.skipIf(SKIP)('AppendPrivacyEventService + hook seams (wave-73 B-2)', ()
     const ctx = evt?.context as Record<string, unknown> | null;
     expect(ctx).not.toBeNull();
 
-    // Must carry from/to visibility/whoCanDm values.
+    // Must carry from/to visibility/whoCanDm/showPresence values.
     expect(ctx).toHaveProperty('visibilityFrom');
     expect(ctx).toHaveProperty('visibilityTo');
     expect(ctx).toHaveProperty('whoCanDmFrom');
     expect(ctx).toHaveProperty('whoCanDmTo');
+    expect(ctx).toHaveProperty('showPresenceFrom');
+    expect(ctx).toHaveProperty('showPresenceTo');
 
-    // visibilityTo and whoCanDmTo must be the values we set.
+    // visibilityTo, whoCanDmTo, showPresenceTo must be the values we set.
     expect(ctx?.visibilityTo).toBe('nobody');
     expect(ctx?.whoCanDmTo).toBe('nobody');
+    expect(ctx?.showPresenceTo).toBe(false);
 
     // NO PII: context must not contain email or display_name.
     const ctxStr = JSON.stringify(ctx);
@@ -235,7 +293,14 @@ describe.skipIf(SKIP)('AppendPrivacyEventService + hook seams (wave-73 B-2)', ()
     // Only the known non-PII keys should be present.
     const keys = Object.keys(ctx ?? {});
     for (const key of keys) {
-      expect(['visibilityFrom', 'visibilityTo', 'whoCanDmFrom', 'whoCanDmTo']).toContain(key);
+      expect([
+        'visibilityFrom',
+        'visibilityTo',
+        'whoCanDmFrom',
+        'whoCanDmTo',
+        'showPresenceFrom',
+        'showPresenceTo',
+      ]).toContain(key);
     }
   });
 
@@ -356,6 +421,7 @@ describe.skipIf(SKIP)('AppendPrivacyEventService + hook seams (wave-73 B-2)', ()
       sutWithThrowingAppend.updatePrivacy(USER_A, {
         profileVisibility: 'nobody',
         whoCanDm: 'nobody',
+        showPresence: false,
       }),
     ).resolves.toBeDefined();
 

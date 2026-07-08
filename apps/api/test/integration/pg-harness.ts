@@ -102,18 +102,23 @@ export async function truncateTables(): Promise<void> {
  * Pass `whoCanDm` to override the users.who_can_dm column (defaults to
  * 'everyone' matching the DB column default — existing 3-arg callers unaffected).
  * Valid values: 'everyone' | 'server-members' | 'nobody'.
+ *
+ * Pass `showPresence` to override the users.show_presence column (defaults to
+ * true matching the DB column default — existing callers unaffected). Used by
+ * the wave-80 presence-honor test to seed a co-member with presence hidden.
  */
 export async function insertFixtureUser(
   id: string,
   email: string,
   username?: string,
   whoCanDm: 'everyone' | 'server-members' | 'nobody' = 'everyone',
+  showPresence = true,
 ): Promise<void> {
   if (!harnessPool) throw new Error('pg-harness: call setupHarness() first');
   await harnessPool.query(
-    `INSERT INTO users (id, email, username, who_can_dm) VALUES ($1, $2, $3, $4)
+    `INSERT INTO users (id, email, username, who_can_dm, show_presence) VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT (id) DO NOTHING`,
-    [id, email, username ?? null, whoCanDm],
+    [id, email, username ?? null, whoCanDm, showPresence],
   );
 }
 

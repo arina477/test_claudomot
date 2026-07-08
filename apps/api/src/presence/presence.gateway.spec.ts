@@ -138,6 +138,8 @@ function makePresenceService(
     getTypers: () => Array<{ userId: string; displayName: string }>;
     getServerIdsForUser: () => Promise<string[]>;
     getCoMemberUserIds: () => Promise<string[]>;
+    getShowPresence: () => Promise<boolean>;
+    getShowPresenceBatch: () => Promise<Map<string, boolean>>;
   }> = {},
 ): PresenceService {
   return {
@@ -149,6 +151,8 @@ function makePresenceService(
     getTypers: vi.fn().mockReturnValue([]),
     getServerIdsForUser: vi.fn().mockResolvedValue([]),
     getCoMemberUserIds: vi.fn().mockResolvedValue([]),
+    getShowPresence: vi.fn().mockResolvedValue(true),
+    getShowPresenceBatch: vi.fn().mockResolvedValue(new Map<string, boolean>()),
     ...overrides,
   } as unknown as PresenceService;
 }
