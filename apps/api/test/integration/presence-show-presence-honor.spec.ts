@@ -263,6 +263,62 @@ describe.skipIf(SKIP)('wave-80 show_presence honor — two-subject presence asse
   });
 
   // -----------------------------------------------------------------------
+  // F2 (wave-80 B-6): connect-vs-toggle race. A toggles OFF while a NEW tab for
+  // A connects and (under the old code) broadcasts A online from a pre-commit
+  // read; the toggle's fetchSockets() snapshot could miss the just-connecting
+  // socket, leaving co-member B seeing a hidden A online. With the fix, after
+  // the race settles B must end up seeing A OFFLINE (a reconciling re-check
+  // against the authoritative flag closes the window).
+  //
+  // We reproduce the WORST ordering deterministically: the DB is committed to
+  // hidden (as the toggle write would leave it), then a brand-new A socket
+  // connects. In the pre-fix code the connect's online-broadcast would fire and
+  // no later step would undo it; with the fix, connect's reconcileHiddenUser()
+  // re-reads the committed hidden flag and emits a corrective offline so B is
+  // never left seeing A online.
+  // -----------------------------------------------------------------------
+  it('F2 race: A hidden in DB then a new A tab connects → B ends up seeing A OFFLINE, not online', async () => {
+    // B is watching. A is online via an initial tab (visible).
+    const sockB = makeSocket('sock-b', USER_B);
+    const sockA1 = makeSocket('sock-a1', USER_A);
+    await connect(sockB);
+    await connect(sockA1);
+    expect(presenceService.isOnline(USER_A)).toBe(true);
+
+    // A toggles OFF via the real privacy path (DB write + proactive emit).
+    await privacyService.updatePrivacy(USER_A, {
+      profileVisibility: 'everyone',
+      whoCanDm: 'everyone',
+      showPresence: false,
+    });
+
+    sockB.emit.mockClear();
+
+    // The race: a NEW A tab connects AFTER the hidden flag committed. Its own
+    // connect-time read now sees hidden and it must NOT broadcast A online; even
+    // if it (raced) did, the reconciling re-check emits a corrective offline.
+    const sockA2 = makeSocket('sock-a2', USER_A);
+    await connect(sockA2);
+
+    // B must NOT be left seeing A online after the race settles.
+    const bOnlineAfter = sockB.emit.mock.calls.find(
+      (c) => c[0] === 'presence:online' && (c[1] as { userId: string }).userId === USER_A,
+    );
+    expect(bOnlineAfter).toBeUndefined();
+
+    // And if any online had been (wrongly) emitted mid-race, a corrective offline
+    // reconciles it — so the LAST A-presence event B saw is offline, never online.
+    const aEvents = sockB.emit.mock.calls.filter(
+      (c) =>
+        (c[0] === 'presence:online' || c[0] === 'presence:offline') &&
+        (c[1] as { userId: string }).userId === USER_A,
+    );
+    if (aEvents.length > 0) {
+      expect(aEvents[aEvents.length - 1]?.[0]).toBe('presence:offline');
+    }
+  });
+
+  // -----------------------------------------------------------------------
   // Own-visibility-only: a hidden user STILL receives co-members' presence.
   // A hides, then B comes online — A must still receive B's presence:online.
   // -----------------------------------------------------------------------

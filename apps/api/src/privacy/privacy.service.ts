@@ -61,21 +61,33 @@ export class PrivacyService {
     // fallback for missing rows.
     const before = await this.getPrivacy(userId);
 
-    await db
-      .update(users)
-      .set({
-        profile_visibility: dto.profileVisibility,
-        who_can_dm: dto.whoCanDm,
-        show_presence: dto.showPresence,
-        updated_at: new Date(),
-      })
-      .where(eq(users.id, userId));
+    // ── PARTIAL update (wave-80 B-6 F1) ──────────────────────────────────────
+    // UpdatePrivacySchema is now partial: a client sends ONLY the field it is
+    // changing. We MUST update only the columns present in the payload and leave
+    // any unspecified column untouched — otherwise a stale full-replace body (or
+    // a partial one) would clobber a field a concurrent tab just set. Build the
+    // SET object from present keys only; `updated_at` always bumps.
+    const setValues: Partial<{
+      profile_visibility: (typeof dto)['profileVisibility'];
+      who_can_dm: (typeof dto)['whoCanDm'];
+      show_presence: boolean;
+    }> & { updated_at: Date } = { updated_at: new Date() };
+
+    if (dto.profileVisibility !== undefined) setValues.profile_visibility = dto.profileVisibility;
+    if (dto.whoCanDm !== undefined) setValues.who_can_dm = dto.whoCanDm;
+    if (dto.showPresence !== undefined) setValues.show_presence = dto.showPresence;
+
+    await db.update(users).set(setValues).where(eq(users.id, userId));
 
     const after = await this.getPrivacy(userId);
 
     // Track show_presence change independently — it drives BOTH the audit gate
-    // and the proactive presence emit below.
+    // and the proactive presence emit below. Under partial updates (F1) the emit
+    // must ALSO require show_presence to have been in the payload: a
+    // profileVisibility-only PUT must never trigger a presence re-broadcast even
+    // if the before/after read races a concurrent presence write.
     const showPresenceChanged = before.showPresence !== after.showPresence;
+    const showPresenceInPayload = dto.showPresence !== undefined;
 
     // ── Privacy audit hook (best-effort, AFTER update commits) ───────────────
     // Context carries ONLY non-PII visibility/whoCanDm/showPresence values (no
@@ -119,7 +131,7 @@ export class PrivacyService {
     //   hidden → on  → presence:online for the user
     // The gateway no-ops when the user is not currently connected. Best-effort:
     // a failure here must NOT fail the updatePrivacy response.
-    if (showPresenceChanged && this.presenceGateway) {
+    if (showPresenceInPayload && showPresenceChanged && this.presenceGateway) {
       try {
         await this.presenceGateway.onShowPresenceChanged(userId, after.showPresence);
       } catch (err) {

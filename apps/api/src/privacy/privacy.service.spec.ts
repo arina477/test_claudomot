@@ -29,6 +29,7 @@ vi.mock('../db/index', () => ({
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '../db/index';
 import { scrubPii } from '../instrument';
+import type { PresenceGateway } from '../presence/presence.gateway';
 import type { AppendPrivacyEventService } from './append-privacy-event.service';
 import { PrivacyService } from './privacy.service';
 
@@ -222,6 +223,74 @@ describe('PrivacyService.updatePrivacy', () => {
       whoCanDm: 'server-members',
       showPresence: false,
     });
+  });
+
+  // ── Partial-update contract (wave-80 B-6 F1) ─────────────────────────────
+  it('PARTIAL: a showPresence-only body sets ONLY show_presence (+updated_at), leaves other columns untouched', async () => {
+    const captured: { value: Record<string, unknown> } = { value: {} };
+    mockUpdate.mockReturnValue(makeUpdateChain(captured));
+    mockSelect.mockReturnValue(
+      makeSelectChain([
+        { profile_visibility: 'everyone', who_can_dm: 'everyone', show_presence: false },
+      ]),
+    );
+
+    // Body carries ONLY the changed field — the cross-tab clobber fix.
+    await sut.updatePrivacy('user-partial-1', { showPresence: false });
+
+    // Only show_presence + updated_at may appear; the untouched columns must NOT
+    // be in the SET payload (else a stale value would clobber them).
+    expect(captured.value).toHaveProperty('show_presence', false);
+    expect(captured.value).not.toHaveProperty('profile_visibility');
+    expect(captured.value).not.toHaveProperty('who_can_dm');
+    expect(captured.value).toHaveProperty('updated_at');
+  });
+
+  it('PARTIAL: a profileVisibility-only body does NOT trigger the proactive presence emit', async () => {
+    mockUpdate.mockReturnValue(makeUpdateChain());
+    // before === after for show_presence (true both reads) — and show_presence is
+    // absent from the payload, so the emit must not fire regardless.
+    mockSelect.mockReturnValue(
+      makeSelectChain([
+        { profile_visibility: 'nobody', who_can_dm: 'everyone', show_presence: true },
+      ]),
+    );
+
+    const onShowPresenceChanged = vi.fn().mockResolvedValue(undefined);
+    const svc = new PrivacyService(
+      { append: vi.fn().mockResolvedValue(undefined) } as unknown as AppendPrivacyEventService,
+      { onShowPresenceChanged } as unknown as PresenceGateway,
+    );
+
+    await svc.updatePrivacy('user-partial-2', { profileVisibility: 'nobody' });
+
+    expect(onShowPresenceChanged).not.toHaveBeenCalled();
+  });
+
+  it('PARTIAL: a showPresence-only body that flips the flag DOES trigger the proactive presence emit', async () => {
+    mockUpdate.mockReturnValue(makeUpdateChain());
+    // before read → true; after read → false. Two distinct select results.
+    mockSelect
+      .mockReturnValueOnce(
+        makeSelectChain([
+          { profile_visibility: 'everyone', who_can_dm: 'everyone', show_presence: true },
+        ]),
+      )
+      .mockReturnValueOnce(
+        makeSelectChain([
+          { profile_visibility: 'everyone', who_can_dm: 'everyone', show_presence: false },
+        ]),
+      );
+
+    const onShowPresenceChanged = vi.fn().mockResolvedValue(undefined);
+    const svc = new PrivacyService(
+      { append: vi.fn().mockResolvedValue(undefined) } as unknown as AppendPrivacyEventService,
+      { onShowPresenceChanged } as unknown as PresenceGateway,
+    );
+
+    await svc.updatePrivacy('user-partial-3', { showPresence: false });
+
+    expect(onShowPresenceChanged).toHaveBeenCalledWith('user-partial-3', false);
   });
 
   it('calls db.update exactly once per updatePrivacy invocation', async () => {

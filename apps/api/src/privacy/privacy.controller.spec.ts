@@ -126,13 +126,15 @@ describe('PrivacyController.updatePrivacy — PUT /profile/privacy', () => {
     expect(privacyService.updatePrivacy).not.toHaveBeenCalled();
   });
 
-  it('throws BadRequestException (400) when body is empty (both profileVisibility and whoCanDm are required)', async () => {
+  // F1 (wave-80 B-6): the update schema is PARTIAL. An empty body is a valid
+  // (no-op) partial update — it must NOT 400 and must delegate to the service.
+  it('accepts an empty body (partial no-op) and delegates to privacyService.updatePrivacy', async () => {
     await expect(
       // biome-ignore lint/suspicious/noExplicitAny: test cast
       controller.updatePrivacy(makeReq() as any, {}),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).resolves.toBeDefined();
 
-    expect(privacyService.updatePrivacy).not.toHaveBeenCalled();
+    expect(privacyService.updatePrivacy).toHaveBeenCalledWith('ctrl-user-1', {});
   });
 
   it('throws BadRequestException (400) when body is null', async () => {
@@ -142,13 +144,17 @@ describe('PrivacyController.updatePrivacy — PUT /profile/privacy', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('throws BadRequestException (400) when whoCanDm is missing (only profileVisibility supplied)', async () => {
+  // F1: a partial body carrying ONLY the changed field is accepted (this is the
+  // exact shape the cross-tab-clobber fix relies on) and delegated as-is.
+  it('accepts a partial body with only profileVisibility and delegates it unchanged', async () => {
     await expect(
       // biome-ignore lint/suspicious/noExplicitAny: test cast
       controller.updatePrivacy(makeReq() as any, { profileVisibility: 'nobody' }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).resolves.toBeDefined();
 
-    expect(privacyService.updatePrivacy).not.toHaveBeenCalled();
+    expect(privacyService.updatePrivacy).toHaveBeenCalledWith('ctrl-user-1', {
+      profileVisibility: 'nobody',
+    });
   });
 
   it('returns 200 PrivacySettingsResponse for valid body and delegates to privacyService.updatePrivacy', async () => {
@@ -214,15 +220,33 @@ describe('PrivacyController.updatePrivacy — PUT /profile/privacy', () => {
     expect(privacyService.updatePrivacy).not.toHaveBeenCalled();
   });
 
-  it('throws BadRequestException (400) when showPresence is missing (full-replace schema)', async () => {
+  // F1: showPresence absent is legal under the partial schema — the service
+  // leaves the show_presence column untouched (no clobber). Must NOT 400.
+  it('accepts a body without showPresence (partial) and delegates without a presence field', async () => {
     await expect(
       // biome-ignore lint/suspicious/noExplicitAny: test cast
       controller.updatePrivacy(makeReq() as any, {
         profileVisibility: 'everyone',
         whoCanDm: 'everyone',
       }),
-    ).rejects.toThrow(BadRequestException);
-    expect(privacyService.updatePrivacy).not.toHaveBeenCalled();
+    ).resolves.toBeDefined();
+    expect(privacyService.updatePrivacy).toHaveBeenCalledWith('ctrl-user-1', {
+      profileVisibility: 'everyone',
+      whoCanDm: 'everyone',
+    });
+  });
+
+  // F1 regression guard: a partial body that carries ONLY showPresence:false is
+  // accepted — the precise shape a presence-off toggle sends. This is the write
+  // path the cross-tab clobber fix protects.
+  it('accepts a showPresence-only body (presence-off toggle) and delegates it unchanged', async () => {
+    await expect(
+      // biome-ignore lint/suspicious/noExplicitAny: test cast
+      controller.updatePrivacy(makeReq() as any, { showPresence: false }),
+    ).resolves.toBeDefined();
+    expect(privacyService.updatePrivacy).toHaveBeenCalledWith('ctrl-user-1', {
+      showPresence: false,
+    });
   });
 
   it('derives userId from session (not from body) — structural session-scoping proof', async () => {
