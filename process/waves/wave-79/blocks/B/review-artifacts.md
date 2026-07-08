@@ -12,8 +12,8 @@
 | B-1 | stages/B-1-contracts.md | done | typescript-pro (privacy.ts key + envelope contracts) |
 | B-2 | stages/B-2-backend.md | done | backend-developer + supertokens-integration (key service/endpoints, server-blind dm.service) |
 | B-3 | stages/B-3-frontend.md | done | react-specialist (Web Crypto + DM view + indicator, after D-3) |
-| B-4 | stages/B-4-wiring.md | pending | |
-| B-5 | stages/B-5-verify.md | pending | |
+| B-4 | stages/B-4-wiring.md | done | |
+| B-5 | stages/B-5-verify.md | done | |
 | B-6 | stages/B-6-review.md | pending | |
 
 ## Block-specific context
