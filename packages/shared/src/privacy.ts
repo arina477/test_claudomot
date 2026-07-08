@@ -9,14 +9,30 @@ export type WhoCanDm = (typeof WHO_CAN_DM)[number];
 export const PrivacySettingsResponseSchema = z.object({
   profileVisibility: z.enum(PROFILE_VISIBILITY),
   whoCanDm: z.enum(WHO_CAN_DM),
+  showPresence: z.boolean(),
 });
 
 export type PrivacySettingsResponse = z.infer<typeof PrivacySettingsResponseSchema>;
 
-export const UpdatePrivacySchema = z.object({
-  profileVisibility: z.enum(PROFILE_VISIBILITY),
-  whoCanDm: z.enum(WHO_CAN_DM),
-});
+// PARTIAL update (wave-80 B-6 F1): every field is OPTIONAL so a client can send
+// ONLY the field it is changing. This eliminates the cross-tab full-replace
+// clobber — a stale second settings tab that re-sends `showPresence:true` would
+// silently re-enable presence a first tab just turned off. With a partial body,
+// the second tab sends only the field it actually changed, and the service
+// merges it onto the current DB state instead of overwriting untouched fields.
+//
+// GET (PrivacySettingsResponseSchema) stays required/unchanged — a read always
+// returns all three fields. Only the write contract is partial.
+//
+// `.strict()` keeps unknown keys rejected. An empty `{}` is a valid (no-op)
+// partial body; the service's no-op audit gate handles it without side effects.
+export const UpdatePrivacySchema = z
+  .object({
+    profileVisibility: z.enum(PROFILE_VISIBILITY),
+    whoCanDm: z.enum(WHO_CAN_DM),
+    showPresence: z.boolean(),
+  })
+  .partial();
 
 export type UpdatePrivacyInput = z.infer<typeof UpdatePrivacySchema>;
 

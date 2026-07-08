@@ -724,15 +724,23 @@ export const api = {
   // ── Privacy endpoints (wave-35 M7) ──────────────────────────────────────
 
   /**
-   * GET /profile/privacy → PrivacySettingsResponse {profileVisibility, whoCanDm}.
+   * GET /profile/privacy → PrivacySettingsResponse {profileVisibility, whoCanDm, showPresence}.
    * Throws: 401 unauthed.
    */
   getPrivacy: (): Promise<PrivacySettingsResponse> =>
     request<PrivacySettingsResponse>('/profile/privacy'),
 
   /**
-   * PUT /profile/privacy {profileVisibility, whoCanDm} → updated PrivacySettingsResponse.
-   * Full-replace semantics (PUT, not PATCH). Throws: 401 unauthed, 400 bad input.
+   * PUT /profile/privacy → updated PrivacySettingsResponse.
+   *
+   * PARTIAL-body semantics (wave-80 B-6 F1): every field of UpdatePrivacyInput is
+   * optional, so callers send ONLY the field they are changing. The service merges
+   * the provided field(s) onto the current DB state, leaving untouched fields
+   * unchanged. This closes the cross-tab clobber where a stale second tab would
+   * re-send the full 3-field object and silently revert a field another tab just
+   * changed. The response still echoes the FULL current settings (GET-shaped, all
+   * three fields), so callers can merge it back into state as before.
+   * Throws: 401 unauthed, 400 bad input.
    */
   putPrivacy: (body: UpdatePrivacyInput): Promise<PrivacySettingsResponse> =>
     request<PrivacySettingsResponse>('/profile/privacy', {

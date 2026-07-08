@@ -89,6 +89,93 @@ export class PresenceGateway implements OnGatewayInit, OnGatewayConnection, OnGa
 
   private readonly logger = new Logger(PresenceGateway.name);
 
+  // ── Per-user presence-broadcast serialization (wave-80 B-6 F2) ─────────────
+  // The connect-time online broadcast and onShowPresenceChanged both decide the
+  // co-member-visible online/offline state for a user. Without serialization a
+  // new tab connecting can read a pre-commit show_presence=true and broadcast
+  // presence:online for a user who is concurrently toggling OFF, and the
+  // toggle's fetchSockets() snapshot may miss the still-connecting socket —
+  // leaving co-members seeing a hidden user online. We chain both critical
+  // sections through a per-user promise so they run strictly one-at-a-time, and
+  // each finishes with a reconciling re-check against the authoritative DB flag.
+  private readonly presenceBroadcastLocks = new Map<string, Promise<void>>();
+
+  /**
+   * Run `fn` under a per-user mutex so presence-broadcast decisions for one user
+   * never interleave. Serialized against every other call for the SAME userId.
+   */
+  private withPresenceLock<T>(userId: string, fn: () => Promise<T>): Promise<T> {
+    const prev = this.presenceBroadcastLocks.get(userId) ?? Promise.resolve();
+    const run = prev.then(fn, fn);
+    // Keep the tail promise (void, never rejects) so the next waiter chains cleanly.
+    const tail = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    this.presenceBroadcastLocks.set(userId, tail);
+    // Best-effort GC: drop the entry once this is the last queued op.
+    void tail.then(() => {
+      if (this.presenceBroadcastLocks.get(userId) === tail) {
+        this.presenceBroadcastLocks.delete(userId);
+      }
+    });
+    return run;
+  }
+
+  /**
+   * Reconciling re-check (wave-80 B-6 F2): re-read the authoritative
+   * show_presence flag; if the user is currently hidden but may have been
+   * broadcast online to co-members (e.g. by a raced connect), emit a corrective
+   * presence:offline so NO co-member is left seeing a hidden user online.
+   * Audience is the UNION of the user's live sockets' cached serverIds (H-1b) —
+   * exactly the rooms that could have received the online broadcast.
+   */
+  private async reconcileHiddenUser(userId: string): Promise<void> {
+    let authoritative: boolean;
+    try {
+      authoritative = await this.presenceService.getShowPresence(userId);
+    } catch (err) {
+      this.logger.warn(
+        `reconcileHiddenUser: failed to read show_presence for userId=${userId}`,
+        err,
+      );
+      return;
+    }
+    // Only reconcile the hidden case — a visible user online is the correct state.
+    if (authoritative) return;
+    if (!this.presenceService.isOnline(userId)) return;
+
+    const serverIds = await this.liveServerIdsForUser(userId);
+    const offlinePayload: PresenceOfflinePayload = { userId };
+    for (const serverId of serverIds) {
+      this.server.to(`presence:server:${serverId}`).emit(PRESENCE_EVENTS.OFFLINE, offlinePayload);
+    }
+    this.logger.debug(
+      `reconcileHiddenUser: userId=${userId} is hidden — emitted corrective offline to ${serverIds.length} room(s)`,
+    );
+  }
+
+  /**
+   * UNION of the user's live sockets' cached socket.data.serverIds (wave-80 B-6
+   * F3). This is the exact audience that received the online broadcasts — it
+   * matches the H-1b disconnect invariant (membership changes mid-session must
+   * NOT change the audience). Falls back to the empty set if fetchSockets fails.
+   */
+  private async liveServerIdsForUser(userId: string): Promise<string[]> {
+    const union = new Set<string>();
+    try {
+      const sockets = await this.server.fetchSockets();
+      for (const s of sockets) {
+        if (s.data.userId !== userId) continue;
+        const ids = (s.data.serverIds as string[] | undefined) ?? [];
+        for (const id of ids) union.add(id);
+      }
+    } catch (err) {
+      this.logger.warn(`liveServerIdsForUser: fetchSockets failed for userId=${userId}`, err);
+    }
+    return Array.from(union);
+  }
+
   constructor(
     private readonly presenceService: PresenceService,
     private readonly rbacService: RbacService,
@@ -113,10 +200,18 @@ export class PresenceGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     const userId = socket.data.userId as string;
     this.logger.debug(`Connected: ${socket.id} userId=${userId}`);
 
-    // 1. Resolve and cache displayName server-side (never client-provided)
+    // 1. Resolve and cache displayName + show_presence server-side (never client-provided).
+    //    show_presence is cached on socket.data (mirror of displayName/serverIds) so
+    //    handleDisconnect can gate the offline emit WITHOUT a disconnect-time DB query.
+    //    Defaults: displayName → email-prefix/userId; show_presence → true (visible).
+    let showPresence = true;
     try {
       const [userRow] = await db
-        .select({ display_name: users.display_name, email: users.email })
+        .select({
+          display_name: users.display_name,
+          email: users.email,
+          show_presence: users.show_presence,
+        })
         .from(users)
         .where(eq(users.id, userId))
         .limit(1);
@@ -124,9 +219,11 @@ export class PresenceGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       // Fall back to email prefix if display_name is not set
       const displayName = userRow?.display_name || userRow?.email?.split('@')[0] || userId;
       socket.data.displayName = displayName;
+      showPresence = userRow?.show_presence ?? true;
     } catch {
       socket.data.displayName = userId;
     }
+    socket.data.showPresence = showPresence;
 
     // 2. Ref-count up
     const { wentOnline } = this.presenceService.connect(userId, socket.id);
@@ -152,13 +249,21 @@ export class PresenceGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       await socket.join(`presence:server:${serverId}`);
     }
 
-    // 4. Emit presence:snapshot to the joining socket with co-members' current states
+    // 4. Emit presence:snapshot to the joining socket with co-members' current states.
+    //    Honor (wave-80): EXCLUDE co-members whose show_presence=false. The subject-set
+    //    is the CO-MEMBERS' flags (a batch lookup keyed on co-member ids) — NOT the
+    //    connecting user's flag (a hidden user still SEES visible co-members). So a new
+    //    peer connecting while a co-member is hidden does not see that co-member online.
     try {
       const coMemberIds = await this.presenceService.getCoMemberUserIds(userId);
-      const members: PresenceState[] = coMemberIds.map((uid) => ({
-        userId: uid,
-        status: this.presenceService.isOnline(uid) ? 'online' : 'offline',
-      }));
+      const showPresenceByUser = await this.presenceService.getShowPresenceBatch(coMemberIds);
+      const members: PresenceState[] = coMemberIds.map((uid) => {
+        // A co-member with show_presence=false is reported as offline (hidden) in
+        // the snapshot regardless of their actual in-memory online state.
+        const visible = showPresenceByUser.get(uid) ?? true;
+        const online = visible && this.presenceService.isOnline(uid);
+        return { userId: uid, status: online ? 'online' : 'offline' };
+      });
       const snapshot: PresenceSnapshot = { members };
       socket.emit(PRESENCE_EVENTS.SNAPSHOT, snapshot);
     } catch (err) {
@@ -166,16 +271,30 @@ export class PresenceGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       // Non-fatal: socket stays connected; client can re-connect to retry
     }
 
-    // 5. If first socket for this user, broadcast presence:online to co-member rooms
-    if (wentOnline) {
-      const onlinePayload: PresenceOnlinePayload = { userId };
-      for (const serverId of serverIds) {
-        // socket.to() excludes this socket — co-members only
-        socket.to(`presence:server:${serverId}`).emit(PRESENCE_EVENTS.ONLINE, onlinePayload);
-      }
-      this.logger.debug(
-        `userId=${userId} came online — notified ${serverIds.length} server room(s)`,
-      );
+    // 5. If first socket for this user, broadcast presence:online to co-member rooms.
+    //    Honor (wave-80): a user with show_presence=false is EXCLUDED from the online
+    //    broadcast — co-members never learn they came online.
+    //
+    //    F2 (wave-80 B-6): the online broadcast + a reconciling re-check run under
+    //    the per-user presence lock, serialized against a concurrent toggle's
+    //    onShowPresenceChanged. `showPresence` read at connect (step 1) may be a
+    //    pre-commit value if a toggle-OFF committed mid-connect; after the online
+    //    emit we re-read the authoritative flag and, if the user is now hidden,
+    //    emit a corrective offline so co-members are never left seeing them online.
+    if (wentOnline && showPresence) {
+      await this.withPresenceLock(userId, async () => {
+        const onlinePayload: PresenceOnlinePayload = { userId };
+        for (const serverId of serverIds) {
+          // socket.to() excludes this socket — co-members only
+          socket.to(`presence:server:${serverId}`).emit(PRESENCE_EVENTS.ONLINE, onlinePayload);
+        }
+        this.logger.debug(
+          `userId=${userId} came online — notified ${serverIds.length} server room(s)`,
+        );
+        // Close the connect-vs-toggle window: if a toggle-OFF committed while this
+        // connect was in flight, undo the online we just (possibly wrongly) sent.
+        await this.reconcileHiddenUser(userId);
+      });
     }
   }
 
@@ -210,7 +329,13 @@ export class PresenceGateway implements OnGatewayInit, OnGatewayConnection, OnGa
 
     const { wentOffline } = this.presenceService.disconnect(userId, socket.id);
 
-    if (wentOffline) {
+    // Honor (wave-80): a user with show_presence=false never emitted online, so
+    // they must not emit offline either. The flag is read from socket.data
+    // (cached at connect) — handleDisconnect runs NO DB query. Default true if
+    // somehow unset so existing behaviour is unchanged.
+    const showPresence = (socket.data.showPresence as boolean | undefined) ?? true;
+
+    if (wentOffline && showPresence) {
       // H-1b: Use the serverIds captured at connect time rather than re-querying the DB.
       // If membership changed during the session, the offline event still reaches every
       // co-member who received the online event — no stale "online" states.
@@ -224,6 +349,79 @@ export class PresenceGateway implements OnGatewayInit, OnGatewayConnection, OnGa
         `userId=${userId} went offline — notified ${serverIds.length} server room(s)`,
       );
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // onShowPresenceChanged — PROACTIVE toggle-time presence emit (wave-80)
+  //
+  // The real AC-2 mechanism. Presence is in-memory ref-counted and only emits
+  // on connect/disconnect; the privacy toggle only writes the DB. So a user who
+  // is ALREADY online when they flip show_presence would not update a watching
+  // co-member without this proactive emit.
+  //
+  // Called by PrivacyService AFTER a successful show_presence change:
+  //   on → hidden (visible=false): emit presence:offline for the user
+  //   hidden → on (visible=true):  emit presence:online for the user
+  //
+  // No-op when the user is not currently connected (nothing to update — the
+  // next connect will honor the new flag passively). Uses the same fresh
+  // serverIds resolution as the connect path so the audience matches.
+  // -------------------------------------------------------------------------
+
+  async onShowPresenceChanged(userId: string, visible: boolean): Promise<void> {
+    // Serialize against the connect-time online broadcast (F2). Running the whole
+    // toggle emit under the per-user lock guarantees a raced connect either (a)
+    // ran fully before us — so its socket is in fetchSockets() when we hide, and
+    // our offline reaches its rooms — or (b) runs after us and its own
+    // reconcileHiddenUser() will re-read the now-committed hidden flag and undo
+    // its online. Either ordering leaves NO co-member seeing a hidden user online.
+    return this.withPresenceLock(userId, async () => {
+      // Keep every live socket's cached flag in sync so a subsequent disconnect
+      // gates on the CURRENT value (handleDisconnect reads socket.data.showPresence).
+      // Reuse the same fetchSockets() pass to build the F3 audience union below.
+      const audience = new Set<string>();
+      try {
+        const sockets = await this.server.fetchSockets();
+        for (const s of sockets) {
+          if (s.data.userId !== userId) continue;
+          s.data.showPresence = visible;
+          const ids = (s.data.serverIds as string[] | undefined) ?? [];
+          for (const id of ids) audience.add(id);
+        }
+      } catch (err) {
+        this.logger.warn(`Failed to sync cached show_presence for userId=${userId}`, err);
+      }
+
+      // Only proactively emit if the user is currently online. An offline user
+      // has no "online" state for co-members to update — the flag applies on next
+      // connect via the passive gate.
+      if (!this.presenceService.isOnline(userId)) return;
+
+      // F3 (wave-80 B-6): fan out to the UNION of the user's LIVE sockets' cached
+      // socket.data.serverIds — the audience that actually received the online
+      // broadcasts — NOT a fresh DB query. This matches the H-1b disconnect
+      // invariant: a server joined mid-session (fresh-DB) would get a phantom
+      // offline; a server left mid-session would miss the hide. The cached union
+      // avoids both.
+      const serverIds = Array.from(audience);
+
+      // online/offline payloads are the same shape ({ userId }); only the event
+      // constant and the log verb differ between un-hide and hide.
+      const event = visible ? PRESENCE_EVENTS.ONLINE : PRESENCE_EVENTS.OFFLINE;
+      const payload: PresenceOnlinePayload | PresenceOfflinePayload = { userId };
+      for (const serverId of serverIds) {
+        this.server.to(`presence:server:${serverId}`).emit(event, payload);
+      }
+      this.logger.debug(
+        `userId=${userId} ${visible ? 'un-hid' : 'hid'} presence — broadcast ${event} to ${serverIds.length} room(s)`,
+      );
+
+      // F2: after a hide settles, reconcile against the authoritative flag so a
+      // connect that raced this toggle cannot leave a stale online behind.
+      if (!visible) {
+        await this.reconcileHiddenUser(userId);
+      }
+    });
   }
 
   // -------------------------------------------------------------------------

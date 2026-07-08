@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
+import { PresenceModule } from '../presence/presence.module';
 import { UsersModule } from '../users/users.module';
 import { AccountDataService } from './account-data.service';
 import { AccountDeletionService } from './account-deletion.service';
@@ -8,7 +9,7 @@ import { PrivacyController } from './privacy.controller';
 import { PrivacyService } from './privacy.service';
 
 @Module({
-  imports: [UsersModule, AuthModule],
+  imports: [UsersModule, AuthModule, PresenceModule],
   controllers: [PrivacyController],
   providers: [
     PrivacyService,

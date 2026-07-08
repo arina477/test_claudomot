@@ -138,6 +138,8 @@ function makePresenceService(
     getTypers: () => Array<{ userId: string; displayName: string }>;
     getServerIdsForUser: () => Promise<string[]>;
     getCoMemberUserIds: () => Promise<string[]>;
+    getShowPresence: () => Promise<boolean>;
+    getShowPresenceBatch: () => Promise<Map<string, boolean>>;
   }> = {},
 ): PresenceService {
   return {
@@ -149,6 +151,8 @@ function makePresenceService(
     getTypers: vi.fn().mockReturnValue([]),
     getServerIdsForUser: vi.fn().mockResolvedValue([]),
     getCoMemberUserIds: vi.fn().mockResolvedValue([]),
+    getShowPresence: vi.fn().mockResolvedValue(true),
+    getShowPresenceBatch: vi.fn().mockResolvedValue(new Map<string, boolean>()),
     ...overrides,
   } as unknown as PresenceService;
 }
@@ -727,6 +731,80 @@ describe('PresenceGateway — handleJoinChannel: non-UUID leak-lock (wave-54)', 
 
     expect(socket.emit).not.toHaveBeenCalled();
     expect(socket.join).toHaveBeenCalledWith(`presence:channel:${CHANNEL_ID}`);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: onShowPresenceChanged — F3 audience = live cached serverIds union
+// (wave-80 B-6)
+//
+// The proactive toggle emit must fan out to the UNION of the user's LIVE
+// sockets' cached socket.data.serverIds (the audience that received the online
+// broadcasts, per the H-1b disconnect invariant) — NOT a fresh DB query. A
+// fresh getServerIdsForUser() would send a phantom offline to a server joined
+// mid-session or miss the hide for a server left mid-session.
+// ---------------------------------------------------------------------------
+
+describe('PresenceGateway — onShowPresenceChanged F3 audience (cached serverIds union)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('hides using the UNION of live sockets cached serverIds, NOT a fresh getServerIdsForUser DB query', async () => {
+    const SRV_1 = 'srv-cached-1';
+    const SRV_2 = 'srv-cached-2';
+    const SRV_FRESH_ONLY = 'srv-fresh-db-only'; // would appear only via a fresh DB read
+
+    // getServerIdsForUser returns a DIFFERENT set (fresh-DB) to prove it is unused.
+    const presenceService = makePresenceService({
+      isOnline: vi.fn().mockReturnValue(true),
+      getShowPresence: vi.fn().mockResolvedValue(false), // authoritative: hidden
+      getServerIdsForUser: vi.fn().mockResolvedValue([SRV_FRESH_ONLY]),
+    });
+    const gateway = new PresenceGateway(presenceService, makeRbacService());
+
+    // Two live sockets for USER_ID with cached serverIds [SRV_1] and [SRV_2].
+    const sockOne = { data: { userId: USER_ID, serverIds: [SRV_1] } };
+    const sockTwo = { data: { userId: USER_ID, serverIds: [SRV_2] } };
+    // A co-member's socket that must be ignored for audience purposes.
+    const sockOther = { data: { userId: 'someone-else', serverIds: ['srv-other'] } };
+
+    const emittedRooms: string[] = [];
+    const mockTo = vi.fn().mockImplementation((room: string) => ({
+      emit: () => {
+        emittedRooms.push(room);
+      },
+    }));
+    const mockFetchSockets = vi.fn().mockResolvedValue([sockOne, sockTwo, sockOther]);
+    // biome-ignore lint/suspicious/noExplicitAny: test server mock
+    (gateway as any).server = { fetchSockets: mockFetchSockets, to: mockTo };
+
+    await gateway.onShowPresenceChanged(USER_ID, false);
+
+    // Fan-out target rooms = union of cached serverIds → SRV_1 + SRV_2 only.
+    expect(emittedRooms).toContain(`presence:server:${SRV_1}`);
+    expect(emittedRooms).toContain(`presence:server:${SRV_2}`);
+    // The fresh-DB-only server must NOT be in the audience.
+    expect(emittedRooms).not.toContain(`presence:server:${SRV_FRESH_ONLY}`);
+    // The other user's server must NOT be in the audience.
+    expect(emittedRooms).not.toContain('presence:server:srv-other');
+    // getServerIdsForUser must NOT have been used to build the audience.
+    expect(presenceService.getServerIdsForUser).not.toHaveBeenCalled();
+  });
+
+  it('no-op when the user is not currently online (offline user has no state to update)', async () => {
+    const presenceService = makePresenceService({
+      isOnline: vi.fn().mockReturnValue(false),
+    });
+    const gateway = new PresenceGateway(presenceService, makeRbacService());
+    const mockTo = vi.fn().mockReturnValue({ emit: vi.fn() });
+    const mockFetchSockets = vi.fn().mockResolvedValue([]);
+    // biome-ignore lint/suspicious/noExplicitAny: test server mock
+    (gateway as any).server = { fetchSockets: mockFetchSockets, to: mockTo };
+
+    await gateway.onShowPresenceChanged(USER_ID, false);
+
+    expect(mockTo).not.toHaveBeenCalled();
   });
 });
 

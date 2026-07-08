@@ -9,5 +9,8 @@ import { PresenceService } from './presence.service';
     RbacModule,
   ],
   providers: [PresenceService, PresenceGateway],
+  // Export PresenceGateway so PrivacyService can call onShowPresenceChanged()
+  // (the proactive toggle-time presence emit — wave-80 cross-module wiring).
+  exports: [PresenceGateway],
 })
 export class PresenceModule {}
