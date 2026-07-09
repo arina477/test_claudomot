@@ -679,6 +679,36 @@ export class ServersService {
   // -------------------------------------------------------------------------
 
   /**
+   * Resolve the server's default role id for stamping onto a new membership row.
+   *
+   * Data-hygiene (not security): every server seeds a per-server default role
+   * (all permission flags false) at creation time.  New members are stamped with
+   * that role at write time so we never insert a NULL role_id that a standing
+   * backfill would later have to repair.
+   *
+   * LIMIT 1 is load-bearing: there is NO unique constraint on (server_id,
+   * is_default), so multiple default rows are schema-possible.  The stable
+   * ORDER BY (position ASC, id ASC) makes the pick deterministic.  All default
+   * roles carry identical all-false flags, so the choice is permission-immaterial.
+   *
+   * Zero-default fallback: a legacy server with no is_default role yields null;
+   * callers proceed with role_id: null (same as before this change).  Never throws.
+   */
+  private async resolveDefaultRoleId(
+    tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+    serverId: string,
+  ): Promise<string | null> {
+    const [row] = await tx
+      .select({ id: roles.id })
+      .from(roles)
+      .where(and(eq(roles.server_id, serverId), eq(roles.is_default, true)))
+      .orderBy(asc(roles.position), asc(roles.id))
+      .limit(1);
+
+    return row?.id ?? null;
+  }
+
+  /**
    * Join a public server without an invite code.
    *
    * SECURITY (load-bearing): the server row is read inside a transaction and
@@ -704,10 +734,13 @@ export class ServersService {
         throw new ForbiddenException('Server is not open for public joining');
       }
 
+      // Stamp the server's default role at write time (data-hygiene; null-safe).
+      const roleId = await this.resolveDefaultRoleId(tx, serverId);
+
       // Idempotent INSERT: existing member re-join returns success.
       await tx
         .insert(server_members)
-        .values({ server_id: serverId, user_id: userId })
+        .values({ server_id: serverId, user_id: userId, role_id: roleId })
         .onConflictDoNothing();
 
       return { serverId };
@@ -746,11 +779,14 @@ export class ServersService {
         isAdHoc = false;
       }
 
+      // Stamp the server's default role at write time (data-hygiene; null-safe).
+      const roleId = await this.resolveDefaultRoleId(tx, serverId);
+
       // INSERT server_members ON CONFLICT DO NOTHING RETURNING
       // If the user is already a member, RETURNING yields an empty array.
       const inserted = await tx
         .insert(server_members)
-        .values({ server_id: serverId, user_id: userId })
+        .values({ server_id: serverId, user_id: userId, role_id: roleId })
         .onConflictDoNothing()
         .returning();
 

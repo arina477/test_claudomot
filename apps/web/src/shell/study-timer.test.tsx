@@ -48,7 +48,15 @@
  */
 
 import type { StudyTimer, StudyTimerPresenceEvent, StudyTimerUpdateEvent } from '@studyhall/shared';
-import { act, configure, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  cleanup,
+  configure,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // CI-robust async timeout: the default waitFor/findBy timeout is 1000ms. Under a
@@ -192,14 +200,30 @@ function withRealTimers(fn: () => Promise<void>): () => Promise<void> {
       await fn();
     } finally {
       // Restore fake timers so the outer afterEach can call vi.runOnlyPendingTimers()
-      // safely — it expects a fake-timer environment.
-      vi.useFakeTimers({ shouldAdvanceTime: true });
-      vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+      // safely — it expects a fake-timer environment. Guarded so a throw in the
+      // restore itself can never mask the original test failure (the finally must
+      // not itself become the reported error).
+      try {
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+        vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+      } catch {
+        // If fake-timer restoration fails, leave real timers active; afterEach's
+        // vi.runOnlyPendingTimers() is guarded on vi.isFakeTimers() so it won't throw.
+      }
     }
   };
 }
 
-describe('StudyTimerWidget', () => {
+// Per-test timeout MUST exceed asyncUtilTimeout (5000ms, set at module scope above).
+// A withRealTimers test whose waitFor/findBy legitimately polls up to ~5s under a
+// CPU-saturated CI runner would otherwise hit the default 5000ms per-test timeout
+// at the same instant the poll would resolve — aborting the test mid-body, before its
+// finally restores fake timers, which then poisons the next test's teardown. Giving the
+// whole suite 15000ms of per-test headroom keeps the invariant test-timeout > asyncUtilTimeout,
+// so a slow-but-valid poll always finishes before the test is killed. Harmless locally
+// (assertions still resolve immediately). Applied at the describe level (the `timeout`
+// TestOption is inherited by every test in this suite) so it covers this file uniformly.
+describe('StudyTimerWidget', { timeout: 15000 }, () => {
   beforeEach(() => {
     // Fake timers control the widget's live 1-second countdown setInterval
     // (StudyTimerWidget.tsx — recomputes displaySeconds against Date.now() on
@@ -222,9 +246,20 @@ describe('StudyTimerWidget', () => {
 
   afterEach(() => {
     // Flush any pending timers then restore real timers so the interval handle
-    // never leaks across files.
-    vi.runOnlyPendingTimers();
+    // never leaks across files. Guard runOnlyPendingTimers on vi.isFakeTimers():
+    // if a withRealTimers test aborted mid-body (e.g. hit the per-test timeout
+    // before its finally could restore fake timers), fake timers are NOT active
+    // here — calling runOnlyPendingTimers() would throw "Timers are not mocked",
+    // turning one slow test into a cascading failure that leaks its un-unmounted
+    // render into the next test. Only flush when fake timers are actually active.
+    if (vi.isFakeTimers()) {
+      vi.runOnlyPendingTimers();
+    }
     vi.useRealTimers();
+    // Always unmount any rendered tree, even if the test body aborted before its
+    // own cleanup — prevents a leaked study-timer-widget from making the next
+    // test's getByTestId find "multiple elements".
+    cleanup();
   });
 
   // ── Wave-49 original tests (1-17) ─────────────────────────────────────────
