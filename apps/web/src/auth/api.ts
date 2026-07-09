@@ -74,6 +74,7 @@ import type {
   ValidatedAttachment,
 } from '@studyhall/shared';
 
+import { withRefreshRetry } from './refreshAndRetry';
 import { retryOn429 } from './retryOn429';
 
 const BASE = import.meta.env.VITE_API_ORIGIN ?? '';
@@ -124,7 +125,12 @@ function parseRetryAfterMs(header: string | null): number | undefined {
   return undefined;
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+/**
+ * Perform a single authed fetch and throw a typed HttpError on non-2xx.
+ * Extracted as a factory so request()/requestNoContent() can re-run it on retry.
+ * Returns the parsed Response so the caller decides json vs void.
+ */
+async function doFetch(path: string, init?: RequestInit): Promise<Response> {
   const res = await fetch(`${BASE}${path}`, {
     credentials: 'include',
     headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
@@ -138,23 +144,25 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new HttpError(res.status, `${res.status} ${res.statusText}: ${body}`, retryAfterMs);
   }
 
+  return res;
+}
+
+/**
+ * Authed JSON request with transient-401 refresh-and-retry (wave-82 B-3).
+ * On a 401 with a still-valid refresh token, a single shared refresh runs and
+ * the request retries once; the caller receives the successful body with no
+ * bounce. A genuine 401 (refresh expired/revoked) propagates as HttpError(401).
+ * A burst of concurrent 401s collapses to ONE shared refresh (see
+ * refreshAndRetry.ts). 429/offline behavior is unchanged.
+ */
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await withRefreshRetry(() => doFetch(path, init));
   return res.json() as Promise<T>;
 }
 
 /** Like `request` but for 204 No Content responses — returns void, throws on non-2xx. */
 async function requestNoContent(path: string, init?: RequestInit): Promise<void> {
-  const res = await fetch(`${BASE}${path}`, {
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
-    ...init,
-  });
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    const retryAfterMs =
-      res.status === 429 ? parseRetryAfterMs(res.headers.get('Retry-After')) : undefined;
-    throw new HttpError(res.status, `${res.status} ${res.statusText}: ${body}`, retryAfterMs);
-  }
+  await withRefreshRetry(() => doFetch(path, init));
 }
 
 export const api = {
