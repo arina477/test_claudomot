@@ -4,9 +4,9 @@
 | Stage | Deliverable | Status | Notes |
 |---|---|---|---|
 | P-0 | ... | done | discovery + reframe (bug root-caused) |
-| P-1 | stages/P-1-decompose.md | pending | |
-| P-2 | stages/P-2-spec.md | pending | |
-| P-3 | stages/P-3-plan.md | pending | |
+| P-1 | ... | done | |
+| P-2 | ... | done | |
+| P-3 | ... | done | |
 | P-4 | stages/P-4-gemini-review.md | pending | |
 ## Block-specific context
 - **Wave topic:** DM auth-guard transient-401 bounce (founder bug-fix phase; roadmap complete)
