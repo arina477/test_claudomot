@@ -5,7 +5,7 @@ Topic: AssignmentCard optimistic toggle revert (restore captured prior state + e
 - [x] P-1 Decompose (single-spec PROCEED; floor waived; no design gap)
 - [x] P-2 Spec (snapshot-restore + onAnnounce error)
 - [x] P-3 Plan (AssignmentCard handleToggle; react-specialist)
-- [ ] P-4 Gate
+- [x] P-4 Gate (APPROVED; AC3 visible-toast + existing-test corrections folded)
 ## D — Design
 - [x] D-block SKIPPED (design_gap_flag false — reuses existing Toast + onAnnounce)
 ## B — Build
