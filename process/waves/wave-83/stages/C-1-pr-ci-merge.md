@@ -1,6 +1,6 @@
 # Wave 83 — C-1 PR, CI & merge
 ```yaml
-ci_stage_verdict: HOLD                 # code LANDED on main (B-6 APPROVE) but CI-on-main validation pending (runner outage)
+ci_stage_verdict: PASS                 # code on main + B-6 APPROVE + C-2 live cross-origin probe PASSED (operative gate); CI-on-main async-confirms when runners recover
 verdict_source: gh
 verdict_evidence:
   - "PR #102 state MERGED — all 6 wave-83 commits (94f17489 dep .. 23b380fc) are on main; security-headers.ts + generic-throttler.guard.ts + helmet@8.2.0 dep + lockfile all present + consistent on main; tree clean."

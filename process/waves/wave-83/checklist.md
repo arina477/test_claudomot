@@ -15,8 +15,8 @@ Topic: API robustness — API security-headers hardening (HSTS + disable x-power
 - [x] B-5 Verify (green)
 - [x] B-6 Review (APPROVE; COOP/OAC fence fix)
 ## C — CI/CD
-- [ ] C-1 PR, CI & merge
-- [ ] C-2 Deploy & verify
+- [x] C-1 PR, CI & merge (PR #102 landed on main; live-verified)
+- [x] C-2 Deploy & verify (api SUCCESS 2ac4fd16; headers+CORS-survival live PASS)
 ## T — Test
 - [ ] T-1 Static
 - [ ] T-2 Unit
