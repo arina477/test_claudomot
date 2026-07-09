@@ -1,15 +1,13 @@
 # Wave 85 — Stage completion ledger
-Topic: Assignments — optimistic toggle revert should restore captured prior state (+ user-facing failure toast)
-Seed task: 3ad35a42-efe5-4e9d-8f90-d22d6fe345e8
-Bundled siblings: (none — single-task bundle)
-Active milestone: none (roadmap COMPLETE; bug-fix phase, milestone-less by design per waves 81–84)
-Claimed task ids: [3ad35a42-efe5-4e9d-8f90-d22d6fe345e8]
+Topic: AssignmentCard optimistic toggle revert (restore captured prior state + error toast)
 ## P — Product
-- [ ] P-0 Frame
+- [x] P-0 Frame (PROCEED; snapshot-restore + toast; consistency spun out)
 - [ ] P-1 Decompose
 - [ ] P-2 Spec
 - [ ] P-3 Plan
 - [ ] P-4 Gate
+## D — Design
+- [ ] (conditional — set at P-1)
 ## B — Build
 - [ ] B-0 Branch & schema
 - [ ] B-1 Contracts
@@ -21,7 +19,6 @@ Claimed task ids: [3ad35a42-efe5-4e9d-8f90-d22d6fe345e8]
 ## C — CI/CD
 - [ ] C-1 PR, CI & merge
 - [ ] C-2 Deploy & verify
-- [ ] C-3 Canary
 ## T — Test
 - [ ] T-1 Static
 - [ ] T-2 Unit
