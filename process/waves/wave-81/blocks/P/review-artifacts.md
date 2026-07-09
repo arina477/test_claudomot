@@ -3,7 +3,7 @@
 **Block:** P (Product)
 **Wave topic:** Fix unscrollable /settings/profile (+ /settings/privacy) — standalone full-page routes clipped by the locked-body overflow:hidden (root-caused).
 **Block exit gate:** P-4
-**Status:** in-progress
+**Status:** gate-passed
 
 ## Stage deliverables
 | Stage | Deliverable file | Status | Notes |

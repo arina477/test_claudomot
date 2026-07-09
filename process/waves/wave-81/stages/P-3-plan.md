@@ -31,3 +31,9 @@ react-specialist (all frontend). Present. No D-block, no B-1/B-2 (skipped).
 2. Specialist assigned (react-specialist). ✓ 3. No file in 2 batches. ✓ 4. design_gap false. ✓ 5. Deltas + alternatives (unlock-body rejected; per-page-ad-hoc considered). ✓ 6. No API/data (n/a). ✓ 7. No deps. ✓ 8. No SDK. ✓
 
 **Binding refinements carried:** body{overflow:hidden} untouched; h-dvh (not h-screen); 6px DS scrollbar; standalone routes only (not /app /discover); LIVE scroll-to-bottom on /settings/profile (T-5).
+
+## P-4 Phase-2 binding notes (fold into B-3)
+- **FullPageScroll MUST NOT establish a containing block:** use ONLY `h-dvh overflow-y-auto` (+ DS scrollbar class) — NO `transform`/`filter`/`contain`/`will-change`. A containing block would reparent LandingPage's `fixed top-0` nav (landing.html:181 / LandingPage.tsx:16) to the wrapper. (karen + jenny.)
+- **jenny validation:** the shipped design mockups (settings-profile.html:278 `main h-[100dvh] overflow-y-auto`; settings-privacy.html:359; body overflow-hidden + scrollable main) already model the body-locked/inner-scroll pattern — the built pages DRIFTED from design intent; this fix RESTORES it. Match the mockup's h-[100dvh]/overflow-y-auto.
+- **B-3 per-route audit + LIVE check must include LandingPage** (fixed nav + min-h-screen hero) not just /settings/profile.
+- **T-9:** forward-add "scrolls internally" to journey-map pages 1/2/3/15/16. **L-1 (optional):** log the body{overflow:hidden} app-shell lock in product-decisions so it isn't re-litigated.
