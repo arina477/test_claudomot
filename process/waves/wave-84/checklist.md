@@ -28,8 +28,8 @@ Topic: Harden session-token storage (httpOnly cookies vs JS-readable header mode
 - [x] T-8 Security (LIVE PASS — 0 CSP violations, header+900s TTL verified)
 - [x] T-9 Journey (APPROVED; regen skipped)
 ## V — Verify
-- [ ] V-1 Reviews
-- [ ] V-2 Triage
+- [x] V-1 Reviews (karen + jenny APPROVE)
+- [x] V-2 Triage (0 blocking)
 - [ ] V-3 Fast-fix gate
 ## L — Learn
 - [ ] L-1 Docs
