@@ -51,6 +51,7 @@ import {
   dm_messages,
   dm_participants,
   server_members,
+  user_encryption_keys,
   userBlocks,
   users,
 } from '../db/schema/index';
@@ -646,6 +647,23 @@ export class DmService {
     // path (backward-compatible / keyless-peer fallback) content is stored and
     // the three envelope columns stay NULL.
     const isEncrypted = input.ciphertext !== undefined;
+
+    // Defense-in-depth (encrypted path only): reject a send whose senderKeyRef
+    // does not match the sender's registered public key. Fail OPEN — a sender
+    // with NO registered key row is allowed through (covers keyless senders and
+    // the register-then-send race). Server-blind: compares public-key strings
+    // only, never touching ciphertext or any private material.
+    if (isEncrypted) {
+      const [registeredKey] = await db
+        .select({ publicKey: user_encryption_keys.public_key })
+        .from(user_encryption_keys)
+        .where(eq(user_encryption_keys.user_id, callerId))
+        .limit(1);
+      if (registeredKey && registeredKey.publicKey !== input.senderKeyRef) {
+        throw new BadRequestException('senderKeyRef does not match your registered encryption key');
+      }
+    }
+
     const insertValues = isEncrypted
       ? {
           conversation_id: conversationId,
