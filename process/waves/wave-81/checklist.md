@@ -43,7 +43,7 @@ VERIFY:
 - [x] V-3 Fast-fix loop (or close)
 
 LEARN:
-- [ ] L-1 Docs
+- [x] L-1 Docs (changelog #100 Fixed entry; milestone-delta SKIP milestone_id NULL; README skip)
 - [ ] L-2 Distill
 
 NEXT:

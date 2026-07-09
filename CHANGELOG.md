@@ -141,6 +141,9 @@ All notable changes to StudyHall are documented here. Format follows
 - Opening your direct messages no longer trips a "too many requests" error during normal use, and if a request is briefly rate-limited it now recovers on its own instead of leaving a gap until you refresh. (#76)
 - Discovery cards now show each community's real member count instead of always reading zero, so you can tell how active a study server is before joining. (#83)
 - The live app no longer white-screens on load: a shared-code packaging regression left browser-only build output that never ran, blanking every page — the shared package now ships in the right format so the app boots and mounts again. (#89)
+- Settings › Profile now scrolls fully: content below the fold — including the academic-identity fields and Save button — was previously unreachable, and the fix also restores full scrolling on Settings › Privacy and the public Privacy, Terms, and Landing pages. (#100)
+  - If a page still doesn't scroll on your first visit right after the update, one refresh fixes it — StudyHall auto-updates in the background.
+  - Also stabilized a test that would intermittently stall and block releases, so changes now ship reliably.
 
 ### Security
 
