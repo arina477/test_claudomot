@@ -11,7 +11,7 @@
 | P-0 | stages/P-0-frame.md | done | seed swapped (ParseUUIDPipe evaporated) -> security-headers; PROCEED |
 | P-1 | stages/P-1-decompose.md | done | single-spec, PROCEED (floor waived per PRODUCT-5); design_gap_flag false |
 | P-2 | stages/P-2-spec.md | done | spec in task 875b97f4 description; 9 ACs |
-| P-3 | stages/P-3-plan.md | pending | |
+| P-3 | stages/P-3-plan.md | done | config-only; B-3 -> supertokens-integration; helmet safe-headers + throttler 429 |
 | P-4 | stages/P-4-gate.md | pending | |
 
 ## Block-specific context

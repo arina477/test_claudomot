@@ -4,7 +4,7 @@ Topic: API robustness — API security-headers hardening (HSTS + disable x-power
 - [x] P-0 Frame (seed swap: dropped evaporated ParseUUIDPipe, re-seeded security-headers; PROCEED)
 - [x] P-1 Decompose (single-spec, PROCEED; floor waived; no design gap)
 - [x] P-2 Spec (9 falsifiable ACs; spec in task description)
-- [ ] P-3 Plan
+- [x] P-3 Plan (helmet safe-headers + throttler override; B-3 supertokens-integration)
 - [ ] P-4 Gate
 ## B — Build
 - [ ] B-0 Branch & schema
