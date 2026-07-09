@@ -13,7 +13,7 @@ Topic: Auth hardening — make SuperTokens anti-CSRF posture explicit + regressi
 - [x] B-3 Frontend (skipped)
 - [x] B-4 Wire
 - [x] B-5 Verify (green)
-- [ ] B-6 Review
+- [x] B-6 Review (APPROVE; CSRF-guard strengthened)
 ## C — CI/CD
 - [ ] C-1 PR, CI & merge
 - [ ] C-2 Deploy & verify
