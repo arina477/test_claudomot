@@ -16,15 +16,15 @@ Topic: Auth hardening — make SuperTokens anti-CSRF posture explicit + regressi
 - [x] B-6 Review (APPROVE; CSRF-guard strengthened)
 ## C — CI/CD
 - [x] C-1 PR, CI & merge (PR #106 merged 83c308a6 — squash to main)
-- [ ] C-2 Deploy & verify
+- [x] C-2 Deploy & verify (api 0f38d1fe @a9556248, health 200, auth 401)
 ## T — Test
-- [ ] T-1 Static
-- [ ] T-2 Unit
-- [ ] T-3 Contract
-- [ ] T-4 Integration
-- [ ] T-5 E2E
-- [ ] T-6 Layout
-- [ ] T-7 Perf
+- [x] T-1 Static (CI green)
+- [x] T-2 Unit (821 + csrf 4/4)
+- [x] T-3 Contract (skipped)
+- [x] T-4 Integration (csrf-posture tripwire)
+- [x] T-5 E2E (skipped — config-only)
+- [x] T-6 Layout (skipped)
+- [x] T-7 Perf (skipped)
 - [ ] T-8 Security
 - [ ] T-9 Journey
 ## V — Verify
