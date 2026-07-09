@@ -28,7 +28,7 @@ Topic: AssignmentCard optimistic toggle revert (restore captured prior state + e
 - [x] T-6 Layout (skipped)
 - [x] T-7 Perf (skipped)
 - [x] T-8 Security (skipped — no auth)
-- [ ] T-9 Journey
+- [x] T-9 Journey (gate APPROVED; journey regen SKIPPED — no new surface)
 ## V — Verify
 - [ ] V-1 Reviews
 - [ ] V-2 Triage
