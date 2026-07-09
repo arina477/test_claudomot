@@ -16,7 +16,7 @@ Topic: Harden session-token storage (httpOnly cookies vs JS-readable header mode
 - [x] B-6 Review (APPROVE; CSP origin gaps fixed)
 ## C — CI/CD
 - [x] C-1 PR, CI & merge (PR #103 merged d1f99f9d, CI green; ci.yml VITE-env fix)
-- [ ] C-2 Deploy & verify
+- [x] C-2 Deploy & verify (api+web+core @5cb5e789; CSP origins live; TTL=900)
 ## T — Test
 - [ ] T-1 Static
 - [ ] T-2 Unit
