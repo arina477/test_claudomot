@@ -65,7 +65,7 @@ jobs:
         run: pnpm build
         env:
           VITE_API_ORIGIN: https://api-production-b93e.up.railway.app
-          VITE_STORAGE_ORIGIN: https://fly.storage.tigris.dev
+          VITE_STORAGE_ORIGIN: https://t3.storageapi.dev
           VITE_LIVEKIT_URL: wss://studyhall.livekit.cloud
 
   secret-scan:
@@ -98,7 +98,7 @@ jobs:
         run: pnpm build
         env:
           VITE_API_ORIGIN: https://api-production-b93e.up.railway.app
-          VITE_STORAGE_ORIGIN: https://fly.storage.tigris.dev
+          VITE_STORAGE_ORIGIN: https://t3.storageapi.dev
           VITE_LIVEKIT_URL: wss://studyhall.livekit.cloud
       - name: Start compiled API in background
         run: node apps/api/dist/src/main.js &> /tmp/api-boot.log &

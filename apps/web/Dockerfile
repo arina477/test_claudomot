@@ -22,6 +22,19 @@ RUN pnpm install --frozen-lockfile
 ARG VITE_API_ORIGIN
 ENV VITE_API_ORIGIN=$VITE_API_ORIGIN
 
+# VITE_STORAGE_ORIGIN + VITE_LIVEKIT_URL are read at build time by src/csp.ts to
+# build the CSP <meta> connect-src/img-src/media-src. Same Railway ARG-matching
+# rule as above: declaring the ARG here + ENV below threads the `web` service's
+# variable into the Vite build. Missing them silently drops the Tigris storage
+# + LiveKit origins from the CSP → attachments/avatars + voice get CSP-blocked
+# in prod. Set both on the Railway `web` service (Variables tab):
+#   VITE_STORAGE_ORIGIN=https://t3.storageapi.dev  (the api's AWS_ENDPOINT_URL host)
+#   VITE_LIVEKIT_URL=wss://<your>.livekit.cloud     (the api's LIVEKIT_URL)
+ARG VITE_STORAGE_ORIGIN
+ENV VITE_STORAGE_ORIGIN=$VITE_STORAGE_ORIGIN
+ARG VITE_LIVEKIT_URL
+ENV VITE_LIVEKIT_URL=$VITE_LIVEKIT_URL
+
 # Build the SPA (turbo: shared -> web). Emits apps/web/dist (static assets).
 RUN pnpm build
 

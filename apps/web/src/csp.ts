@@ -50,7 +50,7 @@
  * emitted when its env var is set at build time).
  */
 export interface CspExtraOrigins {
-  /** Tigris object-storage public origin, e.g. `https://fly.storage.tigris.dev`
+  /** Tigris object-storage public origin, e.g. `https://t3.storageapi.dev`
    *  (VITE_STORAGE_ORIGIN). Added to BOTH img-src and connect-src. */
   storageOrigin?: string | undefined;
   /** LiveKit signaling wss URL, e.g. `wss://studyhall.livekit.cloud`
