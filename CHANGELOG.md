@@ -125,6 +125,7 @@ All notable changes to StudyHall are documented here. Format follows
 - Hardened how your sign-in is kept secure: sign-in tokens now expire faster and refresh automatically, and a strict content-security rule limits what the app is allowed to talk to — while keeping sign-in reliable across every browser, including Safari. No change to how you log in. (#103, #104)
 - Made the API's cross-site-request-forgery protection explicit and added a permanent test guarding it, so a forged request carrying only a cookie is provably rejected and the security posture can't silently regress. No change to how you log in. (#106)
 - Joining a study server now assigns the server's default member role right away, instead of leaving it unset until a background cleanup filled it in. No change for the member. (#107)
+- Private direct messages now get an extra server-side check that the sender is using their own registered encryption key, so a mismatched key is refused before the message is stored. No change to how you send a message. (#109)
 
 ### Fixed
 
