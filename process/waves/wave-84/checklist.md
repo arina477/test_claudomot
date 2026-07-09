@@ -32,8 +32,8 @@ Topic: Harden session-token storage (httpOnly cookies vs JS-readable header mode
 - [x] V-2 Triage (0 blocking)
 - [x] V-3 Fast-fix gate (head-verifier APPROVED)
 ## L — Learn
-- [ ] L-1 Docs
-- [ ] L-2 Distill
+- [x] L-1 Docs (CHANGELOG Changed #103 #104; milestone SKIP; README SKIP; BOARD table)
+- [x] L-2 Distill (task 9535895f done; 3 obs; 1 promotion → BUILD-PRINCIPLES rule 19)
 ## N — Next
 - [ ] N-1 Survey & triggers
 - [ ] N-2 Seed

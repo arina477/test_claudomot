@@ -122,6 +122,7 @@ All notable changes to StudyHall are documented here. Format follows
   - A clear indicator shows when a conversation is genuinely encrypted; if a message can't be encrypted it's shown honestly as not encrypted, never with a false "secure" badge.
   - This is an honest first version: messages are encrypted only when both people have set up encryption, and encrypted history doesn't yet sync across your devices.
 - Hardened the API with standard security response headers and stopped an internal error detail from leaking when a request is rate-limited. (#102)
+- Hardened how your sign-in is kept secure: sign-in tokens now expire faster and refresh automatically, and a strict content-security rule limits what the app is allowed to talk to — while keeping sign-in reliable across every browser, including Safari. No change to how you log in. (#103, #104)
 
 ### Fixed
 

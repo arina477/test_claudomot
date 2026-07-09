@@ -120,3 +120,6 @@ Promoted at L-2 Distill from `process/waves/wave-<N>/blocks/L/observations.md` b
 
 18. Confirm a reused authz or visibility seam gates the exact setting the new surface needs, not a sibling setting.
    Why: A seam gating a sibling setting silently under-gates the new surface and leaks.
+
+19. At B-6 Phase-2, enumerate a security policy's full outbound surface, not just author-visible entries.
+   Why: Omitted origins fail silently on server or feature paths, uncaught by tests.
