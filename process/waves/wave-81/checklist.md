@@ -14,9 +14,9 @@ DESIGN (skip block if non-UI wave):
 - [ ] D-3 Review & adopt
 
 BUILD:
-- [ ] B-0 Branch & schema
-- [ ] B-1 Contracts
-- [ ] B-2 Backend
+- [x] B-0 Branch & schema (no schema)
+- [x] B-1 Contracts (skipped)
+- [x] B-2 Backend (skipped)
 - [ ] B-3 Frontend
 - [ ] B-4 Wiring
 - [ ] B-5 Verify
