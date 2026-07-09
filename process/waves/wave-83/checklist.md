@@ -30,7 +30,7 @@ Topic: API robustness — API security-headers hardening (HSTS + disable x-power
 ## V — Verify
 - [x] V-1 Reviews (karen + jenny APPROVE)
 - [x] V-2 Triage (0 blocking; PWA icon already ticketed)
-- [ ] V-3 Fast-fix gate
+- [x] V-3 Fast-fix gate (head-verifier APPROVED)
 ## L — Learn
 - [ ] L-1 Docs
 - [ ] L-2 Distill
