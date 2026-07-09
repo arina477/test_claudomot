@@ -23,7 +23,7 @@ Skip reason: no user-facing CLI command/flag, no new env var, no install-step ch
 
 FS docs committed on branch wave-81-fullpage-scroll and pushed to main:
 `docs: L-1 wave-81 closeout (changelog, scroll fix)`
-Commit SHA: __COMMIT_SHA__
+Commit SHA: abdff6e (pushed to main)
 
 ---
 
