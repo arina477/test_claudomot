@@ -38,7 +38,7 @@ TEST:
 - [x] T-9 Journey (APPROVED, F-T5-1 self-healed)
 
 VERIFY:
-- [ ] V-1 Independent reviews (Karen + jenny, parallel)
+- [x] V-1 Reviews (karen APPROVE, jenny APPROVE)
 - [ ] V-2 Triage
 - [ ] V-3 Fast-fix loop (or close)
 
