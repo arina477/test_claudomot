@@ -15,7 +15,7 @@ Topic: AssignmentCard optimistic toggle revert (restore captured prior state + e
 - [x] B-3 Frontend (snapshot-restore + toast)
 - [x] B-4 Wire
 - [x] B-5 Verify (green)
-- [ ] B-6 Review
+- [x] B-6 Review (APPROVE; F1 toast-timer fixed)
 ## C — CI/CD
 - [ ] C-1 PR, CI & merge
 - [ ] C-2 Deploy & verify
