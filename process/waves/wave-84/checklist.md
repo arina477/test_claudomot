@@ -3,7 +3,7 @@ Topic: Harden session-token storage (httpOnly cookies vs JS-readable header mode
 ## P — Product
 - [x] P-0 Frame (BOARD 7/7 Option B: header + compensating XSS controls)
 - [x] P-1 Decompose (single-spec PROCEED; floor waived; Option B scope)
-- [ ] P-2 Spec
+- [x] P-2 Spec (6 ACs; CSP load-bearing)
 - [ ] P-3 Plan
 - [ ] P-4 Gate
 ## B — Build
