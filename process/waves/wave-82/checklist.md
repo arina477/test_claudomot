@@ -24,7 +24,7 @@ BUILD:
 
 CI/CD:
 - [x] C-1 PR, CI & merge (PR #101, merged 30bad914)
-- [ ] C-2 Deploy & verify (canary armed when real users > 1000)
+- [x] C-2 Deploy & verify (web SUCCESS 9a66622e, 200 live)
 
 TEST:
 - [ ] T-1 Static
