@@ -7,10 +7,10 @@
 |---|---|---|---|
 | B-0 | ... | done | branch + helmet@8.2.0; schema skip |
 | B-1 | ... | skipped | no contract surface |
-| B-2 | stages/B-2-backend.md | pending | supertokens-integration: helmet + throttler 429 + tests |
+| B-2 | ... | done | helmet + GenericThrottlerGuard + 10 tests (8a1129a5) |
 | B-3 | ... | skipped | no UI |
-| B-4 | stages/B-4-wiring.md | pending | typecheck + boot |
-| B-5 | stages/B-5-verify.md | pending | CI-identical |
+| B-4 | ... | done | self-wired; typecheck clean |
+| B-5 | ... | done | unit 820 + 10 new, typecheck, biome green |
 | B-6 | stages/B-6-review.md | pending | head-builder + /review |
 
 ## Block-specific context
