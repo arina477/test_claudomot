@@ -1,16 +1,28 @@
 /**
- * AuthGuard.test.tsx — transient-401 bounce guard (wave-82 B-3, mechanism 3).
+ * AuthGuard.test.tsx — transient-401 bounce guard (wave-82 B-3, corrected B-6).
  *
  * The real DM-after-login bounce is SessionAuth reacting to the fetch
  * interceptor's UNAUTHORISED event and redirecting — even when the refresh token
- * is still valid (a concurrent-refresh race on /app mount). AuthGuard now passes
- * an `onSessionExpired` handler that attempts a single shared refresh first and
- * only redirects on a genuine failure.
+ * is still valid (a concurrent-refresh race on /app mount). The interceptor fires
+ * that event from its NOT_EXISTS short-circuit: `st-last-access-token-update` has
+ * been written but the non-atomic `frontToken` write has NOT yet landed. In that
+ * exact condition `attemptRefreshingSession()` re-enters the SAME short-circuit
+ * and returns FALSE with no network call — so gating the no-bounce decision on
+ * its boolean is a no-op for the production-dominant case.
+ *
+ * AuthGuard now SETTLES-then-RECHECKS: it awaits the shared refresh, yields a
+ * bounded number of ticks for the frontToken write to land, and re-checks
+ * `Session.doesSessionExist()` DIRECTLY (the source of truth) — redirecting only
+ * if the session is still absent after the bounded settle.
  *
  * These tests capture the handler AuthGuard hands to SessionAuth and assert:
- *   - transient expiry (refresh succeeds + session still exists) → NO redirect.
- *   - genuine logout (refresh returns false) → redirect preserved.
- *   - refresh true but session gone → redirect (fail-safe).
+ *   - DOMINANT PATH: refresh returns FALSE and doesSessionExist is false, but
+ *     after a settle tick doesSessionExist becomes true → NO redirect. This is
+ *     the NOT_EXISTS-then-settle branch the old test missed.
+ *   - genuine logout (session stays absent through the whole settle) → redirect.
+ *   - bounded / no-infinite-loop (session never returns → redirects after the
+ *     bounded ticks, does not hang).
+ *   - fast path (session already live) → NO redirect, NO refresh needed.
  */
 
 import { render } from '@testing-library/react';
@@ -68,37 +80,72 @@ function renderGuard() {
   return capturedOnSessionExpired as () => Promise<void>;
 }
 
-describe('AuthGuard onSessionExpired — transient bounce guard', () => {
-  it('does NOT redirect when a transient expiry is healed by a successful refresh', async () => {
-    mockAttemptRefresh.mockResolvedValue(true);
+describe('AuthGuard onSessionExpired — settle-then-recheck bounce guard', () => {
+  it('DOMINANT PATH: refresh returns FALSE but the session settles true after a tick → NO redirect', async () => {
+    // This is the production-dominant NOT_EXISTS case: attemptRefreshingSession
+    // re-enters the same NOT_EXISTS short-circuit and returns false with no
+    // network call, while doesSessionExist is initially false because the
+    // non-atomic frontToken write has not landed yet. After the settle tick the
+    // write completes and doesSessionExist flips to true → the guard must NOT
+    // gate on the boolean and must NOT bounce.
+    mockAttemptRefresh.mockResolvedValue(false);
+    // false on the fast-path + first post-refresh check, then true once the
+    // frontToken write settles.
+    mockDoesSessionExist
+      .mockResolvedValueOnce(false) // fast-path pre-refresh check
+      .mockResolvedValueOnce(false) // first post-refresh recheck (write not landed)
+      .mockResolvedValue(true); // frontToken write settled
+
+    const handler = renderGuard();
+    await handler();
+
+    // Redirect suppressed — the boolean-false refresh did NOT trigger a bounce.
+    expect(mockRedirectToAuth).not.toHaveBeenCalled();
+    // The direct doesSessionExist source-of-truth was consulted, not the boolean.
+    expect(mockDoesSessionExist).toHaveBeenCalled();
+  });
+
+  it('fast path: NO redirect (and no wait) when the session is already live', async () => {
     mockDoesSessionExist.mockResolvedValue(true);
 
     const handler = renderGuard();
     await handler();
 
-    expect(mockAttemptRefresh).toHaveBeenCalledTimes(1);
-    // Session restored — the user stays put, no bounce.
+    // Session already present on the very first check — no bounce, no refresh
+    // round-trip needed.
     expect(mockRedirectToAuth).not.toHaveBeenCalled();
+    expect(mockAttemptRefresh).not.toHaveBeenCalled();
   });
 
-  it('redirects on a genuine logout when refresh returns false', async () => {
+  it('genuine logout: session stays absent through the whole settle → redirect DOES fire', async () => {
+    // A real revoke — the refresh cannot restore a session and doesSessionExist
+    // stays false through every recheck. The settle-recheck must NOT swallow this.
     mockAttemptRefresh.mockResolvedValue(false);
-
-    const handler = renderGuard();
-    await handler();
-
-    expect(mockAttemptRefresh).toHaveBeenCalledTimes(1);
-    // No usable refresh token — the no-session redirect is preserved.
-    expect(mockRedirectToAuth).toHaveBeenCalledTimes(1);
-  });
-
-  it('redirects (fail-safe) when refresh succeeds but no session exists afterward', async () => {
-    mockAttemptRefresh.mockResolvedValue(true);
     mockDoesSessionExist.mockResolvedValue(false);
 
     const handler = renderGuard();
     await handler();
 
+    // Bounded settle exhausted with no session → the no-session redirect fires.
     expect(mockRedirectToAuth).toHaveBeenCalledTimes(1);
+    expect(mockRedirectToAuth).toHaveBeenCalledWith({ redirectBack: true });
+  });
+
+  it('bounded / no-infinite-loop: never-returning session redirects after finite ticks (does not hang)', async () => {
+    // doesSessionExist never becomes true. The handler must terminate (bounded
+    // ticks) and redirect exactly once — proving no unbounded spin.
+    mockAttemptRefresh.mockResolvedValue(false);
+    mockDoesSessionExist.mockResolvedValue(false);
+
+    const handler = renderGuard();
+    // If this awaited handler ever hung, the test would time out — passing here
+    // proves the settle loop is bounded.
+    await handler();
+
+    expect(mockRedirectToAuth).toHaveBeenCalledTimes(1);
+    // Finite number of source-of-truth checks (fast-path + bounded rechecks +
+    // final check), never unbounded.
+    expect(mockDoesSessionExist.mock.calls.length).toBeGreaterThan(0);
+    expect(mockDoesSessionExist.mock.calls.length).toBeLessThanOrEqual(8);
   });
 });
