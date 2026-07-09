@@ -13,9 +13,14 @@ RUN corepack enable
 COPY . .
 
 RUN pnpm install --frozen-lockfile
-# Mirror the green CI build exactly (turbo: shared -> api -> web) to avoid
-# any CI-vs-deploy divergence.
-RUN pnpm build
+# Build ONLY @studyhall/api and its workspace deps (shared) — NOT web.
+# `--filter=@studyhall/api...` (trailing `...`) selects api + everything it
+# depends on, so turbo runs shared -> api and skips the web app entirely. This
+# keeps the api image lean and, crucially, avoids invoking the web Vite build
+# here — the wave-84 build-time CSP guard (apps/web/src/csp.ts) hard-fails a
+# prod web build when VITE_API_ORIGIN is unset, and the api service has no VITE_*
+# vars. Scoping web out removes that coupling entirely.
+RUN pnpm build --filter=@studyhall/api...
 
 ENV NODE_ENV=production
 
