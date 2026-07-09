@@ -51,8 +51,8 @@ import {
   dm_messages,
   dm_participants,
   server_members,
-  user_encryption_keys,
   userBlocks,
+  user_encryption_keys,
   users,
 } from '../db/schema/index';
 
