@@ -40,7 +40,7 @@ TEST:
 VERIFY:
 - [x] V-1 Reviews (karen APPROVE, jenny APPROVE)
 - [x] V-2 Triage (0 blocking; 1 non-blocking task, 1 noise)
-- [ ] V-3 Fast-fix loop (or close)
+- [x] V-3 Fast-fix gate (head-verifier APPROVED)
 
 LEARN:
 - [ ] L-1 Docs
