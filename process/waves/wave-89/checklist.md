@@ -6,11 +6,11 @@ Active milestone: null (roadmap complete; bug-fix phase — roadmap-planning fou
 Claimed task ids: [45f0a88d-90dd-47b1-a827-e6cf8bbf606e]
 
 PRODUCT:
-- [ ] P-0 Frame (discover + reframe)
-- [ ] P-1 Decompose
-- [ ] P-2 Spec
-- [ ] P-3 Plan
-- [ ] P-4 Gate
+- [x] P-0 Frame (discover + reframe)
+- [x] P-1 Decompose
+- [x] P-2 Spec
+- [x] P-3 Plan
+- [x] P-4 Gate
 
 DESIGN (skip block if non-UI wave):
 - [ ] D-1 Brief
