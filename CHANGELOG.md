@@ -121,6 +121,7 @@ All notable changes to StudyHall are documented here. Format follows
   - Encryption happens entirely in your browser, and your private key never leaves your device — the servers only ever store scrambled text they can't unlock.
   - A clear indicator shows when a conversation is genuinely encrypted; if a message can't be encrypted it's shown honestly as not encrypted, never with a false "secure" badge.
   - This is an honest first version: messages are encrypted only when both people have set up encryption, and encrypted history doesn't yet sync across your devices.
+- Hardened the API with standard security response headers and stopped an internal error detail from leaking when a request is rate-limited. (#102)
 
 ### Fixed
 
