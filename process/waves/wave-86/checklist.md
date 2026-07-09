@@ -3,7 +3,7 @@ Topic: Auth hardening — make SuperTokens anti-CSRF posture explicit + regressi
 ## P — Product
 - [x] P-0 Frame (REFRAME: drop VIA_TOKEN; correct-value + regression-lock + doc)
 - [x] P-1 Decompose (single-spec PROCEED; floor waived; no design gap)
-- [ ] P-2 Spec
+- [x] P-2 Spec (explicit antiCsrf + cookie-forged-POST regression + docs)
 - [ ] P-3 Plan
 - [ ] P-4 Gate
 ## B — Build

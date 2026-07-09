@@ -5,7 +5,7 @@
 |---|---|---|---|
 | P-0 | stages/P-0-frame.md | done | REFRAME (VIA_TOKEN wrong post-header-transport); explicit-value + regression-lock + document |
 | P-1 | stages/P-1-decompose.md | done | single-spec PROCEED (floor waived); design_gap_flag false; security-scope |
-| P-2 | stages/P-2-spec.md | pending | |
+| P-2 | stages/P-2-spec.md | done | 4 ACs; explicit antiCsrf + regression-lock + docs |
 | P-3 | stages/P-3-plan.md | pending | |
 | P-4 | stages/P-4-gate.md | pending | |
 ## Block-specific context
