@@ -36,5 +36,5 @@ Topic: Auth hardening — make SuperTokens anti-CSRF posture explicit + regressi
 - [ ] N-2 Seed
 - [ ] N-3 Handoff
 ## L — Learn
-- [ ] L-1 Docs
-- [ ] L-2 Distill
+- [x] L-1 Docs
+- [x] L-2 Distill
