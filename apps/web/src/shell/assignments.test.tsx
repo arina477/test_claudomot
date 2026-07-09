@@ -449,6 +449,69 @@ describe('AssignmentCard per-member toggle', () => {
     expect(onStatusChange).toHaveBeenNthCalledWith(1, 'asgn-1', 'done');
     expect(onStatusChange).toHaveBeenNthCalledWith(2, 'asgn-1', 'todo');
   });
+
+  it('F1 regression: error toast auto-dismisses on schedule EVEN IF the parent re-renders mid-window', async () => {
+    // The toast's 3500ms auto-dismiss timer must NOT reset when the parent
+    // re-renders (assignments panel re-renders on presence/realtime ticks).
+    // Pre-fix, onGone was a fresh inline arrow each render, so the toast's
+    // [onGone]-dep effect tore down + recreated the setTimeout on every parent
+    // re-render — the clock restarted from zero and the toast never dismissed.
+    // With onGone stabilized via useCallback, the timer runs once and fires.
+    vi.useFakeTimers();
+    try {
+      mockApi.setAssignmentStatus.mockRejectedValue(new Error('Network error'));
+      const announce = vi.fn();
+
+      // Host that re-renders on demand via a bumpable counter, mirroring the
+      // panel's realtime-tick re-renders while the toast is visible.
+      let forceParentRerender: () => void = () => {};
+      function Host() {
+        const [, setTick] = useState(0);
+        forceParentRerender = () => setTick((n) => n + 1);
+        return (
+          <AssignmentCard
+            assignment={makeAssignment({ myStatus: 'todo' })}
+            onStatusChange={vi.fn()}
+            onClick={onClick}
+            onAnnounce={announce}
+          />
+        );
+      }
+
+      render(<Host />);
+      const checkbox = screen.getByTestId('status-toggle');
+
+      // Trigger the failing toggle → toast appears.
+      await act(async () => {
+        fireEvent.click(checkbox);
+        await Promise.resolve();
+      });
+      expect(screen.getByTestId('status-toggle-error-toast')).toBeInTheDocument();
+
+      // Advance partway (2000ms), then force a parent re-render. A reset timer
+      // (pre-fix) would restart its 3500ms clock here; the stable timer keeps
+      // counting from the toast's mount.
+      await act(async () => {
+        vi.advanceTimersByTime(2000);
+      });
+      await act(async () => {
+        forceParentRerender();
+        await Promise.resolve();
+      });
+      // Still visible at 2000ms — dismissal is at 3500ms.
+      expect(screen.getByTestId('status-toggle-error-toast')).toBeInTheDocument();
+
+      // Advance past the original 3500ms deadline (2000 + 1600 = 3600 total).
+      await act(async () => {
+        vi.advanceTimersByTime(1600);
+      });
+
+      // Toast is GONE — the mid-window re-render did NOT reset the timer.
+      expect(screen.queryByTestId('status-toggle-error-toast')).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 // ── 4. AssignmentsPanel — organizer-only form + empty state ──────────────────

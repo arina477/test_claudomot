@@ -723,6 +723,11 @@ export function AssignmentCard({
     setEditing(false);
   }, []);
 
+  // Stable identity so StatusErrorToast's auto-dismiss timer runs once and does
+  // NOT restart on every parent re-render (the assignments panel re-renders on
+  // presence/realtime ticks; an inline arrow here would reset the 3500ms clock).
+  const dismissStatusError = useCallback(() => setStatusError(false), []);
+
   const borderLeftColor =
     urgency === 'overdue' ? '#ef4444' : urgency === 'dueSoon' ? '#f59e0b' : 'transparent';
 
@@ -913,7 +918,7 @@ export function AssignmentCard({
       {statusError && (
         <StatusErrorToast
           text="Couldn't update assignment. Please try again."
-          onGone={() => setStatusError(false)}
+          onGone={dismissStatusError}
         />
       )}
     </article>
