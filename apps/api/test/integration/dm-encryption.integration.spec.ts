@@ -29,7 +29,7 @@ import {
   truncateTables,
 } from './pg-harness';
 
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SendDmMessageSchema } from '@studyhall/shared';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -411,6 +411,139 @@ describe.skipIf(SKIP)('wave-79 server-blind DM encryption (60bda5be + 491cb85d)'
 
       // Missing target → false (fail-closed).
       expect(await dmService.canDm(ALICE, 'ghost')).toBe(false);
+    });
+  });
+
+  // =========================================================================
+  // 6. SENDER-KEY-REF RE-VALIDATION on the encrypted send path (wave-88 B-2)
+  // =========================================================================
+
+  describe('encrypted send senderKeyRef re-validation (wave-88 B-2)', () => {
+    const KEY_A = 'ALICE_PUBLIC_KEY_A_base64_spki';
+    const KEY_B = 'ALICE_PUBLIC_KEY_B_base64_spki';
+
+    it('registered key MATCHING senderKeyRef → row stored', async () => {
+      const convId = await makeConversation(ALICE, BOB);
+      await encryptionKeys.upsertKey(ALICE, { publicKey: KEY_A, algorithm: ALGO });
+
+      const dto = await dmService.sendMessage(
+        convId,
+        ALICE,
+        SendDmMessageSchema.parse({
+          ciphertext: 'CT_MATCH',
+          senderKeyRef: KEY_A,
+          envelopeVersion: 1,
+          idempotencyKey: 'skr-match-1',
+        }),
+      );
+      expect(dto.senderKeyRef).toBe(KEY_A);
+
+      // Row committed and visible over a separate connection.
+      const rows = await harnessQuery<{ n: string }>(
+        `SELECT count(*)::text AS n FROM dm_messages
+           WHERE conversation_id = $1 AND ciphertext = 'CT_MATCH'`,
+        [convId],
+      );
+      expect(rows[0]?.n).toBe('1');
+    });
+
+    it('registered key MISMATCHING senderKeyRef → rejected, no row stored', async () => {
+      const convId = await makeConversation(ALICE, BOB);
+      await encryptionKeys.upsertKey(ALICE, { publicKey: KEY_A, algorithm: ALGO });
+
+      await expect(
+        dmService.sendMessage(
+          convId,
+          ALICE,
+          SendDmMessageSchema.parse({
+            ciphertext: 'CT_SPOOF',
+            senderKeyRef: 'SPOOFED_KEY_NOT_REGISTERED',
+            envelopeVersion: 1,
+            idempotencyKey: 'skr-spoof-1',
+          }),
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+
+      // Side-effect-free rejection: NO row persisted for the spoofed send.
+      const rows = await harnessQuery<{ n: string }>(
+        'SELECT count(*)::text AS n FROM dm_messages WHERE conversation_id = $1',
+        [convId],
+      );
+      expect(rows[0]?.n).toBe('0');
+    });
+
+    it('sender with NO registered key → send SUCCEEDS (fail-open)', async () => {
+      const convId = await makeConversation(ALICE, BOB);
+      // ALICE has no user_encryption_keys row.
+
+      const dto = await dmService.sendMessage(
+        convId,
+        ALICE,
+        SendDmMessageSchema.parse({
+          ciphertext: 'CT_NOKEY',
+          senderKeyRef: 'any-ref-since-no-registered-key',
+          envelopeVersion: 1,
+          idempotencyKey: 'skr-nokey-1',
+        }),
+      );
+      expect(dto.ciphertext).toBe('CT_NOKEY');
+
+      const rows = await harnessQuery<{ n: string }>(
+        `SELECT count(*)::text AS n FROM dm_messages
+           WHERE conversation_id = $1 AND ciphertext = 'CT_NOKEY'`,
+        [convId],
+      );
+      expect(rows[0]?.n).toBe('1');
+    });
+
+    it('post-rotation (T-8): send with the CURRENT (rotated) key ref is ACCEPTED, not rejected', async () => {
+      const convId = await makeConversation(ALICE, BOB);
+      // Register key A, then rotate to key B (upsertKey replaces — UNIQUE(user_id)).
+      await encryptionKeys.upsertKey(ALICE, { publicKey: KEY_A, algorithm: ALGO });
+      await encryptionKeys.upsertKey(ALICE, { publicKey: KEY_B, algorithm: ALGO });
+
+      // Sanity: only one key row, and it is the rotated key B.
+      const keyRows = await harnessQuery<{ public_key: string; n: string }>(
+        `SELECT public_key, count(*) OVER ()::text AS n
+           FROM user_encryption_keys WHERE user_id = $1`,
+        [ALICE],
+      );
+      expect(keyRows).toHaveLength(1);
+      expect(keyRows[0]?.public_key).toBe(KEY_B);
+
+      // Send with senderKeyRef = the rotated key B → ACCEPTED (uses current key).
+      const dto = await dmService.sendMessage(
+        convId,
+        ALICE,
+        SendDmMessageSchema.parse({
+          ciphertext: 'CT_ROTATED',
+          senderKeyRef: KEY_B,
+          envelopeVersion: 1,
+          idempotencyKey: 'skr-rotated-1',
+        }),
+      );
+      expect(dto.senderKeyRef).toBe(KEY_B);
+
+      const rows = await harnessQuery<{ n: string }>(
+        `SELECT count(*)::text AS n FROM dm_messages
+           WHERE conversation_id = $1 AND ciphertext = 'CT_ROTATED'`,
+        [convId],
+      );
+      expect(rows[0]?.n).toBe('1');
+
+      // And a send with the STALE key A is now rejected (proves current-key check).
+      await expect(
+        dmService.sendMessage(
+          convId,
+          ALICE,
+          SendDmMessageSchema.parse({
+            ciphertext: 'CT_STALE',
+            senderKeyRef: KEY_A,
+            envelopeVersion: 1,
+            idempotencyKey: 'skr-stale-1',
+          }),
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
     });
   });
 });
