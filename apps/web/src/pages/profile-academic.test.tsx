@@ -119,6 +119,26 @@ describe('ProfilePage — academic identity editor', () => {
     expect(await screen.findByText('Academic identity saved.')).toBeInTheDocument();
   });
 
+  it('renders the FullPageScroll wrapper as root (overflow-y-auto h-dvh, no containing-block props)', async () => {
+    // wave-81 F7 — ProfilePage was the founder-reported clipped page; its
+    // interactive save button lives below the fold, so the scroll wrapper is the
+    // load-bearing fix. Assert the wrapper is the ROOT and adds no containing block.
+    mockApi.getProfile.mockResolvedValue(makeProfile());
+    const { container } = renderPage();
+    // Wait for the loaded (non-skeleton) render — the Institution field only
+    // exists once the profile has loaded.
+    await screen.findByLabelText('Institution');
+
+    const root = container.firstElementChild as HTMLElement;
+    expect(root.className).toContain('overflow-y-auto');
+    expect(root.className).toContain('h-dvh');
+    const style = root.getAttribute('style') ?? '';
+    for (const forbidden of ['transform', 'filter', 'contain', 'will-change']) {
+      expect(root.className).not.toContain(forbidden);
+      expect(style).not.toContain(forbidden);
+    }
+  });
+
   it('selecting the empty role option + Save clears the role via PATCH academicRole:null', async () => {
     // Loads with a real role, then the user picks "Not specified" and saves.
     mockApi.getProfile.mockResolvedValue(makeProfile({ academicRole: 'student' }));

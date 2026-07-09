@@ -389,7 +389,7 @@ export function ProfilePage() {
   if (initialLoading) {
     return (
       <FullPageScroll>
-        <div className="min-h-screen animate-pulse" style={{ backgroundColor: '#0a0a0b' }}>
+        <div className="min-h-dvh animate-pulse" style={{ backgroundColor: '#0a0a0b' }}>
           {/* Header skeleton */}
           <div
             className="flex h-14 items-center border-b px-6"
@@ -467,7 +467,7 @@ export function ProfilePage() {
   return (
     <FullPageScroll>
       <div
-        className="min-h-screen"
+        className="min-h-dvh"
         style={{ backgroundColor: '#0a0a0b', color: 'rgba(255,255,255,0.92)' }}
       >
         {/* Header */}

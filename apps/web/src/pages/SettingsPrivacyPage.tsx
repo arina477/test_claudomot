@@ -245,7 +245,7 @@ export function SettingsPrivacyPage() {
   return (
     <FullPageScroll>
       <div
-        className="min-h-screen"
+        className="min-h-dvh"
         style={{ backgroundColor: '#0a0a0b', color: 'rgba(255,255,255,0.92)' }}
       >
         {/* Page header — matches ProfilePage structure */}

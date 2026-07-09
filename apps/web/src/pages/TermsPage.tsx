@@ -11,7 +11,7 @@ export function TermsPage() {
   return (
     <FullPageScroll>
       <div
-        className="min-h-screen"
+        className="min-h-dvh"
         style={{ backgroundColor: '#1c1c1f', color: 'rgba(255,255,255,0.92)' }}
       >
         {/* Nav bar */}

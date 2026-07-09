@@ -93,6 +93,26 @@ beforeEach(() => {
   mockApi.getBlocks.mockResolvedValue({ blocks: [] });
 });
 
+describe('SettingsPrivacyPage — scroll viewport wrapper (wave-81 F7)', () => {
+  it('renders the FullPageScroll wrapper as root (overflow-y-auto h-dvh, no containing-block props)', async () => {
+    // Sibling of the founder-reported ProfilePage: interactive save/toggle
+    // controls sit below the fold, so the scroll wrapper is the load-bearing fix.
+    mockApi.getPrivacy.mockResolvedValue(makePrivacy());
+    const { container } = renderPage();
+    // Wait for the loaded render (the presence switch only exists post-load).
+    await screen.findByRole('switch', { name: /online status/i });
+
+    const root = container.firstElementChild as HTMLElement;
+    expect(root.className).toContain('overflow-y-auto');
+    expect(root.className).toContain('h-dvh');
+    const style = root.getAttribute('style') ?? '';
+    for (const forbidden of ['transform', 'filter', 'contain', 'will-change']) {
+      expect(root.className).not.toContain(forbidden);
+      expect(style).not.toContain(forbidden);
+    }
+  });
+});
+
 describe('toUiVisibility', () => {
   it('maps "everyone" → "everyone"', () => {
     expect(toUiVisibility('everyone')).toBe('everyone');
