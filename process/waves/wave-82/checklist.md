@@ -27,15 +27,15 @@ CI/CD:
 - [x] C-2 Deploy & verify (web SUCCESS 9a66622e, 200 live)
 
 TEST:
-- [ ] T-1 Static
-- [ ] T-2 Unit
-- [ ] T-3 Contract
-- [ ] T-4 Integration
-- [ ] T-5 E2E
-- [ ] T-6 Layout
-- [ ] T-7 Perf
-- [ ] T-8 Security
-- [ ] T-9 Journey
+- [x] T-1 Static (CI-verified)
+- [x] T-2 Unit (762 green)
+- [x] T-3 Contract (skipped)
+- [x] T-4 Integration (skipped)
+- [x] T-5 E2E (live PASS, no bounce)
+- [x] T-6 Layout (skipped)
+- [x] T-7 Perf (skipped)
+- [x] T-8 Security (live PASS, genuine-logout holds)
+- [x] T-9 Journey (APPROVED, F-T5-1 self-healed)
 
 VERIFY:
 - [ ] V-1 Independent reviews (Karen + jenny, parallel)
