@@ -10,9 +10,18 @@
 | T-5 | stages/T-5-e2e.md | — | skipped | no user-visible behavior change (config-only; auth login covered by T-8) |
 | T-6 | stages/T-6-layout.md | — | skipped | no UI |
 | T-7 | stages/T-7-perf.md | — | skipped | not heavy |
-| T-8 | stages/T-8-security.md | active | pending | LIVE: cookie-only forged POST rejected + login unregressed + explicit antiCsrf posture |
+| T-8 | stages/T-8-security.md | active | done | LIVE PASS: forged cookie-only POST rejected 401; auth unregressed |
 | T-9 | stages/T-9-journey.md | active | pending | gate |
 ## Block-specific context
 - wave_type: [auth] security-scope. T-8 is the load-bearing live security stage.
 ## Gate verdict log
-<T-9>
+<T-9> APPROVED (attempt 1) — head-tester. T-8 live proof airtight (same-route Bearer 201 / cookie-only+evil 401 / no-auth 401; header-transport login unregressed; CORS scoped). Regression guard is a verified tripwire (structurally-valid cookie + 'any'-transport control + shared CSRF_POSTURE const; flip exercised). Skips (T-3/5/6/7) honest. Operational findings out-of-scope, backlogged to 1c728847 (incl. leftover-row cleanup). journey_regen_skipped: true (config-only, no route/screen/endpoint change). Proceed to V-block.
+
+## T-block exit handoff
+```yaml
+test_block_status:    complete
+stages_run:           [T-1, T-2, T-4, T-8, T-9]
+stages_skipped:       [T-3 (no contract), T-5 (config-only), T-6 (no UI), T-7 (not heavy)]
+findings_total:       0 (security); operational -> backlog 1c728847
+ready_for_verify:     true
+```

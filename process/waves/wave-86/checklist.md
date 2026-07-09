@@ -25,8 +25,8 @@ Topic: Auth hardening — make SuperTokens anti-CSRF posture explicit + regressi
 - [x] T-5 E2E (skipped — config-only)
 - [x] T-6 Layout (skipped)
 - [x] T-7 Perf (skipped)
-- [ ] T-8 Security
-- [ ] T-9 Journey
+- [x] T-8 Security (LIVE PASS — forged POST rejected, auth unregressed)
+- [x] T-9 Journey (APPROVED; regen skipped)
 ## V — Verify
 - [ ] V-1 Reviews
 - [ ] V-2 Triage
