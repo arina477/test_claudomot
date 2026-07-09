@@ -5,7 +5,7 @@ Topic: Harden session-token storage (httpOnly cookies vs JS-readable header mode
 - [x] P-1 Decompose (single-spec PROCEED; floor waived; Option B scope)
 - [x] P-2 Spec (6 ACs; CSP load-bearing)
 - [x] P-3 Plan (Session.init header+TTL + cross-origin CSP; supertokens-integration)
-- [ ] P-4 Gate
+- [x] P-4 Gate (APPROVED; Google-Fonts CSP allowlist + serve-layer folded)
 ## B — Build
 - [ ] B-0 Branch & schema
 - [ ] B-1 Contracts

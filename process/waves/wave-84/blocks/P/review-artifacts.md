@@ -9,7 +9,7 @@
 | P-1 | stages/P-1-decompose.md | done | single-spec PROCEED (floor waived); design_gap_flag false; scope=BOARD Option B |
 | P-2 | stages/P-2-spec.md | done | 6 ACs; CSP+short-TTL+header-explicit; spec in task |
 | P-3 | stages/P-3-plan.md | done | Session.init header+TTL + web CSP (empirical); B-2/B-3 supertokens-integration |
-| P-4 | stages/P-4-gate.md | pending | |
+| P-4 | stages/P-4-gate.md | done | Phase-1 verdict APPROVED (blocks/P/gate-verdict.md); security-scope-tightened → Phase-2 radar |
 
 ## Block-specific context
 - **Wave topic:** SuperTokens session-token transport — header (JS-readable, XSS surface) → httpOnly cookie, OR document header mode as accepted cross-origin choice
@@ -21,4 +21,4 @@
 - **KEY TENSION for reviewers:** web≠api are different Railway origins → cookie mode = cross-site SameSite=None cookies (browser third-party-cookie restrictions: Safari ITP, Chrome deprecation). Header mode may be more robust for cross-origin. Genuine "switch to cookie vs keep+document header" fork with security AND reliability consequences.
 
 ## Gate verdict log
-<P-4>
+<P-4>APPROVED (Phase 1) — escalation+BOARD handled correctly (7/7 Option B; web≠api genuinely different SITES under public-suffix up.railway.app, code-corroborated); floor-waive legit (PRODUCT-5); 6 ACs falsifiable, AC5 correctly load-bearing+T-8-testable, all 4 WS namespaces verified in source; plan sound (supertokens-integration; connect-src https+wss pinned; empirical CSP derivation; web-HTML CSP ≠ wave-83 helmet-on-api-JSON — no contradiction); scope = exact BOARD mandate, not gold-plated. security-scope-tightened gate → Phase-2 radar. rework_attempt_cap_remaining: 3.</P-4>
