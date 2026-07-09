@@ -37,6 +37,6 @@ Topic: AssignmentCard optimistic toggle revert (restore captured prior state + e
 - [x] L-1 Docs (CHANGELOG #105 Fixed; milestone + README SKIP)
 - [x] L-2 Distill (task 3ad35a42 done; 4 observations; 0 promotions)
 ## N — Next
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers (no rituals fire; roadmap-planning founder-deferred bug-fix phase)
+- [x] N-2 Seed (wave-86 = f8fb8023 anti-CSRF VIA_TOKEN; b84f7be9 premise EVAPORATED → cancelled)
+- [x] N-3 Handoff (wave-85 closed + archived; wave-86 seeded; loop ready)
