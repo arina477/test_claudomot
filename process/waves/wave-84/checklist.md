@@ -18,15 +18,15 @@ Topic: Harden session-token storage (httpOnly cookies vs JS-readable header mode
 - [x] C-1 PR, CI & merge (PR #103 merged d1f99f9d, CI green; ci.yml VITE-env fix)
 - [x] C-2 Deploy & verify (api+web+core @5cb5e789; CSP origins live; TTL=900)
 ## T — Test
-- [ ] T-1 Static
-- [ ] T-2 Unit
-- [ ] T-3 Contract
-- [ ] T-4 Integration
-- [ ] T-5 E2E
-- [ ] T-6 Layout
-- [ ] T-7 Perf
-- [ ] T-8 Security
-- [ ] T-9 Journey
+- [x] T-1 Static (CI green)
+- [x] T-2 Unit (821+785 CI)
+- [x] T-3 Contract (skipped)
+- [x] T-4 Integration (21 CSP + config)
+- [x] T-5 E2E (web smoke PASS, 0 CSP errors)
+- [x] T-6 Layout (skipped)
+- [x] T-7 Perf (skipped)
+- [x] T-8 Security (LIVE PASS — 0 CSP violations, header+900s TTL verified)
+- [x] T-9 Journey (APPROVED; regen skipped)
 ## V — Verify
 - [ ] V-1 Reviews
 - [ ] V-2 Triage

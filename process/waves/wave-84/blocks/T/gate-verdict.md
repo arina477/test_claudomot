@@ -1,0 +1,19 @@
+# Wave 84 — T-9 Verdict
+
+**Reviewer:** head-tester (fresh spawn)
+**Reviewed against:** process/waves/wave-84/blocks/T/review-artifacts.md + findings-aggregate.md
+**Attempt:** 1  (first gate)
+
+## Verdict
+APPROVED
+
+## Rationale
+
+The wave's single load-bearing risk — "the new cross-origin CSP silently breaks a feature that B-6 could not live-verify" — is disproven on deployed reality by T-8, and the proof is of the right *kind*, not just the right *headline*. A CSP directive is a per-origin scheme+host allow/deny list; it does not branch on which application code path initiates a request. T-8 exercised each origin the app depends on against the live policy and got a positive network result for every one: the avatar chain `api/users/../avatar → 302 → t3.storageapi.dev → 200` with naturalWidth>0 proves `img-src` permits Tigris; a raw `wss://api` socket reaching OPEN proves `connect-src wss` permits the realtime origin (all 4 Socket.IO namespaces handshook 200); a raw WS to `wss://…livekit.cloud` reaching the server and being *auth*-rejected (not CSP-rejected) proves `connect-src` permits the LiveKit origin; Google Fonts served; and 0 CSP-violation console errors across login + navigation. The two `not_click_tested` items (voice-join flow, image-attachment view) reuse exactly these already-proven origins — the untested surface is the app's own click-through (application logic), which this config+CSP-header wave did not touch, NOT the CSP allowance, which is proven. That is an acceptable basis to pass: were the CSP going to block voice or attachments, it would have had to reject the LiveKit-wss or Tigris-img origin, and T-8 shows it rejects neither. AC2 (short TTL) is proven directly on the deployed binary — the live access-token JWT's iat→exp is exactly 900s — and login continues to work seamlessly (T-5 login PASS + all API calls 200; T-8 cross_origin_fetch: every authed call 200 through the wave-82 refresh path). Header transport is confirmed by the correct fingerprint: st-access/st-refresh-token as response headers via access-control-expose-headers, no sAccessToken httpOnly cookie, hasAntiCsrf:false — unambiguous header/bearer mode. The CI-verified tier is solid: C-1 shows all 6 required checks green on the merged HEAD (run 29027378262), including the 21 CSP unit tests (connect-src/img-src origin assertions + fail-on-empty guard) and the SuperTokens header-mode config specs — and notably the fail-on-empty-api-origin guard did its job by hard-failing an under-configured CI build, which was correctly root-caused and routed (not debug-patched) before merge. Skips (T-3 no contract, T-6 no visual, T-7 not heavy) are all legitimate for a config + CSP-header `[auth]` wave with no UI/route change — no coverage theater. The one carried item, the non-required delete-any-message.spec.ts e2e failure, is a pre-existing two-client realtime/auth-timing flake (failed with *different* signatures across runs — a flake fingerprint, not a deterministic regression); a Dockerfile/CSP-header + auth-config change cannot regress WS realtime delete fan-out logic, and T-8 independently proved all WS namespaces connect live. It is correctly surfaced for next-wave attention rather than treated as a wave-84 blocker.
+
+## Journey regen
+`journey_regen_skipped: true` — AGREE. Per T-9 Action 2 the regen skips when the wave did not touch UI surface: `wave_type=[auth]` (no `ui`/`heavy`), no D-block, no route/frontend-behavior change (config + CSP response header only). The prior wave's user-journey-map.md remains canonical. Scenario smoke: no `user-scenarios/` directory present, so none to run. T-5 already crawled the live primary flow (landing → login → /app → server → #general, composer) as a smoke and it PASSED.
+
+## Footer
+- verdict_complete: true
+- rework_attempt_cap_remaining: 3
