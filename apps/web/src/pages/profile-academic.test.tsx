@@ -139,6 +139,103 @@ describe('ProfilePage — academic identity editor', () => {
     }
   });
 
+  it('a failed over-length save scrolls+focuses the invalid field and marks it aria-invalid', async () => {
+    // wave-89 a11y — a failed academic save must not silently early-return; it
+    // must take the user to the first invalid field. Bio over-length here.
+    const scrollSpy = vi
+      .spyOn(HTMLElement.prototype, 'scrollIntoView')
+      .mockImplementation(() => {});
+    mockApi.getProfile.mockResolvedValue(makeProfile());
+    renderPage();
+
+    const bio = (await screen.findByLabelText('Bio')) as HTMLTextAreaElement;
+    // fireEvent.change bypasses the maxLength attribute in jsdom, so we can push
+    // the field state past the client bound and trigger the guard.
+    const overLong = 'x'.repeat(501); // ACADEMIC_MAX.bio = 500
+    await act(async () => {
+      fireEvent.change(bio, { target: { value: overLong } });
+    });
+
+    // The save button is disabled while a client error is present, so submit the
+    // form directly (this is the path the guard protects).
+    const form = bio.closest('form') as HTMLFormElement;
+    await act(async () => {
+      fireEvent.submit(form);
+    });
+
+    // The invalid field is focused, marked aria-invalid, and was scrolled to.
+    expect(bio).toHaveFocus();
+    expect(bio).toHaveAttribute('aria-invalid', 'true');
+    expect(scrollSpy).toHaveBeenCalled();
+    // The over-length message is still rendered (role="alert").
+    expect(screen.getByRole('alert')).toHaveTextContent(/bio must be 500 characters or fewer/i);
+    // No PATCH was attempted on the error path.
+    expect(mockApi.patchProfile).not.toHaveBeenCalled();
+
+    scrollSpy.mockRestore();
+  });
+
+  it('with multiple over-length fields, focuses the FIRST in priority order (pronouns before bio)', async () => {
+    const scrollSpy = vi
+      .spyOn(HTMLElement.prototype, 'scrollIntoView')
+      .mockImplementation(() => {});
+    mockApi.getProfile.mockResolvedValue(makeProfile());
+    renderPage();
+
+    const pronouns = (await screen.findByLabelText('Pronouns')) as HTMLInputElement;
+    const bio = screen.getByLabelText('Bio') as HTMLTextAreaElement;
+    await act(async () => {
+      fireEvent.change(pronouns, { target: { value: 'p'.repeat(41) } }); // max 40
+      fireEvent.change(bio, { target: { value: 'b'.repeat(501) } }); // max 500
+    });
+
+    const form = pronouns.closest('form') as HTMLFormElement;
+    await act(async () => {
+      fireEvent.submit(form);
+    });
+
+    // Pronouns wins the priority order — it is focused and aria-invalid, not bio.
+    expect(pronouns).toHaveFocus();
+    expect(pronouns).toHaveAttribute('aria-invalid', 'true');
+    expect(bio).toHaveAttribute('aria-invalid', 'false');
+    expect(scrollSpy).toHaveBeenCalled();
+    expect(mockApi.patchProfile).not.toHaveBeenCalled();
+
+    scrollSpy.mockRestore();
+  });
+
+  it('a valid academic save proceeds with no focus interference and no scrollIntoView', async () => {
+    const scrollSpy = vi
+      .spyOn(HTMLElement.prototype, 'scrollIntoView')
+      .mockImplementation(() => {});
+    mockApi.getProfile.mockResolvedValue(makeProfile());
+    mockApi.patchProfile.mockImplementation(async (data: Record<string, unknown>) =>
+      makeProfile({ ...(data as Partial<ProfileResponse>) }),
+    );
+    renderPage();
+
+    const institution = (await screen.findByLabelText('Institution')) as HTMLInputElement;
+    await act(async () => {
+      fireEvent.change(institution, { target: { value: 'UC Berkeley' } });
+    });
+
+    const saveBtn = screen.getByRole('button', { name: /save academic identity/i });
+    await act(async () => {
+      fireEvent.click(saveBtn);
+    });
+
+    await waitFor(() => {
+      expect(mockApi.patchProfile).toHaveBeenCalledTimes(1);
+    });
+    // Happy path: save landed, shell refreshed, success shown — and the error
+    // path's scrollIntoView was NOT triggered.
+    expect(refresh).toHaveBeenCalled();
+    expect(await screen.findByText('Academic identity saved.')).toBeInTheDocument();
+    expect(scrollSpy).not.toHaveBeenCalled();
+
+    scrollSpy.mockRestore();
+  });
+
   it('selecting the empty role option + Save clears the role via PATCH academicRole:null', async () => {
     // Loads with a real role, then the user picks "Not specified" and saves.
     mockApi.getProfile.mockResolvedValue(makeProfile({ academicRole: 'student' }));

@@ -145,6 +145,19 @@ export function ProfilePage() {
   const [academicError, setAcademicError] = useState('');
   const [academicSuccess, setAcademicSuccess] = useState(false);
 
+  // Refs to the academic client-validated fields, keyed so a failed save can
+  // scroll+focus the FIRST over-length field (a11y: no silent early-return).
+  type AcademicFieldKey = 'pronouns' | 'bio' | 'institution' | 'program' | 'academicYear';
+  const academicFieldRefs = useRef<
+    Record<AcademicFieldKey, HTMLInputElement | HTMLTextAreaElement | null>
+  >({
+    pronouns: null,
+    bio: null,
+    institution: null,
+    program: null,
+    academicYear: null,
+  });
+
   // ── Load profile ──────────────────────────────────────────────────────────
 
   const loadProfile = useCallback(() => {
@@ -328,23 +341,48 @@ export function ProfilePage() {
 
   // ── Academic identity save ────────────────────────────────────────────────
 
-  // Client-side over-length guard mirroring the shared Zod max()s.
-  const academicClientError =
+  // Client-side over-length guard mirroring the shared Zod max()s. The invalid
+  // field KEY and its MESSAGE are derived together from the same priority-ordered
+  // conditions so they can never diverge: the first over-length field wins.
+  const academicInvalid: { key: AcademicFieldKey; message: string } | null =
     pronouns.length > ACADEMIC_MAX.pronouns
-      ? `Pronouns must be ${ACADEMIC_MAX.pronouns} characters or fewer.`
+      ? {
+          key: 'pronouns',
+          message: `Pronouns must be ${ACADEMIC_MAX.pronouns} characters or fewer.`,
+        }
       : bio.length > ACADEMIC_MAX.bio
-        ? `Bio must be ${ACADEMIC_MAX.bio} characters or fewer.`
+        ? { key: 'bio', message: `Bio must be ${ACADEMIC_MAX.bio} characters or fewer.` }
         : institution.length > ACADEMIC_MAX.institution
-          ? `Institution must be ${ACADEMIC_MAX.institution} characters or fewer.`
+          ? {
+              key: 'institution',
+              message: `Institution must be ${ACADEMIC_MAX.institution} characters or fewer.`,
+            }
           : program.length > ACADEMIC_MAX.program
-            ? `Program must be ${ACADEMIC_MAX.program} characters or fewer.`
+            ? {
+                key: 'program',
+                message: `Program must be ${ACADEMIC_MAX.program} characters or fewer.`,
+              }
             : academicYear.length > ACADEMIC_MAX.academicYear
-              ? `Academic year must be ${ACADEMIC_MAX.academicYear} characters or fewer.`
+              ? {
+                  key: 'academicYear',
+                  message: `Academic year must be ${ACADEMIC_MAX.academicYear} characters or fewer.`,
+                }
               : null;
+  const academicClientError = academicInvalid?.message ?? null;
+  const academicInvalidFieldKey = academicInvalid?.key ?? null;
 
   async function handleAcademicSave(e: React.FormEvent) {
     e.preventDefault();
-    if (academicClientError) return;
+    if (academicInvalidFieldKey) {
+      // a11y: don't silently early-return — take the user to the first invalid
+      // field so the over-length error is discoverable.
+      const ref = academicFieldRefs.current[academicInvalidFieldKey];
+      if (ref) {
+        ref.scrollIntoView({ block: 'center' });
+        ref.focus();
+      }
+      return;
+    }
 
     setAcademicSaving(true);
     setAcademicError('');
@@ -848,6 +886,9 @@ export function ProfilePage() {
                 </label>
                 <input
                   id="pronouns"
+                  ref={(el) => {
+                    academicFieldRefs.current.pronouns = el;
+                  }}
                   type="text"
                   value={pronouns}
                   onChange={(e) => {
@@ -855,6 +896,7 @@ export function ProfilePage() {
                     setAcademicSuccess(false);
                   }}
                   placeholder="she/her, he/him, they/them…"
+                  aria-invalid={academicInvalidFieldKey === 'pronouns'}
                   maxLength={ACADEMIC_MAX.pronouns}
                   className="h-10 w-full rounded-md px-3 text-sm focus:outline-none"
                   style={{
@@ -876,12 +918,16 @@ export function ProfilePage() {
                 </label>
                 <textarea
                   id="bio"
+                  ref={(el) => {
+                    academicFieldRefs.current.bio = el;
+                  }}
                   value={bio}
                   onChange={(e) => {
                     setBio(e.target.value);
                     setAcademicSuccess(false);
                   }}
                   placeholder="A short line about what you study or work on."
+                  aria-invalid={academicInvalidFieldKey === 'bio'}
                   maxLength={ACADEMIC_MAX.bio}
                   rows={3}
                   className="w-full rounded-md px-3 py-2 text-sm focus:outline-none resize-y"
@@ -907,6 +953,9 @@ export function ProfilePage() {
                 </label>
                 <input
                   id="institution"
+                  ref={(el) => {
+                    academicFieldRefs.current.institution = el;
+                  }}
                   type="text"
                   value={institution}
                   onChange={(e) => {
@@ -914,6 +963,7 @@ export function ProfilePage() {
                     setAcademicSuccess(false);
                   }}
                   placeholder="Your school or university"
+                  aria-invalid={academicInvalidFieldKey === 'institution'}
                   maxLength={ACADEMIC_MAX.institution}
                   className="h-10 w-full rounded-md px-3 text-sm focus:outline-none"
                   style={{
@@ -935,6 +985,9 @@ export function ProfilePage() {
                 </label>
                 <input
                   id="program"
+                  ref={(el) => {
+                    academicFieldRefs.current.program = el;
+                  }}
                   type="text"
                   value={program}
                   onChange={(e) => {
@@ -942,6 +995,7 @@ export function ProfilePage() {
                     setAcademicSuccess(false);
                   }}
                   placeholder="e.g. Ph.D. Computer Science"
+                  aria-invalid={academicInvalidFieldKey === 'program'}
                   maxLength={ACADEMIC_MAX.program}
                   className="h-10 w-full rounded-md px-3 text-sm focus:outline-none"
                   style={{
@@ -995,6 +1049,9 @@ export function ProfilePage() {
                 </label>
                 <input
                   id="academic-year"
+                  ref={(el) => {
+                    academicFieldRefs.current.academicYear = el;
+                  }}
                   type="text"
                   value={academicYear}
                   onChange={(e) => {
@@ -1002,6 +1059,7 @@ export function ProfilePage() {
                     setAcademicSuccess(false);
                   }}
                   placeholder="e.g. Year 3, Freshman, 2026 cohort"
+                  aria-invalid={academicInvalidFieldKey === 'academicYear'}
                   maxLength={ACADEMIC_MAX.academicYear}
                   className="h-10 w-full rounded-md px-3 text-sm focus:outline-none"
                   style={{
