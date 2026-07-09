@@ -12,6 +12,7 @@
 import type { Assignment } from '@studyhall/shared';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getUrgency } from './AssignmentCard';
 import { AssignmentCard } from './AssignmentCard';
@@ -309,22 +310,207 @@ describe('AssignmentCard per-member toggle', () => {
     expect(onClick).not.toHaveBeenCalled();
   });
 
-  it('reverts optimistic update if PUT fails', async () => {
+  it('restores the CAPTURED prior status through the real prop-wiring on a failed toggle', async () => {
+    // BUILD-12: drive the failure through a stateful host that mirrors
+    // AssignmentsPanel (onStatusChange updates the myStatus prop → the card
+    // re-renders), so a stale-closure `prev` would misfire. The snapshot is
+    // captured fresh at click time (assignment.myStatus is in the useCallback
+    // dep array), so the revert restores the true pre-click status.
     mockApi.setAssignmentStatus.mockRejectedValue(new Error('Network error'));
+    const announce = vi.fn();
+    const emitted: Array<'todo' | 'done'> = [];
+
+    function Host() {
+      const [status, setStatus] = useState<'todo' | 'done'>('todo');
+      return (
+        <AssignmentCard
+          assignment={makeAssignment({ myStatus: status })}
+          onStatusChange={(_id, state) => {
+            emitted.push(state);
+            setStatus(state);
+          }}
+          onClick={onClick}
+          onAnnounce={announce}
+        />
+      );
+    }
+
+    render(<Host />);
+    const checkbox = screen.getByTestId('status-toggle') as HTMLInputElement;
+
+    // Toggle todo → done; PUT rejects → restore captured prior 'todo'.
+    await act(async () => {
+      fireEvent.click(checkbox);
+    });
+
+    await waitFor(() => {
+      // optimistic 'done' then revert to the captured prior 'todo'.
+      expect(emitted).toEqual(['done', 'todo']);
+    });
+    // Prop re-rendered back to the restored prior → checkbox unchecked again.
+    expect(checkbox).not.toBeChecked();
+  });
+
+  it('rapid double-toggle race: each failed revert restores its OWN captured prior (not a shared/opposite guess)', async () => {
+    // TEST-HONESTY (P-4): the assume-opposite bug diverged under a rapid
+    // double-toggle race. We stall BOTH PUTs (pending), fire two clicks so the
+    // second toggle captures the mid-flight optimistic status as its prior, then
+    // reject them. Each catch must restore the status THAT toggle captured —
+    // proving the snapshot is per-invocation, not a shared closure. Combined
+    // with the announce/toast assertions (which the OLD console-only code never
+    // produced), this fails on the old behavior and passes on the fix.
+    const rejecters: Array<(e: Error) => void> = [];
+    mockApi.setAssignmentStatus.mockImplementation(
+      () =>
+        new Promise((_res, rej) => {
+          rejecters.push(rej);
+        }),
+    );
+    const announce = vi.fn();
+    const emitted: Array<'todo' | 'done'> = [];
+
+    function Host() {
+      const [status, setStatus] = useState<'todo' | 'done'>('todo');
+      return (
+        <AssignmentCard
+          assignment={makeAssignment({ myStatus: status })}
+          onStatusChange={(_id, state) => {
+            emitted.push(state);
+            setStatus(state);
+          }}
+          onClick={onClick}
+          onAnnounce={announce}
+        />
+      );
+    }
+
+    render(<Host />);
+    const checkbox = screen.getByTestId('status-toggle') as HTMLInputElement;
+
+    // Toggle 1: todo → done (prev captured = 'todo'). PUT pending.
+    await act(async () => {
+      fireEvent.click(checkbox);
+    });
+    // Toggle 2: done → todo (prev captured = 'done', the optimistic value). PUT pending.
+    await act(async () => {
+      fireEvent.click(checkbox);
+    });
+    expect(emitted).toEqual(['done', 'todo']);
+
+    // Reject in order: toggle-1's catch restores its prior 'todo', toggle-2's
+    // catch restores its prior 'done'. Each restores its OWN captured snapshot.
+    await act(async () => {
+      rejecters[0]?.(new Error('Network error'));
+      rejecters[1]?.(new Error('Network error'));
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(emitted).toEqual(['done', 'todo', 'todo', 'done']);
+    });
+    // Two failures → announced exactly once each (no double-announce per failure).
+    expect(announce).toHaveBeenCalledTimes(2);
+    expect(announce).toHaveBeenNthCalledWith(1, "Couldn't update assignment. Please try again.");
+    expect(announce).toHaveBeenNthCalledWith(2, "Couldn't update assignment. Please try again.");
+  });
+
+  it('shows a VISIBLE error toast and announces exactly ONCE per failure', async () => {
+    mockApi.setAssignmentStatus.mockRejectedValue(new Error('Network error'));
+    const announce = vi.fn();
     const a = makeAssignment({ myStatus: 'todo' });
-    render(<AssignmentCard assignment={a} onStatusChange={onStatusChange} onClick={onClick} />);
+    render(
+      <AssignmentCard
+        assignment={a}
+        onStatusChange={onStatusChange}
+        onClick={onClick}
+        onAnnounce={announce}
+      />,
+    );
     const checkbox = screen.getByTestId('status-toggle');
 
     await act(async () => {
       fireEvent.click(checkbox);
     });
 
+    // Visible toast appears for sighted users (old console-only code never showed one).
     await waitFor(() => {
-      // First call: optimistic 'done', second call: revert back to 'todo'
-      expect(onStatusChange).toHaveBeenCalledTimes(2);
-      expect(onStatusChange).toHaveBeenNthCalledWith(1, 'asgn-1', 'done');
-      expect(onStatusChange).toHaveBeenNthCalledWith(2, 'asgn-1', 'todo');
+      expect(screen.getByTestId('status-toggle-error-toast')).toBeInTheDocument();
     });
+    expect(screen.getByTestId('status-toggle-error-toast')).toHaveTextContent(
+      "Couldn't update assignment. Please try again.",
+    );
+    // The visible toast is aria-hidden — AT reads the failure only via onAnnounce,
+    // so the failure is announced to screen readers EXACTLY ONCE (no double-announce).
+    expect(screen.getByTestId('status-toggle-error-toast')).toHaveAttribute('aria-hidden', 'true');
+    expect(announce).toHaveBeenCalledTimes(1);
+    expect(announce).toHaveBeenCalledWith("Couldn't update assignment. Please try again.");
+
+    // Snapshot-restore: optimistic 'done' then revert to captured prior 'todo'.
+    expect(onStatusChange).toHaveBeenNthCalledWith(1, 'asgn-1', 'done');
+    expect(onStatusChange).toHaveBeenNthCalledWith(2, 'asgn-1', 'todo');
+  });
+
+  it('F1 regression: error toast auto-dismisses on schedule EVEN IF the parent re-renders mid-window', async () => {
+    // The toast's 3500ms auto-dismiss timer must NOT reset when the parent
+    // re-renders (assignments panel re-renders on presence/realtime ticks).
+    // Pre-fix, onGone was a fresh inline arrow each render, so the toast's
+    // [onGone]-dep effect tore down + recreated the setTimeout on every parent
+    // re-render — the clock restarted from zero and the toast never dismissed.
+    // With onGone stabilized via useCallback, the timer runs once and fires.
+    vi.useFakeTimers();
+    try {
+      mockApi.setAssignmentStatus.mockRejectedValue(new Error('Network error'));
+      const announce = vi.fn();
+
+      // Host that re-renders on demand via a bumpable counter, mirroring the
+      // panel's realtime-tick re-renders while the toast is visible.
+      let forceParentRerender: () => void = () => {};
+      function Host() {
+        const [, setTick] = useState(0);
+        forceParentRerender = () => setTick((n) => n + 1);
+        return (
+          <AssignmentCard
+            assignment={makeAssignment({ myStatus: 'todo' })}
+            onStatusChange={vi.fn()}
+            onClick={onClick}
+            onAnnounce={announce}
+          />
+        );
+      }
+
+      render(<Host />);
+      const checkbox = screen.getByTestId('status-toggle');
+
+      // Trigger the failing toggle → toast appears.
+      await act(async () => {
+        fireEvent.click(checkbox);
+        await Promise.resolve();
+      });
+      expect(screen.getByTestId('status-toggle-error-toast')).toBeInTheDocument();
+
+      // Advance partway (2000ms), then force a parent re-render. A reset timer
+      // (pre-fix) would restart its 3500ms clock here; the stable timer keeps
+      // counting from the toast's mount.
+      await act(async () => {
+        vi.advanceTimersByTime(2000);
+      });
+      await act(async () => {
+        forceParentRerender();
+        await Promise.resolve();
+      });
+      // Still visible at 2000ms — dismissal is at 3500ms.
+      expect(screen.getByTestId('status-toggle-error-toast')).toBeInTheDocument();
+
+      // Advance past the original 3500ms deadline (2000 + 1600 = 3600 total).
+      await act(async () => {
+        vi.advanceTimersByTime(1600);
+      });
+
+      // Toast is GONE — the mid-window re-render did NOT reset the timer.
+      expect(screen.queryByTestId('status-toggle-error-toast')).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
