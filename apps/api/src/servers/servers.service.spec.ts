@@ -174,7 +174,11 @@ const mockMember = {
   id: 'mem-1',
   server_id: 'server-1',
   user_id: 'user-1',
-  role_id: null,
+  // wave-87 B-2: new members are stamped with the server's default role at join
+  // time (was NULL before). This fixture is a membership-lookup row for
+  // findServerDetail / createInvite gates where role_id is immaterial, but it now
+  // reflects the post-change reality that a joined member carries a default role.
+  role_id: 'role-default-1',
   joined_at: new Date(),
 };
 const mockChannel = {
@@ -851,16 +855,24 @@ describe('ServersService.joinViaInvite', () => {
   /**
    * Build a transaction mock that supports select, insert, and update chains.
    * selectSequence: array of arrays returned in order for each select call.
+   *   joinViaInvite issues selects in this order:
+   *     ad-hoc branch:    [invite lookup] → [default-role lookup]
+   *     permanent branch: [ad-hoc lookup = []] → [server lookup] → [default-role lookup]
+   *   The default-role lookup ([{ id: 'role-default-1' }] = has default role, [] = none)
+   *   is the NEW query added by resolveDefaultRoleId; it must be supplied as the final
+   *   select slot so the inserted membership carries the resolved role_id.
    * insertReturning: what the insert(...).onConflictDoNothing().returning() returns.
    * updateReturning: what the update(...).set(...).where(...).returning() returns
    *   (used by the atomic conditional max_uses consume path). Defaults to [{id:'invite-1'}]
    *   (simulating a successful consume). Pass [] to simulate a concurrent race loss.
+   * capturedValues (optional): each server_members insert's .values(...) arg is pushed here.
    */
   function buildJoinTxMock(
     selectSequence: unknown[][],
     insertReturning: unknown[],
     captureUpdate?: { called: boolean },
     updateReturning: unknown[] = [{ id: 'invite-1' }],
+    capturedValues?: unknown[],
   ) {
     let selectIdx = 0;
     return {
@@ -870,7 +882,8 @@ describe('ServersService.joinViaInvite', () => {
       }),
       insert: vi.fn(() => {
         const chain: Record<string, unknown> = {};
-        chain.values = vi.fn(() => {
+        chain.values = vi.fn((data: unknown) => {
+          if (capturedValues) capturedValues.push(data);
           const conflictChain: Record<string, unknown> = {};
           conflictChain.onConflictDoNothing = vi.fn(() => {
             const returningChain: Record<string, unknown> = {
@@ -1032,6 +1045,94 @@ describe('ServersService.joinViaInvite', () => {
     // The loser's join throws (invite exhausted by concurrent winner) and the
     // transaction would have rolled back the member INSERT on a real DB.
     await expect(service.joinViaInvite('abc123', 'user-loser')).rejects.toThrow(NotFoundException);
+  });
+
+  // AC2 — default role stamped on the membership insert, ad-hoc invite branch (wave-87 B-2)
+  it('stamps the default role id on the membership insert via ad-hoc invite (AC2)', async () => {
+    const capturedValues: unknown[] = [];
+    // Selects in order: [invite lookup] → [default-role lookup].
+    const txMock = buildJoinTxMock(
+      [[mockInvite], [{ id: 'role-default-1' }]],
+      [{ id: 'mem-new', server_id: 'server-1', user_id: 'user-2' }],
+      undefined,
+      [{ id: 'invite-1' }],
+      capturedValues,
+    );
+    mockTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(txMock));
+
+    await service.joinViaInvite('abc123', 'user-2');
+
+    expect(capturedValues).toHaveLength(1);
+    expect(capturedValues[0]).toMatchObject({
+      server_id: 'server-1',
+      user_id: 'user-2',
+      role_id: 'role-default-1',
+    });
+  });
+
+  // AC2 — default role stamped on the membership insert, permanent invite_code branch (wave-87 B-2)
+  it('stamps the default role id on the membership insert via permanent invite_code (AC2)', async () => {
+    const capturedValues: unknown[] = [];
+    // Permanent branch selects in order:
+    //   [ad-hoc lookup = []] → [server lookup] → [default-role lookup].
+    const txMock = buildJoinTxMock(
+      [[], [{ ...mockServer, invite_code: 'perm-code' }], [{ id: 'role-default-1' }]],
+      [{ id: 'mem-new', server_id: 'server-1', user_id: 'user-3' }],
+      undefined,
+      [{ id: 'invite-1' }],
+      capturedValues,
+    );
+    mockTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(txMock));
+
+    await service.joinViaInvite('perm-code', 'user-3');
+
+    expect(capturedValues).toHaveLength(1);
+    expect(capturedValues[0]).toMatchObject({
+      server_id: 'server-1',
+      user_id: 'user-3',
+      role_id: 'role-default-1',
+    });
+  });
+
+  // AC3 — server with NO default role → join succeeds, role_id: null, no throw (wave-87 B-2)
+  it('inserts role_id: null and succeeds when the server has no default role (AC3)', async () => {
+    const capturedValues: unknown[] = [];
+    // Default-role lookup returns [] → resolveDefaultRoleId yields null.
+    const txMock = buildJoinTxMock(
+      [[mockInvite], []],
+      [{ id: 'mem-new', server_id: 'server-1', user_id: 'user-2' }],
+      undefined,
+      [{ id: 'invite-1' }],
+      capturedValues,
+    );
+    mockTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(txMock));
+
+    const result = await service.joinViaInvite('abc123', 'user-2');
+
+    expect(result).toEqual({ serverId: 'server-1' });
+    expect(capturedValues).toHaveLength(1);
+    expect(capturedValues[0]).toMatchObject({
+      server_id: 'server-1',
+      user_id: 'user-2',
+      role_id: null,
+    });
+  });
+
+  // AC4 — existing member re-join (onConflictDoNothing → empty RETURNING) succeeds,
+  // and does NOT increment uses (no role/use side effect on re-join) (wave-87 B-2)
+  it('re-join of an existing member succeeds and does not increment uses (AC4)', async () => {
+    const captureUpdate = { called: false };
+    const txMock = buildJoinTxMock(
+      [[mockInvite], [{ id: 'role-default-1' }]],
+      [], // ON CONFLICT DO NOTHING → empty RETURNING = already a member
+      captureUpdate,
+    );
+    mockTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(txMock));
+
+    const result = await service.joinViaInvite('abc123', 'user-1');
+
+    expect(result).toEqual({ serverId: 'server-1' });
+    expect(captureUpdate.called).toBe(false);
   });
 });
 
@@ -1566,15 +1667,36 @@ describe('ServersService.joinPublicServer', () => {
 
   /**
    * Build a transaction mock for joinPublicServer.
-   * selectRows: what the server SELECT returns inside the txn.
-   * Includes an insert stub with onConflictDoNothing().
+   *
+   * joinPublicServer issues TWO selects inside the txn, in order:
+   *   1. server lookup (is_public gate)
+   *   2. resolveDefaultRoleId — the server's default role row
+   * so the mock must return the server row first and the default-role row second.
+   *
+   * serverRow: what the server SELECT returns (wrap in [] for found, [] empty for 404).
+   * defaultRoleRows: what the default-role SELECT returns
+   *   ([{ id: 'role-default-1' }] = server has a default role; [] = no default role).
+   * capturedValues (optional): each server_members insert's .values(...) arg is pushed here.
    */
-  function buildPublicJoinTxMock(selectRows: unknown[]) {
+  function buildPublicJoinTxMock(
+    serverRow: unknown[],
+    defaultRoleRows: unknown[] = [{ id: 'role-default-1' }],
+    capturedValues?: unknown[],
+  ) {
+    // joinPublicServer issues exactly 2 selects per call (server, then default role).
+    // Cycle every 2 so the same tx mock can be reused across multiple calls
+    // (the idempotent re-join test invokes joinPublicServer twice on one mock).
+    let selectIdx = 0;
     return {
-      select: vi.fn(() => makeSelectChain(selectRows)),
+      select: vi.fn(() => {
+        const rows = selectIdx % 2 === 0 ? serverRow : defaultRoleRows;
+        selectIdx++;
+        return makeSelectChain(rows);
+      }),
       insert: vi.fn(() => {
         const chain: Record<string, unknown> = {};
-        chain.values = vi.fn(() => {
+        chain.values = vi.fn((data: unknown) => {
+          if (capturedValues) capturedValues.push(data);
           return { onConflictDoNothing: vi.fn().mockResolvedValue([]) };
         });
         return chain;
@@ -1632,6 +1754,63 @@ describe('ServersService.joinPublicServer', () => {
     await expect(service.joinPublicServer('ghost-server', 'user-1')).rejects.toThrow(
       NotFoundException,
     );
+  });
+
+  // AC1 — default role stamped on the membership insert (wave-87 B-2)
+  it('stamps the server default role id on the membership insert (AC1)', async () => {
+    const publicServer = { ...mockServer, is_public: true };
+    const capturedValues: unknown[] = [];
+    // Default-role SELECT returns a known role id; insert values must carry it.
+    const txMock = buildPublicJoinTxMock(
+      [publicServer],
+      [{ id: 'role-default-1' }],
+      capturedValues,
+    );
+    mockTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(txMock));
+
+    await service.joinPublicServer('server-1', 'user-new');
+
+    expect(capturedValues).toHaveLength(1);
+    expect(capturedValues[0]).toMatchObject({
+      server_id: 'server-1',
+      user_id: 'user-new',
+      role_id: 'role-default-1',
+    });
+  });
+
+  // AC3 — server with NO default role → join succeeds, role_id: null, no throw (wave-87 B-2)
+  it('inserts role_id: null and succeeds when the server has no default role (AC3)', async () => {
+    const publicServer = { ...mockServer, is_public: true };
+    const capturedValues: unknown[] = [];
+    // Default-role SELECT returns [] (legacy server, no is_default role).
+    const txMock = buildPublicJoinTxMock([publicServer], [], capturedValues);
+    mockTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(txMock));
+
+    const result = await service.joinPublicServer('server-1', 'user-new');
+
+    expect(result).toEqual({ serverId: 'server-1' });
+    expect(capturedValues).toHaveLength(1);
+    expect(capturedValues[0]).toMatchObject({
+      server_id: 'server-1',
+      user_id: 'user-new',
+      role_id: null,
+    });
+  });
+
+  // AC4 — re-join by existing member (onConflictDoNothing → no throw); no role reset UPDATE (wave-87 B-2)
+  it('re-join of an existing member succeeds and issues no role-reset UPDATE (AC4)', async () => {
+    const publicServer = { ...mockServer, is_public: true };
+    const txMock = buildPublicJoinTxMock([publicServer], [{ id: 'role-default-1' }]);
+    // onConflictDoNothing already resolves [] (no returning row) in the builder,
+    // modelling an existing member. joinPublicServer has no update path at all.
+    mockTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(txMock));
+
+    const result = await service.joinPublicServer('server-1', 'existing-user');
+
+    expect(result).toEqual({ serverId: 'server-1' });
+    // No UPDATE method is even defined on the public-join tx mock — a role reset
+    // would require one, proving onConflictDoNothing skips without a reset.
+    expect(txMock).not.toHaveProperty('update');
   });
 });
 
