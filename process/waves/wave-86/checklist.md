@@ -5,7 +5,7 @@ Topic: Auth hardening — make SuperTokens anti-CSRF posture explicit + regressi
 - [x] P-1 Decompose (single-spec PROCEED; floor waived; no design gap)
 - [x] P-2 Spec (explicit antiCsrf + cookie-forged-POST regression + docs)
 - [x] P-3 Plan (explicit antiCsrf + regression test; supertokens-integration)
-- [ ] P-4 Gate
+- [x] P-4 Gate (APPROVED; antiCsrf value = B-block specialist call)
 ## B — Build
 - [ ] B-0 Branch & schema
 - [ ] B-1 Contracts

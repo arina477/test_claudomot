@@ -7,7 +7,7 @@
 | P-1 | stages/P-1-decompose.md | done | single-spec PROCEED (floor waived); design_gap_flag false; security-scope |
 | P-2 | stages/P-2-spec.md | done | 4 ACs; explicit antiCsrf + regression-lock + docs |
 | P-3 | stages/P-3-plan.md | done | explicit antiCsrf (value=specialist call) + regression test; supertokens-integration |
-| P-4 | stages/P-4-gate.md | pending | |
+| P-4 | blocks/P/gate-verdict.md | done | APPROVED (Phase 1) — REFRAME + no-BOARD + spec + worth-doing all confirmed at source |
 ## Block-specific context
 - **Wave topic:** make SuperTokens anti-CSRF posture EXPLICIT (seed asks antiCsrf:VIA_TOKEN) + a regression test asserting a cookie-only forged state-changing POST is rejected. NO live vuln today (verified wave-49 pen-test); a hardening/legibility item.
 - **wave_db_id:** e3988df2-8b1b-4565-9efa-cbe483805959 (wave_number 86)
@@ -17,4 +17,4 @@
 - **CRITICAL PREMISE-SHIFT for reviewers:** seed is from wave-49 (cookie-oriented: "cookieSameSite=none without antiCsrf"). But WAVE-84 (last wave) pinned tokenTransferMethod:'header'. In header/bearer transport, CSRF is largely moot (token not auto-attached cross-site) + SuperTokens antiCsrf is COOKIE-oriented. So: (a) the cookieSameSite=none framing may be dead config now; (b) antiCsrf:VIA_TOKEN (cookie-mode value) may be the WRONG setting vs VIA_CUSTOM_HEADER or moot-by-construction. Reviewers MUST reconcile the header-transport interaction — this could be a simple reframe to the correct value, a doc-the-posture outcome, or (like wave-84) a BOARD-worthy security decision.
 - **Autonomous mode:** automatic
 ## Gate verdict log
-<P-4>
+<P-4>APPROVED — Phase 1 (head-product, fresh review). All source claims re-verified: header transport pinned (config.ts:123), antiCsrf currently unset, residual WS cookie surface real but CSRF-safe by handshake (ws-auth.ts:72). REFRAME correct; no-BOARD correct; 4 ACs falsifiable (AC2 load-bearing, value deferral to B-block specialist appropriate); worth-doing (locks posture vs wave-84 cookie-migration trigger); no hardening theater. rework_cap_remaining: 3. → B-block.</P-4>
