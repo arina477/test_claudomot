@@ -7,7 +7,7 @@
 | T-2 | stages/T-2-unit.md | ci-verified | done | web 788 (incl. toggle: snapshot-restore, race, toast+announce-once, F1 timer) |
 | T-3 | stages/T-3-contract.md | — | skipped | no contract |
 | T-4 | stages/T-4-integration.md | active | done | assignments.test.tsx toggle suite (real-prop-wiring) |
-| T-5 | stages/T-5-e2e.md | active | pending | live: assignments load + toggle happy path + offline-forced failure toast/revert |
+| T-5 | stages/T-5-e2e.md | active | done | LIVE PASS: forced-failure toast + prior-status revert verified |
 | T-6 | stages/T-6-layout.md | — | skipped | no persistent visual surface (toast shows only on failure) |
 | T-7 | stages/T-7-perf.md | — | skipped | not heavy |
 | T-8 | stages/T-8-security.md | — | skipped | no auth/session/payment surface (not an auth wave) |
