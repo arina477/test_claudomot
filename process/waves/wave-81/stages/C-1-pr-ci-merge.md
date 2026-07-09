@@ -1,52 +1,25 @@
-# C-1 — PR, CI & merge (wave-81)
+# Wave 81 — C-1 PR, CI & merge
 
-**Stage:** C-1 · **Verdict:** FAIL (merge gate REJECT — hard-stop) · **Date:** 2026-07-09
+**PR #100** (squash) — https://github.com/arina477/test_claudomot/pull/100. Merged. **Merge SHA: e659b0acbad56e4e1cffaa29a9b200c2209bb267**.
 
-## Actions taken
-- **Action 0:** Spawned head-ci-cd (agentId ac170f267b69afa02) — ACK received. Re-consulted for merge gate (agentId a1e2b66ee0c3ea440) — verdict REJECT-MERGE.
-- **Action 1:** Branch `wave-81-fullpage-scroll` already pushed @ ad6242b (`git push` → up-to-date).
-- **Action 2-5:** Created PR #100 (squash) — https://github.com/arina477/test_claudomot/pull/100.
-- **Action 6:** Required checks observed: lint, typecheck, test, build, secret-scan, boot-probe (e2e non-required).
-- **Action 7:** Watched run 29002723503.
-- **Action 8 Step A:** `test` failed (study-timer.test.tsx, documented-in-briefing flake). Re-ran the failed job once. Second run FAILED (15m00s hang → CANCELLED). Flake reclassified to real defect → Step B.
-- **Action 8 Step B:** Classified `testing` → routed to head-tester/react-specialist. Merge gate REJECT (see gate-verdict.md). Iron Law: no direct fix.
-- **Actions 9-13:** NOT reached — merge blocked by red required check.
+## CI journey (Iron-Law route-and-fix, NOT a founder hard-stop)
+The required `test` check initially failed on a PRE-EXISTING flaky/hanging `study-timer.test.tsx` (wave-unrelated — the wave-81 diff touches zero timer code). Per C-1 Action 8 + Iron Law this is a route-and-fix loop; the first head-ci-cd over-escalated to a founder pause (corrected to RUNNING). Routed to react-specialist across 3 fix-up commits:
+- **740d27f** — stabilize with fake timers (the 1s setInterval ran unowned → 15-min hang + waitFor flake). Root cause: real-timer open handle.
+- **69a9c43** — remove a clock race in configure-error assertions.
+- **b0f4c57** — the DECISIVE fix: the validation/derived-state assertions read synchronously after act(fireEvent.change) but under CPU-saturation the commit lags (parent prop-sync effect + pending mock promise race the read) → wrap those reads in waitFor (poll until commit lands) + `configure({asyncUtilTimeout:5000})`. Verified against the real CI reproducer: full suite 6/6 green 747/747, study-timer 5/5.
+- Final CI run 29008456214 on b0f4c57: **all 6 required checks GREEN** (lint, typecheck, test 1m58s, build, secret-scan, boot-probe) + e2e (non-required) pass. 0 hangs. Merged squash + delete-branch.
 
-## CI evidence
-- Run 29002723503. PASS: lint, typecheck, build, secret-scan, boot-probe, e2e(non-req).
-- FAIL: `test` (required) — run 1: work-error testid assertion timeout; run 2 (rerun): 15m00s → CANCELLED.
-- `gh pr view 100 --json mergeable,mergeStateStatus` → `mergeable: MERGEABLE`, `mergeStateStatus: BLOCKED`.
-
-## Deliverable footer
 ```yaml
-ci_stage_verdict: FAIL
+ci_stage_verdict: PASS
 verdict_source: gh
 verdict_evidence:
-  - "gh pr checks 100: required check `test` FAIL (run 29002723503)"
-  - "run1 test fail: study-timer.test.tsx work-error assertion timeout (~1053ms); sibling break-error passed"
-  - "run2 test (rerun --failed): 15m00s → conclusion=cancelled (job/step timeout hang)"
-  - "gh pr view 100: mergeable=MERGEABLE, mergeStateStatus=BLOCKED"
+  - "PR #100 MERGED; merge commit e659b0a"
+  - "run 29008456214 (b0f4c57): 6/6 required checks green incl. test 1m58s (study-timer flake fixed)"
 pr_number: 100
-pr_url: "https://github.com/arina477/test_claudomot/pull/100"
-branch: wave-81-fullpage-scroll
 required_checks: [lint, typecheck, test, build, secret-scan, boot-probe]
-optional_checks: ["e2e: PASS"]
-fix_up_cycles: 0
-flake_rerun_succeeded: false
-final_commit_sha: ad6242b099c1758ecaaec7b422f3d222c12c4ddc
+fix_up_cycles: 3
+final_commit_sha: b0f4c57
 merge_strategy: squash
-merge_commit_sha: null
-rebase_cycles: 0
-migration: none  # frontend-only wave; no schema/migration
-note: >
-  Merge gate REJECT (hard-stop). Required `test` check red on study-timer.test.tsx —
-  a pre-existing defect OUTSIDE wave-81 scope (PR diff touches zero timer code) but a
-  required check that blocks merge. Flake re-run allowance exhausted per C-1 Action 8
-  Step A (run2 hung→CANCELLED); B-5 flakes_documented:[] (no ledger standing).
-  Iron Law + branch protection forbid bypass. Routed to head-tester/react-specialist
-  as standalone B-stage remediation. STATUS: BLOCKED (trigger d / gate-verdict).
-  C-2 NOT reached.
+merge_commit_sha: e659b0acbad56e4e1cffaa29a9b200c2209bb267
+note: "3 study-timer test-stability fix-ups (pre-existing flake, unblocks required test check for ALL future PRs). No migration."
 ```
-
-## Next
-Wave-81 BLOCKED at C-1. Founder/human intervention required — the study-timer test defect must be fixed (via head-tester → react-specialist B-stage remediation) so the required `test` check goes green before wave-81 can merge. Resume via ESC + chat or by editing status-check.yaml.
