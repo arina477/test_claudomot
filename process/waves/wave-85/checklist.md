@@ -12,9 +12,9 @@ Topic: AssignmentCard optimistic toggle revert (restore captured prior state + e
 - [x] B-0 Branch & schema
 - [x] B-1 Contracts (skipped)
 - [x] B-2 Backend (skipped)
-- [ ] B-3 Frontend
-- [ ] B-4 Wire
-- [ ] B-5 Verify
+- [x] B-3 Frontend (snapshot-restore + toast)
+- [x] B-4 Wire
+- [x] B-5 Verify (green)
 - [ ] B-6 Review
 ## C — CI/CD
 - [ ] C-1 PR, CI & merge

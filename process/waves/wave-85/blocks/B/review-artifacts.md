@@ -6,7 +6,7 @@
 | B-0 | stages/B-0-branch-and-schema.md | in-progress | branch; no deps/schema |
 | B-1 | stages/B-1-contracts.md | pending | SKIP |
 | B-2 | stages/B-2-backend.md | pending | SKIP |
-| B-3 | stages/B-3-frontend.md | pending | react-specialist: handleToggle fix + toast + update existing test |
+| B-3 | ... | done | snapshot-restore + visible toast + a11y (64c3b3eb) |
 | B-4/5/6 | ... | pending | |
 ## Block-specific context
 - Spec: task 3ad35a42 (incl. p4-phase2-corrections + p4-watch-items). Branch wave-85-assignment-toggle-revert. claimed [3ad35a42].
