@@ -18,8 +18,8 @@ BUILD:
 - [x] B-1 Contracts (skipped)
 - [x] B-2 Backend (skipped)
 - [ ] B-3 Frontend
-- [ ] B-4 Wiring
-- [ ] B-5 Verify
+- [x] B-4 Wiring
+- [x] B-5 Verify
 - [ ] B-6 Review
 
 CI/CD:

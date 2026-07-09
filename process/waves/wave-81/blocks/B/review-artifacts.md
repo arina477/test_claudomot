@@ -7,8 +7,8 @@
 | B-1 | ... | skipped |
 | B-2 | ... | skipped |
 | B-3 | stages/B-3-frontend.md | pending | react-specialist (FullPageScroll + 5 routes) |
-| B-4 | stages/B-4-wiring.md | pending | |
-| B-5 | stages/B-5-verify.md | pending | |
+| B-4 | ... | done | |
+| B-5 | ... | done | |
 | B-6 | stages/B-6-review.md | pending | |
 ## Block-specific context
 - Spec: task 2340d2d3 (DB). Branch: wave-81-fullpage-scroll. claimed_task_ids [2340d2d3].
