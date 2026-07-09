@@ -15,7 +15,8 @@
  *     strict.
  *   - X-Powered-By ABSENT.
  *   - Content-Security-Policy, Cross-Origin-Resource-Policy,
- *     Cross-Origin-Embedder-Policy ALL ABSENT (the load-bearing fence).
+ *     Cross-Origin-Embedder-Policy, Cross-Origin-Opener-Policy, and
+ *     Origin-Agent-Cluster ALL ABSENT (the load-bearing fence).
  *   - ThrottlerGuard-triggered 429 body does NOT contain "ThrottlerException"
  *     (generic message), keeps HTTP 429 + Retry-After.
  *   - CORS preflight (OPTIONS from the web origin) still returns
@@ -145,6 +146,16 @@ describe('API security headers + generic throttler 429 — wave-83 B-2 (task 875
   it('does NOT set Cross-Origin-Embedder-Policy (fenced off)', async () => {
     const res = await fetch(`${baseUrl}/ping`);
     expect(res.headers.get('cross-origin-embedder-policy')).toBeNull();
+  });
+
+  it('does NOT set Cross-Origin-Opener-Policy (fenced off — breaks popup/OAuth flow)', async () => {
+    const res = await fetch(`${baseUrl}/ping`);
+    expect(res.headers.get('cross-origin-opener-policy')).toBeNull();
+  });
+
+  it('does NOT set Origin-Agent-Cluster (fenced off for consistency)', async () => {
+    const res = await fetch(`${baseUrl}/ping`);
+    expect(res.headers.get('origin-agent-cluster')).toBeNull();
   });
 
   // -------------------------------------------------------------------------
