@@ -7,13 +7,13 @@ Topic: Auth hardening — make SuperTokens anti-CSRF posture explicit + regressi
 - [x] P-3 Plan (explicit antiCsrf + regression test; supertokens-integration)
 - [x] P-4 Gate (APPROVED; antiCsrf value = B-block specialist call)
 ## B — Build
-- [ ] B-0 Branch & schema
-- [ ] B-1 Contracts
-- [ ] B-2 Backend
-- [ ] B-3 Frontend
-- [ ] B-4 Wire
-- [ ] B-5 Verify
-- [ ] B-6 Review
+- [x] B-0 Branch & schema
+- [x] B-1 Contracts (skipped)
+- [x] B-2 Backend (antiCsrf NONE + regression test)
+- [x] B-3 Frontend (skipped)
+- [x] B-4 Wire
+- [x] B-5 Verify (green)
+- [x] B-6 Review (APPROVE; CSRF-guard strengthened)
 ## C — CI/CD
 - [ ] C-1 PR, CI & merge
 - [ ] C-2 Deploy & verify
