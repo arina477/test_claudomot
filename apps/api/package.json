@@ -33,6 +33,7 @@
     "@studyhall/shared": "workspace:*",
     "cookie": "^0.7.2",
     "drizzle-orm": "^0.45.2",
+    "helmet": "^8.2.0",
     "livekit-server-sdk": "2.15.5",
     "pg": "^8.22.0",
     "reflect-metadata": "^0.2.2",

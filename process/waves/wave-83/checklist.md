@@ -7,10 +7,10 @@ Topic: API robustness — API security-headers hardening (HSTS + disable x-power
 - [x] P-3 Plan (helmet safe-headers + throttler override; B-3 supertokens-integration)
 - [x] P-4 Gate (APPROVED; WS T-8 check folded into spec)
 ## B — Build
-- [ ] B-0 Branch & schema
-- [ ] B-1 Contracts
+- [x] B-0 Branch & schema (helmet@8.2.0)
+- [x] B-1 Contracts (skipped)
 - [ ] B-2 Backend
-- [ ] B-3 Frontend
+- [x] B-3 Frontend (skipped)
 - [ ] B-4 Wire
 - [ ] B-5 Verify
 - [ ] B-6 Review
