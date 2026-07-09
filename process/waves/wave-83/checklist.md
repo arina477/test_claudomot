@@ -32,8 +32,8 @@ Topic: API robustness — API security-headers hardening (HSTS + disable x-power
 - [x] V-2 Triage (0 blocking; PWA icon already ticketed)
 - [x] V-3 Fast-fix gate (head-verifier APPROVED)
 ## L — Learn
-- [ ] L-1 Docs
-- [ ] L-2 Distill
+- [x] L-1 Docs (CHANGELOG #102 under Changed; milestone+README SKIP)
+- [x] L-2 Distill (task 875b97f4 done; 3 observations; 0 promotions — all first-instance)
 ## N — Next
 - [ ] N-1 Survey & triggers
 - [ ] N-2 Seed
