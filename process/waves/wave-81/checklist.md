@@ -27,19 +27,19 @@ CI/CD:
 - [x] C-2 Deploy & verify (both SUCCESS @ e659b0a; no migration; canary skipped)
 
 TEST:
-- [ ] T-1 Static
-- [ ] T-2 Unit
-- [ ] T-3 Contract
-- [ ] T-4 Integration
-- [ ] T-5 E2E
-- [ ] T-6 Layout
-- [ ] T-7 Perf
-- [ ] T-8 Security
-- [ ] T-9 Journey
+- [x] T-1 Static (CI-verified: lint+typecheck green, run 29008456214; 0 TS bypasses)
+- [x] T-2 Unit (CI-verified: test green 747/747; FullPageScroll DOM-root + study-timer stabilized)
+- [x] T-3 Contract (skipped — no API/SDK/contract change)
+- [x] T-4 Integration (skipped — no schema/service change; migration none)
+- [x] T-5 E2E (LIVE: /settings/profile scrolls to "Save academic identity"; privacy + landing PASS; F-T5-1 stale-SW HIGH→V-2)
+- [x] T-6 Layout (single scroller, 6px DS scrollbar, fixed-nav anchored, 0 token violations)
+- [x] T-7 Perf (skipped — not heavy)
+- [x] T-8 Security (skipped-minimal — no auth surface; /app unwrapped, authed routes OK)
+- [x] T-9 Journey (head-tester APPROVED; journey map committed 98ce2dd)
 
 VERIFY:
-- [ ] V-1 Independent reviews (Karen + jenny, parallel)
-- [ ] V-2 Triage
+- [x] V-1 Independent reviews (Karen + jenny, parallel)
+- [x] V-2 Triage
 - [ ] V-3 Fast-fix loop (or close)
 
 LEARN:
