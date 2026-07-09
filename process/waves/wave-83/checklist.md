@@ -2,7 +2,7 @@
 Topic: API robustness — API security-headers hardening (HSTS + disable x-powered-by + generic 429 body)
 ## P — Product
 - [x] P-0 Frame (seed swap: dropped evaporated ParseUUIDPipe, re-seeded security-headers; PROCEED)
-- [ ] P-1 Decompose
+- [x] P-1 Decompose (single-spec, PROCEED; floor waived; no design gap)
 - [ ] P-2 Spec
 - [ ] P-3 Plan
 - [ ] P-4 Gate

@@ -9,7 +9,7 @@
 | Stage | Deliverable file | Status | Notes |
 |---|---|---|---|
 | P-0 | stages/P-0-frame.md | done | seed swapped (ParseUUIDPipe evaporated) -> security-headers; PROCEED |
-| P-1 | stages/P-1-decompose.md | pending | |
+| P-1 | stages/P-1-decompose.md | done | single-spec, PROCEED (floor waived per PRODUCT-5); design_gap_flag false |
 | P-2 | stages/P-2-spec.md | pending | |
 | P-3 | stages/P-3-plan.md | pending | |
 | P-4 | stages/P-4-gate.md | pending | |
@@ -18,7 +18,7 @@
 - **Wave topic:** ParseUUIDPipe on uuid path params (400 not 500 on malformed :id)
 - **Spec-contract short-circuit verdict:** no-prior-spec (prose seed → full P-1..P-3)
 - **Roadmap milestone:** unassigned (roadmap complete, all 14 milestones done)
-- **design_gap_flag:** unset (backend-only wave → D-block will skip)
+- **design_gap_flag:** false (backend/infra-only — no UI surface; D-block skips)
 - **claimed_task_ids:** [875b97f4-bbae-4f1d-99b8-f1f26a876a3f] (to confirm at P-2)
 - **Tier-3 product decisions resolved this wave:** none (ParseUUIDPipe is a technical default, rule 17)
 - **Autonomous mode active during P-block:** automatic
