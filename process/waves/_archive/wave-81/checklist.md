@@ -47,6 +47,6 @@ LEARN:
 - [x] L-2 Distill
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers (roadmap terminal 14/14; stockout SUPPRESSED by founder bug-fix directive → founder-deferred; no BOARD vote; head-next APPROVED)
+- [x] N-2 Seed (0e58af8e DM auth-guard race — user-facing bounce bug; bundle-of-1; validated todo/wave_id NULL/milestone_id NULL; head-next APPROVED)
+- [x] N-3 Handoff (wave-82; single-move archive; waves-81 status=ok; loop RUNNING)
