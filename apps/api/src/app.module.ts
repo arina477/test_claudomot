@@ -2,11 +2,12 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AssignmentsModule } from './assignments/assignments.module';
 import { AuthModule } from './auth/auth.module';
 import { EntitlementsModule } from './billing/entitlements.module';
 import { BlocksModule } from './blocks/blocks.module';
+import { GenericThrottlerGuard } from './common/generic-throttler.guard';
 import { DmModule } from './dm/dm.module';
 import { FilesModule } from './files/files.module';
 import { HealthModule } from './health/health.module';
@@ -61,11 +62,13 @@ import { VoiceModule } from './voice/voice.module';
     StudyRoomModule,
   ],
   providers: [
-    // ThrottlerGuard as APP_GUARD covers all NestJS-handled routes.
+    // GenericThrottlerGuard (ThrottlerGuard subclass) as APP_GUARD covers all
+    // NestJS-handled routes. It emits a GENERIC 429 body (no framework class
+    // name) while keeping HTTP 429 + Retry-After (wave-83 B-2, F23-T-8d).
     // /health is exempt via @SkipThrottle (applied in health.controller.ts).
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: GenericThrottlerGuard,
     },
   ],
 })

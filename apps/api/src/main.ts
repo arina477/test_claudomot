@@ -8,6 +8,7 @@ import supertokens from 'supertokens-node';
 import { AppModule } from './app.module';
 import { SupertokensExceptionFilter } from './auth/auth.exception.filter';
 import { initSuperTokens } from './auth/supertokens.config';
+import { securityHeaders } from './common/security-headers';
 import { EmailService } from './email/email.service';
 import { UsersService } from './users/users.service';
 
@@ -101,6 +102,21 @@ async function bootstrap(): Promise<void> {
   // the robust approach regardless of hop count. Setting trust proxy=true is still
   // correct for req.secure, req.hostname, and other Express features.
   app.set('trust proxy', true);
+
+  // Security headers (helmet) — registered FIRST, before enableCors and routes,
+  // so the headers land on EVERY response (including errors and preflight).
+  //
+  // ORDERING (LOAD-BEARING): helmet must NOT clobber the credentialed-CORS config
+  // wired via enableCors() below. It does not: helmet only SETS flat response
+  // headers (HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy) and
+  // REMOVES X-Powered-By — it never writes/strips Access-Control-Allow-* and does
+  // not respond to OPTIONS preflight. The CSP / CORP / COEP trio (the only helmet
+  // defaults that would restrict cross-origin reads) is fenced OFF in
+  // securityHeaders(), so helmet adds nothing that could break the web→api
+  // cross-origin credentialed fetch or the SuperTokens CORS negotiation.
+  // Registering it here (ahead of enableCors) is the helmet-recommended position
+  // and keeps preflight + credentialed CORS fully intact.
+  app.use(securityHeaders());
 
   // Split WEB_ORIGIN on comma to support multiple origins (e.g. localhost + prod)
   const rawOrigin = process.env.WEB_ORIGIN ?? 'http://localhost:5173';
