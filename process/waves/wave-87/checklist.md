@@ -32,8 +32,8 @@ Topic: Server endpoints — PATCH /servers/:id 500 (un-piped :id 22P02) + no ser
 - [x] V-2 Triage
 - [x] V-3 Fast-fix
 ## L — Learn
-- [ ] L-1 Docs
-- [ ] L-2 Distill
+- [x] L-1 Docs
+- [x] L-2 Distill
 ## N — Next
 - [ ] N-1 Survey & triggers
 - [ ] N-2 Seed
