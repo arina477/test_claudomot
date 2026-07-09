@@ -47,6 +47,6 @@ LEARN:
 - [x] L-2 Distill (task 0e58af8e done; 4 obs, 0 promotions)
 
 NEXT:
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers (no active milestone; no rituals fire; loop_state ready)
+- [x] N-2 Seed (4a92327c ParseUUIDPipe; bundle-of-1)
+- [x] N-3 Handoff (wave-82 closed + archived; wave-83 opened)
