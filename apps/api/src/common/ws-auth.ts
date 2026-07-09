@@ -71,6 +71,9 @@ export function installWsAuthMiddleware(server: Server): void {
       //
       // antiCsrfToken is undefined: no CSRF risk on WS upgrade (the upgrade
       // is a one-time authenticated handshake, not a form-submittable request).
+      // (See auth/supertokens.config.ts Session.init antiCsrf:'NONE' — header
+      // transport is structurally CSRF-safe; this residual cookie read is the
+      // documented exception, safe because the handshake is not form-submittable.)
       const session = await Session.getSessionWithoutRequestResponse(accessToken, undefined);
 
       // --- 3. Validate email-verification claim ---
