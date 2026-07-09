@@ -7,10 +7,10 @@
 |---|---|---|---|
 | B-0 | stages/B-0-branch-and-schema.md | in-progress | branch; no deps/schema |
 | B-1 | stages/B-1-contracts.md | pending | SKIP (no contract surface) |
-| B-2 | stages/B-2-backend.md | pending | api Session.init: tokenTransferMethod header + accessTokenValidity 900 |
-| B-3 | stages/B-3-frontend.md | pending | web Session.init header + cross-origin-safe CSP (empirical, +Google Fonts allowlist) |
-| B-4 | stages/B-4-wiring.md | pending | |
-| B-5 | stages/B-5-verify.md | pending | |
+| B-2 | ... | done | getTokenTransferMethod header; TTL->C-block core env |
+| B-3 | ... | done | web header + Vite CSP plugin (empirically verified) |
+| B-4 | ... | done |
+| B-5 | ... | done | api 821 + web 773 + build + biome green |
 | B-6 | stages/B-6-review.md | pending | |
 
 ## Block-specific context

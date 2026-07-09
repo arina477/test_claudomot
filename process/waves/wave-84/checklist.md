@@ -9,10 +9,10 @@ Topic: Harden session-token storage (httpOnly cookies vs JS-readable header mode
 ## B — Build
 - [x] B-0 Branch & schema
 - [x] B-1 Contracts (skipped)
-- [ ] B-2 Backend
-- [ ] B-3 Frontend
-- [ ] B-4 Wire
-- [ ] B-5 Verify
+- [x] B-2 Backend (getTokenTransferMethod header)
+- [x] B-3 Frontend (web header + CSP plugin)
+- [x] B-4 Wire
+- [x] B-5 Verify (green)
 - [ ] B-6 Review
 ## C — CI/CD
 - [ ] C-1 PR, CI & merge
