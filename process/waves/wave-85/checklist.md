@@ -30,8 +30,8 @@ Topic: AssignmentCard optimistic toggle revert (restore captured prior state + e
 - [x] T-8 Security (skipped — no auth)
 - [x] T-9 Journey (gate APPROVED; journey regen SKIPPED — no new surface)
 ## V — Verify
-- [ ] V-1 Reviews
-- [ ] V-2 Triage
+- [x] V-1 Reviews (karen + jenny APPROVE)
+- [x] V-2 Triage (0 blocking)
 - [ ] V-3 Fast-fix gate
 ## L — Learn
 - [ ] L-1 Docs
