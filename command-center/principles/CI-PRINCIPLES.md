@@ -158,3 +158,6 @@ pr_conventions:
 
 11. Mark an e2e whose baseURL targets deployed prod as non-required; it verifies the deployed binary, not the branch.
    Why: A prod-baseURL e2e can pass green while the branch carries an undeployed regression.
+
+12. Grant the C-1 flake re-run only to a test in the B-5 flakes ledger, not one named only in a briefing.
+   Why: An unledgered flake gets re-run blind, masking a real failure and burning a CI cycle.

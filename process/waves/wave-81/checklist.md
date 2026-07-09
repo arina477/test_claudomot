@@ -44,7 +44,7 @@ VERIFY:
 
 LEARN:
 - [x] L-1 Docs (changelog #100 Fixed entry; milestone-delta SKIP milestone_id NULL; README skip)
-- [ ] L-2 Distill
+- [x] L-2 Distill
 
 NEXT:
 - [ ] N-1 Survey & triggers
