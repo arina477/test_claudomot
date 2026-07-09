@@ -35,6 +35,6 @@ Topic: Server endpoints — PATCH /servers/:id 500 (un-piped :id 22P02) + no ser
 - [x] L-1 Docs
 - [x] L-2 Distill
 ## N — Next
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers
+- [x] N-2 Seed
+- [x] N-3 Handoff
