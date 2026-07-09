@@ -23,7 +23,7 @@ BUILD:
 - [x] B-6 Review (APPROVE)
 
 CI/CD:
-- [ ] C-1 PR, CI & merge
+- [x] C-1 PR, CI & merge (PR #101, merged 30bad914)
 - [ ] C-2 Deploy & verify (canary armed when real users > 1000)
 
 TEST:
