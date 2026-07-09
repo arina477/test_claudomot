@@ -5,7 +5,7 @@
 |---|---|---|---|
 | V-1 | ... | done | both APPROVE |
 | V-2 | ... | done | 0 blocking; SW accept-with-note |
-| V-3 | stages/V-3-fast-fix.md | pending | |
+| V-3 | ... | done | |
 ## Block-specific context
 - T-block findings: 2 — **F-T5-1 (HIGH, deploy-delivery): Workbox SW serves stale pre-fix bundle to returning users (incl. founder) → they may still see the bug**; F-T2-1 (LOW, no standalone ProfilePage-root unit).
 - Founder bug verified FIXED LIVE (scroll top→bottom, save button reachable) once the new bundle loads.
