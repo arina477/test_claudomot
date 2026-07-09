@@ -6,7 +6,7 @@
 | P-0 | stages/P-0-frame.md | done | PROCEED; single-card snapshot-restore + toast; consistency spun out |
 | P-1 | stages/P-1-decompose.md | done | single-spec PROCEED (floor waived); design_gap_flag false (reuses Toast) |
 | P-2 | stages/P-2-spec.md | done | 5 ACs; snapshot-restore + onAnnounce error |
-| P-3 | stages/P-3-plan.md | pending | |
+| P-3 | stages/P-3-plan.md | done | single-file AssignmentCard handleToggle; react-specialist |
 | P-4 | stages/P-4-gate.md | pending | |
 ## Block-specific context
 - **Wave topic:** AssignmentCard.tsx optimistic toggle: capture prior status before the flip + restore on error (currently assumes opposite of newState) + surface an error toast (currently console-only)
