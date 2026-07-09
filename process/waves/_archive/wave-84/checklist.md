@@ -35,6 +35,6 @@ Topic: Harden session-token storage (httpOnly cookies vs JS-readable header mode
 - [x] L-1 Docs (CHANGELOG Changed #103 #104; milestone SKIP; README SKIP; BOARD table)
 - [x] L-2 Distill (task 9535895f done; 3 obs; 1 promotion → BUILD-PRINCIPLES rule 19)
 ## N — Next
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers (no active milestone; roadmap COMPLETE; bug-fix phase — no rituals fire)
+- [x] N-2 Seed (wave-85: 3ad35a42 assignment toggle-revert; premise HOLDS; head-next APPROVED)
+- [x] N-3 Handoff (wave-84 waves row status='ok'; archived; wave-85 seeded; loop ready)
