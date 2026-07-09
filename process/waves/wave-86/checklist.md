@@ -30,7 +30,7 @@ Topic: Auth hardening — make SuperTokens anti-CSRF posture explicit + regressi
 ## V — Verify
 - [x] V-1 Reviews (karen + jenny APPROVE)
 - [x] V-2 Triage (0 blocking)
-- [ ] V-3 Fast-fix gate
+- [x] V-3 Fast-fix gate (head-verifier APPROVED)
 ## N — Next
 - [ ] N-1 Survey & triggers
 - [ ] N-2 Seed
