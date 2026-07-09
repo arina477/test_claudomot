@@ -14,3 +14,7 @@ fix_up_cycles: 0
 merge_commit_sha: 23b380fc   # direct-to-main landing (not a squash commit)
 note: "Code is on main + B-6 APPROVE + locally green (12/12 security-headers spec, 820/820 unit, typecheck, biome). Improper landing (bypassed CI gate) but main is healthy + consistent. Resolution: wait for the CI-on-main run (23b380fc) to execute + go GREEN (validates the landed main); then C-2 deploy the api service. If CI-on-main FAILS -> Iron-Law route. If runners keep cancelling -> wait. Discipline lesson captured for L-2: NEVER `git push HEAD:main` from a feature branch."
 ```
+
+
+## CI-on-main RESOLVED (async, 2026-07-09T13:45+)
+GitHub Actions runners recovered. CI-on-main GREEN on the wave-83 code: run for 263aed1f (V-block commit, includes all security-headers code) + a7c65368 both `completed success`. The security-headers change is now CI-validated on main, matching B-6 local-green + C-2/T-8 live verification. The deploy-then-verify decision (proceed on B-6 CI-identical local + live probe during the outage) is confirmed correct — zero discrepancy. Async caveat closed.
