@@ -32,9 +32,9 @@ Topic: Auth hardening — make SuperTokens anti-CSRF posture explicit + regressi
 - [x] V-2 Triage (0 blocking)
 - [x] V-3 Fast-fix gate (head-verifier APPROVED)
 ## N — Next
-- [ ] N-1 Survey & triggers
-- [ ] N-2 Seed
-- [ ] N-3 Handoff
+- [x] N-1 Survey & triggers (no active/todo milestone; 0 rituals fire; roadmap-planning suppressed per founder bug-fix deferral)
+- [x] N-2 Seed (1c728847 server-endpoints hardening; single-spec, 0 siblings; premise HOLDS)
+- [x] N-3 Handoff (wave-86 closed + archived; wave-87 seeded)
 ## L — Learn
 - [x] L-1 Docs
 - [x] L-2 Distill
