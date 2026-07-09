@@ -43,8 +43,8 @@ VERIFY:
 - [x] V-3 Fast-fix gate (head-verifier APPROVED)
 
 LEARN:
-- [ ] L-1 Docs
-- [ ] L-2 Distill
+- [x] L-1 Docs (changelog #101; milestone + README skip)
+- [x] L-2 Distill (task 0e58af8e done; 4 obs, 0 promotions)
 
 NEXT:
 - [ ] N-1 Survey & triggers
