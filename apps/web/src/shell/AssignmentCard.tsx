@@ -14,9 +14,9 @@
  */
 
 import type { Assignment, AssignmentSubmission, SubmitAssignmentInput } from '@studyhall/shared';
-import { useCallback, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { api } from '../auth/api';
-import { ClockIcon, FileIcon, PaperclipIcon, SpinnerIcon, XIcon } from './icons';
+import { ClockIcon, FileIcon, PaperclipIcon, SpinnerIcon, WarningCircleIcon, XIcon } from './icons';
 
 // ---------------------------------------------------------------------------
 // Chip logic helpers — pure, testable
@@ -604,6 +604,47 @@ function OwnSubmissionCard({ submission, onEditSubmission }: OwnSubmissionCardPr
 }
 
 // ---------------------------------------------------------------------------
+// StatusErrorToast — minimal visible "action failed" toast (DESIGN-SYSTEM.md:106)
+//
+// Local + visual-only: this wave wires a visible error surface into the status
+// toggle only. The shared visible-toast utility across all 9 optimistic sites is
+// spun out to task 3b878f96 — a full extraction of ReportDialog's Toast is
+// intentionally NOT done here.
+//
+// A11y: aria-hidden so AT does NOT read it — the failure is announced to screen
+// readers exactly once via AssignmentsPanel's onAnnounce sr-only live region
+// (see handleToggle). This avoids a double-announce (toast aria-live + onAnnounce).
+// ---------------------------------------------------------------------------
+
+function StatusErrorToast({ text, onGone }: { text: string; onGone: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onGone, 3500);
+    return () => clearTimeout(t);
+  }, [onGone]);
+
+  return (
+    <div
+      aria-hidden="true"
+      data-testid="status-toggle-error-toast"
+      className="fixed bottom-6 left-4 right-4 z-[60] flex items-center gap-3 rounded-md px-4 py-3 text-sm font-medium sm:left-auto sm:right-6"
+      style={{
+        maxWidth: 360,
+        marginLeft: 'auto',
+        backgroundColor: '#27272a',
+        border: '1px solid #ef4444',
+        boxShadow: '0 0 15px rgba(239,68,68,0.15), 0 8px 32px rgba(0,0,0,0.6)',
+        color: 'rgba(255,255,255,0.92)',
+      }}
+    >
+      <span style={{ color: '#ef4444', flexShrink: 0, display: 'inline-flex' }}>
+        <WarningCircleIcon size={18} />
+      </span>
+      <span>{text}</span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
 
@@ -649,18 +690,32 @@ export function AssignmentCard({
 
   const announce = onAnnounce ?? (() => {});
 
+  // Visible "action failed" toast for the status toggle (sighted users).
+  const [statusError, setStatusError] = useState(false);
+
   const handleToggle = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
+      // Capture the ACTUAL prior status at click time — BEFORE the optimistic
+      // flip — so a failure restores the real pre-toggle value, not the naive
+      // opposite of newState. assignment.myStatus is in the dep array below so
+      // this callback re-creates whenever the status changes → prev is never
+      // stale across the optimistic re-render.
+      const prev = assignment.myStatus;
       const newState = e.currentTarget.checked ? 'done' : ('todo' as const);
       onStatusChange(assignment.id, newState);
       try {
         await api.setAssignmentStatus(assignment.id, { state: newState });
       } catch (err) {
         console.error('[AssignmentCard] status toggle failed', err);
-        onStatusChange(assignment.id, newState === 'done' ? 'todo' : 'done');
+        // Restore the captured snapshot (not the assumed opposite).
+        onStatusChange(assignment.id, prev);
+        // Visible surface for sighted users (aria-hidden — see StatusErrorToast).
+        setStatusError(true);
+        // Announce to screen readers exactly once via the sr-only live region.
+        announce("Couldn't update assignment. Please try again.");
       }
     },
-    [assignment.id, onStatusChange],
+    [assignment.id, assignment.myStatus, onStatusChange, announce],
   );
 
   const handleSubmitSuccess = useCallback((sub: AssignmentSubmission) => {
@@ -852,6 +907,14 @@ export function AssignmentCard({
             )}
           </div>
         </div>
+      )}
+
+      {/* Visible error toast on a failed status toggle */}
+      {statusError && (
+        <StatusErrorToast
+          text="Couldn't update assignment. Please try again."
+          onGone={() => setStatusError(false)}
+        />
       )}
     </article>
   );
