@@ -13,3 +13,16 @@
 - **LOAD-BEARING (P-4/karen): interceptor-trace-first** — SuperTokens Session.init already installs a global fetch auto-refresh interceptor with single-flight+bounded-retry; B-3 must trace whether the escaping 401 is interceptor-EXHAUSTED (fix=no-op → address the REAL cause) or interceptor-skipped (explicit seam helps). Tests prove resolution-to-200, not just refresh-called. Genuine-logout guard (refresh=false→propagate). T-9 mark F-T5-1 self-healed.
 ## Gate verdict log
 <B-6>
+
+## Build-block exit handoff
+```yaml
+build_block_status:    complete
+branch:                wave-82-api-401-refresh-retry
+stages_run:            [B-0, B-3, B-4, B-5, B-6]
+stages_skipped:        [B-1 (no contract change), B-2 (frontend-only)]
+review_verdict:        APPROVE
+deviations_logged:     ["B-3 plan framed fix as request()-level; trace proved Mechanism-3 (SessionAuth), primary fix moved to AuthGuard — folded per P-4 interceptor-trace mandate", "B-6 attempt-1 REWORK: attemptRefreshingSession-boolean gate was a no-op for NOT_EXISTS; corrected to settle-then-recheck"]
+last_commit_sha:       673eb221
+ready_for_ci:          true
+review_status:         gate-passed
+```
