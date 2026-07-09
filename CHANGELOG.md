@@ -147,6 +147,7 @@ All notable changes to StudyHall are documented here. Format follows
   - If a page still doesn't scroll on your first visit right after the update, one refresh fixes it — StudyHall auto-updates in the background.
   - Also stabilized a test that would intermittently stall and block releases, so changes now ship reliably.
 - Fixed a rare sign-in glitch where opening your messages right after logging in could bounce you back to the login screen; the app now settles the sign-in and only sends you to login if you're genuinely logged out. (#101)
+- Fixed the assignment done/todo toggle so a failed update restores the correct previous state instead of guessing the opposite, and now shows a visible "Couldn't update assignment. Please try again." message instead of failing silently. (#105)
 
 ### Security
 

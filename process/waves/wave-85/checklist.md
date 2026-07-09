@@ -34,8 +34,8 @@ Topic: AssignmentCard optimistic toggle revert (restore captured prior state + e
 - [x] V-2 Triage (0 blocking)
 - [x] V-3 Fast-fix gate (head-verifier APPROVED)
 ## L — Learn
-- [ ] L-1 Docs
-- [ ] L-2 Distill
+- [x] L-1 Docs (CHANGELOG #105 Fixed; milestone + README SKIP)
+- [x] L-2 Distill (task 3ad35a42 done; 4 observations; 0 promotions)
 ## N — Next
 - [ ] N-1 Survey & triggers
 - [ ] N-2 Seed
