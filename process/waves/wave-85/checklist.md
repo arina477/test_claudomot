@@ -2,12 +2,12 @@
 Topic: AssignmentCard optimistic toggle revert (restore captured prior state + error toast)
 ## P — Product
 - [x] P-0 Frame (PROCEED; snapshot-restore + toast; consistency spun out)
-- [ ] P-1 Decompose
+- [x] P-1 Decompose (single-spec PROCEED; floor waived; no design gap)
 - [ ] P-2 Spec
 - [ ] P-3 Plan
 - [ ] P-4 Gate
 ## D — Design
-- [ ] (conditional — set at P-1)
+- [x] D-block SKIPPED (design_gap_flag false — reuses existing Toast + onAnnounce)
 ## B — Build
 - [ ] B-0 Branch & schema
 - [ ] B-1 Contracts
