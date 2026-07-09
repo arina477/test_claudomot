@@ -487,6 +487,199 @@ describe('DmService — IDOR-safe participant gate', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Tests: encrypted-send senderKeyRef re-validation (wave-88 B-2 SECURITY fix)
+//
+// sendMessage, on the encrypted path (input.ciphertext !== undefined), fetches
+// the sender's registered public key and REJECTS the send with a
+// BadRequestException when a key IS registered AND its public_key differs from
+// input.senderKeyRef. Fail-OPEN: no registered key row → send proceeds.
+//
+// Select call order on the encrypted send path:
+//   1. isParticipant (dm_participants)                        → [{ id }] / []
+//   2. getConversationParticipantIds (block seam 2)           → participant rows
+//   3. user_encryption_keys key select (the NEW check)        → [key] / []
+//   4. getConversationParticipantIds (fan-out, only if insert)→ participant rows
+// ---------------------------------------------------------------------------
+
+describe('DmService — encrypted send senderKeyRef re-validation', () => {
+  let service: DmService;
+  let emitter: ReturnType<typeof makeEventEmitter>;
+
+  const encMsgRow = {
+    id: MSG_ID,
+    conversation_id: CONV_ID,
+    author_id: CREATOR_ID,
+    content: null,
+    ciphertext: 'CT_ENVELOPE',
+    sender_key_ref: 'my-registered-key',
+    envelope_version: 1,
+    idempotency_key: 'idem-enc-001',
+    created_at: NOW,
+  };
+
+  const encryptedInput = {
+    ciphertext: 'CT_ENVELOPE',
+    senderKeyRef: 'my-registered-key',
+    envelopeVersion: 1,
+    idempotencyKey: 'idem-enc-001',
+    // biome-ignore lint/suspicious/noExplicitAny: SendDmMessageInput narrowing not needed in mock test
+  } as any;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    emitter = makeEventEmitter();
+    // biome-ignore lint/suspicious/noExplicitAny: test mock
+    service = new DmService(emitter as any, makeBlocksService() as any);
+  });
+
+  // AC1: registered key MATCHES senderKeyRef → send succeeds (insert + emit).
+  it('AC1: encrypted send with registered key MATCHING senderKeyRef succeeds', async () => {
+    let selectCallCount = 0;
+    mockSelect.mockImplementation(() => {
+      selectCallCount++;
+      if (selectCallCount === 1) return makeSelectChain([{ id: 'part-001' }]); // isParticipant
+      if (selectCallCount === 2) {
+        // block seam 2: getConversationParticipantIds
+        return makeSelectChain([{ user_id: CREATOR_ID }, { user_id: TARGET_A_ID }]);
+      }
+      if (selectCallCount === 3) {
+        // NEW key check: registered key MATCHES input.senderKeyRef
+        return makeSelectChain([{ publicKey: 'my-registered-key' }]);
+      }
+      // fan-out getConversationParticipantIds
+      return makeSelectChain([{ user_id: CREATOR_ID }, { user_id: TARGET_A_ID }]);
+    });
+
+    mockInsert.mockReturnValue(makeInsertChain([encMsgRow]));
+
+    const result = await service.sendMessage(CONV_ID, CREATOR_ID, encryptedInput);
+
+    expect(result.id).toBe(MSG_ID);
+    expect(result.ciphertext).toBe('CT_ENVELOPE');
+    expect(result.content).toBeNull();
+    // Insert DID run and fan-out WAS emitted.
+    expect(mockInsert).toHaveBeenCalledTimes(1);
+    expect(emitter.emit).toHaveBeenCalledWith(
+      'dm.message',
+      expect.objectContaining({ conversationId: CONV_ID, senderId: CREATOR_ID }),
+    );
+  });
+
+  // AC2: registered key MISMATCHES senderKeyRef → throws; NO insert, NO emit.
+  // LOAD-BEARING: removing the production throw makes this case fail.
+  it('AC2: encrypted send with registered key MISMATCHING senderKeyRef throws BadRequestException, no insert, no emit', async () => {
+    let selectCallCount = 0;
+    mockSelect.mockImplementation(() => {
+      selectCallCount++;
+      if (selectCallCount === 1) return makeSelectChain([{ id: 'part-001' }]); // isParticipant
+      if (selectCallCount === 2) {
+        return makeSelectChain([{ user_id: CREATOR_ID }, { user_id: TARGET_A_ID }]);
+      }
+      // key check: registered key DIFFERS from input.senderKeyRef → reject
+      return makeSelectChain([{ publicKey: 'DIFFERENT-registered-key' }]);
+    });
+
+    mockInsert.mockReturnValue(makeInsertChain([encMsgRow]));
+
+    await expect(service.sendMessage(CONV_ID, CREATOR_ID, encryptedInput)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+
+    // The dm_messages INSERT must NOT have been attempted, and NO event emitted.
+    expect(mockInsert).not.toHaveBeenCalled();
+    expect(emitter.emit).not.toHaveBeenCalled();
+  });
+
+  // AC3: NO registered key ([] from key select) → fail-open, send SUCCEEDS.
+  it('AC3: encrypted send with NO registered key succeeds (fail-open)', async () => {
+    let selectCallCount = 0;
+    mockSelect.mockImplementation(() => {
+      selectCallCount++;
+      if (selectCallCount === 1) return makeSelectChain([{ id: 'part-001' }]); // isParticipant
+      if (selectCallCount === 2) {
+        return makeSelectChain([{ user_id: CREATOR_ID }, { user_id: TARGET_A_ID }]);
+      }
+      if (selectCallCount === 3) {
+        // key check: no registered key row → fail-open (registeredKey undefined)
+        return makeSelectChain([]);
+      }
+      // fan-out getConversationParticipantIds
+      return makeSelectChain([{ user_id: CREATOR_ID }, { user_id: TARGET_A_ID }]);
+    });
+
+    mockInsert.mockReturnValue(makeInsertChain([encMsgRow]));
+
+    const result = await service.sendMessage(CONV_ID, CREATOR_ID, encryptedInput);
+
+    expect(result.id).toBe(MSG_ID);
+    expect(result.ciphertext).toBe('CT_ENVELOPE');
+    expect(mockInsert).toHaveBeenCalledTimes(1);
+    expect(emitter.emit).toHaveBeenCalledTimes(1);
+  });
+
+  // AC4: non-encrypted (plaintext) send → key select is NOT performed, no rejection.
+  it('AC4: non-encrypted send performs NO key re-validation (behaves as before)', async () => {
+    let selectCallCount = 0;
+    let keyCheckFired = false;
+    mockSelect.mockImplementation(() => {
+      selectCallCount++;
+      if (selectCallCount === 1) return makeSelectChain([{ id: 'part-001' }]); // isParticipant
+      if (selectCallCount === 2) {
+        // block seam 2: getConversationParticipantIds
+        return makeSelectChain([{ user_id: CREATOR_ID }, { user_id: TARGET_A_ID }]);
+      }
+      // On the plaintext path there is NO key select. If a 3rd select before the
+      // insert returned a mismatching key, and the code (wrongly) consulted it,
+      // the send would throw. We flag it and assert the send still succeeds.
+      if (selectCallCount === 3) keyCheckFired = true;
+      // 3rd real select is the fan-out getConversationParticipantIds (post-insert).
+      return makeSelectChain([{ user_id: CREATOR_ID }, { user_id: TARGET_A_ID }]);
+    });
+
+    mockInsert.mockReturnValue(makeInsertChain([mockMsgRow]));
+
+    const result = await service.sendMessage(CONV_ID, CREATOR_ID, {
+      content: 'plain hello',
+      idempotencyKey: 'idem-plain-001',
+    });
+
+    expect(result.id).toBe(MSG_ID);
+    expect(result.content).toBe('Hello!');
+    expect(mockInsert).toHaveBeenCalledTimes(1);
+    expect(emitter.emit).toHaveBeenCalledTimes(1);
+    // Only 3 selects total: isParticipant + block seam + fan-out. No key select.
+    expect(selectCallCount).toBe(3);
+    // The 3rd select is fan-out, NOT a key check that could reject.
+    expect(keyCheckFired).toBe(true);
+  });
+
+  // AC5: a read/list method performs NO senderKeyRef re-validation.
+  it('AC5: listMessages performs NO senderKeyRef re-validation (unchanged read path)', async () => {
+    let selectCallCount = 0;
+    mockSelect.mockImplementation(() => {
+      selectCallCount++;
+      if (selectCallCount === 1) return makeSelectChain([{ id: 'part-001' }]); // isParticipant
+      if (selectCallCount === 2) {
+        // block seam 5: getConversationParticipantIds
+        return makeSelectChain([{ user_id: CREATOR_ID }, { user_id: TARGET_A_ID }]);
+      }
+      // message rows (encrypted row present) — never a key select.
+      return makeSelectChain([{ ...encMsgRow, created_at_text: NOW.toISOString() }]);
+    });
+
+    const result = await service.listMessages(CONV_ID, CREATOR_ID);
+
+    // Read succeeds without any BadRequestException from key re-validation.
+    expect(result.messages).toHaveLength(1);
+    const first = result.messages[0] as (typeof result.messages)[number];
+    expect(first.id).toBe(MSG_ID);
+    expect(first.ciphertext).toBe('CT_ENVELOPE');
+    // Exactly 3 selects: isParticipant + block seam + message fetch. No 4th key select.
+    expect(selectCallCount).toBe(3);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Tests: Idempotency (sendMessage)
 // ---------------------------------------------------------------------------
 
