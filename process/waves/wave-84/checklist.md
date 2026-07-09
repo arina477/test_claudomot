@@ -13,7 +13,7 @@ Topic: Harden session-token storage (httpOnly cookies vs JS-readable header mode
 - [x] B-3 Frontend (web header + CSP plugin)
 - [x] B-4 Wire
 - [x] B-5 Verify (green)
-- [ ] B-6 Review
+- [x] B-6 Review (APPROVE; CSP origin gaps fixed)
 ## C — CI/CD
 - [ ] C-1 PR, CI & merge
 - [ ] C-2 Deploy & verify
