@@ -9,9 +9,9 @@ Topic: AssignmentCard optimistic toggle revert (restore captured prior state + e
 ## D — Design
 - [x] D-block SKIPPED (design_gap_flag false — reuses existing Toast + onAnnounce)
 ## B — Build
-- [ ] B-0 Branch & schema
-- [ ] B-1 Contracts
-- [ ] B-2 Backend
+- [x] B-0 Branch & schema
+- [x] B-1 Contracts (skipped)
+- [x] B-2 Backend (skipped)
 - [ ] B-3 Frontend
 - [ ] B-4 Wire
 - [ ] B-5 Verify
