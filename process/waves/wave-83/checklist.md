@@ -28,8 +28,8 @@ Topic: API robustness — API security-headers hardening (HSTS + disable x-power
 - [x] T-8 Security (live PASS, WS+HTTP cross-origin verified)
 - [x] T-9 Journey (APPROVED; regen skipped)
 ## V — Verify
-- [ ] V-1 Reviews
-- [ ] V-2 Triage
+- [x] V-1 Reviews (karen + jenny APPROVE)
+- [x] V-2 Triage (0 blocking; PWA icon already ticketed)
 - [ ] V-3 Fast-fix gate
 ## L — Learn
 - [ ] L-1 Docs
