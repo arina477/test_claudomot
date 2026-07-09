@@ -126,6 +126,7 @@ All notable changes to StudyHall are documented here. Format follows
 - Made the API's cross-site-request-forgery protection explicit and added a permanent test guarding it, so a forged request carrying only a cookie is provably rejected and the security posture can't silently regress. No change to how you log in. (#106)
 - Joining a study server now assigns the server's default member role right away, instead of leaving it unset until a background cleanup filled it in. No change for the member. (#107)
 - Private direct messages now get an extra server-side check that the sender is using their own registered encryption key, so a mismatched key is refused before the message is stored. No change to how you send a message. (#109)
+- Saving your academic identity on the profile page is a little smoother: the Save button stays active while you edit, and if the app ever needs to flag a field it now moves focus straight to it so it's never left off-screen. No change to a normal save. (#110)
 
 ### Fixed
 
