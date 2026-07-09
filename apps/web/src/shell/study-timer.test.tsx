@@ -48,8 +48,18 @@
  */
 
 import type { StudyTimer, StudyTimerPresenceEvent, StudyTimerUpdateEvent } from '@studyhall/shared';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, configure, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+// CI-robust async timeout: the default waitFor/findBy timeout is 1000ms. Under a
+// CPU-saturated parallel full-suite run (as in CI, multiple test files at once),
+// the initial mock-promise + React render can occasionally exceed 1000ms, timing
+// out a waitFor BEFORE the test reaches its real assertion — a load-induced flake,
+// not a logic bug. Widening the global async-util timeout to 5000ms once here
+// covers EVERY waitFor and findBy* in this file in one line. It is harmless on a
+// fast local run (assertions still resolve immediately) and eliminates the slow-CI
+// flake. Set at module scope so it applies before any test body runs.
+configure({ asyncUtilTimeout: 5000 });
 
 // ── Mock studyTimerSocket — capture event handlers ────────────────────────────
 
@@ -161,6 +171,33 @@ function makePaused(
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
+
+/**
+ * withRealTimers — wraps a test body so it runs under real timers.
+ *
+ * The outer beforeEach installs fake timers (needed for the countdown interval
+ * in tests that use makeRunning()). Interaction tests that only use makeIdle()
+ * have no active setInterval in the component — their only timer pressure comes
+ * from RTL's waitFor polling mechanism, which uses setTimeout internally.
+ * Under shouldAdvanceTime:true fake timers, a CPU-saturated full-suite run
+ * can starve the fake clock so waitFor's polling never fires within 1000ms,
+ * causing intermittent timeouts. Switching to real timers for these tests
+ * eliminates that fake-clock starvation entirely, while restoring fake timers
+ * afterward so afterEach's vi.runOnlyPendingTimers() operates on a clean state.
+ */
+function withRealTimers(fn: () => Promise<void>): () => Promise<void> {
+  return async () => {
+    vi.useRealTimers();
+    try {
+      await fn();
+    } finally {
+      // Restore fake timers so the outer afterEach can call vi.runOnlyPendingTimers()
+      // safely — it expects a fake-timer environment.
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+    }
+  };
+}
 
 describe('StudyTimerWidget', () => {
   beforeEach(() => {
@@ -485,36 +522,54 @@ describe('StudyTimerWidget', () => {
   });
 
   // 20. Work input validation — out-of-range shows error
-  it('work input rejects out-of-range value (>120) — shows validation error', async () => {
-    mockApi.getStudyTimer.mockResolvedValue(makeIdle());
-    render(<StudyTimerWidget serverId={SERVER_ID} />);
+  it(
+    'work input rejects out-of-range value (>120) — shows validation error',
+    withRealTimers(async () => {
+      // Real timers: waitFor polls via real setTimeout — no fake-clock starvation.
+      mockApi.getStudyTimer.mockResolvedValue(makeIdle());
+      render(<StudyTimerWidget serverId={SERVER_ID} />);
 
-    await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
 
-    const workInputs = screen.getAllByTestId(/work-input$/);
-    fireEvent.change(workInputs[0] as HTMLElement, { target: { value: '150' } });
+      // async act() flushes ALL pending React work (state updates + effects) before
+      // returning, making the assertion after it synchronous and deterministic.
+      // validateWork(workVal) is inline — the error span renders in the same flush.
+      const workInputs = screen.getAllByTestId(/work-input$/);
+      await act(async () => {
+        fireEvent.change(workInputs[0] as HTMLElement, { target: { value: '150' } });
+      });
 
-    await waitFor(() => {
-      const errors = screen.getAllByTestId(/work-error$/);
-      expect(errors.length).toBeGreaterThan(0);
-    });
-  });
+      // Poll for the derived validation-error render. Under a CPU-saturated run the
+      // error-span commit can lag the change event (the parent's prop-sync effect
+      // may re-commit a tick later), so a synchronous read here races the commit.
+      await waitFor(() => {
+        const errors = screen.getAllByTestId(/work-error$/);
+        expect(errors.length).toBeGreaterThan(0);
+      });
+    }),
+  );
 
   // 21. Break input validation — out-of-range shows error
-  it('break input rejects out-of-range value (>60) — shows validation error', async () => {
-    mockApi.getStudyTimer.mockResolvedValue(makeIdle());
-    render(<StudyTimerWidget serverId={SERVER_ID} />);
+  it(
+    'break input rejects out-of-range value (>60) — shows validation error',
+    withRealTimers(async () => {
+      mockApi.getStudyTimer.mockResolvedValue(makeIdle());
+      render(<StudyTimerWidget serverId={SERVER_ID} />);
 
-    await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
 
-    const breakInputs = screen.getAllByTestId(/break-input$/);
-    fireEvent.change(breakInputs[0] as HTMLElement, { target: { value: '99' } });
+      const breakInputs = screen.getAllByTestId(/break-input$/);
+      await act(async () => {
+        fireEvent.change(breakInputs[0] as HTMLElement, { target: { value: '99' } });
+      });
 
-    await waitFor(() => {
-      const errors = screen.getAllByTestId(/break-error$/);
-      expect(errors.length).toBeGreaterThan(0);
-    });
-  });
+      // Poll for the derived validation-error render (see work-input test above).
+      await waitFor(() => {
+        const errors = screen.getAllByTestId(/break-error$/);
+        expect(errors.length).toBeGreaterThan(0);
+      });
+    }),
+  );
 
   // 22. Apply disabled until dirty AND valid AND idle
   it('Apply is disabled initially (no dirty values)', async () => {
@@ -531,81 +586,89 @@ describe('StudyTimerWidget', () => {
   });
 
   // 23. Apply calls configureStudyTimer with correct minutes
-  it('Apply calls api.configureStudyTimer with correct workMinutes/breakMinutes', async () => {
-    mockApi.getStudyTimer.mockResolvedValue(makeIdle(25 * 60 * 1000, 5 * 60 * 1000));
-    mockApi.configureStudyTimer.mockResolvedValue(makeIdle(30 * 60 * 1000, 10 * 60 * 1000));
-    render(<StudyTimerWidget serverId={SERVER_ID} />);
+  it(
+    'Apply calls api.configureStudyTimer with correct workMinutes/breakMinutes',
+    withRealTimers(async () => {
+      mockApi.getStudyTimer.mockResolvedValue(makeIdle(25 * 60 * 1000, 5 * 60 * 1000));
+      mockApi.configureStudyTimer.mockResolvedValue(makeIdle(30 * 60 * 1000, 10 * 60 * 1000));
+      render(<StudyTimerWidget serverId={SERVER_ID} />);
 
-    await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
 
-    // Change work to 30
-    const workInputs = screen.getAllByTestId(/work-input$/);
-    fireEvent.change(workInputs[0] as HTMLElement, { target: { value: '30' } });
+      // Change work to 30; async act() flushes the setWorkVal state update + re-render
+      // synchronously so isApplyEnabled is true before we query the Apply button.
+      const workInputs = screen.getAllByTestId(/work-input$/);
+      await act(async () => {
+        fireEvent.change(workInputs[0] as HTMLElement, { target: { value: '30' } });
+      });
 
-    // Wait for React to flush the state update so isApplyEnabled is recomputed and
-    // the Apply button is genuinely enabled before we click. Re-query inside waitFor
-    // to get a live (post-render) reference — stale references captured before the
-    // flush can still show disabled=true when the form's handleSubmit runs, causing
-    // the isApplyEnabled guard to skip the onApply call silently.
-    let enabledApply: HTMLElement | undefined;
-    await waitFor(() => {
-      const applies = screen.getAllByTestId(/apply$/);
-      enabledApply = applies.find((b) => !(b as HTMLButtonElement).disabled) as
-        | HTMLElement
-        | undefined;
-      expect(enabledApply).toBeDefined();
-    });
+      // After act(), isDirty=true → Apply enables. Under a CPU-saturated run the
+      // parent's prop-sync effect can commit a tick after the change event, so
+      // poll for the enabled button rather than reading it synchronously (which
+      // races the enable-commit and intermittently finds only disabled buttons).
+      let enabledApply: HTMLElement | undefined;
+      await waitFor(() => {
+        const applies = screen.getAllByTestId(/apply$/);
+        enabledApply = applies.find((b) => !(b as HTMLButtonElement).disabled);
+        expect(enabledApply).toBeDefined();
+      });
 
-    // Wrap the click in act so React flushes the submit handler's synchronous
-    // state updates (setIsApplyingConfig) before we observe the spy call.
-    await act(async () => {
-      if (enabledApply) fireEvent.click(enabledApply);
-    });
+      // Wrap the click in act so React flushes the submit handler's synchronous
+      // state updates (setIsApplyingConfig) before we observe the spy call.
+      await act(async () => {
+        if (enabledApply) fireEvent.click(enabledApply);
+      });
 
-    await waitFor(() =>
-      expect(mockApi.configureStudyTimer).toHaveBeenCalledWith(SERVER_ID, {
-        workMinutes: 30,
-        breakMinutes: 5,
-      }),
-    );
-  });
+      await waitFor(() =>
+        expect(mockApi.configureStudyTimer).toHaveBeenCalledWith(SERVER_ID, {
+          workMinutes: 30,
+          breakMinutes: 5,
+        }),
+      );
+    }),
+  );
 
   // 24. Apply shows pending (spinner)
-  it('Apply shows pending state while configureStudyTimer is in-flight', async () => {
-    mockApi.getStudyTimer.mockResolvedValue(makeIdle(25 * 60 * 1000, 5 * 60 * 1000));
-    const deferred = { resolve: (_v: StudyTimer) => {} };
-    mockApi.configureStudyTimer.mockReturnValue(
-      new Promise<StudyTimer>((resolve) => {
-        deferred.resolve = resolve;
-      }),
-    );
-    render(<StudyTimerWidget serverId={SERVER_ID} />);
+  it(
+    'Apply shows pending state while configureStudyTimer is in-flight',
+    withRealTimers(async () => {
+      mockApi.getStudyTimer.mockResolvedValue(makeIdle(25 * 60 * 1000, 5 * 60 * 1000));
+      const deferred = { resolve: (_v: StudyTimer) => {} };
+      mockApi.configureStudyTimer.mockReturnValue(
+        new Promise<StudyTimer>((resolve) => {
+          deferred.resolve = resolve;
+        }),
+      );
+      render(<StudyTimerWidget serverId={SERVER_ID} />);
 
-    await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
 
-    // Make dirty; wrap in act() to flush React's setWorkVal update synchronously.
-    const workInputs = screen.getAllByTestId(/work-input$/);
-    act(() => {
-      fireEvent.change(workInputs[0] as HTMLElement, { target: { value: '30' } });
-    });
+      // Make dirty; async act() flushes state update synchronously.
+      const workInputs = screen.getAllByTestId(/work-input$/);
+      await act(async () => {
+        fireEvent.change(workInputs[0] as HTMLElement, { target: { value: '30' } });
+      });
 
-    // After act(), React has flushed: isApplyEnabled is true — assert directly.
-    const applies = screen.getAllByTestId(/apply$/);
-    const enabledApply = applies.find((b) => !(b as HTMLButtonElement).disabled);
-    expect(enabledApply).toBeDefined();
-    if (enabledApply) fireEvent.click(enabledApply);
+      let enabledApply: HTMLElement | undefined;
+      await waitFor(() => {
+        const applies = screen.getAllByTestId(/apply$/);
+        enabledApply = applies.find((b) => !(b as HTMLButtonElement).disabled);
+        expect(enabledApply).toBeDefined();
+      });
+      if (enabledApply) fireEvent.click(enabledApply);
 
-    // During pending: all inputs should be disabled and apply btn should show spinner
-    await waitFor(() => {
-      const allWorkInputs = screen.getAllByTestId(/work-input$/);
-      expect((allWorkInputs[0] as HTMLInputElement).disabled).toBe(true);
-    });
+      // During pending: all inputs should be disabled and apply btn should show spinner
+      await waitFor(() => {
+        const allWorkInputs = screen.getAllByTestId(/work-input$/);
+        expect((allWorkInputs[0] as HTMLInputElement).disabled).toBe(true);
+      });
 
-    // Cleanup
-    await act(async () => {
-      deferred.resolve(makeIdle(30 * 60 * 1000, 5 * 60 * 1000));
-    });
-  });
+      // Cleanup
+      await act(async () => {
+        deferred.resolve(makeIdle(30 * 60 * 1000, 5 * 60 * 1000));
+      });
+    }),
+  );
 
   // 25. Config inputs disabled while timer is running
   it('config inputs are disabled when timer is running (locked state)', async () => {
@@ -635,87 +698,84 @@ describe('StudyTimerWidget', () => {
   });
 
   // 27. 409 response shows reset hint in BOTH desktop and slim form regions (M-2 fix)
-  it('409 from configureStudyTimer shows reset hint in desktop form (not slim-only)', async () => {
-    mockApi.getStudyTimer.mockResolvedValue(makeIdle(25 * 60 * 1000, 5 * 60 * 1000));
-    mockApi.configureStudyTimer.mockRejectedValue(new Error('409 Conflict: timer not idle'));
-    render(<StudyTimerWidget serverId={SERVER_ID} />);
+  it(
+    '409 from configureStudyTimer shows reset hint in desktop form (not slim-only)',
+    withRealTimers(async () => {
+      mockApi.getStudyTimer.mockResolvedValue(makeIdle(25 * 60 * 1000, 5 * 60 * 1000));
+      mockApi.configureStudyTimer.mockRejectedValue(new Error('409 Conflict: timer not idle'));
+      render(<StudyTimerWidget serverId={SERVER_ID} />);
 
-    await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
 
-    // Wrap fireEvent.change in act() so React flushes the setWorkVal state update
-    // synchronously before we assert. Without act(), the dirty/isApplyEnabled
-    // recompute is deferred, which races against waitFor's timeout on slow CI runners.
-    const workInputs = screen.getAllByTestId(/work-input$/);
-    act(() => {
-      fireEvent.change(workInputs[0] as HTMLElement, { target: { value: '30' } });
-    });
+      // Make dirty via the desktop form work input; async act() flushes state.
+      const workInputs = screen.getAllByTestId(/work-input$/);
+      await act(async () => {
+        fireEvent.change(workInputs[0] as HTMLElement, { target: { value: '30' } });
+      });
 
-    // After act(), React has flushed: isDirty is true, isApplyEnabled is true.
-    // Assert directly without a waitFor — no timer dependency.
-    const applies = screen.getAllByTestId(/apply$/);
-    const enabledApply = applies.find((b) => !(b as HTMLButtonElement).disabled);
-    expect(enabledApply).toBeDefined();
-
-    // Click Apply and wait for the API rejection to resolve + configError state to flush.
-    await act(async () => {
+      // Poll for the enabled Apply (the enable-commit can lag the change event
+      // under load) instead of reading it synchronously.
+      let enabledApply: HTMLElement | undefined;
+      await waitFor(() => {
+        const applies = screen.getAllByTestId(/apply$/);
+        enabledApply = applies.find((b) => !(b as HTMLButtonElement).disabled);
+        expect(enabledApply).toBeDefined();
+      });
       if (enabledApply) fireEvent.click(enabledApply);
-    });
 
-    await waitFor(() => expect(mockApi.configureStudyTimer).toHaveBeenCalled());
+      await waitFor(() => expect(mockApi.configureStudyTimer).toHaveBeenCalled());
 
-    // After 409, the reset hint is visible in the desktop form region — no slim row needed.
-    // Both desktop + slim form instances render the hint via configError prop.
-    await waitFor(() => {
-      const hints = screen.getAllByTestId(/config-error-409$/);
-      // At minimum the desktop instance is rendered (jsdom doesn't apply lg:hidden CSS)
-      expect(hints.length).toBeGreaterThan(0);
-      expect(hints[0]).toHaveTextContent('Reset the timer first to change durations.');
-    });
-  });
+      // After 409, the reset hint is visible in the desktop form region — no slim row needed.
+      // Both desktop + slim form instances render the hint via configError prop.
+      await waitFor(() => {
+        const hints = screen.getAllByTestId(/config-error-409$/);
+        // At minimum the desktop instance is rendered (jsdom doesn't apply lg:hidden CSS)
+        expect(hints.length).toBeGreaterThan(0);
+        expect(hints[0]).toHaveTextContent('Reset the timer first to change durations.');
+      });
+    }),
+  );
 
   // 28. 400 response shows inline validation-error message in both form regions (M-1 fix).
   // The API may return 400 despite client validation (schema drift, future server-side rule).
-  it('400 from configureStudyTimer renders inline error message (not silent no-op)', async () => {
-    mockApi.getStudyTimer.mockResolvedValue(makeIdle(25 * 60 * 1000, 5 * 60 * 1000));
-    mockApi.configureStudyTimer.mockRejectedValue(new Error('400 Bad Request: invalid range'));
-    render(<StudyTimerWidget serverId={SERVER_ID} />);
+  it(
+    '400 from configureStudyTimer renders inline error message (not silent no-op)',
+    withRealTimers(async () => {
+      mockApi.getStudyTimer.mockResolvedValue(makeIdle(25 * 60 * 1000, 5 * 60 * 1000));
+      mockApi.configureStudyTimer.mockRejectedValue(new Error('400 Bad Request: invalid range'));
+      render(<StudyTimerWidget serverId={SERVER_ID} />);
 
-    await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
 
-    // Wrap fireEvent.change in act() so React flushes the setWorkVal state update
-    // synchronously before we assert. Without act(), the dirty/isApplyEnabled
-    // recompute is deferred, which races against waitFor's timeout on slow CI runners.
-    const workInputs = screen.getAllByTestId(/work-input$/);
-    act(() => {
-      fireEvent.change(workInputs[0] as HTMLElement, { target: { value: '30' } });
-    });
+      const workInputs = screen.getAllByTestId(/work-input$/);
+      await act(async () => {
+        fireEvent.change(workInputs[0] as HTMLElement, { target: { value: '30' } });
+      });
 
-    // After act(), React has flushed: isDirty is true, isApplyEnabled is true.
-    // Assert directly without a waitFor — no timer dependency.
-    const applies = screen.getAllByTestId(/apply$/);
-    const enabledApply = applies.find((b) => !(b as HTMLButtonElement).disabled);
-    expect(enabledApply).toBeDefined();
-
-    // Click Apply and wait for the API rejection to resolve + configError state to flush.
-    await act(async () => {
+      let enabledApply: HTMLElement | undefined;
+      await waitFor(() => {
+        const applies = screen.getAllByTestId(/apply$/);
+        enabledApply = applies.find((b) => !(b as HTMLButtonElement).disabled);
+        expect(enabledApply).toBeDefined();
+      });
       if (enabledApply) fireEvent.click(enabledApply);
-    });
 
-    await waitFor(() => expect(mockApi.configureStudyTimer).toHaveBeenCalled());
+      await waitFor(() => expect(mockApi.configureStudyTimer).toHaveBeenCalled());
 
-    // After 400, an inline error message must be visible (not a silent no-op).
-    await waitFor(() => {
-      const errors = screen.getAllByTestId(/config-error-400$/);
-      expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0]).toHaveTextContent('Invalid duration values.');
-    });
+      // After 400, an inline error message must be visible (not a silent no-op).
+      await waitFor(() => {
+        const errors = screen.getAllByTestId(/config-error-400$/);
+        expect(errors.length).toBeGreaterThan(0);
+        expect(errors[0]).toHaveTextContent('Invalid duration values.');
+      });
 
-    // Pending state also clears (inputs re-enabled)
-    await waitFor(() => {
-      const allWorkInputs = screen.getAllByTestId(/work-input$/);
-      expect((allWorkInputs[0] as HTMLInputElement).disabled).toBe(false);
-    });
-  });
+      // Pending state also clears (inputs re-enabled)
+      await waitFor(() => {
+        const allWorkInputs = screen.getAllByTestId(/work-input$/);
+        expect((allWorkInputs[0] as HTMLInputElement).disabled).toBe(false);
+      });
+    }),
+  );
 
   // 29. study-timer:update reconciles new durations into config inputs
   it('study-timer:update reconciles new durations into config form inputs', async () => {
@@ -764,23 +824,32 @@ describe('StudyTimerWidget', () => {
   });
 
   // 32. Validation error sets aria-invalid + aria-describedby
-  it('validation error sets aria-invalid="true" on the input', async () => {
-    mockApi.getStudyTimer.mockResolvedValue(makeIdle());
-    render(<StudyTimerWidget serverId={SERVER_ID} />);
+  it(
+    'validation error sets aria-invalid="true" on the input',
+    withRealTimers(async () => {
+      mockApi.getStudyTimer.mockResolvedValue(makeIdle());
+      render(<StudyTimerWidget serverId={SERVER_ID} />);
 
-    await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
 
-    const workInputs = screen.getAllByTestId(/work-input$/);
-    const firstWorkInput = workInputs[0] as HTMLElement;
-    fireEvent.change(firstWorkInput, { target: { value: '200' } });
+      const workInputs = screen.getAllByTestId(/work-input$/);
+      const firstWorkInput = workInputs[0] as HTMLElement;
 
-    await waitFor(() => {
-      expect(firstWorkInput).toHaveAttribute('aria-invalid', 'true');
-    });
-    // aria-describedby should point to the error element
-    const describedById = firstWorkInput.getAttribute('aria-describedby');
-    expect(describedById).toBeTruthy();
-  });
+      await act(async () => {
+        fireEvent.change(firstWorkInput, { target: { value: '200' } });
+      });
+
+      // aria-invalid is derived from workError (inline React state). Poll for the
+      // commit — under a CPU-saturated run the derived render can lag the change
+      // event, so a synchronous read here races the commit and flakes.
+      await waitFor(() => {
+        expect(firstWorkInput).toHaveAttribute('aria-invalid', 'true');
+      });
+      // aria-describedby should point to the error element
+      const describedById = firstWorkInput.getAttribute('aria-describedby');
+      expect(describedById).toBeTruthy();
+    }),
+  );
 
   // 33. F-1: root element has no inline border-left (so CSS class wins)
   it('F-1: root widget element does not set inline borderLeft (phase CSS class wins)', async () => {
