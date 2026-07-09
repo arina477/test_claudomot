@@ -18,15 +18,15 @@ Topic: API robustness — API security-headers hardening (HSTS + disable x-power
 - [x] C-1 PR, CI & merge (PR #102 landed on main; live-verified)
 - [x] C-2 Deploy & verify (api SUCCESS 2ac4fd16; headers+CORS-survival live PASS)
 ## T — Test
-- [ ] T-1 Static
-- [ ] T-2 Unit
-- [ ] T-3 Contract
-- [ ] T-4 Integration
-- [ ] T-5 E2E
-- [ ] T-6 Layout
-- [ ] T-7 Perf
-- [ ] T-8 Security
-- [ ] T-9 Journey
+- [x] T-1 Static (local-green; CI async)
+- [x] T-2 Unit (820+12 local)
+- [x] T-3 Contract (skipped)
+- [x] T-4 Integration (12/12 + C-2 live)
+- [x] T-5 E2E (web smoke PASS, 0 security errors)
+- [x] T-6 Layout (skipped)
+- [x] T-7 Perf (skipped)
+- [x] T-8 Security (live PASS, WS+HTTP cross-origin verified)
+- [x] T-9 Journey (APPROVED; regen skipped)
 ## V — Verify
 - [ ] V-1 Reviews
 - [ ] V-2 Triage
