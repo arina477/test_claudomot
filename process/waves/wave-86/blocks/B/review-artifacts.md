@@ -5,7 +5,7 @@
 |---|---|---|---|
 | B-0 | stages/B-0-branch-and-schema.md | in-progress | branch; no deps/schema |
 | B-1 | stages/B-1-contracts.md | pending | SKIP |
-| B-2 | stages/B-2-backend.md | pending | supertokens-integration: explicit antiCsrf + regression test + docs |
+| B-2 | ... | done | antiCsrf:NONE (SDK-verified) + DB-free regression test (85b270de) |
 | B-3 | stages/B-3-frontend.md | pending | SKIP (no UI) |
 | B-4/5/6 | ... | pending | |
 ## Block-specific context

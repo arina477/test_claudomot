@@ -9,10 +9,10 @@ Topic: Auth hardening — make SuperTokens anti-CSRF posture explicit + regressi
 ## B — Build
 - [x] B-0 Branch & schema
 - [x] B-1 Contracts (skipped)
-- [ ] B-2 Backend
+- [x] B-2 Backend (antiCsrf NONE + regression test)
 - [x] B-3 Frontend (skipped)
-- [ ] B-4 Wire
-- [ ] B-5 Verify
+- [x] B-4 Wire
+- [x] B-5 Verify (green)
 - [ ] B-6 Review
 ## C — CI/CD
 - [ ] C-1 PR, CI & merge
