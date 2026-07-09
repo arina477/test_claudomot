@@ -23,8 +23,8 @@ BUILD:
 - [x] B-6 Review
 
 CI/CD:
-- [ ] C-1 PR, CI & merge
-- [ ] C-2 Deploy & verify (canary armed when real users > 1000)
+- [ ] C-1 PR, CI & merge — BLOCKED (merge gate REJECT): PR #100 open; required `test` check red on out-of-scope study-timer.test.tsx (run2 15m hang→CANCELLED). Routed to head-tester/react-specialist. STATUS: BLOCKED (trigger d).
+- [ ] C-2 Deploy & verify (canary armed when real users > 1000) — not reached
 
 TEST:
 - [ ] T-1 Static
