@@ -7,13 +7,13 @@ Topic: Harden session-token storage (httpOnly cookies vs JS-readable header mode
 - [x] P-3 Plan (Session.init header+TTL + cross-origin CSP; supertokens-integration)
 - [x] P-4 Gate (APPROVED; Google-Fonts CSP allowlist + serve-layer folded)
 ## B — Build
-- [ ] B-0 Branch & schema
-- [ ] B-1 Contracts
-- [ ] B-2 Backend
-- [ ] B-3 Frontend
-- [ ] B-4 Wire
-- [ ] B-5 Verify
-- [ ] B-6 Review
+- [x] B-0 Branch & schema
+- [x] B-1 Contracts (skipped)
+- [x] B-2 Backend (getTokenTransferMethod header)
+- [x] B-3 Frontend (web header + CSP plugin)
+- [x] B-4 Wire
+- [x] B-5 Verify (green)
+- [x] B-6 Review (APPROVE; CSP origin gaps fixed)
 ## C — CI/CD
 - [ ] C-1 PR, CI & merge
 - [ ] C-2 Deploy & verify

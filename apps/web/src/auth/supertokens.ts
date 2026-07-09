@@ -24,7 +24,16 @@ export function initSuperTokens(): void {
     recipeList: [
       EmailPassword.init(),
       EmailVerification.init({ mode: 'REQUIRED' }),
-      Session.init(),
+      // tokenTransferMethod: 'header' — make the cross-origin transport posture
+      // EXPLICIT (wave-84, BOARD Option B). web and api are different SITES under
+      // the up.railway.app public suffix, so cookie-mode session tokens would be
+      // cross-site (SameSite=None) and unreliable (Safari ITP / Chrome 3p-cookie
+      // deprecation). Header transport is SuperTokens' recommended mode for
+      // different-domain SPAs: the SDK sends st-access-token / st-refresh-token as
+      // Authorization/response headers instead of cookies. This is the FRONTEND
+      // side that actually selects the transport; the backend getTokenTransferMethod
+      // defaults to 'any' and honours this choice.
+      Session.init({ tokenTransferMethod: 'header' }),
     ],
   });
 }
