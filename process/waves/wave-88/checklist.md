@@ -1,27 +1,31 @@
-# Wave 88 — Stage completion ledger
-Topic: Service-worker cache-bust on deploy — returning users served stale bundle once (skipWaiting + clientsClaim)
-Seed task: 6eed0fc2-6f5e-42cd-8be4-b2364a5d066b
-Bundled siblings: (none — single-task bundle)
-Claimed task ids: [6eed0fc2-6f5e-42cd-8be4-b2364a5d066b]
-Active milestone: none (bug-fix phase; roadmap complete)
-## P — Product
-- [ ] P-0 Frame
-- [ ] P-1 Decompose
-- [ ] P-2 Spec
-- [ ] P-3 Plan
-- [ ] P-4 Gate
-## B — Build
+## Wave 88 stage completion
+
+PRODUCT:
+- [x] P-0 Frame (discover + reframe)
+- [x] P-1 Decompose
+- [x] P-2 Spec
+- [x] P-3 Plan
+- [x] P-4 Gate
+
+DESIGN (skip block if non-UI wave):
+- [ ] D-1 Brief
+- [ ] D-2 Variants (with bounded iteration)
+- [ ] D-3 Review & adopt
+
+BUILD:
 - [ ] B-0 Branch & schema
 - [ ] B-1 Contracts
 - [ ] B-2 Backend
 - [ ] B-3 Frontend
-- [ ] B-4 Wire
+- [ ] B-4 Wiring
 - [ ] B-5 Verify
 - [ ] B-6 Review
-## C — CI/CD
+
+CI/CD:
 - [ ] C-1 PR, CI & merge
-- [ ] C-2 Deploy & verify
-## T — Test
+- [ ] C-2 Deploy & verify (canary armed when real users > 1000)
+
+TEST:
 - [ ] T-1 Static
 - [ ] T-2 Unit
 - [ ] T-3 Contract
@@ -31,14 +35,17 @@ Active milestone: none (bug-fix phase; roadmap complete)
 - [ ] T-7 Perf
 - [ ] T-8 Security
 - [ ] T-9 Journey
-## V — Verify
-- [ ] V-1 Independent reviews
+
+VERIFY:
+- [ ] V-1 Independent reviews (Karen + jenny, parallel)
 - [ ] V-2 Triage
-- [ ] V-3 Fast-fix
-## L — Learn
+- [ ] V-3 Fast-fix loop (or close)
+
+LEARN:
 - [ ] L-1 Docs
 - [ ] L-2 Distill
-## N — Next
+
+NEXT:
 - [ ] N-1 Survey & triggers
 - [ ] N-2 Seed
 - [ ] N-3 Handoff
