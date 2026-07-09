@@ -6,7 +6,7 @@
 | Stage | Deliverable file | Status | Notes |
 |---|---|---|---|
 | P-0 | stages/P-0-frame.md | done | Tier-3 -> BOARD 7/7 Option B (keep header + CSP + short TTL + rotation) |
-| P-1 | stages/P-1-decompose.md | pending | |
+| P-1 | stages/P-1-decompose.md | done | single-spec PROCEED (floor waived); design_gap_flag false; scope=BOARD Option B |
 | P-2 | stages/P-2-spec.md | pending | |
 | P-3 | stages/P-3-plan.md | pending | |
 | P-4 | stages/P-4-gate.md | pending | |
