@@ -20,14 +20,14 @@ Topic: AssignmentCard optimistic toggle revert (restore captured prior state + e
 - [x] C-1 PR, CI & merge (PR #105 merged 9d22df4e, 6/6 green)
 - [x] C-2 Deploy & verify (web 62bae5fd, 200, fresh bundle, CSP intact)
 ## T — Test
-- [ ] T-1 Static
-- [ ] T-2 Unit
-- [ ] T-3 Contract
-- [ ] T-4 Integration
+- [x] T-1 Static (CI green)
+- [x] T-2 Unit (788)
+- [x] T-3 Contract (skipped)
+- [x] T-4 Integration (toggle suite)
 - [ ] T-5 E2E
-- [ ] T-6 Layout
-- [ ] T-7 Perf
-- [ ] T-8 Security
+- [x] T-6 Layout (skipped)
+- [x] T-7 Perf (skipped)
+- [x] T-8 Security (skipped — no auth)
 - [ ] T-9 Journey
 ## V — Verify
 - [ ] V-1 Reviews
