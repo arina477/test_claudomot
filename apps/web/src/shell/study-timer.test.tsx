@@ -49,7 +49,7 @@
 
 import type { StudyTimer, StudyTimerPresenceEvent, StudyTimerUpdateEvent } from '@studyhall/shared';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ── Mock studyTimerSocket — capture event handlers ────────────────────────────
 
@@ -164,9 +164,30 @@ function makePaused(
 
 describe('StudyTimerWidget', () => {
   beforeEach(() => {
+    // Fake timers control the widget's live 1-second countdown setInterval
+    // (StudyTimerWidget.tsx — recomputes displaySeconds against Date.now() on
+    // each tick). Without this the real interval fires continuously during the
+    // test: its open handle can hang vitest (observed as a 15-min CI job timeout)
+    // and the constant re-renders make waitFor flaky. A fixed system time keeps
+    // the widget's Date.now() reads and the makeRunning() endsAt anchor on the
+    // same clock so the anti-drift countdown assertions are deterministic.
+    // shouldAdvanceTime keeps fake time progressing off the real clock so RTL's
+    // waitFor / findBy polling and the mocked-api promise microtasks still
+    // resolve (plain fake timers deadlock waitFor against un-flushed promises).
+    // The 1-second interval is still owned by vitest — cleaned up in afterEach —
+    // so no open handle can hang the runner.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
     vi.clearAllMocks();
     capturedUpdateHandler = null;
     capturedPresenceHandler = null;
+  });
+
+  afterEach(() => {
+    // Flush any pending timers then restore real timers so the interval handle
+    // never leaks across files.
+    vi.runOnlyPendingTimers();
+    vi.useRealTimers();
   });
 
   // ── Wave-49 original tests (1-17) ─────────────────────────────────────────
