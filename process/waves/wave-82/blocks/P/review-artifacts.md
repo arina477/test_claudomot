@@ -7,7 +7,7 @@
 | P-1 | ... | done | |
 | P-2 | ... | done | |
 | P-3 | ... | done | |
-| P-4 | stages/P-4-gemini-review.md | pending | |
+| P-4 | ... | done | |
 ## Block-specific context
 - **Wave topic:** DM auth-guard transient-401 bounce (founder bug-fix phase; roadmap complete)
 - **Spec-contract short-circuit:** no-prior-spec

@@ -14,3 +14,9 @@ supertokens-integration (session-refresh seam) [+ react-specialist consult]. Pre
 ## Self-consistency
 Every AC → the request()/requestNoContent() seam + tests. design_gap false. Alternatives (per-call-refresh + DM-catch rejected). No deps/API/data. ✓
 **Binding:** single-flight shared refresh (burst-401s); genuine-logout guard (refresh=false → propagate, T-8); retry once only on 401; deterministic tests incl. non-DM route + concurrency; scope = the seam.
+
+## P-4 Phase-2 binding corrections (fold into B-3)
+- **INTERCEPTOR-INTERACTION (Iron Law, before coding):** SuperTokens' Session.init already installs a global fetch auto-refresh interceptor with its own single-flight lock + bounded retry. B-3 (supertokens-integration) MUST first trace whether the escaping 401 is interceptor-EXHAUSTED (a 2nd refresh = no-op → the plan fixes nothing; address the REAL cause: local-session-state short-circuit / SessionAuth claim re-validation racing the interceptor) OR interceptor-skipped (explicit seam helps). The seam is net-additive-safe (shared SDK lock), but must not ship a no-op.
+- **Tests prove RESOLUTION not just refresh-called:** 401→refresh-true→retry→200 asserts the caller gets 200 (2 fetches) vs a realistic interceptor-aware mock; a call-only assertion would pass a no-op (forbidden). N-concurrent→one-refresh→all-resolve.
+- **Redirect destination:** reconcile / (LandingPage, per P-0) vs /login (AuthGuard/SessionAuth default) — assert the ACTUAL route.
+- **T-9:** mark journey-map F-T5-1 (~L296) self-healed.
