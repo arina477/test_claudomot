@@ -9,7 +9,7 @@
 | Stage | Deliverable file(s) | Status | Notes |
 |---|---|---|---|
 | V-1 | stages/V-1-karen.md + V-1-jenny.md + V-1-summary.md | done | seeded at V-1 Action 0 |
-| V-2 | stages/V-2-triage.md | pending | |
+| V-2 | stages/V-2-triage.md | done | |
 | V-3 | stages/V-3-fast-fix.md | pending | |
 
 ## Block-specific context
