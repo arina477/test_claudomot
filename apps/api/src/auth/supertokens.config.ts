@@ -106,12 +106,46 @@ export function initSuperTokens(usersService: UsersService, emailService: EmailS
         },
       }),
       Session.init({
+        // ── wave-84 (BOARD Option B): explicit header transport ──────────────
+        // getTokenTransferMethod: () => 'header' makes the accepted cross-origin
+        // transport EXPLICIT rather than relying on the SDK default of 'any'
+        // (which would honour whatever the frontend sends). web and api are
+        // different SITES under the up.railway.app public suffix, so cookie-mode
+        // session tokens would be cross-site (SameSite=None) and unreliable
+        // (Safari ITP / Chrome 3p-cookie deprecation). Header transport is
+        // SuperTokens' recommended mode for different-domain SPAs.
+        //
+        // NOTE (SDK verified against supertokens-node@24.0.2 TypeInput): v24 has
+        // NO `tokenTransferMethod` init option — the transport is controlled via
+        // this `getTokenTransferMethod` callback returning 'header' | 'cookie' |
+        // 'any'. Returning 'header' here pins the server to header transport,
+        // matching the frontend's Session.init({ tokenTransferMethod: 'header' }).
+        getTokenTransferMethod: () => 'header',
+        //
+        // ── Access-token TTL + refresh-token rotation ────────────────────────
+        // The XSS token-reuse window is shrunk by a SHORT access-token validity.
+        // IMPORTANT (SDK verified): supertokens-node@24.0.2 Session.init has NO
+        // `accessTokenValidity` option — access-token / refresh-token validity is
+        // a SuperTokens CORE setting, configured on the self-hosted core service
+        // (the `supertokens` Railway service) via the `ACCESS_TOKEN_VALIDITY`
+        // env var (seconds; core default 3600). wave-84 sets ACCESS_TOKEN_VALIDITY
+        // = 900 (15 min) on the core service at deploy (C-block), NOT here in the
+        // SDK. This code comment documents the coupled requirement so the two are
+        // not drifted apart.
+        //
+        // Refresh-token ROTATION is enforced by the core BY DEFAULT (rotate-on-use
+        // with reuse detection): a refresh token is single-use — once the new
+        // access/refresh pair is used, the old refresh token is invalidated. No
+        // SDK option disables it and none is added here, so rotation stays ON.
+        //
         // SameSite=None is required when the web frontend and api are on different
         // Railway subdomains (web-production-*.up.railway.app vs
         // api-production-*.up.railway.app). Cross-site requests (including
         // credentialed XHR/fetch with credentials:'include') will not attach
         // SameSite=Lax cookies — the browser silently drops them, breaking every
         // authenticated request. SameSite=None requires Secure=true (HTTPS).
+        // (Retained defence-in-depth for any residual cookie use; header transport
+        // is the primary path.)
         //
         // In local dev both origins are localhost so SameSite=Lax works and
         // avoids needing HTTPS on loopback. CROSS_ORIGIN_PROD is set on the
