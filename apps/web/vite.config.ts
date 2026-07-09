@@ -5,18 +5,33 @@ import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 import { cspMetaPlugin } from './src/csp';
 
-export default defineConfig(({ mode }) => {
-  // Resolve VITE_API_ORIGIN from .env files + process.env so the CSP plugin's
-  // connect-src is correct in every env (Docker sets it as a real env var;
-  // local dev reads apps/web/.env). loadEnv merges process.env over .env files.
+export default defineConfig(({ mode, command }) => {
+  // Resolve the CSP-relevant VITE_* vars from .env files + process.env so the
+  // CSP plugin's connect-src / img-src are correct in every env (Docker sets
+  // them as real env vars; local dev reads apps/web/.env). loadEnv merges
+  // process.env over .env files. VITE_STORAGE_ORIGIN (Tigris) + VITE_LIVEKIT_URL
+  // (voice signaling) + VITE_SENTRY_DSN (ingest host) are threaded the same way
+  // as VITE_API_ORIGIN so the meta-tag policy names every real origin.
   const env = loadEnv(mode, process.cwd(), '');
-  if (env.VITE_API_ORIGIN && !process.env.VITE_API_ORIGIN) {
-    process.env.VITE_API_ORIGIN = env.VITE_API_ORIGIN;
+  for (const key of [
+    'VITE_API_ORIGIN',
+    'VITE_STORAGE_ORIGIN',
+    'VITE_LIVEKIT_URL',
+    'VITE_SENTRY_DSN',
+  ]) {
+    if (env[key] && !process.env[key]) {
+      process.env[key] = env[key];
+    }
   }
+
+  // A production `vite build` with an empty VITE_API_ORIGIN must FAIL loudly
+  // (cspMetaPlugin throws) rather than silently ship a self-only policy that
+  // bricks the deployed SPA. Dev-serve (command === 'serve') tolerates it.
+  const isProdBuild = command === 'build';
 
   return {
     plugins: [
-      cspMetaPlugin(),
+      cspMetaPlugin(isProdBuild),
       react(),
       tailwindcss(),
       VitePWA({
