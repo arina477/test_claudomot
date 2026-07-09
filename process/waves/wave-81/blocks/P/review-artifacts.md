@@ -9,16 +9,16 @@
 | Stage | Deliverable file | Status | Notes |
 |---|---|---|---|
 | P-0 | process/waves/wave-81/stages/P-0-frame.md | done | discovery + reframe (bug already root-caused) |
-| P-1 | process/waves/wave-81/stages/P-1-decompose.md | pending | |
-| P-2 | process/waves/wave-81/stages/P-2-spec.md | pending | |
-| P-3 | process/waves/wave-81/stages/P-3-plan.md | pending | |
+| P-1 | ... | done | |
+| P-2 | ... | done | |
+| P-3 | ... | done | |
 | P-4 | process/waves/wave-81/stages/P-4-gemini-review.md | pending | |
 
 ## Block-specific context
 - **Wave topic:** unscrollable /settings/profile fix (founder directive 2026-07-09)
 - **Spec-contract short-circuit verdict:** no-prior-spec
 - **Roadmap milestone:** NONE — roadmap complete (14/14 done); founder bug-fix phase. Task milestone_id NULL.
-- **design_gap_flag:** unset — P-1 (likely false; a layout/scroll fix to existing adopted pages)
+- **design_gap_flag:** false (scroll-container fix on existing pages) (likely false; a layout/scroll fix to existing adopted pages)
 - **claimed_task_ids:** [2340d2d3] — final at P-2
 - **Tier-3 product decisions resolved this wave:** none (bug fix)
 - **Autonomous mode active during P-block:** automatic
