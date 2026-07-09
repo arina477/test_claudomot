@@ -18,7 +18,7 @@ Topic: AssignmentCard optimistic toggle revert (restore captured prior state + e
 - [x] B-6 Review (APPROVE; F1 toast-timer fixed)
 ## C — CI/CD
 - [x] C-1 PR, CI & merge (PR #105 merged 9d22df4e, 6/6 green)
-- [ ] C-2 Deploy & verify
+- [x] C-2 Deploy & verify (web 62bae5fd, 200, fresh bundle, CSP intact)
 ## T — Test
 - [ ] T-1 Static
 - [ ] T-2 Unit
