@@ -20,6 +20,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../auth/api';
 import { ErrorBanner } from '../components/ErrorBanner';
+import { FullPageScroll } from '../shell/FullPageScroll';
 import { useProfile } from '../shell/ProfileContext';
 
 // ── Accent colour swatches (from settings-profile.html mockup) ───────────────
@@ -387,68 +388,74 @@ export function ProfilePage() {
 
   if (initialLoading) {
     return (
-      <div className="min-h-screen animate-pulse" style={{ backgroundColor: '#0a0a0b' }}>
-        {/* Header skeleton */}
-        <div
-          className="flex h-14 items-center border-b px-6"
-          style={{ borderColor: 'rgba(255,255,255,0.06)' }}
-          aria-hidden="true"
-        >
-          <div className="h-4 w-36 rounded-md" style={{ backgroundColor: '#27272a' }} />
-        </div>
-        <div className="mx-auto max-w-2xl px-6 py-10" aria-busy="true" aria-label="Loading profile">
-          {/* Avatar section */}
-          <div className="mb-10 flex items-center gap-6">
-            <div
-              className="h-20 w-20 shrink-0 rounded-full"
-              style={{ backgroundColor: '#27272a' }}
-              aria-hidden="true"
-            />
-            <div className="flex flex-col gap-3">
-              <div className="h-4 w-32 rounded-md" style={{ backgroundColor: '#27272a' }} />
-              <div className="h-3 w-48 rounded-md" style={{ backgroundColor: '#1c1c1f' }} />
-              <div className="h-3 w-20 rounded-md" style={{ backgroundColor: '#27272a' }} />
-            </div>
-          </div>
+      <FullPageScroll>
+        <div className="min-h-dvh animate-pulse" style={{ backgroundColor: '#0a0a0b' }}>
+          {/* Header skeleton */}
           <div
-            className="mb-10 border-t"
+            className="flex h-14 items-center border-b px-6"
             style={{ borderColor: 'rgba(255,255,255,0.06)' }}
             aria-hidden="true"
-          />
-          {/* Form section skeleton (display name + username) */}
-          {[0, 1].map((i) => (
-            <div key={i} className="mb-10">
+          >
+            <div className="h-4 w-36 rounded-md" style={{ backgroundColor: '#27272a' }} />
+          </div>
+          <div
+            className="mx-auto max-w-2xl px-6 py-10"
+            aria-busy="true"
+            aria-label="Loading profile"
+          >
+            {/* Avatar section */}
+            <div className="mb-10 flex items-center gap-6">
               <div
-                className="mb-4 h-[10px] w-24 rounded-md"
-                style={{ backgroundColor: '#3f3f46' }}
-                aria-hidden="true"
-              />
-              <div
-                className="mb-5 h-3 w-64 rounded-md"
+                className="h-20 w-20 shrink-0 rounded-full"
                 style={{ backgroundColor: '#27272a' }}
                 aria-hidden="true"
               />
-              <div
-                className="h-10 w-full rounded-md"
-                style={{ backgroundColor: '#27272a' }}
-                aria-hidden="true"
-              />
-              <div
-                className="mt-4 h-8 w-16 rounded-md"
-                style={{ backgroundColor: '#27272a' }}
-                aria-hidden="true"
-              />
-              {i < 1 && (
+              <div className="flex flex-col gap-3">
+                <div className="h-4 w-32 rounded-md" style={{ backgroundColor: '#27272a' }} />
+                <div className="h-3 w-48 rounded-md" style={{ backgroundColor: '#1c1c1f' }} />
+                <div className="h-3 w-20 rounded-md" style={{ backgroundColor: '#27272a' }} />
+              </div>
+            </div>
+            <div
+              className="mb-10 border-t"
+              style={{ borderColor: 'rgba(255,255,255,0.06)' }}
+              aria-hidden="true"
+            />
+            {/* Form section skeleton (display name + username) */}
+            {[0, 1].map((i) => (
+              <div key={i} className="mb-10">
                 <div
-                  className="mt-10 border-t"
-                  style={{ borderColor: 'rgba(255,255,255,0.06)' }}
+                  className="mb-4 h-[10px] w-24 rounded-md"
+                  style={{ backgroundColor: '#3f3f46' }}
                   aria-hidden="true"
                 />
-              )}
-            </div>
-          ))}
+                <div
+                  className="mb-5 h-3 w-64 rounded-md"
+                  style={{ backgroundColor: '#27272a' }}
+                  aria-hidden="true"
+                />
+                <div
+                  className="h-10 w-full rounded-md"
+                  style={{ backgroundColor: '#27272a' }}
+                  aria-hidden="true"
+                />
+                <div
+                  className="mt-4 h-8 w-16 rounded-md"
+                  style={{ backgroundColor: '#27272a' }}
+                  aria-hidden="true"
+                />
+                {i < 1 && (
+                  <div
+                    className="mt-10 border-t"
+                    style={{ borderColor: 'rgba(255,255,255,0.06)' }}
+                    aria-hidden="true"
+                  />
+                )}
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      </FullPageScroll>
     );
   }
 
@@ -458,613 +465,622 @@ export function ProfilePage() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div
-      className="min-h-screen"
-      style={{ backgroundColor: '#0a0a0b', color: 'rgba(255,255,255,0.92)' }}
-    >
-      {/* Header */}
-      <header
-        className="flex h-14 items-center border-b px-6"
-        style={{ borderColor: 'rgba(255,255,255,0.06)' }}
+    <FullPageScroll>
+      <div
+        className="min-h-dvh"
+        style={{ backgroundColor: '#0a0a0b', color: 'rgba(255,255,255,0.92)' }}
       >
-        <h1 className="text-base font-semibold">Settings — Profile</h1>
-        <button
-          type="button"
-          onClick={() => navigate('/app')}
-          className="ml-auto text-sm transition-colors hover:opacity-90 focus-visible:outline-none"
-          style={{ color: 'rgba(255,255,255,0.60)' }}
+        {/* Header */}
+        <header
+          className="flex h-14 items-center border-b px-6"
+          style={{ borderColor: 'rgba(255,255,255,0.06)' }}
         >
-          Go to app
-        </button>
-      </header>
-
-      <main className="mx-auto max-w-2xl px-6 py-10">
-        {loadError && (
-          <div className="mb-6">
-            <ErrorBanner message={loadError} />
-            {/* §113 retry affordance for the profile load error */}
-            <button
-              type="button"
-              onClick={loadProfile}
-              className="mt-3 flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[13px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70"
-              style={{
-                backgroundColor: 'rgba(239,68,68,0.08)',
-                borderColor: 'rgba(239,68,68,0.30)',
-                color: '#f87171',
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-                  'rgba(239,68,68,0.14)';
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-                  'rgba(239,68,68,0.08)';
-              }}
-            >
-              Retry
-            </button>
-          </div>
-        )}
-
-        {/* ── Avatar section ─────────────────────────────────────────────── */}
-        <section className="mb-10">
-          <h2
-            className="mb-4 text-[11px] font-bold uppercase tracking-wider"
-            style={{ color: 'rgba(255,255,255,0.40)' }}
+          <h1 className="text-base font-semibold">Settings — Profile</h1>
+          <button
+            type="button"
+            onClick={() => navigate('/app')}
+            className="ml-auto text-sm transition-colors hover:opacity-90 focus-visible:outline-none"
+            style={{ color: 'rgba(255,255,255,0.60)' }}
           >
-            Avatar
-          </h2>
+            Go to app
+          </button>
+        </header>
 
-          <div className="flex items-center gap-6">
-            {/* Avatar preview */}
-            <button
-              type="button"
-              aria-label="Change avatar — click to upload"
-              className="relative shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 group"
-              style={{ '--tw-ring-color': accentColor } as React.CSSProperties}
-              onClick={() => avatarInputRef.current?.click()}
-              disabled={avatarUploading}
-            >
-              <div
-                className="w-20 h-20 rounded-full overflow-hidden border flex items-center justify-center text-xl font-semibold"
-                style={{
-                  backgroundColor: '#1c1c1f',
-                  borderColor: 'rgba(255,255,255,0.06)',
-                  color: accentColor,
-                }}
-              >
-                {displayAvatarSrc ? (
-                  <img
-                    src={displayAvatarSrc}
-                    alt="Your avatar"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <span aria-hidden="true">{initials}</span>
-                )}
-              </div>
-
-              {/* Hover/uploading overlay */}
-              <div
-                aria-hidden="true"
-                className="absolute inset-0 rounded-full flex items-center justify-center text-xs font-semibold uppercase tracking-wider transition-opacity duration-200"
-                style={{
-                  backgroundColor: 'rgba(0,0,0,0.60)',
-                  opacity: avatarUploading ? 1 : 0,
-                  color: '#fff',
-                }}
-              >
-                {avatarUploading ? '…' : 'Change'}
-              </div>
-              <div
-                aria-hidden="true"
-                className="absolute inset-0 rounded-full flex items-center justify-center text-xs font-semibold uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                style={{ backgroundColor: 'rgba(0,0,0,0.60)', color: '#fff' }}
-              >
-                {!avatarUploading && 'Change'}
-              </div>
-            </button>
-
-            {/* Upload button + status */}
-            <div className="flex flex-col gap-2">
-              <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.92)' }}>
-                Upload a custom avatar
-              </p>
-              <p className="text-xs" style={{ color: 'rgba(255,255,255,0.60)' }}>
-                PNG, JPEG, or WEBP. Max 2 MB.
-              </p>
-
+        <main className="mx-auto max-w-2xl px-6 py-10">
+          {loadError && (
+            <div className="mb-6">
+              <ErrorBanner message={loadError} />
+              {/* §113 retry affordance for the profile load error */}
               <button
                 type="button"
-                className="text-sm font-medium hover:underline text-left focus-visible:outline-none"
-                style={{ color: accentColor }}
+                onClick={loadProfile}
+                className="mt-3 flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[13px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70"
+                style={{
+                  backgroundColor: 'rgba(239,68,68,0.08)',
+                  borderColor: 'rgba(239,68,68,0.30)',
+                  color: '#f87171',
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+                    'rgba(239,68,68,0.14)';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+                    'rgba(239,68,68,0.08)';
+                }}
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
+          {/* ── Avatar section ─────────────────────────────────────────────── */}
+          <section className="mb-10">
+            <h2
+              className="mb-4 text-[11px] font-bold uppercase tracking-wider"
+              style={{ color: 'rgba(255,255,255,0.40)' }}
+            >
+              Avatar
+            </h2>
+
+            <div className="flex items-center gap-6">
+              {/* Avatar preview */}
+              <button
+                type="button"
+                aria-label="Change avatar — click to upload"
+                className="relative shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 group"
+                style={{ '--tw-ring-color': accentColor } as React.CSSProperties}
                 onClick={() => avatarInputRef.current?.click()}
                 disabled={avatarUploading}
-                aria-busy={avatarUploading}
               >
-                {avatarUploading ? 'Uploading…' : 'Choose file…'}
+                <div
+                  className="w-20 h-20 rounded-full overflow-hidden border flex items-center justify-center text-xl font-semibold"
+                  style={{
+                    backgroundColor: '#1c1c1f',
+                    borderColor: 'rgba(255,255,255,0.06)',
+                    color: accentColor,
+                  }}
+                >
+                  {displayAvatarSrc ? (
+                    <img
+                      src={displayAvatarSrc}
+                      alt="Your avatar"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span aria-hidden="true">{initials}</span>
+                  )}
+                </div>
+
+                {/* Hover/uploading overlay */}
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-0 rounded-full flex items-center justify-center text-xs font-semibold uppercase tracking-wider transition-opacity duration-200"
+                  style={{
+                    backgroundColor: 'rgba(0,0,0,0.60)',
+                    opacity: avatarUploading ? 1 : 0,
+                    color: '#fff',
+                  }}
+                >
+                  {avatarUploading ? '…' : 'Change'}
+                </div>
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-0 rounded-full flex items-center justify-center text-xs font-semibold uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                  style={{ backgroundColor: 'rgba(0,0,0,0.60)', color: '#fff' }}
+                >
+                  {!avatarUploading && 'Change'}
+                </div>
               </button>
 
-              <input
-                ref={avatarInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="sr-only"
-                aria-label="Avatar file upload"
-                onChange={handleAvatarSelect}
-              />
-
-              {avatarError && (
-                <p role="alert" className="text-xs" style={{ color: '#ef4444' }}>
-                  {avatarError}
+              {/* Upload button + status */}
+              <div className="flex flex-col gap-2">
+                <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.92)' }}>
+                  Upload a custom avatar
                 </p>
-              )}
-            </div>
-          </div>
-        </section>
+                <p className="text-xs" style={{ color: 'rgba(255,255,255,0.60)' }}>
+                  PNG, JPEG, or WEBP. Max 2 MB.
+                </p>
 
-        <hr style={{ borderColor: 'rgba(255,255,255,0.06)' }} className="mb-10" />
-
-        {/* ── Display name section ────────────────────────────────────────── */}
-        <section className="mb-10">
-          <h2
-            className="mb-4 text-[11px] font-bold uppercase tracking-wider"
-            style={{ color: 'rgba(255,255,255,0.40)' }}
-          >
-            Display name
-          </h2>
-          <p className="mb-5 text-sm" style={{ color: 'rgba(255,255,255,0.60)' }}>
-            This is how others see you in StudyHall.
-          </p>
-
-          {displayNameError && (
-            <div className="mb-4">
-              <ErrorBanner message={displayNameError} />
-            </div>
-          )}
-
-          {displayNameSuccess && (
-            <output
-              className="mb-4 flex items-center gap-2 rounded-md p-3 text-sm"
-              style={{
-                backgroundColor: 'rgba(16,185,129,0.10)',
-                border: '1px solid rgba(16,185,129,0.20)',
-                color: '#10b981',
-                display: 'flex',
-              }}
-            >
-              <span aria-hidden="true">✓</span>
-              Display name saved.
-            </output>
-          )}
-
-          <form onSubmit={handleDisplayNameSave} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="display-name"
-                className="text-sm font-medium"
-                style={{ color: 'rgba(255,255,255,0.92)' }}
-              >
-                Display name
-              </label>
-              <input
-                id="display-name"
-                type="text"
-                value={displayName}
-                onChange={(e) => {
-                  setDisplayName(e.target.value);
-                  setDisplayNameSuccess(false);
-                }}
-                placeholder="Your name"
-                autoComplete="name"
-                maxLength={50}
-                className="h-10 w-full rounded-md px-3 text-sm focus:outline-none"
-                style={{
-                  backgroundColor: '#121214',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  color: 'rgba(255,255,255,0.92)',
-                }}
-                onFocus={(e) => {
-                  const { r, g, b } = hexToRgb(accentColor);
-                  e.currentTarget.style.borderColor = accentColor;
-                  e.currentTarget.style.boxShadow = `0 0 0 2px rgba(${r},${g},${b},0.4)`;
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
-                  e.currentTarget.style.boxShadow = '';
-                }}
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={displayNameSaving || !displayNameDirty || !displayName.trim()}
-              aria-busy={displayNameSaving}
-              className="self-start rounded-md px-5 py-2 text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none"
-              style={{ backgroundColor: accentColor, color: '#fff' }}
-            >
-              {displayNameSaving ? 'Saving…' : 'Save'}
-            </button>
-          </form>
-        </section>
-
-        <hr style={{ borderColor: 'rgba(255,255,255,0.06)' }} className="mb-10" />
-
-        {/* ── Username section ────────────────────────────────────────────── */}
-        <section className="mb-10">
-          <h2
-            className="mb-4 text-[11px] font-bold uppercase tracking-wider"
-            style={{ color: 'rgba(255,255,255,0.40)' }}
-          >
-            Username
-          </h2>
-
-          <form onSubmit={handleUsernameSave} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="username"
-                className="text-sm font-medium"
-                style={{ color: 'rgba(255,255,255,0.92)' }}
-              >
-                Username
-              </label>
-
-              <div className="relative flex items-center">
-                <span
-                  className="absolute left-3 select-none font-mono text-sm"
-                  style={{ color: 'rgba(255,255,255,0.40)' }}
-                  aria-hidden="true"
+                <button
+                  type="button"
+                  className="text-sm font-medium hover:underline text-left focus-visible:outline-none"
+                  style={{ color: accentColor }}
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={avatarUploading}
+                  aria-busy={avatarUploading}
                 >
-                  @
-                </span>
+                  {avatarUploading ? 'Uploading…' : 'Choose file…'}
+                </button>
+
                 <input
-                  id="username"
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="sr-only"
+                  aria-label="Avatar file upload"
+                  onChange={handleAvatarSelect}
+                />
+
+                {avatarError && (
+                  <p role="alert" className="text-xs" style={{ color: '#ef4444' }}>
+                    {avatarError}
+                  </p>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <hr style={{ borderColor: 'rgba(255,255,255,0.06)' }} className="mb-10" />
+
+          {/* ── Display name section ────────────────────────────────────────── */}
+          <section className="mb-10">
+            <h2
+              className="mb-4 text-[11px] font-bold uppercase tracking-wider"
+              style={{ color: 'rgba(255,255,255,0.40)' }}
+            >
+              Display name
+            </h2>
+            <p className="mb-5 text-sm" style={{ color: 'rgba(255,255,255,0.60)' }}>
+              This is how others see you in StudyHall.
+            </p>
+
+            {displayNameError && (
+              <div className="mb-4">
+                <ErrorBanner message={displayNameError} />
+              </div>
+            )}
+
+            {displayNameSuccess && (
+              <output
+                className="mb-4 flex items-center gap-2 rounded-md p-3 text-sm"
+                style={{
+                  backgroundColor: 'rgba(16,185,129,0.10)',
+                  border: '1px solid rgba(16,185,129,0.20)',
+                  color: '#10b981',
+                  display: 'flex',
+                }}
+              >
+                <span aria-hidden="true">✓</span>
+                Display name saved.
+              </output>
+            )}
+
+            <form onSubmit={handleDisplayNameSave} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="display-name"
+                  className="text-sm font-medium"
+                  style={{ color: 'rgba(255,255,255,0.92)' }}
+                >
+                  Display name
+                </label>
+                <input
+                  id="display-name"
                   type="text"
-                  value={username}
-                  onChange={handleUsernameChange}
-                  placeholder="your_handle"
-                  autoComplete="username"
-                  maxLength={20}
-                  spellCheck={false}
-                  aria-invalid={!!(usernameClientError || usernameServerError)}
-                  aria-describedby={
-                    usernameClientError || usernameServerError ? 'username-error' : 'username-hint'
-                  }
-                  className="h-10 w-full rounded-md pl-8 pr-3 font-mono text-sm focus:outline-none"
+                  value={displayName}
+                  onChange={(e) => {
+                    setDisplayName(e.target.value);
+                    setDisplayNameSuccess(false);
+                  }}
+                  placeholder="Your name"
+                  autoComplete="name"
+                  maxLength={50}
+                  className="h-10 w-full rounded-md px-3 text-sm focus:outline-none"
                   style={{
                     backgroundColor: '#121214',
-                    border: `1px solid ${usernameClientError || usernameServerError ? '#ef4444' : 'rgba(255,255,255,0.06)'}`,
+                    border: '1px solid rgba(255,255,255,0.06)',
                     color: 'rgba(255,255,255,0.92)',
                   }}
                   onFocus={(e) => {
-                    if (!usernameClientError && !usernameServerError) {
-                      e.currentTarget.style.borderColor = accentColor;
-                      const { r, g, b } = hexToRgb(accentColor);
-                      e.currentTarget.style.boxShadow = `0 0 0 2px rgba(${r},${g},${b},0.4)`;
-                    }
+                    const { r, g, b } = hexToRgb(accentColor);
+                    e.currentTarget.style.borderColor = accentColor;
+                    e.currentTarget.style.boxShadow = `0 0 0 2px rgba(${r},${g},${b},0.4)`;
                   }}
                   onBlur={(e) => {
-                    if (!usernameClientError && !usernameServerError) {
-                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
-                      e.currentTarget.style.boxShadow = '';
-                    }
+                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
+                    e.currentTarget.style.boxShadow = '';
                   }}
                 />
               </div>
 
-              {usernameClientError || usernameServerError ? (
-                <p
-                  id="username-error"
-                  role="alert"
-                  className="text-xs"
-                  style={{ color: '#ef4444' }}
-                >
-                  {usernameClientError ?? usernameServerError}
-                </p>
-              ) : (
-                <p
-                  id="username-hint"
-                  className="text-xs"
-                  style={{ color: 'rgba(255,255,255,0.40)' }}
-                >
-                  Unique across StudyHall. 3–20 characters: lowercase letters, numbers, underscores.
-                </p>
-              )}
+              <button
+                type="submit"
+                disabled={displayNameSaving || !displayNameDirty || !displayName.trim()}
+                aria-busy={displayNameSaving}
+                className="self-start rounded-md px-5 py-2 text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none"
+                style={{ backgroundColor: accentColor, color: '#fff' }}
+              >
+                {displayNameSaving ? 'Saving…' : 'Save'}
+              </button>
+            </form>
+          </section>
 
-              {usernameSuccess && !usernameServerError && (
-                <p className="text-xs" style={{ color: '#10b981' }}>
-                  ✓ Username saved.
-                </p>
-              )}
-            </div>
+          <hr style={{ borderColor: 'rgba(255,255,255,0.06)' }} className="mb-10" />
 
-            <button
-              type="submit"
-              disabled={usernameSaving || !usernameDirty || !username || !!usernameClientError}
-              aria-busy={usernameSaving}
-              className="self-start rounded-md px-5 py-2 text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none"
-              style={{ backgroundColor: accentColor, color: '#fff' }}
+          {/* ── Username section ────────────────────────────────────────────── */}
+          <section className="mb-10">
+            <h2
+              className="mb-4 text-[11px] font-bold uppercase tracking-wider"
+              style={{ color: 'rgba(255,255,255,0.40)' }}
             >
-              {usernameSaving ? 'Saving…' : 'Save username'}
-            </button>
-          </form>
-        </section>
+              Username
+            </h2>
 
-        <hr style={{ borderColor: 'rgba(255,255,255,0.06)' }} className="mb-10" />
+            <form onSubmit={handleUsernameSave} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="username"
+                  className="text-sm font-medium"
+                  style={{ color: 'rgba(255,255,255,0.92)' }}
+                >
+                  Username
+                </label>
 
-        {/* ── Academic identity section (wave-77 M13 leg-2) ─────────────────── */}
-        <section className="mb-10">
-          <h2
-            className="mb-4 text-[11px] font-bold uppercase tracking-wider"
-            style={{ color: 'rgba(255,255,255,0.40)' }}
-          >
-            Academic identity
-          </h2>
-          <p className="mb-5 text-sm" style={{ color: 'rgba(255,255,255,0.60)' }}>
-            Self-declared details shown on your profile card across StudyHall. All optional.
-          </p>
+                <div className="relative flex items-center">
+                  <span
+                    className="absolute left-3 select-none font-mono text-sm"
+                    style={{ color: 'rgba(255,255,255,0.40)' }}
+                    aria-hidden="true"
+                  >
+                    @
+                  </span>
+                  <input
+                    id="username"
+                    type="text"
+                    value={username}
+                    onChange={handleUsernameChange}
+                    placeholder="your_handle"
+                    autoComplete="username"
+                    maxLength={20}
+                    spellCheck={false}
+                    aria-invalid={!!(usernameClientError || usernameServerError)}
+                    aria-describedby={
+                      usernameClientError || usernameServerError
+                        ? 'username-error'
+                        : 'username-hint'
+                    }
+                    className="h-10 w-full rounded-md pl-8 pr-3 font-mono text-sm focus:outline-none"
+                    style={{
+                      backgroundColor: '#121214',
+                      border: `1px solid ${usernameClientError || usernameServerError ? '#ef4444' : 'rgba(255,255,255,0.06)'}`,
+                      color: 'rgba(255,255,255,0.92)',
+                    }}
+                    onFocus={(e) => {
+                      if (!usernameClientError && !usernameServerError) {
+                        e.currentTarget.style.borderColor = accentColor;
+                        const { r, g, b } = hexToRgb(accentColor);
+                        e.currentTarget.style.boxShadow = `0 0 0 2px rgba(${r},${g},${b},0.4)`;
+                      }
+                    }}
+                    onBlur={(e) => {
+                      if (!usernameClientError && !usernameServerError) {
+                        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
+                        e.currentTarget.style.boxShadow = '';
+                      }
+                    }}
+                  />
+                </div>
 
-          {academicError && (
-            <div className="mb-4">
-              <ErrorBanner message={academicError} />
-            </div>
-          )}
+                {usernameClientError || usernameServerError ? (
+                  <p
+                    id="username-error"
+                    role="alert"
+                    className="text-xs"
+                    style={{ color: '#ef4444' }}
+                  >
+                    {usernameClientError ?? usernameServerError}
+                  </p>
+                ) : (
+                  <p
+                    id="username-hint"
+                    className="text-xs"
+                    style={{ color: 'rgba(255,255,255,0.40)' }}
+                  >
+                    Unique across StudyHall. 3–20 characters: lowercase letters, numbers,
+                    underscores.
+                  </p>
+                )}
 
-          {academicSuccess && (
-            <output
-              className="mb-4 flex items-center gap-2 rounded-md p-3 text-sm"
-              style={{
-                backgroundColor: 'rgba(16,185,129,0.10)',
-                border: '1px solid rgba(16,185,129,0.20)',
-                color: '#10b981',
-                display: 'flex',
-              }}
+                {usernameSuccess && !usernameServerError && (
+                  <p className="text-xs" style={{ color: '#10b981' }}>
+                    ✓ Username saved.
+                  </p>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={usernameSaving || !usernameDirty || !username || !!usernameClientError}
+                aria-busy={usernameSaving}
+                className="self-start rounded-md px-5 py-2 text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none"
+                style={{ backgroundColor: accentColor, color: '#fff' }}
+              >
+                {usernameSaving ? 'Saving…' : 'Save username'}
+              </button>
+            </form>
+          </section>
+
+          <hr style={{ borderColor: 'rgba(255,255,255,0.06)' }} className="mb-10" />
+
+          {/* ── Academic identity section (wave-77 M13 leg-2) ─────────────────── */}
+          <section className="mb-10">
+            <h2
+              className="mb-4 text-[11px] font-bold uppercase tracking-wider"
+              style={{ color: 'rgba(255,255,255,0.40)' }}
             >
-              <span aria-hidden="true">✓</span>
-              Academic identity saved.
-            </output>
-          )}
+              Academic identity
+            </h2>
+            <p className="mb-5 text-sm" style={{ color: 'rgba(255,255,255,0.60)' }}>
+              Self-declared details shown on your profile card across StudyHall. All optional.
+            </p>
 
-          <form onSubmit={handleAcademicSave} className="flex flex-col gap-4">
-            {/* Pronouns */}
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="pronouns"
-                className="text-sm font-medium"
-                style={{ color: 'rgba(255,255,255,0.92)' }}
-              >
-                Pronouns
-              </label>
-              <input
-                id="pronouns"
-                type="text"
-                value={pronouns}
-                onChange={(e) => {
-                  setPronouns(e.target.value);
-                  setAcademicSuccess(false);
-                }}
-                placeholder="she/her, he/him, they/them…"
-                maxLength={ACADEMIC_MAX.pronouns}
-                className="h-10 w-full rounded-md px-3 text-sm focus:outline-none"
-                style={{
-                  backgroundColor: '#121214',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  color: 'rgba(255,255,255,0.92)',
-                }}
-              />
-            </div>
-
-            {/* Bio */}
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="bio"
-                className="text-sm font-medium"
-                style={{ color: 'rgba(255,255,255,0.92)' }}
-              >
-                Bio
-              </label>
-              <textarea
-                id="bio"
-                value={bio}
-                onChange={(e) => {
-                  setBio(e.target.value);
-                  setAcademicSuccess(false);
-                }}
-                placeholder="A short line about what you study or work on."
-                maxLength={ACADEMIC_MAX.bio}
-                rows={3}
-                className="w-full rounded-md px-3 py-2 text-sm focus:outline-none resize-y"
-                style={{
-                  backgroundColor: '#121214',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  color: 'rgba(255,255,255,0.92)',
-                }}
-              />
-              <span className="text-xs" style={{ color: 'rgba(255,255,255,0.40)' }}>
-                {bio.length}/{ACADEMIC_MAX.bio}
-              </span>
-            </div>
-
-            {/* Institution */}
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="institution"
-                className="text-sm font-medium"
-                style={{ color: 'rgba(255,255,255,0.92)' }}
-              >
-                Institution
-              </label>
-              <input
-                id="institution"
-                type="text"
-                value={institution}
-                onChange={(e) => {
-                  setInstitution(e.target.value);
-                  setAcademicSuccess(false);
-                }}
-                placeholder="Your school or university"
-                maxLength={ACADEMIC_MAX.institution}
-                className="h-10 w-full rounded-md px-3 text-sm focus:outline-none"
-                style={{
-                  backgroundColor: '#121214',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  color: 'rgba(255,255,255,0.92)',
-                }}
-              />
-            </div>
-
-            {/* Program / Field */}
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="program"
-                className="text-sm font-medium"
-                style={{ color: 'rgba(255,255,255,0.92)' }}
-              >
-                Program / Field
-              </label>
-              <input
-                id="program"
-                type="text"
-                value={program}
-                onChange={(e) => {
-                  setProgram(e.target.value);
-                  setAcademicSuccess(false);
-                }}
-                placeholder="e.g. Ph.D. Computer Science"
-                maxLength={ACADEMIC_MAX.program}
-                className="h-10 w-full rounded-md px-3 text-sm focus:outline-none"
-                style={{
-                  backgroundColor: '#121214',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  color: 'rgba(255,255,255,0.92)',
-                }}
-              />
-            </div>
-
-            {/* Academic role — select from ACADEMIC_ROLES */}
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="academic-role"
-                className="text-sm font-medium"
-                style={{ color: 'rgba(255,255,255,0.92)' }}
-              >
-                Academic role
-              </label>
-              <select
-                id="academic-role"
-                value={academicRole}
-                onChange={(e) => {
-                  setAcademicRole(e.target.value as AcademicRole | '');
-                  setAcademicSuccess(false);
-                }}
-                className="h-10 w-full rounded-md px-3 text-sm focus:outline-none"
-                style={{
-                  backgroundColor: '#121214',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  color: academicRole ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.40)',
-                }}
-              >
-                <option value="">Not specified</option>
-                {ACADEMIC_ROLES.map((role) => (
-                  <option key={role} value={role}>
-                    {ROLE_OPTION_LABELS[role]}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Academic year */}
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="academic-year"
-                className="text-sm font-medium"
-                style={{ color: 'rgba(255,255,255,0.92)' }}
-              >
-                Academic year
-              </label>
-              <input
-                id="academic-year"
-                type="text"
-                value={academicYear}
-                onChange={(e) => {
-                  setAcademicYear(e.target.value);
-                  setAcademicSuccess(false);
-                }}
-                placeholder="e.g. Year 3, Freshman, 2026 cohort"
-                maxLength={ACADEMIC_MAX.academicYear}
-                className="h-10 w-full rounded-md px-3 text-sm focus:outline-none"
-                style={{
-                  backgroundColor: '#121214',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  color: 'rgba(255,255,255,0.92)',
-                }}
-              />
-            </div>
-
-            {academicClientError && (
-              <p role="alert" className="text-xs" style={{ color: '#ef4444' }}>
-                {academicClientError}
-              </p>
+            {academicError && (
+              <div className="mb-4">
+                <ErrorBanner message={academicError} />
+              </div>
             )}
 
-            <button
-              type="submit"
-              disabled={academicSaving || !!academicClientError}
-              aria-busy={academicSaving}
-              className="self-start rounded-md px-5 py-2 text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none"
-              style={{ backgroundColor: accentColor, color: '#fff' }}
-            >
-              {academicSaving ? 'Saving…' : 'Save academic identity'}
-            </button>
-          </form>
-        </section>
+            {academicSuccess && (
+              <output
+                className="mb-4 flex items-center gap-2 rounded-md p-3 text-sm"
+                style={{
+                  backgroundColor: 'rgba(16,185,129,0.10)',
+                  border: '1px solid rgba(16,185,129,0.20)',
+                  color: '#10b981',
+                  display: 'flex',
+                }}
+              >
+                <span aria-hidden="true">✓</span>
+                Academic identity saved.
+              </output>
+            )}
 
-        <hr style={{ borderColor: 'rgba(255,255,255,0.06)' }} className="mb-10" />
-
-        {/* ── Accent colour section ───────────────────────────────────────── */}
-        <section className="mb-10">
-          <h2
-            className="mb-4 text-[11px] font-bold uppercase tracking-wider"
-            style={{ color: 'rgba(255,255,255,0.40)' }}
-          >
-            Accent colour
-          </h2>
-          <p className="mb-5 text-sm" style={{ color: 'rgba(255,255,255,0.60)' }}>
-            Used for buttons, links, and your profile card identity.
-          </p>
-
-          <div role="radiogroup" aria-label="Choose accent colour" className="flex flex-wrap gap-3">
-            {ACCENT_COLORS.map(({ hex, label }) => {
-              const isActive = accentColor === hex;
-              return (
-                <button
-                  key={hex}
-                  type="button"
-                  role="radio"
-                  aria-checked={isActive}
-                  aria-label={label}
-                  disabled={accentSaving}
-                  onClick={() => handleAccentSelect(hex)}
-                  className="w-7 h-7 rounded-full shrink-0 focus-visible:outline-none transition-transform"
+            <form onSubmit={handleAcademicSave} className="flex flex-col gap-4">
+              {/* Pronouns */}
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="pronouns"
+                  className="text-sm font-medium"
+                  style={{ color: 'rgba(255,255,255,0.92)' }}
+                >
+                  Pronouns
+                </label>
+                <input
+                  id="pronouns"
+                  type="text"
+                  value={pronouns}
+                  onChange={(e) => {
+                    setPronouns(e.target.value);
+                    setAcademicSuccess(false);
+                  }}
+                  placeholder="she/her, he/him, they/them…"
+                  maxLength={ACADEMIC_MAX.pronouns}
+                  className="h-10 w-full rounded-md px-3 text-sm focus:outline-none"
                   style={{
-                    backgroundColor: hex,
-                    border: isActive ? '3px solid white' : '3px solid transparent',
-                    transform: isActive ? 'scale(1.12)' : 'scale(1)',
-                    boxShadow: isActive ? '0 0 0 1px rgba(255,255,255,0.3)' : 'none',
-                    opacity: accentSaving ? 0.7 : 1,
+                    backgroundColor: '#121214',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    color: 'rgba(255,255,255,0.92)',
                   }}
                 />
-              );
-            })}
-          </div>
+              </div>
 
-          {accentError && (
-            <p role="alert" className="mt-3 text-xs" style={{ color: '#ef4444' }}>
-              {accentError}
+              {/* Bio */}
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="bio"
+                  className="text-sm font-medium"
+                  style={{ color: 'rgba(255,255,255,0.92)' }}
+                >
+                  Bio
+                </label>
+                <textarea
+                  id="bio"
+                  value={bio}
+                  onChange={(e) => {
+                    setBio(e.target.value);
+                    setAcademicSuccess(false);
+                  }}
+                  placeholder="A short line about what you study or work on."
+                  maxLength={ACADEMIC_MAX.bio}
+                  rows={3}
+                  className="w-full rounded-md px-3 py-2 text-sm focus:outline-none resize-y"
+                  style={{
+                    backgroundColor: '#121214',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    color: 'rgba(255,255,255,0.92)',
+                  }}
+                />
+                <span className="text-xs" style={{ color: 'rgba(255,255,255,0.40)' }}>
+                  {bio.length}/{ACADEMIC_MAX.bio}
+                </span>
+              </div>
+
+              {/* Institution */}
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="institution"
+                  className="text-sm font-medium"
+                  style={{ color: 'rgba(255,255,255,0.92)' }}
+                >
+                  Institution
+                </label>
+                <input
+                  id="institution"
+                  type="text"
+                  value={institution}
+                  onChange={(e) => {
+                    setInstitution(e.target.value);
+                    setAcademicSuccess(false);
+                  }}
+                  placeholder="Your school or university"
+                  maxLength={ACADEMIC_MAX.institution}
+                  className="h-10 w-full rounded-md px-3 text-sm focus:outline-none"
+                  style={{
+                    backgroundColor: '#121214',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    color: 'rgba(255,255,255,0.92)',
+                  }}
+                />
+              </div>
+
+              {/* Program / Field */}
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="program"
+                  className="text-sm font-medium"
+                  style={{ color: 'rgba(255,255,255,0.92)' }}
+                >
+                  Program / Field
+                </label>
+                <input
+                  id="program"
+                  type="text"
+                  value={program}
+                  onChange={(e) => {
+                    setProgram(e.target.value);
+                    setAcademicSuccess(false);
+                  }}
+                  placeholder="e.g. Ph.D. Computer Science"
+                  maxLength={ACADEMIC_MAX.program}
+                  className="h-10 w-full rounded-md px-3 text-sm focus:outline-none"
+                  style={{
+                    backgroundColor: '#121214',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    color: 'rgba(255,255,255,0.92)',
+                  }}
+                />
+              </div>
+
+              {/* Academic role — select from ACADEMIC_ROLES */}
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="academic-role"
+                  className="text-sm font-medium"
+                  style={{ color: 'rgba(255,255,255,0.92)' }}
+                >
+                  Academic role
+                </label>
+                <select
+                  id="academic-role"
+                  value={academicRole}
+                  onChange={(e) => {
+                    setAcademicRole(e.target.value as AcademicRole | '');
+                    setAcademicSuccess(false);
+                  }}
+                  className="h-10 w-full rounded-md px-3 text-sm focus:outline-none"
+                  style={{
+                    backgroundColor: '#121214',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    color: academicRole ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.40)',
+                  }}
+                >
+                  <option value="">Not specified</option>
+                  {ACADEMIC_ROLES.map((role) => (
+                    <option key={role} value={role}>
+                      {ROLE_OPTION_LABELS[role]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Academic year */}
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="academic-year"
+                  className="text-sm font-medium"
+                  style={{ color: 'rgba(255,255,255,0.92)' }}
+                >
+                  Academic year
+                </label>
+                <input
+                  id="academic-year"
+                  type="text"
+                  value={academicYear}
+                  onChange={(e) => {
+                    setAcademicYear(e.target.value);
+                    setAcademicSuccess(false);
+                  }}
+                  placeholder="e.g. Year 3, Freshman, 2026 cohort"
+                  maxLength={ACADEMIC_MAX.academicYear}
+                  className="h-10 w-full rounded-md px-3 text-sm focus:outline-none"
+                  style={{
+                    backgroundColor: '#121214',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    color: 'rgba(255,255,255,0.92)',
+                  }}
+                />
+              </div>
+
+              {academicClientError && (
+                <p role="alert" className="text-xs" style={{ color: '#ef4444' }}>
+                  {academicClientError}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={academicSaving || !!academicClientError}
+                aria-busy={academicSaving}
+                className="self-start rounded-md px-5 py-2 text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none"
+                style={{ backgroundColor: accentColor, color: '#fff' }}
+              >
+                {academicSaving ? 'Saving…' : 'Save academic identity'}
+              </button>
+            </form>
+          </section>
+
+          <hr style={{ borderColor: 'rgba(255,255,255,0.06)' }} className="mb-10" />
+
+          {/* ── Accent colour section ───────────────────────────────────────── */}
+          <section className="mb-10">
+            <h2
+              className="mb-4 text-[11px] font-bold uppercase tracking-wider"
+              style={{ color: 'rgba(255,255,255,0.40)' }}
+            >
+              Accent colour
+            </h2>
+            <p className="mb-5 text-sm" style={{ color: 'rgba(255,255,255,0.60)' }}>
+              Used for buttons, links, and your profile card identity.
             </p>
-          )}
-        </section>
-      </main>
-    </div>
+
+            <div
+              role="radiogroup"
+              aria-label="Choose accent colour"
+              className="flex flex-wrap gap-3"
+            >
+              {ACCENT_COLORS.map(({ hex, label }) => {
+                const isActive = accentColor === hex;
+                return (
+                  <button
+                    key={hex}
+                    type="button"
+                    role="radio"
+                    aria-checked={isActive}
+                    aria-label={label}
+                    disabled={accentSaving}
+                    onClick={() => handleAccentSelect(hex)}
+                    className="w-7 h-7 rounded-full shrink-0 focus-visible:outline-none transition-transform"
+                    style={{
+                      backgroundColor: hex,
+                      border: isActive ? '3px solid white' : '3px solid transparent',
+                      transform: isActive ? 'scale(1.12)' : 'scale(1)',
+                      boxShadow: isActive ? '0 0 0 1px rgba(255,255,255,0.3)' : 'none',
+                      opacity: accentSaving ? 0.7 : 1,
+                    }}
+                  />
+                );
+              })}
+            </div>
+
+            {accentError && (
+              <p role="alert" className="mt-3 text-xs" style={{ color: '#ef4444' }}>
+                {accentError}
+              </p>
+            )}
+          </section>
+        </main>
+      </div>
+    </FullPageScroll>
   );
 }

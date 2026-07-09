@@ -30,6 +30,7 @@ import { api } from '../auth/api';
 import { ErrorBanner } from '../components/ErrorBanner';
 import { BlockedUsersPanel } from '../shell/BlockedUsersPanel';
 import { DangerZonePanel } from '../shell/DangerZonePanel';
+import { FullPageScroll } from '../shell/FullPageScroll';
 import { PrivacyActivityPanel } from '../shell/PrivacyActivityPanel';
 
 // ── Static option tables (defined outside component — no deps) ────────────────
@@ -242,507 +243,515 @@ export function SettingsPrivacyPage() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div
-      className="min-h-screen"
-      style={{ backgroundColor: '#0a0a0b', color: 'rgba(255,255,255,0.92)' }}
-    >
-      {/* Page header — matches ProfilePage structure */}
-      <header
-        className="flex h-14 items-center border-b px-6"
-        style={{ borderColor: 'rgba(255,255,255,0.06)' }}
+    <FullPageScroll>
+      <div
+        className="min-h-dvh"
+        style={{ backgroundColor: '#0a0a0b', color: 'rgba(255,255,255,0.92)' }}
       >
-        <h1 className="text-base font-semibold">Settings — Privacy</h1>
-      </header>
+        {/* Page header — matches ProfilePage structure */}
+        <header
+          className="flex h-14 items-center border-b px-6"
+          style={{ borderColor: 'rgba(255,255,255,0.06)' }}
+        >
+          <h1 className="text-base font-semibold">Settings — Privacy</h1>
+        </header>
 
-      <main className="mx-auto max-w-2xl px-6 py-10">
-        {/* Section heading */}
-        <div className="mb-8">
-          <h2 className="mb-2 text-2xl font-semibold tracking-tight text-white">
-            Privacy Settings
-          </h2>
-          <p className="text-sm" style={{ color: 'rgba(255,255,255,0.60)' }}>
-            Your data is yours. StudyHall doesn&apos;t track you for ads or sell your data. We give
-            you full control over what you share and who can interact with you.
-          </p>
-        </div>
-
-        {/* ── Loading state — skeleton rows ─────────────────────────────────── */}
-        {loading && <PrivacyPageSkeleton />}
-
-        {/* ── Error state — banner + retry ──────────────────────────────────── */}
-        {!loading && loadError && (
-          <div className="flex flex-col items-start gap-4">
-            <ErrorBanner message={loadError} />
-            <button
-              type="button"
-              onClick={load}
-              className="rounded-md px-4 py-2 text-sm font-semibold transition-all focus-visible:outline-none"
-              style={{
-                backgroundColor: '#27272a',
-                border: '1px solid rgba(255,255,255,0.06)',
-                color: 'rgba(255,255,255,0.92)',
-              }}
-            >
-              Try again
-            </button>
+        <main className="mx-auto max-w-2xl px-6 py-10">
+          {/* Section heading */}
+          <div className="mb-8">
+            <h2 className="mb-2 text-2xl font-semibold tracking-tight text-white">
+              Privacy Settings
+            </h2>
+            <p className="text-sm" style={{ color: 'rgba(255,255,255,0.60)' }}>
+              Your data is yours. StudyHall doesn&apos;t track you for ads or sell your data. We
+              give you full control over what you share and who can interact with you.
+            </p>
           </div>
-        )}
 
-        {/* ── Content — visible once loaded without error ────────────────────── */}
-        {!loading && !loadError && (
-          <div className="flex flex-col gap-6">
-            {/* ── Panel 1: Profile Visibility ───────────────────────────────── */}
-            <section
-              className="rounded-lg p-6"
-              style={{
-                backgroundColor: '#1c1c1f',
-                border: '1px solid rgba(255,255,255,0.06)',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.4)',
-              }}
-            >
-              <h3 id="visibility-heading" className="mb-1 text-[17px] font-semibold text-white">
-                Who can see your profile?
-              </h3>
-              <p className="mb-5 text-[13px]" style={{ color: 'rgba(255,255,255,0.60)' }}>
-                Your profile card (avatar, display name) is shown in member lists. Control who can
-                find you across StudyHall.
-              </p>
+          {/* ── Loading state — skeleton rows ─────────────────────────────────── */}
+          {loading && <PrivacyPageSkeleton />}
 
-              {visibilityError && (
-                <div className="mb-4">
-                  <ErrorBanner message={visibilityError} />
-                </div>
-              )}
-
-              {visibilitySaveSuccess && (
-                <p
-                  role="status"
-                  className="mb-4 rounded-md px-3 py-2 text-sm"
-                  style={{
-                    backgroundColor: 'rgba(16,185,129,0.10)',
-                    border: '1px solid rgba(16,185,129,0.20)',
-                    color: '#10b981',
-                  }}
-                >
-                  ✓ Visibility saved.
-                </p>
-              )}
-
-              <div
-                role="radiogroup"
-                aria-labelledby="visibility-heading"
-                className="flex flex-col gap-3"
-              >
-                {VISIBILITY_OPTIONS.map(({ value, label, desc }) => {
-                  const isChecked = uiVisibility === value;
-                  return (
-                    <label
-                      key={value}
-                      className="flex cursor-pointer gap-3 rounded-md p-4 transition-colors"
-                      style={{
-                        border: isChecked
-                          ? '1px solid rgba(16,185,129,0.30)'
-                          : '1px solid rgba(255,255,255,0.06)',
-                        backgroundColor: isChecked ? 'rgba(16,185,129,0.04)' : '#121214',
-                        opacity: visibilitySaving ? 0.65 : 1,
-                        pointerEvents: visibilitySaving ? 'none' : undefined,
-                        transition: 'border-color 150ms ease, background-color 150ms ease',
-                      }}
-                    >
-                      {/* Real radio input — accessible, visually hidden */}
-                      <input
-                        type="radio"
-                        name="profile-visibility"
-                        value={value}
-                        checked={isChecked}
-                        onChange={() => handleVisibilityChange(value)}
-                        disabled={visibilitySaving}
-                        className="sr-only"
-                      />
-
-                      {/* Custom visual radio dot */}
-                      <div
-                        aria-hidden="true"
-                        className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
-                        style={{
-                          border: isChecked ? '2px solid #10b981' : '2px solid #52525b',
-                          transition: 'border-color 150ms ease',
-                        }}
-                      >
-                        {isChecked && (
-                          <div
-                            className="h-2.5 w-2.5 rounded-full"
-                            style={{ backgroundColor: '#10b981' }}
-                          />
-                        )}
-                      </div>
-
-                      {/* Text */}
-                      <div className="flex-1">
-                        <div
-                          className="mb-0.5 text-sm font-semibold"
-                          style={{
-                            color: isChecked ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.60)',
-                            transition: 'color 150ms ease',
-                          }}
-                        >
-                          {label}
-                        </div>
-                        <div
-                          className="text-[13px] leading-snug"
-                          style={{ color: 'rgba(255,255,255,0.40)' }}
-                        >
-                          {desc}
-                        </div>
-                      </div>
-                    </label>
-                  );
-                })}
-              </div>
-
-              <p
-                className="mt-4 pt-4 text-[12px] leading-relaxed"
+          {/* ── Error state — banner + retry ──────────────────────────────────── */}
+          {!loading && loadError && (
+            <div className="flex flex-col items-start gap-4">
+              <ErrorBanner message={loadError} />
+              <button
+                type="button"
+                onClick={load}
+                className="rounded-md px-4 py-2 text-sm font-semibold transition-all focus-visible:outline-none"
                 style={{
-                  borderTop: '1px solid rgba(255,255,255,0.06)',
-                  color: 'rgba(255,255,255,0.40)',
+                  backgroundColor: '#27272a',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  color: 'rgba(255,255,255,0.92)',
                 }}
               >
-                When set to Hidden, your profile is removed from the member list for everyone in the
-                server — including organizers and owners.
-              </p>
-            </section>
+                Try again
+              </button>
+            </div>
+          )}
 
-            {/* ── Panel 2: Online status — LIVE working toggle ──────────────── */}
-            {/*
+          {/* ── Content — visible once loaded without error ────────────────────── */}
+          {!loading && !loadError && (
+            <div className="flex flex-col gap-6">
+              {/* ── Panel 1: Profile Visibility ───────────────────────────────── */}
+              <section
+                className="rounded-lg p-6"
+                style={{
+                  backgroundColor: '#1c1c1f',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.4)',
+                }}
+              >
+                <h3 id="visibility-heading" className="mb-1 text-[17px] font-semibold text-white">
+                  Who can see your profile?
+                </h3>
+                <p className="mb-5 text-[13px]" style={{ color: 'rgba(255,255,255,0.60)' }}>
+                  Your profile card (avatar, display name) is shown in member lists. Control who can
+                  find you across StudyHall.
+                </p>
+
+                {visibilityError && (
+                  <div className="mb-4">
+                    <ErrorBanner message={visibilityError} />
+                  </div>
+                )}
+
+                {visibilitySaveSuccess && (
+                  <p
+                    role="status"
+                    className="mb-4 rounded-md px-3 py-2 text-sm"
+                    style={{
+                      backgroundColor: 'rgba(16,185,129,0.10)',
+                      border: '1px solid rgba(16,185,129,0.20)',
+                      color: '#10b981',
+                    }}
+                  >
+                    ✓ Visibility saved.
+                  </p>
+                )}
+
+                <div
+                  role="radiogroup"
+                  aria-labelledby="visibility-heading"
+                  className="flex flex-col gap-3"
+                >
+                  {VISIBILITY_OPTIONS.map(({ value, label, desc }) => {
+                    const isChecked = uiVisibility === value;
+                    return (
+                      <label
+                        key={value}
+                        className="flex cursor-pointer gap-3 rounded-md p-4 transition-colors"
+                        style={{
+                          border: isChecked
+                            ? '1px solid rgba(16,185,129,0.30)'
+                            : '1px solid rgba(255,255,255,0.06)',
+                          backgroundColor: isChecked ? 'rgba(16,185,129,0.04)' : '#121214',
+                          opacity: visibilitySaving ? 0.65 : 1,
+                          pointerEvents: visibilitySaving ? 'none' : undefined,
+                          transition: 'border-color 150ms ease, background-color 150ms ease',
+                        }}
+                      >
+                        {/* Real radio input — accessible, visually hidden */}
+                        <input
+                          type="radio"
+                          name="profile-visibility"
+                          value={value}
+                          checked={isChecked}
+                          onChange={() => handleVisibilityChange(value)}
+                          disabled={visibilitySaving}
+                          className="sr-only"
+                        />
+
+                        {/* Custom visual radio dot */}
+                        <div
+                          aria-hidden="true"
+                          className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+                          style={{
+                            border: isChecked ? '2px solid #10b981' : '2px solid #52525b',
+                            transition: 'border-color 150ms ease',
+                          }}
+                        >
+                          {isChecked && (
+                            <div
+                              className="h-2.5 w-2.5 rounded-full"
+                              style={{ backgroundColor: '#10b981' }}
+                            />
+                          )}
+                        </div>
+
+                        {/* Text */}
+                        <div className="flex-1">
+                          <div
+                            className="mb-0.5 text-sm font-semibold"
+                            style={{
+                              color: isChecked
+                                ? 'rgba(255,255,255,0.92)'
+                                : 'rgba(255,255,255,0.60)',
+                              transition: 'color 150ms ease',
+                            }}
+                          >
+                            {label}
+                          </div>
+                          <div
+                            className="text-[13px] leading-snug"
+                            style={{ color: 'rgba(255,255,255,0.40)' }}
+                          >
+                            {desc}
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+
+                <p
+                  className="mt-4 pt-4 text-[12px] leading-relaxed"
+                  style={{
+                    borderTop: '1px solid rgba(255,255,255,0.06)',
+                    color: 'rgba(255,255,255,0.40)',
+                  }}
+                >
+                  When set to Hidden, your profile is removed from the member list for everyone in
+                  the server — including organizers and owners.
+                </p>
+              </section>
+
+              {/* ── Panel 2: Online status — LIVE working toggle ──────────────── */}
+              {/*
               Presence is a live feature (honored server-side). This is a REAL
               working control — enabled, auto-saved, PUT→GET round-trip — modelled
               on the profileVisibility panel above, NOT the disabled DM affordance.
             */}
-            <section
-              className="rounded-lg p-6"
-              style={{
-                backgroundColor: '#1c1c1f',
-                border: '1px solid rgba(255,255,255,0.06)',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.4)',
-              }}
-            >
-              <h3 id="presence-heading" className="mb-1 text-[17px] font-semibold text-white">
-                Show my online status
-              </h3>
-              <p className="mb-5 text-[13px]" style={{ color: 'rgba(255,255,255,0.60)' }}>
-                When on, classmates can see when you&apos;re online. Turn it off to appear offline
-                to everyone.
-              </p>
-
-              {presenceError && (
-                <div className="mb-4">
-                  <ErrorBanner message={presenceError} />
-                </div>
-              )}
-
-              {presenceSaveSuccess && (
-                <p
-                  role="status"
-                  className="mb-4 rounded-md px-3 py-2 text-sm"
-                  style={{
-                    backgroundColor: 'rgba(16,185,129,0.10)',
-                    border: '1px solid rgba(16,185,129,0.20)',
-                    color: '#10b981',
-                  }}
-                >
-                  ✓ Online status saved.
-                </p>
-              )}
-
-              <div
-                className="flex items-center justify-between gap-4 rounded-md p-4"
+              <section
+                className="rounded-lg p-6"
                 style={{
+                  backgroundColor: '#1c1c1f',
                   border: '1px solid rgba(255,255,255,0.06)',
-                  backgroundColor: '#121214',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.4)',
                 }}
               >
-                <div className="flex-1">
-                  <div
-                    className="mb-0.5 text-sm font-semibold"
-                    style={{ color: 'rgba(255,255,255,0.92)' }}
-                  >
-                    Show when I&apos;m online to others
-                  </div>
-                  <div
-                    className="text-[13px] leading-snug"
-                    style={{ color: 'rgba(255,255,255,0.40)' }}
-                  >
-                    {showPresence
-                      ? 'Classmates can see when you’re online.'
-                      : 'You’ll appear offline to everyone.'}
-                  </div>
-                </div>
+                <h3 id="presence-heading" className="mb-1 text-[17px] font-semibold text-white">
+                  Show my online status
+                </h3>
+                <p className="mb-5 text-[13px]" style={{ color: 'rgba(255,255,255,0.60)' }}>
+                  When on, classmates can see when you&apos;re online. Turn it off to appear offline
+                  to everyone.
+                </p>
 
-                {/* Real switch — accessible, enabled, emerald when on (DESIGN-SYSTEM) */}
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={showPresence}
-                  aria-labelledby="presence-heading"
-                  disabled={presenceSaving}
-                  onClick={() => handlePresenceChange(!showPresence)}
-                  className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none"
+                {presenceError && (
+                  <div className="mb-4">
+                    <ErrorBanner message={presenceError} />
+                  </div>
+                )}
+
+                {presenceSaveSuccess && (
+                  <p
+                    role="status"
+                    className="mb-4 rounded-md px-3 py-2 text-sm"
+                    style={{
+                      backgroundColor: 'rgba(16,185,129,0.10)',
+                      border: '1px solid rgba(16,185,129,0.20)',
+                      color: '#10b981',
+                    }}
+                  >
+                    ✓ Online status saved.
+                  </p>
+                )}
+
+                <div
+                  className="flex items-center justify-between gap-4 rounded-md p-4"
                   style={{
-                    backgroundColor: showPresence ? '#10b981' : '#52525b',
-                    opacity: presenceSaving ? 0.65 : 1,
-                    cursor: presenceSaving ? 'default' : 'pointer',
-                    transition: 'background-color 150ms ease',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    backgroundColor: '#121214',
                   }}
                 >
-                  <span
-                    aria-hidden="true"
-                    className="inline-block h-5 w-5 rounded-full"
-                    style={{
-                      backgroundColor: '#fff',
-                      transform: showPresence ? 'translateX(22px)' : 'translateX(2px)',
-                      transition: 'transform 150ms ease',
-                    }}
-                  />
-                </button>
-              </div>
-            </section>
+                  <div className="flex-1">
+                    <div
+                      className="mb-0.5 text-sm font-semibold"
+                      style={{ color: 'rgba(255,255,255,0.92)' }}
+                    >
+                      Show when I&apos;m online to others
+                    </div>
+                    <div
+                      className="text-[13px] leading-snug"
+                      style={{ color: 'rgba(255,255,255,0.40)' }}
+                    >
+                      {showPresence
+                        ? 'Classmates can see when you’re online.'
+                        : 'You’ll appear offline to everyone.'}
+                    </div>
+                  </div>
 
-            {/* ── Panel 3: Who can message you — DISABLED affordance ────────── */}
-            {/*
+                  {/* Real switch — accessible, enabled, emerald when on (DESIGN-SYSTEM) */}
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={showPresence}
+                    aria-labelledby="presence-heading"
+                    disabled={presenceSaving}
+                    onClick={() => handlePresenceChange(!showPresence)}
+                    className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none"
+                    style={{
+                      backgroundColor: showPresence ? '#10b981' : '#52525b',
+                      opacity: presenceSaving ? 0.65 : 1,
+                      cursor: presenceSaving ? 'default' : 'pointer',
+                      transition: 'background-color 150ms ease',
+                    }}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="inline-block h-5 w-5 rounded-full"
+                      style={{
+                        backgroundColor: '#fff',
+                        transform: showPresence ? 'translateX(22px)' : 'translateX(2px)',
+                        transition: 'transform 150ms ease',
+                      }}
+                    />
+                  </button>
+                </div>
+              </section>
+
+              {/* ── Panel 3: Who can message you — DISABLED affordance ────────── */}
+              {/*
               BOARD binding: NOT an active control. whoCanDm is persisted server-side
               but there is no DM enforcement surface today. This panel must look
               clearly inactive — the instructions require it NOT to look like a
               working toggle.
             */}
-            <section
-              className="rounded-lg p-6"
-              style={{
-                backgroundColor: '#121214',
-                border: '1px solid rgba(255,255,255,0.06)',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.4)',
-                opacity: 0.65,
-              }}
-            >
-              <div className="mb-1 flex flex-wrap items-center gap-2">
-                <h3 className="text-[17px] font-semibold text-white">Who can message you?</h3>
-                <span
-                  className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
-                  style={{
-                    backgroundColor: '#27272a',
-                    color: 'rgba(255,255,255,0.40)',
-                  }}
-                >
-                  Beta Feature
-                </span>
-              </div>
-              <p className="mb-4 text-[13px]" style={{ color: 'rgba(255,255,255,0.60)' }}>
-                Direct messaging is rolling out soon. Your preference will be saved and enforced
-                once the feature is available.
-              </p>
-
-              {/* Disabled affordance — no pointer events, no interactivity */}
-              <div
-                aria-disabled="true"
-                className="flex select-none flex-col gap-2"
-                style={{ pointerEvents: 'none', opacity: 0.55 }}
+              <section
+                className="rounded-lg p-6"
+                style={{
+                  backgroundColor: '#121214',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.4)',
+                  opacity: 0.65,
+                }}
               >
-                {DM_OPTIONS.map(({ value, label }) => {
-                  const isCurrent = privacy?.whoCanDm === value;
-                  return (
-                    <div
-                      key={value}
-                      className="flex items-center gap-3 rounded-md p-3"
-                      style={{
-                        border: '1px solid rgba(255,255,255,0.06)',
-                        backgroundColor: '#1c1c1f',
-                      }}
-                    >
-                      <div
-                        aria-hidden="true"
-                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
-                        style={{ border: '2px solid #52525b' }}
-                      >
-                        {isCurrent && (
-                          <div
-                            className="h-2.5 w-2.5 rounded-full"
-                            style={{ backgroundColor: '#52525b' }}
-                          />
-                        )}
-                      </div>
-                      <span
-                        className="text-sm font-medium"
-                        style={{ color: 'rgba(255,255,255,0.60)' }}
-                      >
-                        {label}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <p className="mt-3 text-[12px] italic" style={{ color: 'rgba(255,255,255,0.40)' }}>
-                Takes effect when direct messages arrive.
-              </p>
-            </section>
-
-            {/* ── Panel 3: Blocked users ────────────────────────────────────── */}
-            <BlockedUsersPanel />
-
-            {/* ── Panel 4: Account data (sibling a4169fac) ─────────────────── */}
-            {/* (Panel 5: Danger Zone rendered below) */}
-            <section
-              className="rounded-lg p-6"
-              style={{
-                backgroundColor: '#1c1c1f',
-                border: '1px solid rgba(255,255,255,0.06)',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.4)',
-              }}
-            >
-              {/* Header row: title + download button */}
-              <div className="mb-5 flex flex-col items-start gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <h3 className="mb-1 text-[17px] font-semibold text-white">Your data</h3>
-                  <p className="text-[13px]" style={{ color: 'rgba(255,255,255,0.60)' }}>
-                    Personal data held by StudyHall. Review it below or download a copy.
-                  </p>
-                </div>
-
-                <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
-                  <button
-                    type="button"
-                    onClick={handleExport}
-                    disabled={exporting}
-                    aria-busy={exporting}
-                    className="rounded-md px-4 py-2 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none"
-                    style={{ backgroundColor: '#10b981', color: '#fff' }}
+                <div className="mb-1 flex flex-wrap items-center gap-2">
+                  <h3 className="text-[17px] font-semibold text-white">Who can message you?</h3>
+                  <span
+                    className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+                    style={{
+                      backgroundColor: '#27272a',
+                      color: 'rgba(255,255,255,0.40)',
+                    }}
                   >
-                    {exporting ? 'Preparing…' : 'Download my data'}
-                  </button>
-                  {exportError && (
-                    <p role="alert" className="text-[12px]" style={{ color: '#ef4444' }}>
-                      {exportError}
-                    </p>
-                  )}
+                    Beta Feature
+                  </span>
                 </div>
-              </div>
+                <p className="mb-4 text-[13px]" style={{ color: 'rgba(255,255,255,0.60)' }}>
+                  Direct messaging is rolling out soon. Your preference will be saved and enforced
+                  once the feature is available.
+                </p>
 
-              {/* Account data display */}
-              {accountData && (
-                <div className="flex flex-col gap-5">
-                  {/* Profile fields */}
-                  <div>
-                    <h4
-                      className="mb-3 text-[11px] font-bold uppercase tracking-wider"
-                      style={{ color: 'rgba(255,255,255,0.40)' }}
-                    >
-                      Profile information
-                    </h4>
-                    <dl className="flex flex-col gap-2">
-                      {(
-                        [
-                          ['Display name', accountData.profile.displayName ?? '—'],
-                          [
-                            'Username',
-                            accountData.profile.username ? `@${accountData.profile.username}` : '—',
-                          ],
-                          ['Email', accountData.profile.email],
-                        ] as [string, string][]
-                      ).map(([key, val]) => (
-                        <div key={key} className="flex items-baseline gap-2">
-                          <dt
-                            className="w-28 shrink-0 text-[12px]"
-                            style={{ color: 'rgba(255,255,255,0.40)' }}
-                          >
-                            {key}
-                          </dt>
-                          <dd className="text-sm" style={{ color: 'rgba(255,255,255,0.92)' }}>
-                            {val}
-                          </dd>
+                {/* Disabled affordance — no pointer events, no interactivity */}
+                <div
+                  aria-disabled="true"
+                  className="flex select-none flex-col gap-2"
+                  style={{ pointerEvents: 'none', opacity: 0.55 }}
+                >
+                  {DM_OPTIONS.map(({ value, label }) => {
+                    const isCurrent = privacy?.whoCanDm === value;
+                    return (
+                      <div
+                        key={value}
+                        className="flex items-center gap-3 rounded-md p-3"
+                        style={{
+                          border: '1px solid rgba(255,255,255,0.06)',
+                          backgroundColor: '#1c1c1f',
+                        }}
+                      >
+                        <div
+                          aria-hidden="true"
+                          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+                          style={{ border: '2px solid #52525b' }}
+                        >
+                          {isCurrent && (
+                            <div
+                              className="h-2.5 w-2.5 rounded-full"
+                              style={{ backgroundColor: '#52525b' }}
+                            />
+                          )}
                         </div>
-                      ))}
-                    </dl>
+                        <span
+                          className="text-sm font-medium"
+                          style={{ color: 'rgba(255,255,255,0.60)' }}
+                        >
+                          {label}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <p className="mt-3 text-[12px] italic" style={{ color: 'rgba(255,255,255,0.40)' }}>
+                  Takes effect when direct messages arrive.
+                </p>
+              </section>
+
+              {/* ── Panel 3: Blocked users ────────────────────────────────────── */}
+              <BlockedUsersPanel />
+
+              {/* ── Panel 4: Account data (sibling a4169fac) ─────────────────── */}
+              {/* (Panel 5: Danger Zone rendered below) */}
+              <section
+                className="rounded-lg p-6"
+                style={{
+                  backgroundColor: '#1c1c1f',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.4)',
+                }}
+              >
+                {/* Header row: title + download button */}
+                <div className="mb-5 flex flex-col items-start gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h3 className="mb-1 text-[17px] font-semibold text-white">Your data</h3>
+                    <p className="text-[13px]" style={{ color: 'rgba(255,255,255,0.60)' }}>
+                      Personal data held by StudyHall. Review it below or download a copy.
+                    </p>
                   </div>
 
-                  <hr style={{ borderColor: 'rgba(255,255,255,0.06)' }} />
-
-                  {/* Membership summary */}
-                  <div>
-                    <h4
-                      className="mb-3 text-[11px] font-bold uppercase tracking-wider"
-                      style={{ color: 'rgba(255,255,255,0.40)' }}
+                  <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
+                    <button
+                      type="button"
+                      onClick={handleExport}
+                      disabled={exporting}
+                      aria-busy={exporting}
+                      className="rounded-md px-4 py-2 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none"
+                      style={{ backgroundColor: '#10b981', color: '#fff' }}
                     >
-                      Membership summary
-                    </h4>
-                    {accountData.memberships.length === 0 ? (
-                      <p className="text-sm" style={{ color: 'rgba(255,255,255,0.40)' }}>
-                        Not a member of any servers yet.
+                      {exporting ? 'Preparing…' : 'Download my data'}
+                    </button>
+                    {exportError && (
+                      <p role="alert" className="text-[12px]" style={{ color: '#ef4444' }}>
+                        {exportError}
                       </p>
-                    ) : (
-                      <ul className="flex flex-col gap-1.5">
-                        {accountData.memberships.map((m) => (
-                          <li
-                            key={m.serverId}
-                            className="flex items-center justify-between text-sm"
-                          >
-                            <span style={{ color: 'rgba(255,255,255,0.92)' }}>{m.serverName}</span>
-                            <span
-                              className="text-[12px]"
-                              style={{ color: 'rgba(255,255,255,0.40)' }}
-                            >
-                              Joined {formatDate(m.joinedAt)}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
                     )}
                   </div>
-
-                  <hr style={{ borderColor: 'rgba(255,255,255,0.06)' }} />
-
-                  {/* Activity summary */}
-                  <div>
-                    <h4
-                      className="mb-3 text-[11px] font-bold uppercase tracking-wider"
-                      style={{ color: 'rgba(255,255,255,0.40)' }}
-                    >
-                      Activity summary
-                    </h4>
-                    <dl className="flex flex-col gap-2">
-                      {(
-                        [
-                          ['Servers joined', String(accountData.activitySummary.serversJoined)],
-                          [
-                            'Account created',
-                            formatDate(accountData.activitySummary.accountCreatedAt),
-                          ],
-                        ] as [string, string][]
-                      ).map(([key, val]) => (
-                        <div key={key} className="flex items-baseline gap-2">
-                          <dt
-                            className="w-28 shrink-0 text-[12px]"
-                            style={{ color: 'rgba(255,255,255,0.40)' }}
-                          >
-                            {key}
-                          </dt>
-                          <dd className="text-sm" style={{ color: 'rgba(255,255,255,0.92)' }}>
-                            {val}
-                          </dd>
-                        </div>
-                      ))}
-                    </dl>
-                  </div>
                 </div>
-              )}
-            </section>
 
-            {/* ── Panel 5: Privacy activity ─────────────────────────────────── */}
-            <PrivacyActivityPanel />
+                {/* Account data display */}
+                {accountData && (
+                  <div className="flex flex-col gap-5">
+                    {/* Profile fields */}
+                    <div>
+                      <h4
+                        className="mb-3 text-[11px] font-bold uppercase tracking-wider"
+                        style={{ color: 'rgba(255,255,255,0.40)' }}
+                      >
+                        Profile information
+                      </h4>
+                      <dl className="flex flex-col gap-2">
+                        {(
+                          [
+                            ['Display name', accountData.profile.displayName ?? '—'],
+                            [
+                              'Username',
+                              accountData.profile.username
+                                ? `@${accountData.profile.username}`
+                                : '—',
+                            ],
+                            ['Email', accountData.profile.email],
+                          ] as [string, string][]
+                        ).map(([key, val]) => (
+                          <div key={key} className="flex items-baseline gap-2">
+                            <dt
+                              className="w-28 shrink-0 text-[12px]"
+                              style={{ color: 'rgba(255,255,255,0.40)' }}
+                            >
+                              {key}
+                            </dt>
+                            <dd className="text-sm" style={{ color: 'rgba(255,255,255,0.92)' }}>
+                              {val}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
 
-            {/* ── Panel 6: Danger Zone ──────────────────────────────────────── */}
-            <DangerZonePanel />
-          </div>
-        )}
-      </main>
-    </div>
+                    <hr style={{ borderColor: 'rgba(255,255,255,0.06)' }} />
+
+                    {/* Membership summary */}
+                    <div>
+                      <h4
+                        className="mb-3 text-[11px] font-bold uppercase tracking-wider"
+                        style={{ color: 'rgba(255,255,255,0.40)' }}
+                      >
+                        Membership summary
+                      </h4>
+                      {accountData.memberships.length === 0 ? (
+                        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.40)' }}>
+                          Not a member of any servers yet.
+                        </p>
+                      ) : (
+                        <ul className="flex flex-col gap-1.5">
+                          {accountData.memberships.map((m) => (
+                            <li
+                              key={m.serverId}
+                              className="flex items-center justify-between text-sm"
+                            >
+                              <span style={{ color: 'rgba(255,255,255,0.92)' }}>
+                                {m.serverName}
+                              </span>
+                              <span
+                                className="text-[12px]"
+                                style={{ color: 'rgba(255,255,255,0.40)' }}
+                              >
+                                Joined {formatDate(m.joinedAt)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+
+                    <hr style={{ borderColor: 'rgba(255,255,255,0.06)' }} />
+
+                    {/* Activity summary */}
+                    <div>
+                      <h4
+                        className="mb-3 text-[11px] font-bold uppercase tracking-wider"
+                        style={{ color: 'rgba(255,255,255,0.40)' }}
+                      >
+                        Activity summary
+                      </h4>
+                      <dl className="flex flex-col gap-2">
+                        {(
+                          [
+                            ['Servers joined', String(accountData.activitySummary.serversJoined)],
+                            [
+                              'Account created',
+                              formatDate(accountData.activitySummary.accountCreatedAt),
+                            ],
+                          ] as [string, string][]
+                        ).map(([key, val]) => (
+                          <div key={key} className="flex items-baseline gap-2">
+                            <dt
+                              className="w-28 shrink-0 text-[12px]"
+                              style={{ color: 'rgba(255,255,255,0.40)' }}
+                            >
+                              {key}
+                            </dt>
+                            <dd className="text-sm" style={{ color: 'rgba(255,255,255,0.92)' }}>
+                              {val}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
+                  </div>
+                )}
+              </section>
+
+              {/* ── Panel 5: Privacy activity ─────────────────────────────────── */}
+              <PrivacyActivityPanel />
+
+              {/* ── Panel 6: Danger Zone ──────────────────────────────────────── */}
+              <DangerZonePanel />
+            </div>
+          )}
+        </main>
+      </div>
+    </FullPageScroll>
   );
 }

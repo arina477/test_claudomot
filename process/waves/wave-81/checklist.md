@@ -14,17 +14,17 @@ DESIGN (skip block if non-UI wave):
 - [ ] D-3 Review & adopt
 
 BUILD:
-- [ ] B-0 Branch & schema
-- [ ] B-1 Contracts
-- [ ] B-2 Backend
+- [x] B-0 Branch & schema (no schema)
+- [x] B-1 Contracts (skipped)
+- [x] B-2 Backend (skipped)
 - [ ] B-3 Frontend
-- [ ] B-4 Wiring
-- [ ] B-5 Verify
-- [ ] B-6 Review
+- [x] B-4 Wiring
+- [x] B-5 Verify
+- [x] B-6 Review
 
 CI/CD:
-- [ ] C-1 PR, CI & merge
-- [ ] C-2 Deploy & verify (canary armed when real users > 1000)
+- [ ] C-1 PR, CI & merge — BLOCKED (merge gate REJECT): PR #100 open; required `test` check red on out-of-scope study-timer.test.tsx (run2 15m hang→CANCELLED). Routed to head-tester/react-specialist. STATUS: BLOCKED (trigger d).
+- [ ] C-2 Deploy & verify (canary armed when real users > 1000) — not reached
 
 TEST:
 - [ ] T-1 Static
