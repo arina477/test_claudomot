@@ -1,36 +1,23 @@
-## Wave 84 stage completion
-
-Seed task: 9535895f-1d80-4a59-b93e-dff05ff94c6e — Harden session-token storage: httpOnly cookies vs JS-readable header mode
-Bundled siblings: (none — single-spec seed)
-Active milestone: null (roadmap COMPLETE 14/14; founder bug-fix phase)
-Pending rituals: none
-
-PRODUCT:
-- [ ] P-0 Frame (discover + reframe)
+# Wave 84 — Stage completion ledger
+Topic: Harden session-token storage (httpOnly cookies vs JS-readable header mode)
+## P — Product
+- [x] P-0 Frame (BOARD 7/7 Option B: header + compensating XSS controls)
 - [ ] P-1 Decompose
 - [ ] P-2 Spec
 - [ ] P-3 Plan
 - [ ] P-4 Gate
-
-DESIGN (skip block if non-UI wave):
-- [ ] D-1 Brief
-- [ ] D-2 Variants (with bounded iteration)
-- [ ] D-3 Review & adopt
-
-BUILD:
+## B — Build
 - [ ] B-0 Branch & schema
 - [ ] B-1 Contracts
 - [ ] B-2 Backend
 - [ ] B-3 Frontend
-- [ ] B-4 Wiring
+- [ ] B-4 Wire
 - [ ] B-5 Verify
 - [ ] B-6 Review
-
-CI/CD:
+## C — CI/CD
 - [ ] C-1 PR, CI & merge
-- [ ] C-2 Deploy & verify (canary armed when real users > 1000)
-
-TEST:
+- [ ] C-2 Deploy & verify
+## T — Test
 - [ ] T-1 Static
 - [ ] T-2 Unit
 - [ ] T-3 Contract
@@ -40,17 +27,14 @@ TEST:
 - [ ] T-7 Perf
 - [ ] T-8 Security
 - [ ] T-9 Journey
-
-VERIFY:
-- [ ] V-1 Independent reviews (Karen + jenny, parallel)
+## V — Verify
+- [ ] V-1 Reviews
 - [ ] V-2 Triage
-- [ ] V-3 Fast-fix loop (or close)
-
-LEARN:
+- [ ] V-3 Fast-fix gate
+## L — Learn
 - [ ] L-1 Docs
 - [ ] L-2 Distill
-
-NEXT:
+## N — Next
 - [ ] N-1 Survey & triggers
 - [ ] N-2 Seed
 - [ ] N-3 Handoff
