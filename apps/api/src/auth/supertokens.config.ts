@@ -8,6 +8,27 @@ import { users } from '../db/schema/index';
 import type { EmailService } from '../email/email.service';
 import type { UsersService } from '../users/users.service';
 
+/**
+ * Shared CSRF/transport posture — the SINGLE SOURCE OF TRUTH for the two
+ * Session.init surfaces the wave-86 csrf-posture regression test guards.
+ *
+ * Exported so test/integration/csrf-posture.spec.ts imports the SAME object the
+ * prod Session.init spreads below. If a future maintainer changes the transport
+ * method (or the antiCsrf value) here, the regression test picks up the change
+ * automatically instead of drifting against a hand-copied mirror — a prod
+ * transport flip to 'any' will make the guard FAIL loudly (its whole purpose).
+ *
+ * `as const` pins the literal types ('header' | 'NONE') so the values are
+ * legible at the import site and cannot be widened to `string`.
+ *
+ * See the antiCsrf rationale block on Session.init below for WHY 'NONE' is the
+ * correct value under the pinned 'header' transport.
+ */
+export const CSRF_POSTURE = {
+  tokenTransferMethod: 'header',
+  antiCsrf: 'NONE',
+} as const;
+
 // Guard against accidental double-init (e.g. if a future refactor calls this
 // from both bootstrap() and a module). The SDK itself throws on double-init, so
 // this provides a clear message instead of a cryptic SDK error.
@@ -120,7 +141,11 @@ export function initSuperTokens(usersService: UsersService, emailService: EmailS
         // this `getTokenTransferMethod` callback returning 'header' | 'cookie' |
         // 'any'. Returning 'header' here pins the server to header transport,
         // matching the frontend's Session.init({ tokenTransferMethod: 'header' }).
-        getTokenTransferMethod: () => 'header',
+        //
+        // Sourced from the shared CSRF_POSTURE const (top of file) so the
+        // wave-86 regression test guards the EXACT value shipped here — not a
+        // hand-copied mirror that could silently drift.
+        getTokenTransferMethod: () => CSRF_POSTURE.tokenTransferMethod,
         //
         // ── wave-86 (B-2): explicit antiCsrf posture for header transport ────
         // antiCsrf is set EXPLICITLY to 'NONE' — the CORRECT + safe value for the
@@ -144,8 +169,20 @@ export function initSuperTokens(usersService: UsersService, emailService: EmailS
         //        session token. The request is rejected before antiCsrf matters.
         //     2. When requestTransferMethod === 'header', doAntiCsrfCheck is
         //        forced false regardless of this value.
-        //   So 'NONE' changes NOTHING behaviourally today; a cookie-only forged
-        //   cross-site POST is ALREADY rejected by the transport gate.
+        //   'NONE' is INERT today ONLY BECAUSE the 'header' transport pin above
+        //   makes antiCsrf unreachable — NOT because the previous UNSET default
+        //   was already NONE. With antiCsrf omitted, the SDK's resolver
+        //   (utils.js) derives the default from cookieSameSite: our cross-origin
+        //   prod topology uses cookieSameSite='none', which resolves the UNSET
+        //   default to VIA_CUSTOM_HEADER — so the prior effective value was
+        //   VIA_CUSTOM_HEADER, not NONE. Setting 'NONE' explicitly is a no-op
+        //   for behaviour *while the header pin holds*: a cookie-only forged
+        //   cross-site POST is ALREADY rejected by the transport gate, before
+        //   antiCsrf is consulted at all. THE INERTNESS IS CONDITIONAL ON THE
+        //   HEADER PIN — a future maintainer who loosens the pin to 'cookie'/'any'
+        //   while trusting "changes nothing" would re-expose antiCsrf and drop
+        //   from the old VIA_CUSTOM_HEADER default down to NONE (see the pre-GA
+        //   cookie-migration trigger below).
         //
         // WHY NOT 'VIA_TOKEN' — that was the wave-49 T-8 seed's literal ask, but
         //   it predates wave-84's header-transport pin. VIA_TOKEN is a COOKIE-mode
@@ -172,7 +209,10 @@ export function initSuperTokens(usersService: UsersService, emailService: EmailS
         //   reads the sAccessToken cookie first) — already documented CSRF-safe
         //   (one-time handshake, not form-submittable; ws-auth.ts:72). This value
         //   does not change WS auth behaviour.
-        antiCsrf: 'NONE',
+        //
+        // Sourced from the shared CSRF_POSTURE const (top of file) — see the
+        // getTokenTransferMethod note above for the drift-guard rationale.
+        antiCsrf: CSRF_POSTURE.antiCsrf,
         //
         // ── Access-token TTL + refresh-token rotation ────────────────────────
         // The XSS token-reuse window is shrunk by a SHORT access-token validity.
