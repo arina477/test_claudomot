@@ -15,7 +15,7 @@ Topic: Server endpoints — PATCH /servers/:id 500 (un-piped :id 22P02) + no ser
 - [x] B-5 Verify
 - [x] B-6 Review
 ## C — CI/CD
-- [ ] C-1 PR, CI & merge
+- [x] C-1 PR, CI & merge
 - [ ] C-2 Deploy & verify
 ## T — Test
 - [ ] T-1 Static
