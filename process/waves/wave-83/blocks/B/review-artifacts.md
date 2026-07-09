@@ -11,7 +11,7 @@
 | B-3 | ... | skipped | no UI |
 | B-4 | ... | done | self-wired; typecheck clean |
 | B-5 | ... | done | unit 820 + 10 new, typecheck, biome green |
-| B-6 | stages/B-6-review.md | pending | head-builder + /review |
+| B-6 | ... | done | APPROVED; 1 HIGH (COOP/OAC) fixed 594338b6 |
 
 ## Block-specific context
 - **Spec contract:** task 875b97f4 (DB); spec at process/waves/wave-83/stages/P-2-spec.md
@@ -24,3 +24,15 @@
 
 ## Gate verdict log
 <B-6>
+
+## Build-block exit handoff
+```yaml
+build_block_status:    complete
+branch:                wave-83-api-security-headers
+stages_run:            [B-0, B-2, B-4, B-5, B-6]
+stages_skipped:        [B-1 (no contracts), B-3 (no UI)]
+review_verdict:        APPROVE
+deviations_logged:     ["plan labeled backend stage B-3; implemented as canonical B-2 (config-only, same scope)", "B-6 fix-up: fenced COOP + Origin-Agent-Cluster (helmet v8 defaults) per adversarial /review HIGH"]
+last_commit_sha:       594338b6
+ready_for_ci:          true
+```
