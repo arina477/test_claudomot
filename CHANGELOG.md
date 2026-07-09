@@ -144,6 +144,7 @@ All notable changes to StudyHall are documented here. Format follows
 - Settings › Profile now scrolls fully: content below the fold — including the academic-identity fields and Save button — was previously unreachable, and the fix also restores full scrolling on Settings › Privacy and the public Privacy, Terms, and Landing pages. (#100)
   - If a page still doesn't scroll on your first visit right after the update, one refresh fixes it — StudyHall auto-updates in the background.
   - Also stabilized a test that would intermittently stall and block releases, so changes now ship reliably.
+- Fixed a rare sign-in glitch where opening your messages right after logging in could bounce you back to the login screen; the app now settles the sign-in and only sends you to login if you're genuinely logged out. (#101)
 
 ### Security
 
