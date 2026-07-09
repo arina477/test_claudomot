@@ -1078,7 +1078,7 @@ export function ProfilePage() {
 
               <button
                 type="submit"
-                disabled={academicSaving || !!academicClientError}
+                disabled={academicSaving}
                 aria-busy={academicSaving}
                 className="self-start rounded-md px-5 py-2 text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none"
                 style={{ backgroundColor: accentColor, color: '#fff' }}

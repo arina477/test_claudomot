@@ -156,11 +156,16 @@ describe('ProfilePage — academic identity editor', () => {
       fireEvent.change(bio, { target: { value: overLong } });
     });
 
-    // The save button is disabled while a client error is present, so submit the
-    // form directly (this is the path the guard protects).
-    const form = bio.closest('form') as HTMLFormElement;
+    // Reachability regression guard (wave-89 B-6 REWORK): the Save button must
+    // stay ENABLED when a client error is present, so a real user can click it
+    // and be taken to the problem. If it were disabled, this path would be
+    // dead-code-in-practice, reachable only via fireEvent.submit.
+    const saveBtn = screen.getByRole('button', { name: /save academic identity/i });
+    expect(saveBtn).not.toBeDisabled();
+
+    // Click the enabled button — the genuinely user-reachable submit path.
     await act(async () => {
-      fireEvent.submit(form);
+      fireEvent.click(saveBtn);
     });
 
     // The invalid field is focused, marked aria-invalid, and was scrolled to.
@@ -189,9 +194,11 @@ describe('ProfilePage — academic identity editor', () => {
       fireEvent.change(bio, { target: { value: 'b'.repeat(501) } }); // max 500
     });
 
-    const form = pronouns.closest('form') as HTMLFormElement;
+    // Save stays enabled on a client error; click it as a real user would.
+    const saveBtn = screen.getByRole('button', { name: /save academic identity/i });
+    expect(saveBtn).not.toBeDisabled();
     await act(async () => {
-      fireEvent.submit(form);
+      fireEvent.click(saveBtn);
     });
 
     // Pronouns wins the priority order — it is focused and aria-invalid, not bio.
