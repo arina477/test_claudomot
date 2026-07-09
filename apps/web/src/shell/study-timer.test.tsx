@@ -583,17 +583,16 @@ describe('StudyTimerWidget', () => {
 
     await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
 
-    // Make dirty
+    // Make dirty; wrap in act() to flush React's setWorkVal update synchronously.
     const workInputs = screen.getAllByTestId(/work-input$/);
-    fireEvent.change(workInputs[0] as HTMLElement, { target: { value: '30' } });
-
-    await waitFor(() => {
-      const applies = screen.getAllByTestId(/apply$/);
-      expect(applies.some((b) => !(b as HTMLButtonElement).disabled)).toBe(true);
+    act(() => {
+      fireEvent.change(workInputs[0] as HTMLElement, { target: { value: '30' } });
     });
 
+    // After act(), React has flushed: isApplyEnabled is true — assert directly.
     const applies = screen.getAllByTestId(/apply$/);
     const enabledApply = applies.find((b) => !(b as HTMLButtonElement).disabled);
+    expect(enabledApply).toBeDefined();
     if (enabledApply) fireEvent.click(enabledApply);
 
     // During pending: all inputs should be disabled and apply btn should show spinner
@@ -643,20 +642,24 @@ describe('StudyTimerWidget', () => {
 
     await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
 
-    // Make dirty via the desktop form work input
+    // Wrap fireEvent.change in act() so React flushes the setWorkVal state update
+    // synchronously before we assert. Without act(), the dirty/isApplyEnabled
+    // recompute is deferred, which races against waitFor's timeout on slow CI runners.
     const workInputs = screen.getAllByTestId(/work-input$/);
-    fireEvent.change(workInputs[0] as HTMLElement, { target: { value: '30' } });
-
-    await waitFor(() => {
-      const applies = screen.getAllByTestId(/apply$/);
-      expect(applies.some((b) => !(b as HTMLButtonElement).disabled)).toBe(true);
+    act(() => {
+      fireEvent.change(workInputs[0] as HTMLElement, { target: { value: '30' } });
     });
 
-    // Trigger via whichever Apply is enabled (desktop in jsdom)
+    // After act(), React has flushed: isDirty is true, isApplyEnabled is true.
+    // Assert directly without a waitFor — no timer dependency.
     const applies = screen.getAllByTestId(/apply$/);
     const enabledApply = applies.find((b) => !(b as HTMLButtonElement).disabled);
     expect(enabledApply).toBeDefined();
-    if (enabledApply) fireEvent.click(enabledApply);
+
+    // Click Apply and wait for the API rejection to resolve + configError state to flush.
+    await act(async () => {
+      if (enabledApply) fireEvent.click(enabledApply);
+    });
 
     await waitFor(() => expect(mockApi.configureStudyTimer).toHaveBeenCalled());
 
@@ -679,17 +682,24 @@ describe('StudyTimerWidget', () => {
 
     await waitFor(() => expect(screen.getByTestId('timer-display')).toBeInTheDocument());
 
+    // Wrap fireEvent.change in act() so React flushes the setWorkVal state update
+    // synchronously before we assert. Without act(), the dirty/isApplyEnabled
+    // recompute is deferred, which races against waitFor's timeout on slow CI runners.
     const workInputs = screen.getAllByTestId(/work-input$/);
-    fireEvent.change(workInputs[0] as HTMLElement, { target: { value: '30' } });
-
-    await waitFor(() => {
-      const applies = screen.getAllByTestId(/apply$/);
-      expect(applies.some((b) => !(b as HTMLButtonElement).disabled)).toBe(true);
+    act(() => {
+      fireEvent.change(workInputs[0] as HTMLElement, { target: { value: '30' } });
     });
 
+    // After act(), React has flushed: isDirty is true, isApplyEnabled is true.
+    // Assert directly without a waitFor — no timer dependency.
     const applies = screen.getAllByTestId(/apply$/);
     const enabledApply = applies.find((b) => !(b as HTMLButtonElement).disabled);
-    if (enabledApply) fireEvent.click(enabledApply);
+    expect(enabledApply).toBeDefined();
+
+    // Click Apply and wait for the API rejection to resolve + configError state to flush.
+    await act(async () => {
+      if (enabledApply) fireEvent.click(enabledApply);
+    });
 
     await waitFor(() => expect(mockApi.configureStudyTimer).toHaveBeenCalled());
 
